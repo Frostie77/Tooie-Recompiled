@@ -99,8 +99,16 @@ cmake --build build-plume-android -j 4
 
 This verifies compilation, not GPU execution or APK packaging. A full build needs
 the Android SDL2 and FreeType development prefixes, and the checkout is missing
-`lib/rt64/src/contrib/zstd/build/cmake`. The Android Gradle project expects native
-libraries under `android/app/src/main/jniLibs`; it does not build them itself.
+`lib/rt64/src/contrib/zstd/build/cmake`. The missing directory may be a snapshot
+artifact: the repository snapshot process excluded directories named `build`,
+even when they contained required source files. zstd's `build/cmake` directory
+contains build-system source, rather than disposable generated output. Check the
+snapshot/export rules and the original dependency contents before treating its
+absence as an upstream zstd or renderer defect; restoring those files is outside
+this workaround's scope.
+
+The Android Gradle project expects native libraries under
+`android/app/src/main/jniLibs`; it does not build them itself.
 No attached Android device is available in this cloud machine.
 
 On the Portal, first run isolation with only the queue-isolation flag: A–E must
