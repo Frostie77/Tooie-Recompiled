@@ -79,6 +79,7 @@ namespace plume {
         VkImage vk = VK_NULL_HANDLE;
         VkImageView imageView = VK_NULL_HANDLE;
         VkFormat imageFormat = VK_FORMAT_UNDEFINED;
+        VkImageUsageFlags imageUsage = 0;
         VkImageSubresourceRange imageSubresourceRange = {};
         VulkanDevice *device = nullptr;
         VulkanPool *pool = nullptr;
@@ -269,6 +270,9 @@ namespace plume {
         VkRenderPass renderPass = VK_NULL_HANDLE;
 #if defined(__ANDROID__)
         std::vector<VkRenderPass> colorClearRenderPasses;
+        std::vector<VkFormat> colorAttachmentFormats;
+        std::vector<VkImageView> colorAttachmentImageViews;
+        std::vector<bool> colorAttachmentUsesBaseView;
 #endif
         std::vector<const VulkanTexture *> colorAttachments;
         const VulkanTexture *depthAttachment = nullptr;

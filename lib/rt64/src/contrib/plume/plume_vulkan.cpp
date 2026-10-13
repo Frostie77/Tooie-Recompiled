@@ -999,6 +999,7 @@ namespace plume {
         }
 
         imageFormat = imageInfo.format;
+        imageUsage = imageInfo.usage;
         fillSubresourceRange();
 
         VmaAllocationCreateInfo createInfo = {};
@@ -2367,6 +2368,14 @@ namespace plume {
         createInfo.clipped = VK_TRUE;
         createInfo.oldSwapchain = vk;
 
+#if defined(__ANDROID__)
+        char swapchainRecord[256];
+        std::snprintf(swapchainRecord, sizeof(swapchainRecord),
+            "Swapchain record: format=%u extent=%ux%u usage=0x%X supportedUsage=0x%X transform=0x%X family=%u",
+            unsigned(createInfo.imageFormat), width, height, createInfo.imageUsage,
+            surfaceCapabilities.supportedUsageFlags, createInfo.preTransform, commandQueue->familyIndex);
+        tooie_android_debug_log(swapchainRecord);
+#endif
         VkResult res = vkCreateSwapchainKHR(commandQueue->device->vk, &createInfo, nullptr, &vk);
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateSwapchainKHR failed with error code 0x%X.\n", res);
@@ -2406,6 +2415,8 @@ namespace plume {
 
         for (uint32_t i = 0; i < desc.textureCount; i++) {
             textures[i] = VulkanTexture(commandQueue->device, images[i]);
+            textures[i].imageFormat = pickedSurfaceFormat.format;
+            textures[i].imageUsage = createInfo.imageUsage;
             textures[i].desc.dimension = RenderTextureDimension::TEXTURE_2D;
             textures[i].desc.format = desc.format;
             textures[i].desc.width = width;
@@ -2561,6 +2572,11 @@ namespace plume {
             assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
             colorAttachments.emplace_back(colorAttachment);
             imageViews.emplace_back(colorAttachmentImageView);
+#if defined(__ANDROID__)
+            colorAttachmentFormats.emplace_back(toVk(colorAttachmentFormat));
+            colorAttachmentImageViews.emplace_back(colorAttachmentImageView);
+            colorAttachmentUsesBaseView.emplace_back(!(desc.colorAttachmentViews && desc.colorAttachmentViews[i]));
+#endif
 
             if (i == 0) {
                 width = uint32_t(colorAttachment->desc.width);
@@ -2652,7 +2668,8 @@ namespace plume {
             return;
         }
         
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) && defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && !TOOIE_VULKAN_TRANSFER_CLEAR_TEST
+        // Retained failing load-op control. Compatibility excludes load/store ops.
         // Load operations are compatible with the normal LOAD render pass and
         // framebuffer/pipelines. Use one variant per color attachment so a full
         // clear preserves every other attachment, including depth/stencil.
@@ -3195,68 +3212,43 @@ namespace plume {
         }
     }
 
+#if defined(__ANDROID__)
+    // Log recorded CPU state, not an assertion that the GPU executed the commands.
+    static bool logColorClearRecord(const VulkanFramebuffer *framebuffer, uint32_t attachmentIndex,
+        const char *path, VkCommandBuffer commandBuffer) {
+        static thread_local uint32_t records = 0;
+        if (records++ >= 16) {
+            return false;
+        }
+        const VulkanTexture *texture = framebuffer->colorAttachments[attachmentIndex];
+        char message[640];
+        std::snprintf(message, sizeof(message),
+            "Clear record: path=%s cb=%llx fb=%llx loadPass=%llx image=%llx boundView=%llx attachment=%u "
+            "imageFormat=%u viewFormat=%u samples=%u usage=0x%X owned=%u baseViewUsed=%u "
+            "trackedLayout=%u trackedStages=0x%X fbExtent=%ux%u imageExtent=%ux%u mips=%u layers=%u",
+            path, (unsigned long long)commandBuffer, (unsigned long long)framebuffer->vk,
+            (unsigned long long)framebuffer->renderPass, (unsigned long long)texture->vk,
+            (unsigned long long)framebuffer->colorAttachmentImageViews[attachmentIndex], attachmentIndex, unsigned(texture->imageFormat),
+            unsigned(framebuffer->colorAttachmentFormats[attachmentIndex]), texture->desc.multisampling.sampleCount,
+            texture->imageUsage, unsigned(texture->ownership), unsigned(framebuffer->colorAttachmentUsesBaseView[attachmentIndex]),
+            unsigned(texture->textureLayout), texture->barrierStages, framebuffer->width, framebuffer->height,
+            texture->desc.width, texture->desc.height, texture->desc.mipLevels, texture->desc.arraySize);
+        tooie_android_debug_log(message);
+        return true;
+    }
+#endif
+
     void VulkanCommandList::clearColor(uint32_t attachmentIndex, RenderColor colorValue, const RenderRect *clearRects, uint32_t clearRectsCount) {
         assert(targetFramebuffer != nullptr);
         assert(attachmentIndex < targetFramebuffer->colorAttachments.size());
         assert((clearRectsCount == 0) || (clearRects != nullptr));
 
 #if defined(__ANDROID__)
-#if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && TOOIE_VULKAN_TRANSFER_CLEAR_TEST
-        // Diagnostic: swapchain images are externally owned, single-sampled and
-        // were created with VK_IMAGE_USAGE_TRANSFER_DST_BIT. Test whether a
-        // transfer clear avoids the vkCmdClearAttachments GPU hang on Adreno.
-        // This path preserves RT64's tracked COLOR_WRITE layout on return.
-        const VulkanTexture *colorTexture = targetFramebuffer->colorAttachments[attachmentIndex];
-        if (!colorTexture->ownership && (clearRectsCount == 0) &&
-            (colorTexture->desc.multisampling.sampleCount == 1)) {
-            endActiveRenderPass(); // vkCmdClearColorImage must be outside render pass.
-
-            VkImageSubresourceRange range = {};
-            range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            range.baseMipLevel = 0;
-            range.levelCount = 1;
-            range.baseArrayLayer = 0;
-            range.layerCount = 1;
-
-            VkImageMemoryBarrier barrier = {};
-            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.image = colorTexture->vk;
-            barrier.subresourceRange = range;
-            barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            vkCmdPipelineBarrier(vk, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr,
-                1, &barrier);
-
-            VkClearColorValue clearValue = {};
-            clearValue.float32[0] = colorValue.r;
-            clearValue.float32[1] = colorValue.g;
-            clearValue.float32[2] = colorValue.b;
-            clearValue.float32[3] = colorValue.a;
-            vkCmdClearColorImage(vk, colorTexture->vk,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearValue, 1, &range);
-
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
-                                    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            vkCmdPipelineBarrier(vk, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr,
-                0, nullptr, 1, &barrier);
-
-            tooie_android_debug_log("DIAG D: swapchain vkCmdClearColorImage recorded");
-            return;
-        }
-#else
-        // Adreno's in-pass vkCmdClearAttachments path times out on this port.
-        // A loadOp clear also works for the launcher's MSAA offscreen target,
-        // which cannot be cleared with vkCmdClearColorImage.
+#if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && !TOOIE_VULKAN_TRANSFER_CLEAR_TEST
+        // Retain the failed Portal load-op experiment for controlled comparison.
+        // Its D submission contains a memory barrier AND a CLEAR render pass.
         if (clearRectsCount == 0) {
+            const bool recordClear = logColorClearRecord(targetFramebuffer, attachmentIndex, "load-op-control", vk);
             endActiveRenderPass();
 
             // A full clear can restart a pass after earlier draws. Preserve
@@ -3274,6 +3266,11 @@ namespace plume {
             vkCmdPipelineBarrier(vk, attachmentStages, attachmentStages, 0,
                 1, &barrier, 0, nullptr, 0, nullptr);
 
+#if defined(TOOIE_VULKAN_CLEAR_BARRIER_TEST) && TOOIE_VULKAN_CLEAR_BARRIER_TEST
+            // Isolate the additional D memory barrier, without starting a pass.
+            tooie_android_debug_log("Clear record: load-op D barrier only; no render pass or clear");
+            return;
+#endif
             std::vector<VkClearValue> clearValues(targetFramebuffer->colorAttachments.size());
             clearValues[attachmentIndex].color.float32[0] = colorValue.r;
             clearValues[attachmentIndex].color.float32[1] = colorValue.g;
@@ -3287,10 +3284,109 @@ namespace plume {
             beginInfo.renderArea.extent = { targetFramebuffer->width, targetFramebuffer->height };
             beginInfo.clearValueCount = uint32_t(clearValues.size());
             beginInfo.pClearValues = clearValues.data();
+            char beginRecord[160];
+            std::snprintf(beginRecord, sizeof(beginRecord),
+                "Clear record: begin CLEAR pass=%llx compatibleLoadPass=%llx values=%u selected=%u",
+                (unsigned long long)beginInfo.renderPass, (unsigned long long)targetFramebuffer->renderPass,
+                beginInfo.clearValueCount, attachmentIndex);
+            if (recordClear) tooie_android_debug_log(beginRecord);
             vkCmdBeginRenderPass(vk, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
             activeRenderPass = beginInfo.renderPass;
             return;
         }
+#else
+        const VulkanTexture *colorTexture = targetFramebuffer->colorAttachments[attachmentIndex];
+        // The proposal deliberately covers the launcher's plain RGBA/BGRA UNORM
+        // images only. A framebuffer clear is not a whole-image clear for a
+        // smaller render area, attachment view, or integer/reinterpreted format.
+        bool transferClear = (clearRectsCount == 0) &&
+            targetFramebuffer->colorAttachmentUsesBaseView[attachmentIndex] &&
+            (colorTexture->desc.dimension == RenderTextureDimension::TEXTURE_2D) &&
+            (colorTexture->desc.textureArrangement != RenderTextureArrangement::ROW_MAJOR) &&
+            (colorTexture->desc.mipLevels == 1) && (colorTexture->desc.arraySize == 1) &&
+            (colorTexture->desc.width == targetFramebuffer->width) &&
+            (colorTexture->desc.height == targetFramebuffer->height) &&
+            (colorTexture->imageUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) &&
+            (colorTexture->imageFormat == targetFramebuffer->colorAttachmentFormats[attachmentIndex]) &&
+            ((colorTexture->imageFormat == VK_FORMAT_R8G8B8A8_UNORM) ||
+             (colorTexture->imageFormat == VK_FORMAT_B8G8R8A8_UNORM));
+#if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && TOOIE_VULKAN_TRANSFER_CLEAR_TEST
+        // Preserve the previous successful swapchain-only isolation diagnostic.
+        transferClear = transferClear && !colorTexture->ownership &&
+            (colorTexture->desc.multisampling.sampleCount == 1);
+#endif
+        if (transferClear) {
+            VkFormatProperties properties = {};
+            vkGetPhysicalDeviceFormatProperties(queue->device->physicalDevice, colorTexture->imageFormat, &properties);
+            transferClear = (properties.optimalTilingFeatures & VK_FORMAT_FEATURE_TRANSFER_DST_BIT) != 0;
+        }
+        if (transferClear) {
+            const bool recordClear = logColorClearRecord(targetFramebuffer, attachmentIndex, "transfer", vk);
+            if (colorTexture->vk == VK_NULL_HANDLE || colorTexture->imageView == VK_NULL_HANDLE ||
+                targetFramebuffer->vk == VK_NULL_HANDLE || targetFramebuffer->renderPass == VK_NULL_HANDLE ||
+                colorTexture->textureLayout != RenderTextureLayout::COLOR_WRITE ||
+                !(colorTexture->barrierStages & RenderBarrierStage::GRAPHICS)) {
+                tooie_android_debug_log("Clear record: invalid tracked state or resource for attachment clear");
+                std::_Exit(EXIT_FAILURE);
+            }
+            endActiveRenderPass(); // Transfer commands must be outside a render pass.
+
+            VkImageSubresourceRange range = {};
+            range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            range.levelCount = 1;
+            range.layerCount = 1;
+
+            VkImageMemoryBarrier barrier = {};
+            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.image = colorTexture->vk;
+            barrier.subresourceRange = range;
+            barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.oldLayout = toImageLayout(colorTexture->textureLayout);
+            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+            // Splitting a pass must also preserve any OTHER attachments that
+            // will be LOADed when drawing resumes. The launcher has one color
+            // target and no depth, so its recorded path needs no such barrier.
+            VkMemoryBarrier preserve = {};
+            preserve.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+            preserve.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            preserve.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            const bool preserveOthers = (targetFramebuffer->colorAttachments.size() > 1) || targetFramebuffer->depthAttachment;
+            const VkPipelineStageFlags otherStages = preserveOthers ?
+                (VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                 VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT) : 0;
+            vkCmdPipelineBarrier(vk, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | otherStages,
+                VK_PIPELINE_STAGE_TRANSFER_BIT | otherStages, 0, preserveOthers ? 1 : 0,
+                preserveOthers ? &preserve : nullptr, 0, nullptr, 1, &barrier);
+
+            VkClearColorValue clearValue = {};
+            clearValue.float32[0] = colorValue.r;
+            clearValue.float32[1] = colorValue.g;
+            clearValue.float32[2] = colorValue.b;
+            clearValue.float32[3] = colorValue.a;
+            // Vulkan clears every sample; vkCmdClearColorImage has no 1x-only
+            // restriction. The Portal's MSAA transfer path is still unverified.
+            vkCmdClearColorImage(vk, colorTexture->vk, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearValue, 1, &range);
+
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            vkCmdPipelineBarrier(vk, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                0, 0, nullptr, 0, nullptr, 1, &barrier);
+            // COLOR_WRITE/GRAPHICS tracking is unchanged: both transitions were
+            // scoped to this clear and the image is restored before returning.
+            if (recordClear) tooie_android_debug_log("Clear record: COLOR->TRANSFER_DST; clear mip=0 layer=0; TRANSFER_DST->COLOR; no clear render pass");
+#if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && TOOIE_VULKAN_TRANSFER_CLEAR_TEST
+            tooie_android_debug_log("DIAG D: swapchain vkCmdClearColorImage recorded");
+#endif
+            return;
+        }
+        logColorClearRecord(targetFramebuffer, attachmentIndex, "attachment-fallback", vk);
 #endif
 #endif
         checkActiveRenderPass();

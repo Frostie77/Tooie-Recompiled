@@ -354,8 +354,9 @@ namespace RT64 {
                 ext.presentGraphicsWorker->wait();
                 tooie_android_debug_log("DIAG C: fence signaled (COLOR_WRITE transition completed)");
 
-                // D: Isolate the framebuffer clear (loadOp by default; the original
-                // transfer diagnostic uses TOOIE_VULKAN_TRANSFER_CLEAR_TEST=1).
+                // D: Isolate the selected clear policy. Omitted transfer flag:
+                // proposed transfer path; =1: prior swapchain-only transfer;
+                // =0: failed load-op control (optionally its barrier alone).
                 tooie_android_debug_log("DIAG D: swapchain clear begin");
                 commandList->begin();
                 commandList->setFramebuffer(swapChainFramebuffer);
@@ -365,7 +366,11 @@ namespace RT64 {
                     &diagnosticList, 1, nullptr, 0, nullptr, 0,
                     ext.presentGraphicsWorker->commandFence.get());
                 ext.presentGraphicsWorker->wait();
+#if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && !TOOIE_VULKAN_TRANSFER_CLEAR_TEST && defined(TOOIE_VULKAN_CLEAR_BARRIER_TEST) && TOOIE_VULKAN_CLEAR_BARRIER_TEST
+                tooie_android_debug_log("DIAG D: fence signaled (load-op memory barrier only; no clear)");
+#else
                 tooie_android_debug_log("DIAG D: fence signaled (swapchain clear completed)");
+#endif
 
                 // E: Isolate the final transition to the present layout.
                 tooie_android_debug_log("DIAG E: transition to PRESENT begin");
