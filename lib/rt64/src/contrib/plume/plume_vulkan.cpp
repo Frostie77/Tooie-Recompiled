@@ -2652,6 +2652,22 @@ namespace plume {
             return;
         }
         
+#if defined(__ANDROID__)
+        // Load operations are compatible with the normal LOAD render pass and
+        // framebuffer/pipelines. Use one variant per color attachment so a full
+        // clear preserves every other attachment, including depth/stencil.
+        colorClearRenderPasses.resize(desc.colorAttachmentsCount, VK_NULL_HANDLE);
+        for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
+            attachments[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            res = vkCreateRenderPass(device->vk, &passInfo, nullptr, &colorClearRenderPasses[i]);
+            attachments[i].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            if (res != VK_SUCCESS) {
+                fprintf(stderr, "vkCreateRenderPass (color clear) failed with error code 0x%X.\n", res);
+                std::_Exit(EXIT_FAILURE);
+            }
+        }
+#endif
+
         VkFramebufferCreateInfo fbInfo = {};
         fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         fbInfo.renderPass = renderPass;
@@ -2669,6 +2685,13 @@ namespace plume {
     }
 
     VulkanFramebuffer::~VulkanFramebuffer() {
+#if defined(__ANDROID__)
+        for (VkRenderPass clearPass : colorClearRenderPasses) {
+            if (clearPass != VK_NULL_HANDLE) {
+                vkDestroyRenderPass(device->vk, clearPass, nullptr);
+            }
+        }
+#endif
         if (vk != VK_NULL_HANDLE) {
             vkDestroyFramebuffer(device->vk, vk, nullptr);
         }
@@ -3178,6 +3201,7 @@ namespace plume {
         assert((clearRectsCount == 0) || (clearRects != nullptr));
 
 #if defined(__ANDROID__)
+#if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && TOOIE_VULKAN_TRANSFER_CLEAR_TEST
         // Diagnostic: swapchain images are externally owned, single-sampled and
         // were created with VK_IMAGE_USAGE_TRANSFER_DST_BIT. Test whether a
         // transfer clear avoids the vkCmdClearAttachments GPU hang on Adreno.
@@ -3228,6 +3252,46 @@ namespace plume {
             tooie_android_debug_log("DIAG D: swapchain vkCmdClearColorImage recorded");
             return;
         }
+#else
+        // Adreno's in-pass vkCmdClearAttachments path times out on this port.
+        // A loadOp clear also works for the launcher's MSAA offscreen target,
+        // which cannot be cleared with vkCmdClearColorImage.
+        if (clearRectsCount == 0) {
+            endActiveRenderPass();
+
+            // A full clear can restart a pass after earlier draws. Preserve
+            // attachment writes for the LOAD operations on the other targets.
+            VkMemoryBarrier barrier = {};
+            barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+            barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                                    VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                                    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                                    VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                                    VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            const VkPipelineStageFlags attachmentStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            vkCmdPipelineBarrier(vk, attachmentStages, attachmentStages, 0,
+                1, &barrier, 0, nullptr, 0, nullptr);
+
+            std::vector<VkClearValue> clearValues(targetFramebuffer->colorAttachments.size());
+            clearValues[attachmentIndex].color.float32[0] = colorValue.r;
+            clearValues[attachmentIndex].color.float32[1] = colorValue.g;
+            clearValues[attachmentIndex].color.float32[2] = colorValue.b;
+            clearValues[attachmentIndex].color.float32[3] = colorValue.a;
+
+            VkRenderPassBeginInfo beginInfo = {};
+            beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            beginInfo.renderPass = targetFramebuffer->colorClearRenderPasses[attachmentIndex];
+            beginInfo.framebuffer = targetFramebuffer->vk;
+            beginInfo.renderArea.extent = { targetFramebuffer->width, targetFramebuffer->height };
+            beginInfo.clearValueCount = uint32_t(clearValues.size());
+            beginInfo.pClearValues = clearValues.data();
+            vkCmdBeginRenderPass(vk, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+            activeRenderPass = beginInfo.renderPass;
+            return;
+        }
+#endif
 #endif
         checkActiveRenderPass();
 
@@ -3242,9 +3306,9 @@ namespace plume {
         rgba[3] = colorValue.a;
         attachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         attachment.colorAttachment = attachmentIndex;
-#if defined(__ANDROID__)
-        // Keep the prior diagnostic's behaviour for all non-swapchain clears.
-        // Do not re-enable them until the swapchain clear test succeeds.
+#if defined(__ANDROID__) && defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && TOOIE_VULKAN_TRANSFER_CLEAR_TEST
+        // Preserve the transfer-only isolation diagnostic without skipping
+        // offscreen UI clears in the normal launcher path.
         tooie_android_debug_log("DIAG: non-swapchain attachment clear skipped");
 #else
         vkCmdClearAttachments(vk, 1, &attachment, uint32_t(rectVector.size()), rectVector.data());
@@ -3693,14 +3757,17 @@ namespace plume {
         submitInfo.commandBufferCount = uint32_t(commandBuffers.size());
 
 #if defined(__ANDROID__)
-        const VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        const VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 #else
-        const VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        const VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 #endif
+        // Vulkan requires one stage mask for each wait semaphore, not a single
+        // scalar when a submission waits on multiple semaphores.
+        const std::vector<VkPipelineStageFlags> waitStages(waitSemaphoreVector.size(), waitStage);
         if (!waitSemaphoreVector.empty()) {
             submitInfo.pWaitSemaphores = waitSemaphoreVector.data();
             submitInfo.waitSemaphoreCount = uint32_t(waitSemaphoreVector.size());
-            submitInfo.pWaitDstStageMask = &waitStages;
+            submitInfo.pWaitDstStageMask = waitStages.data();
         }
 
         if (!signalSemaphoreVector.empty()) {

@@ -267,6 +267,9 @@ namespace plume {
         VulkanDevice *device = nullptr;
         VkFramebuffer vk = VK_NULL_HANDLE;
         VkRenderPass renderPass = VK_NULL_HANDLE;
+#if defined(__ANDROID__)
+        std::vector<VkRenderPass> colorClearRenderPasses;
+#endif
         std::vector<const VulkanTexture *> colorAttachments;
         const VulkanTexture *depthAttachment = nullptr;
         std::unique_ptr<VulkanTextureView> depthAttachmentView = nullptr;

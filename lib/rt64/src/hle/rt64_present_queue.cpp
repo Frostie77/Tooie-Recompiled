@@ -7,9 +7,9 @@
 
 #include <cstdlib>
 
-#if defined(__ANDROID__)
-#define TOOIE_VULKAN_QUEUE_ISOLATION_TEST 1
-#endif
+// Opt in with -DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=1. The isolation
+// sequence consumes the acquired semaphore and exits; it must not run in
+// a normal launcher build.
 
 #include "common/rt64_thread.h"
 #include "rhi/rt64_render_hooks.h"
@@ -319,9 +319,9 @@ namespace RT64 {
                 RenderTexture *swapChainTexture = ext.swapChain->getTexture(swapChainIndex);
                 RenderFramebuffer *swapChainFramebuffer = swapChainFramebuffers[swapChainIndex].get();
                 RenderCommandList *commandList = ext.presentGraphicsWorker->commandList.get();
-#if defined(__ANDROID__) && defined(TOOIE_VULKAN_QUEUE_ISOLATION_TEST)
+#if defined(__ANDROID__) && defined(TOOIE_VULKAN_QUEUE_ISOLATION_TEST) && TOOIE_VULKAN_QUEUE_ISOLATION_TEST
                 // Android-only one-shot diagnostic. Never render or present this acquired image.
-                // Exit after the two fences so that the acquired image is not reused.
+                // Exit after the diagnostic fences so that the acquired image is not reused.
                 tooie_android_debug_log("DIAG A: empty submit with no semaphore begin");
                 commandList->begin();
                 commandList->end();
@@ -354,8 +354,9 @@ namespace RT64 {
                 ext.presentGraphicsWorker->wait();
                 tooie_android_debug_log("DIAG C: fence signaled (COLOR_WRITE transition completed)");
 
-                // D: Isolate the render pass and framebuffer clear.
-                tooie_android_debug_log("DIAG D: swapchain transfer clear begin");
+                // D: Isolate the framebuffer clear (loadOp by default; the original
+                // transfer diagnostic uses TOOIE_VULKAN_TRANSFER_CLEAR_TEST=1).
+                tooie_android_debug_log("DIAG D: swapchain clear begin");
                 commandList->begin();
                 commandList->setFramebuffer(swapChainFramebuffer);
                 commandList->clearColor();
@@ -364,7 +365,7 @@ namespace RT64 {
                     &diagnosticList, 1, nullptr, 0, nullptr, 0,
                     ext.presentGraphicsWorker->commandFence.get());
                 ext.presentGraphicsWorker->wait();
-                tooie_android_debug_log("DIAG D: fence signaled (swapchain transfer clear completed)");
+                tooie_android_debug_log("DIAG D: fence signaled (swapchain clear completed)");
 
                 // E: Isolate the final transition to the present layout.
                 tooie_android_debug_log("DIAG E: transition to PRESENT begin");
