@@ -5,6 +5,7 @@
 #include "render/rt64_vertex_processor.h"
 #include "../src/android_descriptor_context.h"
 #include "plume_vulkan_descriptor_probe.h"
+#include "plume_vulkan_descriptor_pool.h"
 #include <atomic>
 #include <future>
 #include <cstdio>
@@ -19,11 +20,11 @@ template<class T> T handle() { static uintptr_t n=1; return reinterpret_cast<T>(
 static unsigned updates=0;
 static bool prohibitUpdate=false, failLayout=false, failPool=false, failAllocate=false, nullAllocate=false, failView=false, failImageView=false;
 struct Layout { std::vector<VkDescriptorSetLayoutBinding> bindings; std::vector<VkDescriptorBindingFlags> flags; VkDescriptorSetLayoutCreateFlags creationFlags = 0; };
-struct Pool { std::unordered_map<VkDescriptorType,uint32_t> remaining; uint32_t sets; VkDescriptorPoolCreateFlags flags; };
+struct Pool { std::unordered_map<VkDescriptorType,uint32_t> remaining, capacity; uint32_t sets; VkDescriptorPoolCreateFlags flags; };
 static std::unordered_map<VkDescriptorSetLayout,Layout> layouts;
 static std::unordered_map<VkDescriptorPool,Pool> pools;
 static std::unordered_map<VkDescriptorSet,std::pair<VkDescriptorSetLayout,uint32_t>> sets;
-static bool layoutSupported=true, shortPool=false;
+static bool layoutSupported=true, shortPool=false, declaredAccounting=false;
 static uint32_t variableLimit=8192;
 static void layoutSupport(VkDevice,const VkDescriptorSetLayoutCreateInfo *,VkDescriptorSetLayoutSupport *out) {
  out->supported=layoutSupported;
@@ -49,7 +50,7 @@ static VkResult createPool(VkDevice,const VkDescriptorPoolCreateInfo *info,const
  *out=failPool?VK_NULL_HANDLE:handle<VkDescriptorPool>();
  REQUIRE(info->maxSets==1);
  if(*out) {auto &p=pools[*out];p.sets=info->maxSets;p.flags=info->flags;
-  for(uint32_t i=0;i<info->poolSizeCount;++i) {auto s=info->pPoolSizes[i];REQUIRE(s.descriptorCount && !p.remaining.count(s.type));p.remaining[s.type]=shortPool?0:s.descriptorCount;}
+  for(uint32_t i=0;i<info->poolSizeCount;++i) {auto s=info->pPoolSizes[i];REQUIRE(s.descriptorCount && !p.remaining.count(s.type));p.capacity[s.type]=s.descriptorCount;p.remaining[s.type]=shortPool?0:s.descriptorCount;}
  }
  return failPool?VK_ERROR_OUT_OF_HOST_MEMORY:VK_SUCCESS;
 }
@@ -66,6 +67,10 @@ static VkResult allocate(VkDevice,const VkDescriptorSetAllocateInfo *info,VkDesc
    REQUIRE(v && v->sType==VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO && v->descriptorSetCount==1 && v->pDescriptorCounts);
    count=v->pDescriptorCounts[0];REQUIRE(count<=b.descriptorCount);
   }
+  // Model the observed capacity requirement, without claiming knowledge of
+  // Adreno's internals. Allocation metadata must retain the requested count.
+  if(declaredAccounting && b.descriptorType==VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE &&
+     (layout.flags[i] & VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT)) count=b.descriptorCount;
   // Immutable samplers still consume sampler descriptors in the pool.
   if(remaining[b.descriptorType]<count || !pool.sets) {*out=VK_NULL_HANDLE;return VK_ERROR_OUT_OF_POOL_MEMORY;}
   remaining[b.descriptorType]-=count;
@@ -118,6 +123,12 @@ static std::unique_ptr<RenderDescriptorSet> makeSet(VulkanDevice &d,RenderDescri
  RenderDescriptorRange range(type,7,count,nullptr); RenderDescriptorSetDesc desc; desc.descriptorRanges=&range;desc.descriptorRangesCount=1;
  desc.lastRangeIsBoundless=actual!=0;desc.boundlessRangeSize=actual;return d.createDescriptorSet(desc);
 }
+static void qualify(VulkanDevice &d) {
+ d.physicalDeviceProperties.vendorID=0x5143;
+ std::strcpy(d.physicalDeviceProperties.deviceName,"Adreno (TM) 740");
+ d.driverProperties.sType=VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
+ d.driverProperties.driverID=VK_DRIVER_ID_QUALCOMM_PROPRIETARY;
+}
 int main(int argc,char **argv) {
  VulkanInterface interface; vkEnumeratePhysicalDevices=enumerate; VulkanDevice device(&interface,"");
  device.vk=handle<VkDevice>();
@@ -154,6 +165,12 @@ int main(int argc,char **argv) {
   if(reason=="stage-limit") {device.descriptorIndexingProperties.maxPerStageDescriptorUpdateAfterBindSampledImages=4096;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
   if(reason=="variable-limit") {variableLimit=4096;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
   if(reason=="variable-not-highest") {RenderDescriptorRange ranges[]={RenderDescriptorRange(RenderDescriptorRangeType::SAMPLER,9,1,nullptr),RenderDescriptorRange(RenderDescriptorRangeType::TEXTURE,0,8,nullptr)};device.createDescriptorSet(RenderDescriptorSetDesc(ranges,2,true,1));REQUIRE(false);}
+  if(reason=="declared-accounting-old-plan") {declaredAccounting=true;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
+  if(reason=="reserved-pool-limit") {qualify(device);device.descriptorIndexingProperties.maxUpdateAfterBindDescriptorsInAllPools=8191;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
+  if(reason=="reserved-overlap-limit") {qualify(device);device.descriptorIndexingProperties.maxUpdateAfterBindDescriptorsInAllPools=16383;auto old=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
+  if(reason=="reserved-allocation-failed") {qualify(device);failAllocate=true;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
+  if(reason=="reserved-retirement-underflow") {qualify(device);auto reserved=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);device.liveUpdateAfterBindSlots=0;reserved.reset();REQUIRE(false);}
+  if(reason=="reserved-variable-outside") {qualify(device);declaredAccounting=true;auto t=image(device);auto reserved=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);reserved->setTexture(1,t.get(),RenderTextureLayout::SHADER_READ);REQUIRE(false);}
   if(reason=="pool-capacity-control") {shortPool=true;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
   auto set=makeSet(device,RenderDescriptorRangeType::FORMATTED_BUFFER);
   Buffer buffer(device);auto view=buffer.createBufferFormattedView(RenderFormat::R8_UINT);
@@ -233,6 +250,56 @@ int main(int argc,char **argv) {
   RenderDescriptorSetBuilder mixed;mixed.begin();mixed.addImmutableSampler(0,sampler.get());mixed.addTexture(1,2);mixed.addTexture(2,8192);mixed.end(true,3);
   auto mixedSet=mixed.create(&device);auto &mixedPool=pools.at(static_cast<VulkanDescriptorSet *>(mixedSet.get())->descriptorPool);
   REQUIRE(mixedPool.remaining[VK_DESCRIPTOR_TYPE_SAMPLER]==0 && mixedPool.remaining[VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE]==0);
+  // Qualification is deliberately specific. Different vendors/GPUs/drivers
+  // and unavailable properties keep the exact requested capacity.
+  const auto originalDevice=device.physicalDeviceProperties;
+  const auto originalDriver=device.driverProperties;
+  for(unsigned test=0;test<6;++test) {
+   qualify(device);
+   if(test==0) device.physicalDeviceProperties.vendorID=0x1002;
+   if(test==1) std::strcpy(device.physicalDeviceProperties.deviceName,"Adreno (TM) 730");
+   if(test==2) device.driverProperties.driverID=VK_DRIVER_ID_MESA_TURNIP;
+   if(test==3) device.driverProperties.sType=VK_STRUCTURE_TYPE_MAX_ENUM;
+   if(test==4) std::strcpy(device.physicalDeviceProperties.deviceName,"Adreno (TM) 740 extra");
+   if(test==5) std::strcpy(device.physicalDeviceProperties.deviceName,"Adreno 740");
+   auto selected=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);
+   auto *v=static_cast<VulkanDescriptorSet *>(selected.get());
+   REQUIRE(v->allocatedCounts[0]==1 && pools.at(v->descriptorPool).capacity.at(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)==(test==5?8192u:1u));
+  }
+  qualify(device);declaredAccounting=true;
+  uint64_t previousSlots=device.liveUpdateAfterBindSlots;
+  {
+   auto a=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);
+   auto *v=static_cast<VulkanDescriptorSet *>(a.get());
+   REQUIRE(v->allocatedCounts[0]==1 && sets.at(v->vk).second==1 && v->reservedUpdateAfterBindSlots==8192);
+   REQUIRE(device.liveUpdateAfterBindSlots==previousSlots+8192);
+   auto t=image(device);a->setTexture(0,t.get(),RenderTextureLayout::SHADER_READ);
+   auto replacement=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,2);
+   REQUIRE(device.liveUpdateAfterBindSlots==previousSlots+16384);
+   RenderDescriptorSetBuilder withFixed;withFixed.begin();withFixed.addImmutableSampler(0,sampler.get());withFixed.addTexture(1,2);withFixed.addTexture(2,8192);withFixed.end(true,1);
+   auto combined=withFixed.create(&device);auto *c=static_cast<VulkanDescriptorSet *>(combined.get());
+   REQUIRE(c->allocatedCounts==std::vector<uint32_t>({1,2,1}));
+   REQUIRE(pools.at(c->descriptorPool).capacity.at(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)==8194 && pools.at(c->descriptorPool).capacity.at(VK_DESCRIPTOR_TYPE_SAMPLER)==1);
+   REQUIRE(c->reservedUpdateAfterBindSlots==8195);
+   auto fixed=makeSet(device,RenderDescriptorRangeType::TEXTURE,8);auto *f=static_cast<VulkanDescriptorSet *>(fixed.get());
+   REQUIRE(pools.at(f->descriptorPool).capacity.at(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)==8 && f->reservedUpdateAfterBindSlots==0);
+  }
+  REQUIRE(device.liveUpdateAfterBindSlots==previousSlots);
+  declaredAccounting=false;device.physicalDeviceProperties=originalDevice;device.driverProperties=originalDriver;
+  // Arithmetic controls use the actual planner without constructing enormous
+  // synthetic RHI index arrays or allocating any Vulkan object.
+  std::vector<VkDescriptorSetLayoutBinding> wide(2);for(auto &b:wide) b.descriptorType=VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  wide[0].descriptorCount=UINT32_MAX;wide[1].descriptorCount=1;
+  REQUIRE(std::strcmp(planAndroidDescriptorPool(wide,{0,0},{UINT32_MAX,1},false,false,0,0).error,"descriptor-pool-capacity-overflow")==0);
+  wide.resize(1);wide[0].descriptorCount=1;
+  REQUIRE(planAndroidDescriptorPool(wide,{0},{1},false,true,1,0).error==nullptr);
+  REQUIRE(std::strcmp(planAndroidDescriptorPool(wide,{0},{1},false,true,1,UINT64_MAX).error,"descriptor-pool-update-after-bind-limit")==0);
+  REQUIRE(planAndroidDescriptorPool(wide,{0},{0},false,false,0,0).error && planAndroidDescriptorPool(wide,{0},{2},false,false,0,0).error);
+  REQUIRE(planAndroidDescriptorPool(wide,{}, {1},false,false,0,0).error);
+  wide[0].descriptorType=VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;wide[0].descriptorCount=8;
+  const VkDescriptorBindingFlags variableFlags=VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT|VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT|VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+  const auto storagePlan=planAndroidDescriptorPool(wide,{variableFlags},{1},true,true,32,0);
+  REQUIRE(!storagePlan.error && !storagePlan.declarationReserved && storagePlan.capacities.at(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)==1);
   // The actual RSP layouts include the gameplay R32_FLOAT/R8_SINT/R16_UINT
   // typed inputs. A fill-only workload must not populate absent output buffers.
   RT64::RSPProcessor processor(&device);RT64::DrawData draw;RT64::DrawBuffers inputs;RT64::OutputBuffers outputs;
@@ -264,6 +331,6 @@ int main(int argc,char **argv) {
   auto destroy=std::async(std::launch::async,[&]{sampler.reset();});REQUIRE(destroy.wait_for(std::chrono::milliseconds(30))==std::future_status::timeout);
   release.set_value();writer.get();destroy.get();
  }
- REQUIRE(device.descriptorResources.objects.empty() && pools.empty() && layouts.empty());device.vk=VK_NULL_HANDLE;
- std::puts("PASS: production descriptor payloads, RT64 RSP layouts, allocated array counts, 64-bit offsets, empty vertex/modify work and atomic update/destruction");
+ REQUIRE(device.descriptorResources.objects.empty() && pools.empty() && layouts.empty() && device.liveUpdateAfterBindSlots==0);device.vk=VK_NULL_HANDLE;
+ std::puts("PASS: production descriptor payloads, RT64 RSP layouts, qualified declaration reservations, unchanged allocated array counts, checked limits/overlap, 64-bit offsets, empty vertex/modify work and atomic update/destruction");
 }

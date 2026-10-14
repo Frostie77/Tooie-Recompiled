@@ -1,5 +1,10 @@
 # Android descriptor allocation follow-up
 
+The subsequent Step 54 hardware comparison reproduces the allocation failure
+in the isolated probe and supports a bounded, qualified production reservation.
+See [Adreno 740 pool compatibility](android-vulkan-descriptor-pool-compatibility.md)
+for the newer evidence, policy and limits; this document retains the earlier history.
+
 The subsequent tested `2e0b753` handoff now attributes the original allocation
 rejection to PID 27983 and confirms advertised/enabled features and supported
 layout. The missing-extension scenario is not its demonstrated cause. See

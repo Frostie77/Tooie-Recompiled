@@ -13,6 +13,7 @@
 #if defined(__ANDROID__)
 #include "../../../../../src/android_presentation_lifecycle.h"
 #include "plume_vulkan_clear_shaders.h"
+#include "plume_vulkan_descriptor_pool.h"
 #include <unistd.h>
 #include <cstddef>
 #include "../../../../../src/android_descriptor_context.h"
@@ -2213,15 +2214,19 @@ namespace plume {
             // Ensure at least one entry is created for boundless ranges.
             boundlessRangeSize = std::max(desc.boundlessRangeSize, 1U);
 
+#if !defined(__ANDROID__)
             const RenderDescriptorRange &lastDescriptorRange = desc.descriptorRanges[desc.descriptorRangesCount - 1];
             typeCounts[toVk(lastDescriptorRange.type)] += boundlessRangeSize;
+#endif
             rangeCount--;
         }
 
+#if !defined(__ANDROID__)
         for (uint32_t i = 0; i < rangeCount; i++) {
             const RenderDescriptorRange &descriptorRange = desc.descriptorRanges[i];
             typeCounts[toVk(descriptorRange.type)] += descriptorRange.count;
         }
+#endif
 
         setLayout = new VulkanDescriptorSetLayout(device, desc);
 #if defined(__ANDROID__)
@@ -2229,17 +2234,26 @@ namespace plume {
         if (!setLayout->vk || setLayout->creationResult != VK_SUCCESS) rejectDescriptor(UINT32_MAX, initializationFailure, setLayout->creationResult);
         for (const auto &binding : setLayout->setBindings) allocatedCounts.push_back(binding.descriptorCount);
         if (desc.lastRangeIsBoundless) allocatedCounts.back() = boundlessRangeSize;
-        // Size the pool from the actual Vulkan layout and requested variable
-        // count, including immutable samplers. Never reserve an arbitrary slack
-        // multiplier or substitute the 8192-entry upper bound for a small set.
-        typeCounts.clear();
-        for (size_t i = 0; i < allocatedCounts.size(); ++i) typeCounts[setLayout->setBindings[i].descriptorType] += allocatedCounts[i];
-        char allocationRecord[512];
+        const char *qualification = androidDescriptorPoolQualification(device->physicalDeviceProperties, device->driverProperties);
+        const bool qualified = std::strcmp(qualification, "adreno-740-proprietary-declared-bound") == 0;
+        const auto poolPlan = planAndroidDescriptorPool(setLayout->setBindings, setLayout->bindingFlags, allocatedCounts,
+            qualified, desc.lastRangeIsBoundless, device->descriptorIndexingProperties.maxUpdateAfterBindDescriptorsInAllPools,
+            device->liveUpdateAfterBindSlots);
+        char allocationRecord[768];
+        std::snprintf(allocationRecord, sizeof(allocationRecord), "Descriptor pool policy: pid=%d tid=%d ctx=%s policy=%s qualification=%s vendor=0x%X device=0x%X driverID=%u driverVersion=0x%X reservedUAB=%llu liveUAB=%llu limitUAB=%u error=%s",
+            int(getpid()), int(gettid()), tooie::android::descriptorContext(), poolPlan.declarationReserved ? "declared-bound" : "actual-count",
+            qualification, device->physicalDeviceProperties.vendorID, device->physicalDeviceProperties.deviceID,
+            unsigned(device->driverProperties.driverID), device->physicalDeviceProperties.driverVersion,
+            (unsigned long long)poolPlan.updateAfterBindSlots, (unsigned long long)device->liveUpdateAfterBindSlots,
+            device->descriptorIndexingProperties.maxUpdateAfterBindDescriptorsInAllPools, poolPlan.error ? poolPlan.error : "none");
+        tooie_android_debug_log(allocationRecord);
+        if (poolPlan.error) { initializationFailure = poolPlan.error; rejectDescriptor(UINT32_MAX, initializationFailure); }
+        typeCounts = poolPlan.capacities;
         for (size_t i = 0; i < allocatedCounts.size(); ++i) {
             const auto &binding = setLayout->setBindings[i];
-            std::snprintf(allocationRecord, sizeof(allocationRecord), "Descriptor allocation binding: pid=%d tid=%d ctx=%s layout=%llx binding=%u type=%u declared=%u requested=%u immutable=%u flags=0x%X",
+            std::snprintf(allocationRecord, sizeof(allocationRecord), "Descriptor allocation binding: pid=%d tid=%d ctx=%s layout=%llx binding=%u type=%u declared=%u requested=%u immutable=%u flags=0x%X reservedType=%u",
                 int(getpid()), int(gettid()), tooie::android::descriptorContext(), (unsigned long long)setLayout->vk, binding.binding,
-                unsigned(binding.descriptorType), binding.descriptorCount, allocatedCounts[i], unsigned(binding.pImmutableSamplers != nullptr), setLayout->bindingFlags[i]);
+                unsigned(binding.descriptorType), binding.descriptorCount, allocatedCounts[i], unsigned(binding.pImmutableSamplers != nullptr), setLayout->bindingFlags[i], typeCounts.at(binding.descriptorType));
             tooie_android_debug_log(allocationRecord);
         }
 #endif
@@ -2253,6 +2267,10 @@ namespace plume {
             return;
         }
 
+#if defined(__ANDROID__)
+        reservedUpdateAfterBindSlots = poolPlan.updateAfterBindSlots;
+        device->liveUpdateAfterBindSlots += reservedUpdateAfterBindSlots;
+#endif
         VkDescriptorSetAllocateInfo allocateInfo = {};
         allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocateInfo.descriptorPool = descriptorPool;
@@ -2305,7 +2323,7 @@ namespace plume {
         thread_local unsigned loggedSets = 0;
         if (loggedSets++ < 8 || (typed && !loggedTyped)) {
             char record[384];
-            std::snprintf(record, sizeof(record), "Descriptor set allocated: pid=%d tid=%d set=%llx layout=%llx bindings=%u typed=%u sampled=%u storageImages=%u buffers=%u variable=%u allocatedLast=%u",
+            std::snprintf(record, sizeof(record), "Descriptor set allocated: pid=%d tid=%d set=%llx layout=%llx bindings=%u typed=%u sampledReserved=%u storageImages=%u buffers=%u variable=%u allocatedLast=%u",
                 int(getpid()), int(gettid()), (unsigned long long)vk, (unsigned long long)setLayout->vk, unsigned(allocatedCounts.size()), typed,
                 typeCounts[VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE], typeCounts[VK_DESCRIPTOR_TYPE_STORAGE_IMAGE],
                 typeCounts[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER] + typeCounts[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER], unsigned(desc.lastRangeIsBoundless),
@@ -2327,7 +2345,21 @@ namespace plume {
         device->descriptorResources.erase(this);
 #endif
         if (descriptorPool != VK_NULL_HANDLE) {
+#if defined(__ANDROID__)
+            if (device->liveUpdateAfterBindSlots < reservedUpdateAfterBindSlots)
+                rejectDescriptor(UINT32_MAX, "descriptor-pool-retirement-accounting");
+#endif
             vkDestroyDescriptorPool(device->vk, descriptorPool, nullptr);
+#if defined(__ANDROID__)
+            device->liveUpdateAfterBindSlots -= reservedUpdateAfterBindSlots;
+            if (reservedUpdateAfterBindSlots) {
+                char record[384];
+                std::snprintf(record, sizeof(record), "Descriptor pool retired: pid=%d tid=%d ctx=%s pool=%llx releasedUAB=%llu liveUAB=%llu",
+                    int(getpid()), int(gettid()), tooie::android::descriptorContext(), (unsigned long long)descriptorPool,
+                    (unsigned long long)reservedUpdateAfterBindSlots, (unsigned long long)device->liveUpdateAfterBindSlots);
+                tooie_android_debug_log(record);
+            }
+#endif
         }
 
         delete setLayout;
@@ -5510,6 +5542,21 @@ namespace plume {
         vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceFeatures);
 
 #if defined(__ANDROID__)
+        const bool driverPropertiesFound = (renderInterface->appInfo.apiVersion >= VK_API_VERSION_1_2 && physicalDeviceProperties.apiVersion >= VK_API_VERSION_1_2) ||
+            std::any_of(availableExtensions.begin(), availableExtensions.end(), [](const auto &e) { return std::strcmp(e.extensionName, VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME) == 0; });
+        if (driverPropertiesFound) {
+            driverProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
+            VkPhysicalDeviceProperties2 properties = {};
+            properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+            properties.pNext = &driverProperties;
+            vkGetPhysicalDeviceProperties2(physicalDevice, &properties);
+        }
+        char driverRecord[1024];
+        std::snprintf(driverRecord, sizeof(driverRecord), "Descriptor pool device: pid=%d tid=%d vendor=0x%X device=0x%X name=%s driverID=%u driverVersion=0x%X driverName=%s driverInfo=%s queried=%u qualification=%s",
+            int(getpid()), int(gettid()), physicalDeviceProperties.vendorID, physicalDeviceProperties.deviceID, physicalDeviceProperties.deviceName,
+            unsigned(driverProperties.driverID), physicalDeviceProperties.driverVersion, driverProperties.driverName, driverProperties.driverInfo,
+            unsigned(driverPropertiesFound), androidDescriptorPoolQualification(physicalDeviceProperties, driverProperties));
+        tooie_android_debug_log(driverRecord);
         if (descriptorIndexingFound) {
             descriptorIndexingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
             VkPhysicalDeviceProperties2 indexingProperties = {};

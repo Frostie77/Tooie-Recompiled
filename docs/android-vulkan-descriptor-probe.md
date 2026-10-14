@@ -1,5 +1,10 @@
 # Step 50: supported allocation failure and isolated probe
 
+The subsequent Step 54 hardware comparison reproduces the allocation failure
+in the isolated probe and supports a bounded, qualified production reservation.
+See [Adreno 740 pool compatibility](android-vulkan-descriptor-pool-compatibility.md)
+for the newer evidence, policy and limits; this document retains the earlier history.
+
 Base/parent: `2e0b7536083f5fc1e610506e05e683c8e268052b`, branch
 `fix/android-vulkan-transfer-proposal`. This revision supplies an **opt-in
 experiment**, not a verified allocation workaround. Normal pool capacities,

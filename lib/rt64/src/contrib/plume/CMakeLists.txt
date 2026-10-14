@@ -63,6 +63,7 @@ set(PLUME_SOURCES
     plume_vulkan.cpp
     plume_vulkan.h
     plume_vulkan_descriptor_probe.h
+    plume_vulkan_descriptor_pool.h
 )
 
 # Platform-specific files

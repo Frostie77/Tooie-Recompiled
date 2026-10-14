@@ -37,12 +37,22 @@ int main(int argc,char **argv) {
     HostVulkanValidation validation;
     const bool coreOnly=argc==2 && std::strcmp(argv[1],"core-only")==0;
     const bool capacityControl=argc==2 && std::strcmp(argv[1],"declared-pool")==0;
+    const bool qualifiedControl=argc==2 && std::strcmp(argv[1],"qualified")==0;
     originalEnumerate=vkEnumerateDeviceExtensionProperties;
     if(coreOnly) vkEnumerateDeviceExtensionProperties=coreExtensions;
     {
         VulkanDevice device(&validation.interface,"llvmpipe"); REQUIRE(device.vk);
         static_assert(RT64::FramebufferRendererDescriptorTextureSet::UpperRange==8192);
         REQUIRE(runVulkanDescriptorAllocationProbe(device.vk,device.descriptorIndexingFeatures));
+        // Exercise the production Android reservation policy on a real CPU
+        // Vulkan driver. Only selection metadata is synthetic, never device
+        // handles/features/limits/API calls; this is not Adreno verification.
+        if(qualifiedControl) {
+            device.physicalDeviceProperties.vendorID=0x5143;
+            std::strcpy(device.physicalDeviceProperties.deviceName,"Adreno (TM) 740");
+            device.driverProperties.sType=VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
+            device.driverProperties.driverID=VK_DRIVER_ID_QUALCOMM_PROPRIETARY;
+        }
         originalCreatePool=vkCreateDescriptorPool;
         if(capacityControl) vkCreateDescriptorPool=declaredCapacityPool;
         REQUIRE(device.descriptorIndexingFeatures.descriptorBindingVariableDescriptorCount &&
@@ -68,7 +78,11 @@ int main(int argc,char **argv) {
             auto next=std::make_unique<RT64::FramebufferRendererDescriptorTextureSet>(&device,requested);
             auto &textures=*next;
             const uint32_t allocated=std::max(requested,1u),selected=allocated-1;
-            REQUIRE(static_cast<VulkanDescriptorSet *>(textures.get())->allocatedCounts[0]==allocated);
+            auto *vkTextures=static_cast<VulkanDescriptorSet *>(textures.get());
+            REQUIRE(vkTextures->allocatedCounts[0]==allocated);
+            REQUIRE(vkTextures->reservedUpdateAfterBindSlots==(qualifiedControl?textureLayout.UpperRange:allocated));
+            const uint64_t oldSlots=previous?static_cast<VulkanDescriptorSet *>(previous->get())->reservedUpdateAfterBindSlots:0;
+            REQUIRE(device.liveUpdateAfterBindSlots==oldSlots+vkTextures->reservedUpdateAfterBindSlots);
             auto src=device.createTexture(RenderTextureDesc::ColorTarget(1,1,RenderFormat::R8G8B8A8_UNORM));
             auto dst=device.createTexture(RenderTextureDesc::Texture2D(1,1,1,RenderFormat::R8G8B8A8_UNORM,RenderTextureFlag::STORAGE));
             const RenderTexture *color=src.get(); auto framebuffer=device.createFramebuffer(RenderFramebufferDesc(&color,1));
@@ -84,11 +98,13 @@ int main(int argc,char **argv) {
             list->setComputePushConstants(0,&selected); list->dispatch(1,1,1);
             auto pixels=readImage(device,list.get(),queue.get(),fence.get(),dst.get(),1,1,4);
             expectPixels(pixels,{expected},RenderFormat::R8G8B8A8_UNORM);
-            std::printf("PASS: %s production framebuffer common/8192-image layouts requested=%u allocated=%u last-element RGB/alpha readback\n",coreOnly?"core-only":capacityControl?"declared-pool":"extension",requested,allocated);
+            std::printf("PASS: %s production framebuffer common/8192-image layouts requested=%u allocated=%u last-element RGB/alpha readback\n",coreOnly?"core-only":qualifiedControl?"qualified-policy-on-Lavapipe":capacityControl?"declared-pool":"extension",requested,allocated);
             // Allocate the new set while the preceding set is still alive, as
             // unique_ptr replacement in RT64 does. Prior GPU work is fenced.
             previous=std::move(next);
         }
+        previous.reset();
+        REQUIRE(device.liveUpdateAfterBindSlots==0);
         vkCreateDescriptorPool=originalCreatePool;
     }
     vkEnumerateDeviceExtensionProperties=originalEnumerate;

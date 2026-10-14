@@ -34,6 +34,12 @@ PY
 APP_FOLDER_PATH="$t" MESA_SHADER_CACHE_DIR="$t/cache" "$t/pool-validation"
 APP_FOLDER_PATH="$t" MESA_SHADER_CACHE_DIR="$t/cache" "$t/pool-validation" declared-pool
 rm -f "$t/banjotooi-debug.log"
+APP_FOLDER_PATH="$t" MESA_SHADER_CACHE_DIR="$t/cache" "$t/pool-validation" qualified
+grep -q 'Descriptor pool policy: .*policy=declared-bound qualification=adreno-740-proprietary-declared-bound .*reservedUAB=8192' "$t/banjotooi-debug.log"
+grep -q 'Descriptor allocation binding: .*type=2 declared=8192 requested=1 .*reservedType=8192' "$t/banjotooi-debug.log"
+grep -q 'Descriptor pool policy: .*reservedUAB=8192 liveUAB=8192' "$t/banjotooi-debug.log"
+if grep -q 'intentional diagnostic stop' "$t/banjotooi-debug.log"; then echo 'FAIL: normal path entered probe';exit 1;fi
+rm -f "$t/banjotooi-debug.log"
 APP_FOLDER_PATH="$t" MESA_SHADER_CACHE_DIR="$t/cache" "$t/pool-validation" core-only
 grep -Eq 'Descriptor indexing discovery: pid=[0-9]+ tid=[0-9]+ .*extension=0 queried=1 enabled=1' "$t/banjotooi-debug.log"
 grep -q 'Descriptor allocation binding: .*type=2 declared=8192 requested=1 immutable=0 flags=0xD' "$t/banjotooi-debug.log"

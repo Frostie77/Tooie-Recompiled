@@ -240,6 +240,7 @@ namespace plume {
 
 #if defined(__ANDROID__)
         std::vector<uint32_t> allocatedCounts;
+        uint64_t reservedUpdateAfterBindSlots = 0;
         uint32_t diagnosticWrites = 0;
         const char *initializationFailure = "not-initialized";
         struct WriteRecord {
@@ -498,6 +499,8 @@ namespace plume {
         VkPhysicalDeviceSampleLocationsPropertiesEXT sampleLocationProperties = {};
 #if defined(__ANDROID__)
         VulkanDescriptorResources descriptorResources;
+        VkPhysicalDeviceDriverProperties driverProperties = {};
+        uint64_t liveUpdateAfterBindSlots = 0; // Guarded by descriptorResources.mutex.
         VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures = {};
         VkPhysicalDeviceDescriptorIndexingProperties descriptorIndexingProperties = {};
 #endif

@@ -27,6 +27,16 @@ while IFS='|' read -r mode reason; do
   grep -q 'Descriptor pool capacity: .*type=2 capacity=1 flags=0x2 maxSets=1' "$test_dir/banjotooi-debug.log"
   grep -q 'Descriptor allocation begin: .*variable=1 variableCount=1 countStructType=1000161003 countStructSets=1' "$test_dir/banjotooi-debug.log"
   grep -q 'Descriptor rejected: reason=descriptor-set-allocation-failed result=-1000069000' "$test_dir/failure.log"
+ elif [ "$mode" = "declared-accounting-old-plan" ]; then
+  grep -q 'policy=actual-count .*reservedUAB=1' "$test_dir/banjotooi-debug.log"
+  grep -q 'Descriptor rejected: reason=descriptor-set-allocation-failed result=-1000069000' "$test_dir/failure.log"
+ elif [ "$mode" = "reserved-variable-outside" ]; then
+  grep -q 'policy=declared-bound .*reservedUAB=8192' "$test_dir/banjotooi-debug.log"
+  grep -q 'declared=8192 requested=1 .*reservedType=8192' "$test_dir/banjotooi-debug.log"
+  grep -q 'Descriptor pool capacity: .*type=2 capacity=8192' "$test_dir/banjotooi-debug.log"
+  grep -q 'Descriptor allocation begin: .*variable=1 variableCount=1' "$test_dir/banjotooi-debug.log"
+ elif [ "$mode" = "reserved-allocation-failed" ]; then
+  grep -q 'Descriptor rejected: reason=descriptor-set-allocation-failed result=-1000069000 .* set=0 ' "$test_dir/failure.log"
  elif [ "$mode" = "allocation-failed" ]; then
   grep -q 'Descriptor rejected: reason=descriptor-set-allocation-failed .* set=0 ' "$test_dir/failure.log"
  fi
@@ -48,6 +58,12 @@ stage-limit|sampled-image-update-after-bind-limit
 variable-limit|variable-descriptor-layout-limit
 variable-not-highest|variable-binding-not-highest
 pool-capacity-control|descriptor-set-allocation-failed
+declared-accounting-old-plan|descriptor-set-allocation-failed
+reserved-pool-limit|descriptor-pool-update-after-bind-limit
+reserved-overlap-limit|descriptor-pool-update-after-bind-limit
+reserved-allocation-failed|descriptor-set-allocation-failed
+reserved-variable-outside|descriptor-array-element-not-allocated
+reserved-retirement-underflow|descriptor-pool-retirement-accounting
 unsupported-view-format|null-buffer-view
 texel-element-limit|null-buffer-view
 missing-texel-view|buffer-payload-type-mismatch
@@ -85,4 +101,4 @@ APP_FOLDER_PATH="$test_dir" "$test_dir/record" probe-exhaustion-control >"$test_
 test "$(grep -c 'phase=allocate-return .*result=-1000069000' "$test_dir/probe.log")" -eq 5
 test "$(grep -c 'phase=retired' "$test_dir/probe.log")" -eq 5
 grep -q 'PASS: probe preserves exhausted-pool failure' "$test_dir/probe.log"
-printf '%s\n' 'PASS: 49 invalid descriptor cases stop before unsafe Vulkan calls, with exact reasons'
+printf '%s\n' 'PASS: 55 invalid descriptor cases stop before unsafe Vulkan calls, with exact reasons'
