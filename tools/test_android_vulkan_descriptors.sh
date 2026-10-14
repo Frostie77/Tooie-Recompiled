@@ -13,19 +13,41 @@ p="$repo_root/lib/rt64/src/contrib/plume"
  -Wl,--gc-sections -ldl -o "$test_dir/record"
 APP_FOLDER_PATH="$test_dir" "$test_dir/record"
 while IFS='|' read -r mode reason; do
+ rm -f "$test_dir/banjotooi-debug.log"
  if APP_FOLDER_PATH="$test_dir" "$test_dir/record" "$mode" >"$test_dir/failure.log" 2>&1; then
   echo "FAIL: accepted $mode" >&2;exit 1
  else
   test "$?" -eq 1 || { cat "$test_dir/failure.log";exit 1; }
  fi
- grep -q "Descriptor rejected: reason=$reason" "$test_dir/failure.log" || { cat "$test_dir/failure.log";exit 1; }
+ grep -Eq "Descriptor (layout )?rejected: reason=$reason" "$test_dir/failure.log" || { cat "$test_dir/failure.log";exit 1; }
+ if [ "$mode" = "pool-failed" ]; then
+  grep -q 'Descriptor rejected: reason=descriptor-pool-creation-failed result=-1' "$test_dir/failure.log"
+ elif [ "$mode" = "pool-capacity-control" ]; then
+  grep -Eq 'Descriptor allocation binding: pid=[0-9]+ tid=[0-9]+ .*type=2 declared=8192 requested=1' "$test_dir/banjotooi-debug.log"
+  grep -q 'Descriptor pool capacity: .*type=2 capacity=1 flags=0x2 maxSets=1' "$test_dir/banjotooi-debug.log"
+  grep -q 'Descriptor allocation begin: .*variable=1 variableCount=1 countStructType=1000161003 countStructSets=1' "$test_dir/banjotooi-debug.log"
+  grep -q 'Descriptor rejected: reason=descriptor-set-allocation-failed result=-1000069000' "$test_dir/failure.log"
+ elif [ "$mode" = "allocation-failed" ]; then
+  grep -q 'Descriptor rejected: reason=descriptor-set-allocation-failed .* set=0 ' "$test_dir/failure.log"
+ fi
 done <<'CASES'
 invalid-range|invalid-descriptor-range-type-or-count
 layout-failed|descriptor-layout-creation-failed
 pool-failed|descriptor-pool-creation-failed
 allocation-failed|descriptor-set-allocation-failed
-allocation-null|descriptor-set-allocation-failed
+allocation-null|descriptor-set-allocation-null-handle
 variable-too-large|invalid-descriptor-range-or-variable-count
+layout-empty-variable|invalid-layout-ranges
+layout-null-ranges|invalid-layout-ranges
+layout-invalid-type|invalid-layout-type-or-count
+layout-duplicate-binding|duplicate-layout-binding
+layout-unsupported|descriptor-layout-unsupported
+indexing-disabled|descriptor-indexing-features-not-enabled
+uab-disabled|update-after-bind-feature-not-enabled
+stage-limit|sampled-image-update-after-bind-limit
+variable-limit|variable-descriptor-layout-limit
+variable-not-highest|variable-binding-not-highest
+pool-capacity-control|descriptor-set-allocation-failed
 unsupported-view-format|null-buffer-view
 texel-element-limit|null-buffer-view
 missing-texel-view|buffer-payload-type-mismatch
@@ -59,4 +81,4 @@ stale-sampler|sampler-not-live-or-wrong-device
 sampler-as-image|image-payload-type-mismatch
 wrong-device|sampler-not-live-or-wrong-device
 CASES
-printf '%s\n' 'PASS: 38 invalid descriptor cases stop before vkUpdateDescriptorSets, with exact reasons'
+printf '%s\n' 'PASS: 49 invalid descriptor cases stop before unsafe Vulkan calls, with exact reasons'

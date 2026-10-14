@@ -147,6 +147,9 @@ namespace plume {
         std::vector<VkSampler> immutableSamplerHandles;
         std::vector<std::pair<const void *, uint64_t>> immutableSamplerResources;
         VkResult creationResult = VK_NOT_READY;
+        std::vector<VkDescriptorBindingFlags> bindingFlags;
+        VkDescriptorSetLayoutCreateFlags creationFlags = 0;
+        uint32_t maxVariableDescriptorCount = 0;
 #endif
         VulkanDescriptorSetLayout(VulkanDevice *device, const RenderDescriptorSetDesc &descriptorSetDesc);
         ~VulkanDescriptorSetLayout();
@@ -254,7 +257,7 @@ namespace plume {
         void setSampler(uint32_t descriptorIndex, const RenderSampler *sampler) override;
         void setAccelerationStructure(uint32_t descriptorIndex, const RenderAccelerationStructure *accelerationStructure) override;
         void setDescriptor(uint32_t descriptorIndex, const VkDescriptorBufferInfo *bufferInfo, const VkDescriptorImageInfo *imageInfo, const VkBufferView *texelBufferView, void *pNext);
-        static VkDescriptorPool createDescriptorPool(VulkanDevice *device, const std::unordered_map<VkDescriptorType, uint32_t> &typeCounts, bool lastRangeIsBoundless);
+        static VkDescriptorPool createDescriptorPool(VulkanDevice *device, const std::unordered_map<VkDescriptorType, uint32_t> &typeCounts, bool lastRangeIsBoundless, VkResult *creationResult = nullptr);
     };
 
     struct VulkanSwapChain : RenderSwapChain {
@@ -495,6 +498,8 @@ namespace plume {
         VkPhysicalDeviceSampleLocationsPropertiesEXT sampleLocationProperties = {};
 #if defined(__ANDROID__)
         VulkanDescriptorResources descriptorResources;
+        VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures = {};
+        VkPhysicalDeviceDescriptorIndexingProperties descriptorIndexingProperties = {};
 #endif
         std::unique_ptr<RenderBuffer> nullBuffer;
         bool loadStoreOpNoneSupported = false;

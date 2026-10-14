@@ -17,9 +17,17 @@ extern "C" int32_t ANativeWindow_getHeight(ANativeWindow *) { return 1; }
 template<class T> T handle() { static uintptr_t n=1; return reinterpret_cast<T>(n++); }
 static unsigned updates=0;
 static bool prohibitUpdate=false, failLayout=false, failPool=false, failAllocate=false, nullAllocate=false, failView=false, failImageView=false;
-struct Layout { std::vector<VkDescriptorSetLayoutBinding> bindings; };
+struct Layout { std::vector<VkDescriptorSetLayoutBinding> bindings; std::vector<VkDescriptorBindingFlags> flags; VkDescriptorSetLayoutCreateFlags creationFlags = 0; };
+struct Pool { std::unordered_map<VkDescriptorType,uint32_t> remaining; uint32_t sets; VkDescriptorPoolCreateFlags flags; };
 static std::unordered_map<VkDescriptorSetLayout,Layout> layouts;
+static std::unordered_map<VkDescriptorPool,Pool> pools;
 static std::unordered_map<VkDescriptorSet,std::pair<VkDescriptorSetLayout,uint32_t>> sets;
+static bool layoutSupported=true, shortPool=false;
+static uint32_t variableLimit=8192;
+static void layoutSupport(VkDevice,const VkDescriptorSetLayoutCreateInfo *,VkDescriptorSetLayoutSupport *out) {
+ out->supported=layoutSupported;
+ if(out->pNext) static_cast<VkDescriptorSetVariableDescriptorCountLayoutSupport *>(out->pNext)->maxVariableDescriptorCount=variableLimit;
+}
 static bool storageTexelSupported=true;
 static void formatProperties(VkPhysicalDevice,VkFormat,VkFormatProperties *out) { *out={};out->bufferFeatures=VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT | (storageTexelSupported?VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT:0); }
 static VkWriteDescriptorSet lastWrite={};
@@ -29,19 +37,43 @@ static std::shared_future<void> updateRelease;
 static VkResult enumerate(VkInstance,uint32_t *n,VkPhysicalDevice *) { *n=0; return VK_SUCCESS; }
 static VkResult createLayout(VkDevice,const VkDescriptorSetLayoutCreateInfo *info,const VkAllocationCallbacks *,VkDescriptorSetLayout *out) {
  *out=failLayout? VK_NULL_HANDLE:handle<VkDescriptorSetLayout>();
- if(!failLayout) layouts[*out].bindings.assign(info->pBindings,info->pBindings+info->bindingCount);
+ if(!failLayout) {
+  auto &l=layouts[*out];l.bindings.assign(info->pBindings,info->pBindings+info->bindingCount);l.creationFlags=info->flags;l.flags.resize(info->bindingCount,0);
+  if(info->pNext) {const auto *flags=static_cast<const VkDescriptorSetLayoutBindingFlagsCreateInfo *>(info->pNext);REQUIRE(flags->sType==VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO && flags->bindingCount==info->bindingCount);l.flags.assign(flags->pBindingFlags,flags->pBindingFlags+flags->bindingCount);}
+ }
  return failLayout?VK_ERROR_OUT_OF_HOST_MEMORY:VK_SUCCESS;
 }
 static void destroyLayout(VkDevice,VkDescriptorSetLayout v,const VkAllocationCallbacks *) { layouts.erase(v); }
-static VkResult createPool(VkDevice,const VkDescriptorPoolCreateInfo *,const VkAllocationCallbacks *,VkDescriptorPool *out) {
- *out=failPool?VK_NULL_HANDLE:handle<VkDescriptorPool>(); return failPool?VK_ERROR_OUT_OF_HOST_MEMORY:VK_SUCCESS;
+static VkResult createPool(VkDevice,const VkDescriptorPoolCreateInfo *info,const VkAllocationCallbacks *,VkDescriptorPool *out) {
+ *out=failPool?VK_NULL_HANDLE:handle<VkDescriptorPool>();
+ REQUIRE(info->maxSets==1);
+ if(*out) {auto &p=pools[*out];p.sets=info->maxSets;p.flags=info->flags;
+  for(uint32_t i=0;i<info->poolSizeCount;++i) {auto s=info->pPoolSizes[i];REQUIRE(s.descriptorCount && !p.remaining.count(s.type));p.remaining[s.type]=shortPool?0:s.descriptorCount;}
+ }
+ return failPool?VK_ERROR_OUT_OF_HOST_MEMORY:VK_SUCCESS;
 }
-static void destroyPool(VkDevice,VkDescriptorPool,const VkAllocationCallbacks *) {}
+static void destroyPool(VkDevice,VkDescriptorPool p,const VkAllocationCallbacks *) {pools.erase(p);}
 static VkResult allocate(VkDevice,const VkDescriptorSetAllocateInfo *info,VkDescriptorSet *out) {
- *out=failAllocate||nullAllocate?VK_NULL_HANDLE:handle<VkDescriptorSet>();
+ REQUIRE(info->descriptorSetCount==1);
+ auto &pool=pools.at(info->descriptorPool);auto &layout=layouts.at(*info->pSetLayouts);
+ auto remaining=pool.remaining;
+ if(layout.creationFlags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT) REQUIRE(pool.flags & VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT);
+ for(size_t i=0;i<layout.bindings.size();++i) {
+  auto &b=layout.bindings[i];uint32_t count=b.descriptorCount;
+  if(layout.flags[i] & VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT) {
+   const auto *v=static_cast<const VkDescriptorSetVariableDescriptorCountAllocateInfo *>(info->pNext);
+   REQUIRE(v && v->sType==VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO && v->descriptorSetCount==1 && v->pDescriptorCounts);
+   count=v->pDescriptorCounts[0];REQUIRE(count<=b.descriptorCount);
+  }
+  // Immutable samplers still consume sampler descriptors in the pool.
+  if(remaining[b.descriptorType]<count || !pool.sets) {*out=VK_NULL_HANDLE;return VK_ERROR_OUT_OF_POOL_MEMORY;}
+  remaining[b.descriptorType]-=count;
+ }
+ if(failAllocate) {*out=handle<VkDescriptorSet>();return VK_ERROR_OUT_OF_POOL_MEMORY;} // Failed output is not usable.
+ *out=nullAllocate?VK_NULL_HANDLE:handle<VkDescriptorSet>();
  if(*out) { auto count=info->pNext?static_cast<const VkDescriptorSetVariableDescriptorCountAllocateInfo *>(info->pNext)->pDescriptorCounts[0]:UINT32_MAX;
- sets[*out]={*info->pSetLayouts,count}; }
- return failAllocate?VK_ERROR_OUT_OF_POOL_MEMORY:VK_SUCCESS;
+ sets[*out]={*info->pSetLayouts,count};pool.remaining=std::move(remaining);--pool.sets; }
+ return VK_SUCCESS;
 }
 static void update(VkDevice,uint32_t n,const VkWriteDescriptorSet *w,uint32_t copies,const VkCopyDescriptorSet *) {
  REQUIRE(!prohibitUpdate && n==1 && copies==0 && w->dstSet && w->descriptorCount==1);
@@ -88,6 +120,14 @@ static std::unique_ptr<RenderDescriptorSet> makeSet(VulkanDevice &d,RenderDescri
 int main(int argc,char **argv) {
  VulkanInterface interface; vkEnumeratePhysicalDevices=enumerate; VulkanDevice device(&interface,"");
  device.vk=handle<VkDevice>();
+ device.descriptorIndexingFeatures.descriptorBindingVariableDescriptorCount=VK_TRUE;
+ device.descriptorIndexingFeatures.descriptorBindingPartiallyBound=VK_TRUE;
+ device.descriptorIndexingFeatures.runtimeDescriptorArray=VK_TRUE;
+ device.descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind=VK_TRUE;
+ device.descriptorIndexingProperties.maxDescriptorSetUpdateAfterBindSampledImages=65536;
+ device.descriptorIndexingProperties.maxPerStageDescriptorUpdateAfterBindSampledImages=65536;
+ device.descriptorIndexingProperties.maxUpdateAfterBindDescriptorsInAllPools=65536;
+ vkGetDescriptorSetLayoutSupport=layoutSupport;
  vkGetPhysicalDeviceFormatProperties=formatProperties;
  vkCreateDescriptorSetLayout=createLayout;vkDestroyDescriptorSetLayout=destroyLayout;vkCreateDescriptorPool=createPool;vkDestroyDescriptorPool=destroyPool;
  vkAllocateDescriptorSets=allocate;vkUpdateDescriptorSets=update;vkCreateBufferView=createBufferView;vkDestroyBufferView=destroyBufferView;
@@ -97,6 +137,17 @@ int main(int argc,char **argv) {
   failLayout=reason=="layout-failed";failPool=reason=="pool-failed";failAllocate=reason=="allocation-failed";nullAllocate=reason=="allocation-null";
   if(reason=="invalid-range") {makeSet(device,RenderDescriptorRangeType::UNKNOWN);REQUIRE(false);}
   if(reason=="variable-too-large") {makeSet(device,RenderDescriptorRangeType::TEXTURE,2,3);REQUIRE(false);}
+  if(reason=="layout-empty-variable") {RenderDescriptorSetDesc empty;empty.lastRangeIsBoundless=true;VulkanDescriptorSetLayout invalid(&device,empty);REQUIRE(false);}
+  if(reason=="layout-null-ranges") {RenderDescriptorSetDesc invalid;invalid.descriptorRangesCount=1;VulkanDescriptorSetLayout bad(&device,invalid);REQUIRE(false);}
+  if(reason=="layout-invalid-type") {RenderDescriptorRange bad(RenderDescriptorRangeType::UNKNOWN,0,1,nullptr);VulkanDescriptorSetLayout invalid(&device,RenderDescriptorSetDesc(&bad,1));REQUIRE(false);}
+  if(reason=="layout-duplicate-binding") {RenderDescriptorRange ranges[]={RenderDescriptorRange(RenderDescriptorRangeType::SAMPLER,0,1,nullptr),RenderDescriptorRange(RenderDescriptorRangeType::TEXTURE,0,1,nullptr)};VulkanDescriptorSetLayout invalid(&device,RenderDescriptorSetDesc(ranges,2));REQUIRE(false);}
+  if(reason=="layout-unsupported") {layoutSupported=false;makeSet(device,RenderDescriptorRangeType::TEXTURE);REQUIRE(false);}
+  if(reason=="indexing-disabled") {device.descriptorIndexingFeatures.descriptorBindingVariableDescriptorCount=VK_FALSE;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
+  if(reason=="uab-disabled") {device.descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind=VK_FALSE;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
+  if(reason=="stage-limit") {device.descriptorIndexingProperties.maxPerStageDescriptorUpdateAfterBindSampledImages=4096;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
+  if(reason=="variable-limit") {variableLimit=4096;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
+  if(reason=="variable-not-highest") {RenderDescriptorRange ranges[]={RenderDescriptorRange(RenderDescriptorRangeType::SAMPLER,9,1,nullptr),RenderDescriptorRange(RenderDescriptorRangeType::TEXTURE,0,8,nullptr)};device.createDescriptorSet(RenderDescriptorSetDesc(ranges,2,true,1));REQUIRE(false);}
+  if(reason=="pool-capacity-control") {shortPool=true;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
   auto set=makeSet(device,RenderDescriptorRangeType::FORMATTED_BUFFER);
   Buffer buffer(device);auto view=buffer.createBufferFormattedView(RenderFormat::R8_UINT);
   if(reason=="unsupported-view-format") {storageTexelSupported=false;view=buffer.createBufferFormattedView(RenderFormat::R8_SINT);set->setBuffer(0,&buffer,0,nullptr,view.get());}
@@ -163,6 +214,16 @@ int main(int argc,char **argv) {
   auto texture=image(device);auto tSet=makeSet(device,RenderDescriptorRangeType::TEXTURE,8,2);tSet->setTexture(1,texture.get(),RenderTextureLayout::SHADER_READ);
   auto explicitView=texture->createTextureView(RenderTextureViewDesc::Texture2D(texture->desc.format));tSet->setTexture(0,texture.get(),RenderTextureLayout::SHADER_READ,explicitView.get());
   auto sampler=device.createSampler(RenderSamplerDesc());auto samplerSet=makeSet(device,RenderDescriptorRangeType::SAMPLER);samplerSet->setSampler(0,sampler.get());
+  // Exercise the actual framebuffer texture layout with small variable counts,
+  // and mixed fixed/variable ranges sharing a type. No unused capacity remains.
+  for(uint32_t n:{1u,2u,32u,8192u}) {
+   RT64::FramebufferRendererDescriptorTextureSet fb(&device,n);
+   auto *vkSet=static_cast<VulkanDescriptorSet *>(fb.get());auto &pool=pools.at(vkSet->descriptorPool);
+   REQUIRE(pool.remaining[VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE]==0 && pool.sets==0 && vkSet->allocatedCounts[0]==n);
+  }
+  RenderDescriptorSetBuilder mixed;mixed.begin();mixed.addImmutableSampler(0,sampler.get());mixed.addTexture(1,2);mixed.addTexture(2,8192);mixed.end(true,3);
+  auto mixedSet=mixed.create(&device);auto &mixedPool=pools.at(static_cast<VulkanDescriptorSet *>(mixedSet.get())->descriptorPool);
+  REQUIRE(mixedPool.remaining[VK_DESCRIPTOR_TYPE_SAMPLER]==0 && mixedPool.remaining[VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE]==0);
   // The actual RSP layouts include the gameplay R32_FLOAT/R8_SINT/R16_UINT
   // typed inputs. A fill-only workload must not populate absent output buffers.
   RT64::RSPProcessor processor(&device);RT64::DrawData draw;RT64::DrawBuffers inputs;RT64::OutputBuffers outputs;
@@ -194,6 +255,6 @@ int main(int argc,char **argv) {
   auto destroy=std::async(std::launch::async,[&]{sampler.reset();});REQUIRE(destroy.wait_for(std::chrono::milliseconds(30))==std::future_status::timeout);
   release.set_value();writer.get();destroy.get();
  }
- REQUIRE(device.descriptorResources.objects.empty());device.vk=VK_NULL_HANDLE;
+ REQUIRE(device.descriptorResources.objects.empty() && pools.empty() && layouts.empty());device.vk=VK_NULL_HANDLE;
  std::puts("PASS: production descriptor payloads, RT64 RSP layouts, allocated array counts, 64-bit offsets, empty vertex/modify work and atomic update/destruction");
 }

@@ -1299,8 +1299,8 @@ namespace plume {
 #if defined(__ANDROID__)
     [[noreturn]] static void rejectDescriptorLayout(const char *reason, uint32_t binding, uint32_t element) {
         char record[256];
-        std::snprintf(record, sizeof(record), "Descriptor layout rejected: reason=%s ctx=%s tid=%d binding=%u element=%u",
-            reason, tooie::android::descriptorContext(), int(gettid()), binding, element);
+        std::snprintf(record, sizeof(record), "Descriptor layout rejected: reason=%s ctx=%s pid=%d tid=%d binding=%u element=%u",
+            reason, tooie::android::descriptorContext(), int(getpid()), int(gettid()), binding, element);
         tooie_android_debug_log(record);
         std::fprintf(stderr, "%s\n", record);
         std::_Exit(EXIT_FAILURE);
@@ -1314,6 +1314,17 @@ namespace plume {
         // Gather immutable sampler handles.
 #if defined(__ANDROID__)
         const std::lock_guard lock(device->descriptorResources.mutex);
+        if ((descriptorSetDesc.descriptorRangesCount && !descriptorSetDesc.descriptorRanges) ||
+            (descriptorSetDesc.lastRangeIsBoundless && !descriptorSetDesc.descriptorRangesCount))
+            rejectDescriptorLayout("invalid-layout-ranges", UINT32_MAX, 0);
+        std::unordered_set<uint32_t> bindingNumbers;
+        for (uint32_t i = 0; i < descriptorSetDesc.descriptorRangesCount; ++i) {
+            const auto &range = descriptorSetDesc.descriptorRanges[i];
+            if (!range.count || toVk(range.type) == VK_DESCRIPTOR_TYPE_MAX_ENUM)
+                rejectDescriptorLayout("invalid-layout-type-or-count", range.binding, 0);
+            if (!bindingNumbers.insert(range.binding).second)
+                rejectDescriptorLayout("duplicate-layout-binding", range.binding, 0);
+        }
         auto &samplerHandles = immutableSamplerHandles;
 #else
         thread_local std::vector<VkSampler> samplerHandles;
@@ -1368,7 +1379,12 @@ namespace plume {
         setLayoutInfo.pBindings = !setBindings.empty() ? setBindings.data() : nullptr;
         setLayoutInfo.bindingCount = uint32_t(setBindings.size());
         
+#if defined(__ANDROID__)
+        auto &bindingFlags = this->bindingFlags;
+        bindingFlags.resize(setBindings.size(), 0);
+#else
         thread_local std::vector<VkDescriptorBindingFlags> bindingFlags;
+#endif
         VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo = {};
         if (descriptorSetDesc.lastRangeIsBoundless && (descriptorSetDesc.descriptorRangesCount > 0)) {
             bindingFlags.clear();
@@ -1382,6 +1398,58 @@ namespace plume {
             setLayoutInfo.pNext = &flagsInfo;
             setLayoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
         }
+
+#if defined(__ANDROID__)
+        creationFlags = setLayoutInfo.flags;
+        char record[512];
+        for (uint32_t i = 0; i < setBindings.size(); ++i) {
+            const auto &binding = setBindings[i];
+            std::snprintf(record, sizeof(record), "Descriptor layout binding: pid=%d tid=%d ctx=%s binding=%u type=%u declared=%u stages=0x%X immutable=%u flags=0x%X layoutFlags=0x%X",
+                int(getpid()), int(gettid()), tooie::android::descriptorContext(), binding.binding, unsigned(binding.descriptorType), binding.descriptorCount,
+                binding.stageFlags, unsigned(binding.pImmutableSamplers != nullptr), bindingFlags[i], creationFlags);
+            tooie_android_debug_log(record);
+        }
+        if (descriptorSetDesc.lastRangeIsBoundless) {
+            const auto &features = device->descriptorIndexingFeatures;
+            const auto &limits = device->descriptorIndexingProperties;
+            const auto &last = setBindings.back();
+            std::snprintf(record, sizeof(record), "Descriptor indexing configuration: pid=%d tid=%d ctx=%s enabledVariable=%u enabledPartial=%u enabledRuntime=%u enabledSampledUAB=%u maxSetSampledUAB=%u maxStageSampledUAB=%u maxAllPoolsUAB=%u",
+                int(getpid()), int(gettid()), tooie::android::descriptorContext(), features.descriptorBindingVariableDescriptorCount,
+                features.descriptorBindingPartiallyBound, features.runtimeDescriptorArray, features.descriptorBindingSampledImageUpdateAfterBind,
+                limits.maxDescriptorSetUpdateAfterBindSampledImages, limits.maxPerStageDescriptorUpdateAfterBindSampledImages, limits.maxUpdateAfterBindDescriptorsInAllPools);
+            tooie_android_debug_log(record);
+            if (!features.descriptorBindingVariableDescriptorCount || !features.descriptorBindingPartiallyBound || !features.runtimeDescriptorArray)
+                rejectDescriptorLayout("descriptor-indexing-features-not-enabled", last.binding, 0);
+            const bool updateSupported = last.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || last.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER
+                ? features.descriptorBindingSampledImageUpdateAfterBind
+                : last.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ? features.descriptorBindingStorageImageUpdateAfterBind
+                : last.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ? features.descriptorBindingUniformBufferUpdateAfterBind
+                : last.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ? features.descriptorBindingStorageBufferUpdateAfterBind
+                : last.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER ? features.descriptorBindingUniformTexelBufferUpdateAfterBind
+                : last.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ? features.descriptorBindingStorageTexelBufferUpdateAfterBind : false;
+            if (!updateSupported) rejectDescriptorLayout("update-after-bind-feature-not-enabled", last.binding, 0);
+            for (size_t i = 0; i + 1 < setBindings.size(); ++i)
+                if (setBindings[i].binding >= last.binding) rejectDescriptorLayout("variable-binding-not-highest", last.binding, 0);
+            uint64_t sampledCount = 0;
+            for (const auto &binding : setBindings)
+                if (binding.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) sampledCount += binding.descriptorCount;
+            if (sampledCount > limits.maxDescriptorSetUpdateAfterBindSampledImages || sampledCount > limits.maxPerStageDescriptorUpdateAfterBindSampledImages)
+                rejectDescriptorLayout("sampled-image-update-after-bind-limit", last.binding, 0);
+        }
+        VkDescriptorSetVariableDescriptorCountLayoutSupport variableSupport = {};
+        variableSupport.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_LAYOUT_SUPPORT;
+        VkDescriptorSetLayoutSupport support = {};
+        support.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_SUPPORT;
+        support.pNext = descriptorSetDesc.lastRangeIsBoundless ? &variableSupport : nullptr;
+        vkGetDescriptorSetLayoutSupport(device->vk, &setLayoutInfo, &support);
+        maxVariableDescriptorCount = variableSupport.maxVariableDescriptorCount;
+        std::snprintf(record, sizeof(record), "Descriptor layout support: pid=%d tid=%d ctx=%s supported=%u bindings=%u flags=0x%X maxVariable=%u",
+            int(getpid()), int(gettid()), tooie::android::descriptorContext(), support.supported, setLayoutInfo.bindingCount, creationFlags, maxVariableDescriptorCount);
+        tooie_android_debug_log(record);
+        if (!support.supported) rejectDescriptorLayout("descriptor-layout-unsupported", UINT32_MAX, 0);
+        if (descriptorSetDesc.lastRangeIsBoundless && setBindings.back().descriptorCount > maxVariableDescriptorCount)
+            rejectDescriptorLayout("variable-descriptor-layout-limit", setBindings.back().binding, 0);
+#endif
         
         VkResult res = vkCreateDescriptorSetLayout(device->vk, &setLayoutInfo, nullptr, &vk);
 #if defined(__ANDROID__)
@@ -2116,7 +2184,11 @@ namespace plume {
                 std::max(desc.boundlessRangeSize, 1u) > desc.descriptorRanges[desc.descriptorRangesCount - 1].count)))
             rejectDescriptor(UINT32_MAX, "invalid-descriptor-range-or-variable-count");
 #endif
+#if defined(__ANDROID__)
+        std::unordered_map<VkDescriptorType, uint32_t> typeCounts;
+#else
         thread_local std::unordered_map<VkDescriptorType, uint32_t> typeCounts;
+#endif
         typeCounts.clear();
         
         uint32_t boundlessRangeSize = 0;
@@ -2143,12 +2215,26 @@ namespace plume {
         if (!setLayout->vk || setLayout->creationResult != VK_SUCCESS) rejectDescriptor(UINT32_MAX, initializationFailure, setLayout->creationResult);
         for (const auto &binding : setLayout->setBindings) allocatedCounts.push_back(binding.descriptorCount);
         if (desc.lastRangeIsBoundless) allocatedCounts.back() = boundlessRangeSize;
+        // Size the pool from the actual Vulkan layout and requested variable
+        // count, including immutable samplers. Never reserve an arbitrary slack
+        // multiplier or substitute the 8192-entry upper bound for a small set.
+        typeCounts.clear();
+        for (size_t i = 0; i < allocatedCounts.size(); ++i) typeCounts[setLayout->setBindings[i].descriptorType] += allocatedCounts[i];
+        char allocationRecord[512];
+        for (size_t i = 0; i < allocatedCounts.size(); ++i) {
+            const auto &binding = setLayout->setBindings[i];
+            std::snprintf(allocationRecord, sizeof(allocationRecord), "Descriptor allocation binding: pid=%d tid=%d ctx=%s layout=%llx binding=%u type=%u declared=%u requested=%u immutable=%u flags=0x%X",
+                int(getpid()), int(gettid()), tooie::android::descriptorContext(), (unsigned long long)setLayout->vk, binding.binding,
+                unsigned(binding.descriptorType), binding.descriptorCount, allocatedCounts[i], unsigned(binding.pImmutableSamplers != nullptr), setLayout->bindingFlags[i]);
+            tooie_android_debug_log(allocationRecord);
+        }
 #endif
-        descriptorPool = createDescriptorPool(device, typeCounts, desc.lastRangeIsBoundless);
+        VkResult poolResult = VK_NOT_READY;
+        descriptorPool = createDescriptorPool(device, typeCounts, desc.lastRangeIsBoundless, &poolResult);
         if (descriptorPool == VK_NULL_HANDLE) {
 #if defined(__ANDROID__)
             initializationFailure = "descriptor-pool-creation-failed";
-            rejectDescriptor(UINT32_MAX, initializationFailure);
+            rejectDescriptor(UINT32_MAX, initializationFailure, poolResult);
 #endif
             return;
         }
@@ -2167,10 +2253,20 @@ namespace plume {
             allocateInfo.pNext = &countInfo;
         }
 
+#if defined(__ANDROID__)
+        std::snprintf(allocationRecord, sizeof(allocationRecord), "Descriptor allocation begin: pid=%d tid=%d ctx=%s pool=%llx layout=%llx layoutFlags=0x%X maxSets=1 sets=1 variable=%u variableCount=%u countStructType=%u countStructSets=%u",
+            int(getpid()), int(gettid()), tooie::android::descriptorContext(), (unsigned long long)descriptorPool, (unsigned long long)setLayout->vk,
+            setLayout->creationFlags, unsigned(desc.lastRangeIsBoundless), boundlessRangeSize, unsigned(countInfo.sType), countInfo.descriptorSetCount);
+        tooie_android_debug_log(allocationRecord);
+#endif
         VkResult res = vkAllocateDescriptorSets(device->vk, &allocateInfo, &vk);
 #if defined(__ANDROID__)
         initializationFailure = "descriptor-set-allocation-failed";
-        if (res != VK_SUCCESS || !vk) rejectDescriptor(UINT32_MAX, initializationFailure, res);
+        std::snprintf(allocationRecord, sizeof(allocationRecord), "Descriptor allocation returned: pid=%d tid=%d ctx=%s pool=%llx layout=%llx result=%d returnedSet=%llx",
+            int(getpid()), int(gettid()), tooie::android::descriptorContext(), (unsigned long long)descriptorPool, (unsigned long long)setLayout->vk, int(res), (unsigned long long)vk);
+        tooie_android_debug_log(allocationRecord);
+        if (res != VK_SUCCESS) { vk = VK_NULL_HANDLE; rejectDescriptor(UINT32_MAX, initializationFailure, res); }
+        if (!vk) { initializationFailure = "descriptor-set-allocation-null-handle"; rejectDescriptor(UINT32_MAX, initializationFailure, res); }
         device->descriptorResources.track(this, VK_OBJECT_TYPE_DESCRIPTOR_SET, uint64_t(vk), setLayout);
         initializationFailure = "none";
         // Layout shape is diagnostic evidence, especially for the first real
@@ -2180,8 +2276,8 @@ namespace plume {
         thread_local unsigned loggedSets = 0;
         if (loggedSets++ < 8 || (typed && !loggedTyped)) {
             char record[384];
-            std::snprintf(record, sizeof(record), "Descriptor set allocated: tid=%d set=%llx layout=%llx bindings=%u typed=%u sampled=%u storageImages=%u buffers=%u variable=%u allocatedLast=%u",
-                int(gettid()), (unsigned long long)vk, (unsigned long long)setLayout->vk, unsigned(allocatedCounts.size()), typed,
+            std::snprintf(record, sizeof(record), "Descriptor set allocated: pid=%d tid=%d set=%llx layout=%llx bindings=%u typed=%u sampled=%u storageImages=%u buffers=%u variable=%u allocatedLast=%u",
+                int(getpid()), int(gettid()), (unsigned long long)vk, (unsigned long long)setLayout->vk, unsigned(allocatedCounts.size()), typed,
                 typeCounts[VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE], typeCounts[VK_DESCRIPTOR_TYPE_STORAGE_IMAGE],
                 typeCounts[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER] + typeCounts[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER], unsigned(desc.lastRangeIsBoundless),
                 allocatedCounts.empty() ? 0 : allocatedCounts.back());
@@ -2221,9 +2317,9 @@ namespace plume {
         }
         char record[768];
         std::snprintf(record, sizeof(record),
-            "Descriptor rejected: reason=%s result=%d op=%s ctx=%s tid=%d set=%llx pool=%llx setLayout=%llx init=%s index=%u binding=%u type=%u allocated=%u "
+            "Descriptor rejected: reason=%s result=%d op=%s ctx=%s pid=%d tid=%d set=%llx pool=%llx setLayout=%llx init=%s index=%u binding=%u type=%u allocated=%u "
             "resource=%llx view=%llx offset=%llu range=%llu format=%u usage=0x%X flags=0x%X samples=%u layout=%u",
-            reason, int(result), writeRecord.operation, tooie::android::descriptorContext(), int(gettid()), (unsigned long long)vk, (unsigned long long)descriptorPool,
+            reason, int(result), writeRecord.operation, tooie::android::descriptorContext(), int(getpid()), int(gettid()), (unsigned long long)vk, (unsigned long long)descriptorPool,
             (unsigned long long)(setLayout ? setLayout->vk : VK_NULL_HANDLE), initializationFailure,
             index, binding, type, count, (unsigned long long)writeRecord.resource, (unsigned long long)writeRecord.view,
             (unsigned long long)writeRecord.offset, (unsigned long long)writeRecord.range,
@@ -2488,8 +2584,8 @@ namespace plume {
         char record[512];
         if (logWrite) {
             std::snprintf(record, sizeof(record),
-                "Descriptor write begin: tid=%d op=%s ctx=%s set=%llx index=%u binding=%u element=%u type=%u allocated=%u resource=%llx view=%llx offset=%llu range=%llu format=%u usage=0x%X flags=0x%X samples=%u layout=%u",
-                int(gettid()), writeRecord.operation, tooie::android::descriptorContext(), (unsigned long long)vk, descriptorIndex, writeDescriptor.dstBinding, writeDescriptor.dstArrayElement,
+                "Descriptor write begin: pid=%d tid=%d op=%s ctx=%s set=%llx index=%u binding=%u element=%u type=%u allocated=%u resource=%llx view=%llx offset=%llu range=%llu format=%u usage=0x%X flags=0x%X samples=%u layout=%u",
+                int(getpid()), int(gettid()), writeRecord.operation, tooie::android::descriptorContext(), (unsigned long long)vk, descriptorIndex, writeDescriptor.dstBinding, writeDescriptor.dstArrayElement,
                 unsigned(type), allocatedCounts[bindingIndex], (unsigned long long)writeRecord.resource, (unsigned long long)writeRecord.view,
                 (unsigned long long)writeRecord.offset, (unsigned long long)writeRecord.range, writeRecord.format, writeRecord.usage, writeRecord.flags, writeRecord.samples, writeRecord.layout);
             tooie_android_debug_log(record);
@@ -2502,14 +2598,14 @@ namespace plume {
         ++diagnosticWrites;
         if (logWrite) {
             loggedTypes.insert(signature);
-            std::snprintf(record, sizeof(record), "Descriptor write returned: tid=%d set=%llx index=%u binding=%u type=%u",
-                int(gettid()), (unsigned long long)vk, descriptorIndex, writeDescriptor.dstBinding, unsigned(type));
+            std::snprintf(record, sizeof(record), "Descriptor write returned: pid=%d tid=%d set=%llx index=%u binding=%u type=%u",
+                int(getpid()), int(gettid()), (unsigned long long)vk, descriptorIndex, writeDescriptor.dstBinding, unsigned(type));
             tooie_android_debug_log(record);
         }
 #endif
     }
 
-    VkDescriptorPool VulkanDescriptorSet::createDescriptorPool(VulkanDevice *device, const std::unordered_map<VkDescriptorType, uint32_t> &typeCounts, bool lastRangeIsBoundless) {
+    VkDescriptorPool VulkanDescriptorSet::createDescriptorPool(VulkanDevice *device, const std::unordered_map<VkDescriptorType, uint32_t> &typeCounts, bool lastRangeIsBoundless, VkResult *creationResult) {
         thread_local std::vector<VkDescriptorPoolSize> poolSizes;
         poolSizes.clear();
 
@@ -2531,7 +2627,22 @@ namespace plume {
             poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
         }
 
+#if defined(__ANDROID__)
+        char record[384];
+        for (const auto &size : poolSizes) {
+            std::snprintf(record, sizeof(record), "Descriptor pool capacity: pid=%d tid=%d ctx=%s type=%u capacity=%u flags=0x%X maxSets=%u types=%u",
+                int(getpid()), int(gettid()), tooie::android::descriptorContext(), unsigned(size.type), size.descriptorCount, poolInfo.flags, poolInfo.maxSets, poolInfo.poolSizeCount);
+            tooie_android_debug_log(record);
+        }
+#endif
+
         VkResult res = vkCreateDescriptorPool(device->vk, &poolInfo, nullptr, &descriptorPool);
+        if (creationResult) *creationResult = res;
+#if defined(__ANDROID__)
+        std::snprintf(record, sizeof(record), "Descriptor pool creation returned: pid=%d tid=%d ctx=%s result=%d pool=%llx flags=0x%X maxSets=%u",
+            int(getpid()), int(gettid()), tooie::android::descriptorContext(), int(res), (unsigned long long)descriptorPool, poolInfo.flags, poolInfo.maxSets);
+        tooie_android_debug_log(record);
+#endif
         if (res == VK_SUCCESS) {
             return descriptorPool;
         }
@@ -5294,7 +5405,13 @@ namespace plume {
         // Check for supported features.
         void *featuresChain = nullptr;
         VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
-        const bool descriptorIndexingFound = supportedOptionalExtensions.find(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) != supportedOptionalExtensions.end();
+        const bool descriptorIndexingFound = supportedOptionalExtensions.find(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) != supportedOptionalExtensions.end()
+#if defined(__ANDROID__)
+            // Descriptor indexing is core in Vulkan 1.2; the extension name is
+            // optional on newer devices. Query and enable core features too.
+            || (renderInterface->appInfo.apiVersion >= VK_API_VERSION_1_2 && physicalDeviceProperties.apiVersion >= VK_API_VERSION_1_2)
+#endif
+            ;
         if (descriptorIndexingFound) {
             indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
             featuresChain = &indexingFeatures;
@@ -5362,6 +5479,16 @@ namespace plume {
         deviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
         deviceFeatures.pNext = featuresChain;
         vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceFeatures);
+
+#if defined(__ANDROID__)
+        if (descriptorIndexingFound) {
+            descriptorIndexingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
+            VkPhysicalDeviceProperties2 indexingProperties = {};
+            indexingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+            indexingProperties.pNext = &descriptorIndexingProperties;
+            vkGetPhysicalDeviceProperties2(physicalDevice, &indexingProperties);
+        }
+#endif
 
         // Check for properties.
         if (rayTracingFound) {
@@ -5519,6 +5646,18 @@ namespace plume {
             fprintf(stderr, "vkCreateDevice failed with error code 0x%X.\n", res);
             return;
         }
+
+#if defined(__ANDROID__)
+        if (descriptorIndexingSupported) {
+            descriptorIndexingFeatures = indexingFeatures;
+            descriptorIndexingFeatures.pNext = nullptr;
+        }
+        char indexingRecord[384];
+        std::snprintf(indexingRecord, sizeof(indexingRecord), "Descriptor indexing discovery: pid=%d tid=%d instanceApi=0x%X deviceApi=0x%X extension=%u queried=%u enabled=%u",
+            int(getpid()), int(gettid()), renderInterface->appInfo.apiVersion, physicalDeviceProperties.apiVersion,
+            unsigned(supportedOptionalExtensions.count(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) != 0), unsigned(descriptorIndexingFound), unsigned(descriptorIndexingSupported));
+        tooie_android_debug_log(indexingRecord);
+#endif
 
         for (uint32_t i = 0; i < queueFamilyCount; i++) {
             for (uint32_t j = 0; j < queueFamilies[i].queues.size(); j++) {

@@ -4,6 +4,11 @@ Base: `e95638d73963e480c546dbd3c859a948c1a4f84f`, branch
 `fix/android-vulkan-transfer-proposal`. This is a descriptor-update revision;
 it does not undo the working ROM picker, surface recreation or graphics clears.
 
+The subsequent `3268685` report stops at descriptor allocation with
+`VK_ERROR_OUT_OF_POOL_MEMORY`, before a descriptor update. Its ambiguous process
+evidence, allocation audit and follow-up are documented in
+[Android descriptor allocation](android-vulkan-descriptor-allocation.md).
+
 ## Device evidence and symbolization limits
 
 The user confirms launcher navigation, Android document selection, acceptance of
