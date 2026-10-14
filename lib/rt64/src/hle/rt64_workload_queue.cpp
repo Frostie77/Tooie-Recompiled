@@ -646,17 +646,26 @@ namespace RT64 {
             }
 
             // Create all GPU tile mappings and upload them.
-            if (!workload.drawData.gpuTiles.empty()) {
+#if !defined(__ANDROID__)
+            if (!workload.drawData.gpuTiles.empty())
+#endif
+            { // Android empty work also prepares an initialized common-set binding.
                 std::pair<size_t, size_t> gpuTileRange;
                 gpuTileRange.first = 0;
                 gpuTileRange.second = workload.drawData.gpuTiles.size();
-                framebufferRenderer->createGPUTiles(workload.drawData.callTiles.data(), uint32_t(workload.drawData.gpuTiles.size()),
-                    workload.drawData.gpuTiles.data(), &fbManager, ext.textureCache, workload.submissionFrame);
+                if (!workload.drawData.gpuTiles.empty()) {
+                    framebufferRenderer->createGPUTiles(workload.drawData.callTiles.data(), uint32_t(workload.drawData.gpuTiles.size()),
+                        workload.drawData.gpuTiles.data(), &fbManager, ext.textureCache, workload.submissionFrame);
+                }
 
                 // Upload the GPU tiles.
+#if defined(__ANDROID__)
+                workload.drawBuffers.gpuTilesBuffer.submit(ext.workloadTilesUploader, ext.workloadGraphicsWorker, workload.drawData.gpuTiles.data(), gpuTileRange);
+#else
                 ext.workloadTilesUploader->submit(ext.workloadGraphicsWorker, {
                     { workload.drawData.gpuTiles.data(), gpuTileRange, sizeof(interop::GPUTile), RenderBufferFlag::STORAGE, { }, &workload.drawBuffers.gpuTilesBuffer}
                 });
+#endif
 
                 bufferUploaders.emplace_back(ext.workloadTilesUploader);
             }
@@ -701,7 +710,7 @@ namespace RT64 {
             ext.workloadGraphicsWorker->commandList->begin();
             ext.workloadGraphicsWorker->commandList->resetQueryPool(queryPool.get(), 0, 2);
             ext.workloadGraphicsWorker->commandList->writeTimestamp(queryPool.get(), 0);
-            framebufferRenderer->endFramebuffers(ext.workloadGraphicsWorker, &workload.drawBuffers, &workload.outputBuffers, workloadConfig.raytracingEnabled);
+            framebufferRenderer->endFramebuffers(ext.workloadGraphicsWorker, &workload.drawBuffers, &workload.outputBuffers, workloadConfig.raytracingEnabled, workload.drawData.gpuTiles.size());
             framebufferRenderer->recordSetup(ext.workloadGraphicsWorker, bufferUploaders, processRSP ? rspProcessor.get() : nullptr, processWorldVertices ? vertexProcessor.get() : nullptr, &workload.outputBuffers, workloadConfig.raytracingEnabled);
             
             // Record all framebuffer pairs.

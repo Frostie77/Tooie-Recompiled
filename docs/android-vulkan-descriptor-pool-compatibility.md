@@ -2,9 +2,11 @@
 
 Base: `7005b76ad7af60e521727a9396a318549a6e1da0`, on
 `fix/android-vulkan-transfer-proposal`. This implements the Step 54 handoff's
-bounded allocation compatibility policy. Production rendering with this change
-has **not** run on the Odin; genuine gameplay and the older gameplay
-`vkUpdateDescriptorSets` failure remain unverified.
+bounded allocation compatibility policy. The subsequent Step 59 hardware run
+confirms qualification and successful initial production allocation, then stops
+at a missing common-set GPU-tile buffer. See [GPU-tile lifecycle](android-vulkan-gpu-tiles.md)
+for that evidence and correction. Launcher rendering, genuine gameplay and the
+older gameplay `vkUpdateDescriptorSets` failure remain unverified.
 
 ## Supplied hardware evidence
 
@@ -72,8 +74,10 @@ same driver whose need for the reservation has not been measured. Unexpected
 device naming fails qualification and retains strict failure reporting; it
 does not trigger a broad vendor fallback. A later separately authorized normal
 test can review the new properties/qualification records.
-The handoff does not supply the actual Vulkan device-name/vendor-ID/driver-ID
-fields; those new records must confirm this exact qualification on the Odin.
+The Step 54 handoff did not supply the actual Vulkan device-name/vendor-ID/driver-ID
+fields. Step 59 now confirms them: vendor 0x5143, device 0x43050A01, name
+Adreno (TM) 740, driver ID 8 and raw driverVersion 0x802A4035. The existing
+qualification is unchanged; no version threshold is introduced.
 
 Only a **sampled-image** binding with variable-count, partially-bound and
 update-after-bind flags in an update-after-bind layout uses its real declaration

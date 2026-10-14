@@ -1318,17 +1318,27 @@ namespace RT64 {
 
                 // Create all GPU tile mappings and upload them.
                 bool uploadGPUTiles = (gpuTileCursor < rdpTileCursor);
-                if (uploadGPUTiles) {
+                if (uploadGPUTiles
+#if defined(__ANDROID__)
+                    || rdpTileCursor == 0 // Initialize empty work, including reused pairs.
+#endif
+                ) {
                     std::pair<size_t, size_t> gpuTileRange;
                     gpuTileRange.first = gpuTileCursor;
                     gpuTileRange.second = rdpTileCursor;
-                    framebufferRenderer->createGPUTiles(&workload.drawData.callTiles[gpuTileCursor], rdpTileCursor - gpuTileCursor,
-                        &workload.drawData.gpuTiles[gpuTileCursor], &framebufferManager, ext.textureCache, workload.submissionFrame);
+                    if (uploadGPUTiles) {
+                        framebufferRenderer->createGPUTiles(&workload.drawData.callTiles[gpuTileCursor], rdpTileCursor - gpuTileCursor,
+                            &workload.drawData.gpuTiles[gpuTileCursor], &framebufferManager, ext.textureCache, workload.submissionFrame);
+                    }
 
                     // Upload the GPU tiles.
+#if defined(__ANDROID__)
+                    workload.drawBuffers.gpuTilesBuffer.submit(ext.tilesUploader, ext.framebufferGraphicsWorker, workload.drawData.gpuTiles.data(), gpuTileRange);
+#else
                     ext.tilesUploader->submit(ext.framebufferGraphicsWorker, {
                         { workload.drawData.gpuTiles.data(), gpuTileRange, sizeof(interop::GPUTile), RenderBufferFlag::STORAGE, { }, &workload.drawBuffers.gpuTilesBuffer}
                     });
+#endif
 
                     gpuTileCursor = rdpTileCursor;
 
@@ -1346,7 +1356,7 @@ namespace RT64 {
                 }
 
                 // Record all setup previous to drawing any of the recorded framebuffers.
-                framebufferRenderer->endFramebuffers(ext.framebufferGraphicsWorker, &workload.drawBuffers, &workload.outputBuffers, false);
+                framebufferRenderer->endFramebuffers(ext.framebufferGraphicsWorker, &workload.drawBuffers, &workload.outputBuffers, false, rdpTileCursor);
                 framebufferRenderer->recordSetup(ext.framebufferGraphicsWorker, bufferUploaders, queuedProcessor, nullptr, &workload.outputBuffers, false);
 
                 // Record the command list for the framebuffer pairs.

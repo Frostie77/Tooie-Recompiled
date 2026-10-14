@@ -5,6 +5,9 @@
 #pragma once
 
 #include "render/rt64_buffer_uploader.h"
+#if defined(__ANDROID__)
+#include "render/rt64_gpu_tile_buffer.h"
+#endif
 #include "shared/rt64_extra_params.h"
 #include "shared/rt64_gpu_tile.h"
 #include "shared/rt64_rdp_params.h"
@@ -152,7 +155,11 @@ namespace RT64 {
         BufferPair extraParamsBuffer;
         BufferPair renderParamsBuffer;
         BufferPair rdpTilesBuffer;
+#if defined(__ANDROID__)
+        GPUTileBuffer gpuTilesBuffer;
+#else
         BufferPair gpuTilesBuffer;
+#endif
         BufferPair rspViewportsBuffer;
         BufferPair rspFogBuffer;
         BufferPair rspLightsBuffer;

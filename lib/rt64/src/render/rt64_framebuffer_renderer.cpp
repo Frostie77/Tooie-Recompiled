@@ -335,7 +335,7 @@ namespace RT64 {
         return dstIndex;
     }
     
-    void FramebufferRenderer::updateShaderDescriptorSet(RenderWorker *worker, const DrawBuffers *drawBuffers, const OutputBuffers *outputBuffers, const bool raytracingEnabled) {
+    void FramebufferRenderer::updateShaderDescriptorSet(RenderWorker *worker, const DrawBuffers *drawBuffers, const OutputBuffers *outputBuffers, const bool raytracingEnabled, uint64_t gpuTileCount) {
         assert(worker != nullptr);
         assert(drawBuffers != nullptr);
         
@@ -404,7 +404,11 @@ namespace RT64 {
         descCommonSet->setBuffer(descCommonSet->instanceRenderIndices, renderIndicesBuffer.get(), RenderBufferStructuredView(sizeof(interop::RenderIndices)));
         descCommonSet->setBuffer(descCommonSet->instanceRDPParams, drawBuffers->rdpParamsBuffer.get(), RenderBufferStructuredView(sizeof(interop::RDPParams)));
         descCommonSet->setBuffer(descCommonSet->RDPTiles, drawBuffers->rdpTilesBuffer.get(), RenderBufferStructuredView(sizeof(interop::RDPTile)));
+#if defined(__ANDROID__)
+        drawBuffers->gpuTilesBuffer.bind(descCommonSet->get(), descCommonSet->GPUTiles, gpuTileCount);
+#else
         descCommonSet->setBuffer(descCommonSet->GPUTiles, drawBuffers->gpuTilesBuffer.get(), RenderBufferStructuredView(sizeof(interop::GPUTile)));
+#endif
         descCommonSet->setBuffer(descCommonSet->DynamicRenderParams, drawBuffers->renderParamsBuffer.get(), RenderBufferStructuredView(sizeof(interop::RenderParams)));
 
         // Make sure the versions vector matches the texture cache size.
@@ -468,11 +472,11 @@ namespace RT64 {
         vertexTestZSet->setBuffer(vertexTestZSet->dstFaceIndices, outputBuffers->testZIndexBuffer.buffer.get(), outputBuffers->testZIndexBuffer.allocatedSize, RenderBufferStructuredView(sizeof(uint32_t)));
     }
 
-    void FramebufferRenderer::updateShaderViews(RenderWorker *worker, const DrawBuffers *drawBuffers, const OutputBuffers *outputBuffers, const bool raytracingEnabled) {
+    void FramebufferRenderer::updateShaderViews(RenderWorker *worker, const DrawBuffers *drawBuffers, const OutputBuffers *outputBuffers, const bool raytracingEnabled, uint64_t gpuTileCount) {
 #if defined(__ANDROID__)
         tooie::android::DescriptorContextScope descriptorContext("framebuffer-shader-views");
 #endif
-        updateShaderDescriptorSet(worker, drawBuffers, outputBuffers, raytracingEnabled);
+        updateShaderDescriptorSet(worker, drawBuffers, outputBuffers, raytracingEnabled, gpuTileCount);
 #if defined(__ANDROID__)
         const bool usesVertexTestZ = std::any_of(instanceDrawCallVector.begin(), instanceDrawCallVector.end(),
             [](const InstanceDrawCall &call) { return call.type == InstanceDrawCall::Type::VertexTestZ; });
@@ -1877,7 +1881,7 @@ namespace RT64 {
         checkRasterScene(rasterScene);
     }
 
-    void FramebufferRenderer::endFramebuffers(RenderWorker *worker, const DrawBuffers *drawBuffers, const OutputBuffers *outputBuffers, bool rtEnabled) {
+    void FramebufferRenderer::endFramebuffers(RenderWorker *worker, const DrawBuffers *drawBuffers, const OutputBuffers *outputBuffers, bool rtEnabled, uint64_t gpuTileCount) {
         bool shaderViewRtEnabled = false;
         std::vector<BufferUploader::Upload> shaderUploads = {
             { renderIndicesVector.data(), { 0, renderIndicesVector.size() }, sizeof(interop::RenderIndices), RenderBufferFlag::STORAGE, { }, &renderIndicesBuffer},
@@ -1934,7 +1938,7 @@ namespace RT64 {
 #   endif
 
         shaderUploader->submit(worker, shaderUploads);
-        updateShaderViews(worker, drawBuffers, outputBuffers, shaderViewRtEnabled);
+        updateShaderViews(worker, drawBuffers, outputBuffers, shaderViewRtEnabled, gpuTileCount);
     }
 
     void FramebufferRenderer::advanceFrame(bool rtEnabled) {
