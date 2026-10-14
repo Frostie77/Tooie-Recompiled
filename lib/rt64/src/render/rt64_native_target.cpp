@@ -2,6 +2,10 @@
 // RT64
 //
 
+#if defined(__ANDROID__)
+#include "../../../../src/android_descriptor_context.h"
+#endif
+
 #include <cstring>
 
 #include "rt64_native_target.h"
@@ -61,6 +65,9 @@ namespace RT64 {
     }
 
     uint32_t NativeTarget::copyFromRAM(RenderWorker *worker, FramebufferChange &emptyFbChange, uint32_t width, uint32_t height, uint32_t rowStart, uint8_t siz, uint8_t fmt, const uint8_t *data, bool invalidateTargets, const ShaderLibrary *shaderLibrary) {
+#if defined(__ANDROID__)
+        tooie::android::DescriptorContextScope descriptorContext("native-ram-read");
+#endif
         assert(worker != nullptr);
 
         // Create the buffers for change count readback if they've not been created yet.

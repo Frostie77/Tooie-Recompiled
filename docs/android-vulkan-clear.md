@@ -5,7 +5,15 @@ first physical-device test. This document describes a review proposal, not a
 verified launcher fix. No new Portal test is requested until this proposal has
 been reviewed.
 
-## Latest device evidence: launcher works, document-picker transition crashes
+## Latest device evidence: ROM selection works; gameplay descriptor crash
+
+On `e95638d`, the user confirms working ROM selection, USA ROM acceptance, Start
+Game and presentation-surface recreation after the picker. Gameplay start faults
+in `vkUpdateDescriptorSets` on the Gfx Thread; see
+[the separate descriptor investigation](android-vulkan-descriptors.md). Clear
+semantics, diagnostics and five-second safety timeouts are preserved.
+
+## Previous device evidence: launcher works, document-picker transition crashes
 
 The user reports that `06b2f6c` reaches a usable graphical launcher with working
 menu navigation, and previous A–E isolation passed. On `cf2d780`, the ROM picker

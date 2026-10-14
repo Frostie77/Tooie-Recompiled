@@ -41,6 +41,10 @@
 #pragma clang diagnostic pop
 #endif
 
+#if defined(__ANDROID__)
+#include "plume_vulkan_descriptors.h"
+#endif
+
 namespace plume {
     struct VulkanCommandQueue;
     struct VulkanDevice;
@@ -55,6 +59,9 @@ namespace plume {
         VmaAllocation allocation = VK_NULL_HANDLE;
         VmaAllocationInfo allocationInfo = {};
         RenderBufferDesc desc;
+#if defined(__ANDROID__)
+        VkBufferUsageFlags bufferUsage = 0;
+#endif
         RenderBarrierStages barrierStages = RenderBarrierStage::NONE;
 
         VulkanBuffer() = default;
@@ -70,6 +77,10 @@ namespace plume {
     struct VulkanBufferFormattedView : RenderBufferFormattedView {
         VkBufferView vk = VK_NULL_HANDLE;
         VulkanBuffer *buffer = nullptr;
+#if defined(__ANDROID__)
+        RenderFormat format = RenderFormat::UNKNOWN;
+        VulkanDevice *viewDevice = nullptr;
+#endif
 
         VulkanBufferFormattedView(VulkanBuffer *buffer, RenderFormat format);
         ~VulkanBufferFormattedView() override;
@@ -109,6 +120,9 @@ namespace plume {
         const VulkanTexture *texture = nullptr;
         RenderTextureViewDesc desc;
 
+#if defined(__ANDROID__)
+        VulkanDevice *viewDevice = nullptr;
+#endif
         VulkanTextureView(const VulkanTexture *texture, const RenderTextureViewDesc &desc);
         ~VulkanTextureView() override;
     };
@@ -129,6 +143,11 @@ namespace plume {
         std::vector<uint32_t> descriptorBindingIndices;
         VulkanDevice *device = nullptr;
 
+#if defined(__ANDROID__)
+        std::vector<VkSampler> immutableSamplerHandles;
+        std::vector<std::pair<const void *, uint64_t>> immutableSamplerResources;
+        VkResult creationResult = VK_NOT_READY;
+#endif
         VulkanDescriptorSetLayout(VulkanDevice *device, const RenderDescriptorSetDesc &descriptorSetDesc);
         ~VulkanDescriptorSetLayout();
     };
@@ -216,6 +235,18 @@ namespace plume {
         VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
         VulkanDevice *device = nullptr;
 
+#if defined(__ANDROID__)
+        std::vector<uint32_t> allocatedCounts;
+        uint32_t diagnosticWrites = 0;
+        const char *initializationFailure = "not-initialized";
+        struct WriteRecord {
+            const char *operation = "raw";
+            uint64_t resource = 0, view = 0, offset = 0, range = 0;
+            uint32_t format = 0, usage = 0, flags = 0, samples = 0, layout = 0;
+        } writeRecord;
+        [[noreturn]] void rejectDescriptor(uint32_t index, const char *reason, VkResult result = VK_SUCCESS) const;
+        void validateDescriptorIndex(uint32_t index) const;
+#endif
         VulkanDescriptorSet(VulkanDevice *device, const RenderDescriptorSetDesc &desc);
         ~VulkanDescriptorSet() override;
         void setBuffer(uint32_t descriptorIndex, const RenderBuffer *buffer, uint64_t bufferSize, const RenderBufferStructuredView *bufferStructuredView, const RenderBufferFormattedView *bufferFormattedView) override;
@@ -462,6 +493,9 @@ namespace plume {
         RenderDeviceDescription description;
         VkPhysicalDeviceRayTracingPipelinePropertiesKHR rtPipelineProperties = {};
         VkPhysicalDeviceSampleLocationsPropertiesEXT sampleLocationProperties = {};
+#if defined(__ANDROID__)
+        VulkanDescriptorResources descriptorResources;
+#endif
         std::unique_ptr<RenderBuffer> nullBuffer;
         bool loadStoreOpNoneSupported = false;
         bool nullDescriptorSupported = false;

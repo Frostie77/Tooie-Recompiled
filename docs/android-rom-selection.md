@@ -8,6 +8,11 @@ not establish that gameplay works. The later picker-transition crash and
 Android WSI lifetime fix are documented in
 [Android Vulkan lifecycle](android-vulkan-lifecycle.md).
 
+The user now confirms successful Android ROM selection, USA ROM acceptance and
+Start Game on `e95638d`, after the lifecycle fix. Gameplay then crashes in a
+separate Vulkan descriptor update; see
+[Android Vulkan descriptors](android-vulkan-descriptors.md).
+
 ## Selection and import
 
 The native single-file adapter calls the existing SDL Activity through SDL's

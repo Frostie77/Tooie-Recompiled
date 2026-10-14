@@ -3,6 +3,10 @@
 // RT64
 //
 
+#if defined(__ANDROID__)
+#include "../../../../src/android_descriptor_context.h"
+#endif
+
 #include "rt64_application.h"
 #if defined(__ANDROID__)
 #include "../../../../src/android_presentation_lifecycle.h"
@@ -526,6 +530,9 @@ namespace RT64 {
     }
 
     void Application::processDisplayLists(uint8_t *memory, uint32_t dlStartAddress, uint32_t dlEndAddress, bool isHLE) {
+#if defined(__ANDROID__)
+        tooie::android::DescriptorContextScope descriptorContext("game-display-list");
+#endif
         if (state->debuggerInspector.paused) {
             // TODO: It'd be necessary to parse the display list to see if it actually does a fullSync before sending the interrupt.
             state->dpInterrupt();

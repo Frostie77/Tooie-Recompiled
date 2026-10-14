@@ -4,7 +4,10 @@ Base: `cf2d78025d2b96c254c28b27158558a0c575f10a`, on
 `fix/android-vulkan-transfer-proposal`. The user reports successful A–E tests and
 a usable graphical launcher on the Odin 2 Portal. This revision addresses the
 native crash when that launcher opens the ROM document picker. Gameplay and this
-lifecycle fix have not been verified on the device.
+lifecycle fix were unverified on the device at initial publication. The user
+subsequently confirms ROM selection, USA ROM acceptance, Start Game and successful
+surface recreation on `e95638d`; gameplay now encounters a separate descriptor
+update crash. See [the descriptor investigation](android-vulkan-descriptors.md).
 
 ## Device evidence and symbolization
 

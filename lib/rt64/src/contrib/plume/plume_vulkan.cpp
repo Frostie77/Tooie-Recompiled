@@ -13,6 +13,8 @@
 #if defined(__ANDROID__)
 #include "../../../../../src/android_presentation_lifecycle.h"
 #include "plume_vulkan_clear_shaders.h"
+#include <unistd.h>
+#include "../../../../../src/android_descriptor_context.h"
 #endif
 
 #include <algorithm>
@@ -830,7 +832,13 @@ namespace plume {
         this->pool = pool;
         this->desc = desc;
 
-        const RenderBufferFlags storageFormattedMask = (RenderBufferFlag::STORAGE | RenderBufferFlag::FORMATTED);
+#if defined(__ANDROID__)
+        // STORAGE permits byte-address/structured access as well. Only an
+        // explicitly writable formatted buffer needs STORAGE_TEXEL_BUFFER.
+        const RenderBufferFlags storageFormattedMask = RenderBufferFlag::STORAGE | RenderBufferFlag::FORMATTED | RenderBufferFlag::UNORDERED_ACCESS;
+#else
+        const RenderBufferFlags storageFormattedMask = RenderBufferFlag::STORAGE | RenderBufferFlag::FORMATTED;
+#endif
         VkBufferCreateInfo bufferInfo = {};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = desc.size;
@@ -892,6 +900,9 @@ namespace plume {
             minAlignment = device->rtPipelineProperties.shaderGroupBaseAlignment;
         }
 
+#if defined(__ANDROID__)
+        bufferUsage = bufferInfo.usage;
+#endif
         VkResult res;
         if (minAlignment > 0) {
             res = vmaCreateBufferWithAlignment(device->allocator, &bufferInfo, &createInfo, minAlignment, &vk, &allocation, &allocationInfo);
@@ -900,6 +911,10 @@ namespace plume {
             res = vmaCreateBuffer(device->allocator, &bufferInfo, &createInfo, &vk, &allocation, &allocationInfo);
         }
 
+#if defined(__ANDROID__)
+        if (res != VK_SUCCESS) vk = VK_NULL_HANDLE;
+        device->descriptorResources.track(this, VK_OBJECT_TYPE_BUFFER, uint64_t(vk));
+#endif
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vmaCreateBuffer failed with error code 0x%X.\n", res);
             return;
@@ -907,6 +922,10 @@ namespace plume {
     }
 
     VulkanBuffer::~VulkanBuffer() {
+#if defined(__ANDROID__)
+        std::unique_lock<std::recursive_mutex> lock;
+        if (device) { lock = std::unique_lock(device->descriptorResources.mutex); device->descriptorResources.erase(this); }
+#endif
         if (vk != VK_NULL_HANDLE) {
             vmaDestroyBuffer(device->allocator, vk, allocation);
         }
@@ -951,6 +970,33 @@ namespace plume {
         assert((buffer->desc.flags & RenderBufferFlag::FORMATTED) && "Buffer must allow formatted views.");
 
         this->buffer = buffer;
+#if defined(__ANDROID__)
+        this->format = format;
+        viewDevice = buffer->device;
+        const std::lock_guard lock(viewDevice->descriptorResources.mutex);
+        viewDevice->descriptorResources.track(this, VK_OBJECT_TYPE_BUFFER_VIEW, 0, buffer);
+        VkFormatProperties properties = {};
+        vkGetPhysicalDeviceFormatProperties(viewDevice->physicalDevice, toVk(format), &properties);
+        const VkFormatFeatureFlags required =
+            ((buffer->bufferUsage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) ? VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT : 0) |
+            ((buffer->bufferUsage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) ? VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT : 0);
+        const uint32_t elementSize = RenderFormatSize(format);
+        const uint64_t maxElements = viewDevice->physicalDeviceProperties.limits.maxTexelBufferElements;
+        const char *reason = !buffer->vk ? "null-buffer-handle" :
+            !required ? "missing-texel-buffer-usage" :
+            (properties.bufferFeatures & required) != required ? "format-texel-buffer-unsupported" :
+            (!elementSize || !buffer->desc.size || buffer->desc.size % elementSize) ? "invalid-texel-buffer-range" :
+            (maxElements && buffer->desc.size / elementSize > maxElements) ? "texel-buffer-element-limit" : nullptr;
+        if (reason) {
+            char record[384];
+            std::snprintf(record, sizeof(record), "Descriptor buffer view rejected: reason=%s ctx=%s format=%u features=0x%X required=0x%X usage=0x%X bytes=%llu elementBytes=%u maxElements=%llu",
+                reason, tooie::android::descriptorContext(), unsigned(toVk(format)), properties.bufferFeatures, required, buffer->bufferUsage,
+                (unsigned long long)buffer->desc.size, elementSize, (unsigned long long)maxElements);
+            tooie_android_debug_log(record);
+            std::fprintf(stderr, "%s\n", record);
+            return; // Alive failed view; a required descriptor update will reject it.
+        }
+#endif
 
         VkBufferViewCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
@@ -960,6 +1006,16 @@ namespace plume {
         createInfo.range = buffer->desc.size;
 
         VkResult res = vkCreateBufferView(buffer->device->vk, &createInfo, nullptr, &vk);
+#if defined(__ANDROID__)
+        if (res != VK_SUCCESS) vk = VK_NULL_HANDLE;
+        buffer->device->descriptorResources.track(this, VK_OBJECT_TYPE_BUFFER_VIEW, uint64_t(vk), buffer);
+        if (res != VK_SUCCESS) {
+            char record[256];
+            std::snprintf(record, sizeof(record), "Descriptor buffer view creation failed: result=%d buffer=%llx format=%u bytes=%llu flags=0x%X",
+                int(res), (unsigned long long)buffer->vk, unsigned(toVk(format)), (unsigned long long)buffer->desc.size, unsigned(buffer->desc.flags));
+            tooie_android_debug_log(record);
+        }
+#endif
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateBufferView failed with error code 0x%X.\n", res);
             return;
@@ -967,8 +1023,16 @@ namespace plume {
     }
 
     VulkanBufferFormattedView::~VulkanBufferFormattedView() {
+#if defined(__ANDROID__)
+        const std::lock_guard lock(viewDevice->descriptorResources.mutex);
+        viewDevice->descriptorResources.erase(this);
+#endif
         if (vk != VK_NULL_HANDLE) {
+#if defined(__ANDROID__)
+            vkDestroyBufferView(viewDevice->vk, vk, nullptr);
+#else
             vkDestroyBufferView(buffer->device->vk, vk, nullptr);
+#endif
         }
     }
 
@@ -1059,6 +1123,10 @@ namespace plume {
         }
 
         VkResult res = vmaCreateImage(device->allocator, &imageInfo, &createInfo, &vk, &allocation, &allocationInfo);
+#if defined(__ANDROID__)
+        if (res != VK_SUCCESS) vk = VK_NULL_HANDLE;
+        device->descriptorResources.track(this, VK_OBJECT_TYPE_IMAGE, uint64_t(vk));
+#endif
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vmaCreateImage failed with error code 0x%X.\n", res);
             return;
@@ -1073,9 +1141,16 @@ namespace plume {
 
         this->device = device;
         vk = image;
+#if defined(__ANDROID__)
+        device->descriptorResources.track(this, VK_OBJECT_TYPE_IMAGE, uint64_t(vk));
+#endif
     }
 
     VulkanTexture::~VulkanTexture() {
+#if defined(__ANDROID__)
+        std::unique_lock<std::recursive_mutex> lock;
+        if (device) { lock = std::unique_lock(device->descriptorResources.mutex); device->descriptorResources.erase(this); }
+#endif
         if (imageView != VK_NULL_HANDLE) {
             vkDestroyImageView(device->vk, imageView, nullptr);
         }
@@ -1099,6 +1174,10 @@ namespace plume {
         viewInfo.subresourceRange = imageSubresourceRange;
         
         VkResult res = vkCreateImageView(device->vk, &viewInfo, nullptr, &imageView);
+#if defined(__ANDROID__)
+        if (res != VK_SUCCESS) imageView = VK_NULL_HANDLE;
+        device->descriptorResources.track(this, VK_OBJECT_TYPE_IMAGE, uint64_t(vk));
+#endif
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateImageView failed with error code 0x%X.\n", res);
             return;
@@ -1130,6 +1209,9 @@ namespace plume {
 
         this->texture = texture;
         this->desc = desc;
+#if defined(__ANDROID__)
+        viewDevice = texture->device;
+#endif
 
         const uint32_t mipLevels = std::min(desc.mipLevels, texture->desc.mipLevels - desc.mipSlice);
         const uint32_t arraySize = std::min(desc.arraySize, texture->desc.arraySize - desc.arrayIndex);
@@ -1150,6 +1232,10 @@ namespace plume {
         viewInfo.subresourceRange.layerCount = arraySize;
 
         VkResult res = vkCreateImageView(texture->device->vk, &viewInfo, nullptr, &vk);
+#if defined(__ANDROID__)
+        if (res != VK_SUCCESS) vk = VK_NULL_HANDLE;
+        texture->device->descriptorResources.track(this, VK_OBJECT_TYPE_IMAGE_VIEW, uint64_t(vk), texture);
+#endif
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateImageView failed with error code 0x%X.\n", res);
             return;
@@ -1157,8 +1243,16 @@ namespace plume {
     }
 
     VulkanTextureView::~VulkanTextureView() {
+#if defined(__ANDROID__)
+        const std::lock_guard lock(viewDevice->descriptorResources.mutex);
+        viewDevice->descriptorResources.erase(this);
+#endif
         if (vk != VK_NULL_HANDLE) {
+#if defined(__ANDROID__)
+            vkDestroyImageView(viewDevice->vk, vk, nullptr);
+#else
             vkDestroyImageView(texture->device->vk, vk, nullptr);
+#endif
         }
     }
 
@@ -1180,6 +1274,10 @@ namespace plume {
         createInfo.type = toVk(desc.type);
 
         VkResult res = vkCreateAccelerationStructureKHR(device->vk, &createInfo, nullptr, &vk);
+#if defined(__ANDROID__)
+        if (res != VK_SUCCESS) vk = VK_NULL_HANDLE;
+        device->descriptorResources.track(this, VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR, uint64_t(vk), desc.buffer.ref);
+#endif
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateAccelerationStructureKHR failed with error code 0x%X.\n", res);
             return;
@@ -1187,6 +1285,10 @@ namespace plume {
     }
 
     VulkanAccelerationStructure::~VulkanAccelerationStructure() {
+#if defined(__ANDROID__)
+        const std::lock_guard lock(device->descriptorResources.mutex);
+        device->descriptorResources.erase(this);
+#endif
         if (vk != VK_NULL_HANDLE) {
             vkDestroyAccelerationStructureKHR(device->vk, vk, nullptr);
         }
@@ -1194,20 +1296,43 @@ namespace plume {
 
     // VulkanDescriptorSetLayout
 
+#if defined(__ANDROID__)
+    [[noreturn]] static void rejectDescriptorLayout(const char *reason, uint32_t binding, uint32_t element) {
+        char record[256];
+        std::snprintf(record, sizeof(record), "Descriptor layout rejected: reason=%s ctx=%s tid=%d binding=%u element=%u",
+            reason, tooie::android::descriptorContext(), int(gettid()), binding, element);
+        tooie_android_debug_log(record);
+        std::fprintf(stderr, "%s\n", record);
+        std::_Exit(EXIT_FAILURE);
+    }
+#endif
     VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VulkanDevice *device, const RenderDescriptorSetDesc &descriptorSetDesc) {
         assert(device != nullptr);
 
         this->device = device;
 
         // Gather immutable sampler handles.
+#if defined(__ANDROID__)
+        const std::lock_guard lock(device->descriptorResources.mutex);
+        auto &samplerHandles = immutableSamplerHandles;
+#else
         thread_local std::vector<VkSampler> samplerHandles;
+#endif
         samplerHandles.clear();
 
         for (uint32_t i = 0; i < descriptorSetDesc.descriptorRangesCount; i++) {
             const RenderDescriptorRange &srcRange = descriptorSetDesc.descriptorRanges[i];
             if (srcRange.immutableSampler != nullptr) {
                 for (uint32_t j = 0; j < srcRange.count; j++) {
+#if defined(__ANDROID__)
+                    if (!device->descriptorResources.live(srcRange.immutableSampler[j], VK_OBJECT_TYPE_SAMPLER))
+                        rejectDescriptorLayout("immutable-sampler-not-live", srcRange.binding, j);
+#endif
                     const VulkanSampler *interfaceSampler = static_cast<const VulkanSampler *>(srcRange.immutableSampler[j]);
+#if defined(__ANDROID__)
+                    if (!interfaceSampler->vk) rejectDescriptorLayout("null-immutable-sampler", srcRange.binding, j);
+                    immutableSamplerResources.emplace_back(interfaceSampler, device->descriptorResources.objects.at(interfaceSampler).generation);
+#endif
                     assert(interfaceSampler != nullptr);
                     samplerHandles.emplace_back(interfaceSampler->vk);
                 }
@@ -1259,13 +1384,27 @@ namespace plume {
         }
         
         VkResult res = vkCreateDescriptorSetLayout(device->vk, &setLayoutInfo, nullptr, &vk);
+#if defined(__ANDROID__)
+        creationResult = res;
+        if (res != VK_SUCCESS) vk = VK_NULL_HANDLE;
+        device->descriptorResources.track(this, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, uint64_t(vk));
+#endif
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateDescriptorSetLayout failed with error code 0x%X.\n", res);
+#if defined(__ANDROID__)
+            char record[256];
+            std::snprintf(record, sizeof(record), "Descriptor layout creation failed: result=%d bindings=%u variable=%u", int(res), unsigned(setBindings.size()), unsigned(descriptorSetDesc.lastRangeIsBoundless));
+            tooie_android_debug_log(record);
+#endif
             return;
         }
     }
 
     VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout() {
+#if defined(__ANDROID__)
+        const std::lock_guard lock(device->descriptorResources.mutex);
+        device->descriptorResources.erase(this);
+#endif
         if (vk != VK_NULL_HANDLE) {
             vkDestroyDescriptorSetLayout(device->vk, vk, nullptr);
         }
@@ -1390,6 +1529,10 @@ namespace plume {
         samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
         VkResult res = vkCreateSampler(device->vk, &samplerInfo, nullptr, &vk);
+#if defined(__ANDROID__)
+        if (res != VK_SUCCESS) vk = VK_NULL_HANDLE;
+        device->descriptorResources.track(this, VK_OBJECT_TYPE_SAMPLER, uint64_t(vk));
+#endif
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateSampler failed with error code 0x%X.\n", res);
             return;
@@ -1397,6 +1540,10 @@ namespace plume {
     }
 
     VulkanSampler::~VulkanSampler() {
+#if defined(__ANDROID__)
+        const std::lock_guard lock(device->descriptorResources.mutex);
+        device->descriptorResources.erase(this);
+#endif
         if (vk != VK_NULL_HANDLE) {
             vkDestroySampler(device->vk, vk, nullptr);
         }
@@ -1956,7 +2103,19 @@ namespace plume {
         assert(device != nullptr);
 
         this->device = device;
-
+#if defined(__ANDROID__)
+        const std::lock_guard lock(device->descriptorResources.mutex);
+        if (!device->vk) rejectDescriptor(UINT32_MAX, "null-device-handle");
+        for (uint32_t i = 0; desc.descriptorRanges && i < desc.descriptorRangesCount; ++i) {
+            const auto &range = desc.descriptorRanges[i];
+            if (!range.count || toVk(range.type) == VK_DESCRIPTOR_TYPE_MAX_ENUM)
+                rejectDescriptor(UINT32_MAX, "invalid-descriptor-range-type-or-count");
+        }
+        if ((desc.descriptorRangesCount && !desc.descriptorRanges) ||
+            (desc.lastRangeIsBoundless && (!desc.descriptorRangesCount ||
+                std::max(desc.boundlessRangeSize, 1u) > desc.descriptorRanges[desc.descriptorRangesCount - 1].count)))
+            rejectDescriptor(UINT32_MAX, "invalid-descriptor-range-or-variable-count");
+#endif
         thread_local std::unordered_map<VkDescriptorType, uint32_t> typeCounts;
         typeCounts.clear();
         
@@ -1979,9 +2138,18 @@ namespace plume {
         }
 
         setLayout = new VulkanDescriptorSetLayout(device, desc);
-
+#if defined(__ANDROID__)
+        initializationFailure = "descriptor-layout-creation-failed";
+        if (!setLayout->vk || setLayout->creationResult != VK_SUCCESS) rejectDescriptor(UINT32_MAX, initializationFailure, setLayout->creationResult);
+        for (const auto &binding : setLayout->setBindings) allocatedCounts.push_back(binding.descriptorCount);
+        if (desc.lastRangeIsBoundless) allocatedCounts.back() = boundlessRangeSize;
+#endif
         descriptorPool = createDescriptorPool(device, typeCounts, desc.lastRangeIsBoundless);
         if (descriptorPool == VK_NULL_HANDLE) {
+#if defined(__ANDROID__)
+            initializationFailure = "descriptor-pool-creation-failed";
+            rejectDescriptor(UINT32_MAX, initializationFailure);
+#endif
             return;
         }
 
@@ -2000,6 +2168,28 @@ namespace plume {
         }
 
         VkResult res = vkAllocateDescriptorSets(device->vk, &allocateInfo, &vk);
+#if defined(__ANDROID__)
+        initializationFailure = "descriptor-set-allocation-failed";
+        if (res != VK_SUCCESS || !vk) rejectDescriptor(UINT32_MAX, initializationFailure, res);
+        device->descriptorResources.track(this, VK_OBJECT_TYPE_DESCRIPTOR_SET, uint64_t(vk), setLayout);
+        initializationFailure = "none";
+        // Layout shape is diagnostic evidence, especially for the first real
+        // RSP/typed-buffer set after a launcher with only texture descriptors.
+        uint32_t typed = typeCounts[VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER] + typeCounts[VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER];
+        thread_local bool loggedTyped = false;
+        thread_local unsigned loggedSets = 0;
+        if (loggedSets++ < 8 || (typed && !loggedTyped)) {
+            char record[384];
+            std::snprintf(record, sizeof(record), "Descriptor set allocated: tid=%d set=%llx layout=%llx bindings=%u typed=%u sampled=%u storageImages=%u buffers=%u variable=%u allocatedLast=%u",
+                int(gettid()), (unsigned long long)vk, (unsigned long long)setLayout->vk, unsigned(allocatedCounts.size()), typed,
+                typeCounts[VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE], typeCounts[VK_DESCRIPTOR_TYPE_STORAGE_IMAGE],
+                typeCounts[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER] + typeCounts[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER], unsigned(desc.lastRangeIsBoundless),
+                allocatedCounts.empty() ? 0 : allocatedCounts.back());
+            tooie_android_debug_log(record);
+            std::fprintf(stderr, "%s\n", record);
+        }
+        loggedTyped |= typed != 0;
+#endif
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkAllocateDescriptorSets failed with error code 0x%X.\n", res);
             return;
@@ -2007,6 +2197,10 @@ namespace plume {
     }
 
     VulkanDescriptorSet::~VulkanDescriptorSet() {
+#if defined(__ANDROID__)
+        const std::lock_guard lock(device->descriptorResources.mutex);
+        device->descriptorResources.erase(this);
+#endif
         if (descriptorPool != VK_NULL_HANDLE) {
             vkDestroyDescriptorPool(device->vk, descriptorPool, nullptr);
         }
@@ -2014,73 +2208,201 @@ namespace plume {
         delete setLayout;
     }
     
-    void VulkanDescriptorSet::setBuffer(uint32_t descriptorIndex, const RenderBuffer *buffer, uint64_t bufferSize, const RenderBufferStructuredView *bufferStructuredView, const RenderBufferFormattedView *bufferFormattedView) {
-        if (buffer == nullptr) {
-            return;
+#if defined(__ANDROID__)
+    [[noreturn]] void VulkanDescriptorSet::rejectDescriptor(uint32_t index, const char *reason, VkResult result) const {
+        uint32_t binding = UINT32_MAX, count = 0, type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
+        if (setLayout && index < setLayout->descriptorBindingIndices.size()) {
+            const uint32_t b = setLayout->descriptorBindingIndices[index];
+            if (b < setLayout->setBindings.size()) {
+                binding = setLayout->setBindings[b].binding;
+                type = setLayout->setBindings[b].descriptorType;
+                if (b < allocatedCounts.size()) count = allocatedCounts[b];
+            }
         }
+        char record[768];
+        std::snprintf(record, sizeof(record),
+            "Descriptor rejected: reason=%s result=%d op=%s ctx=%s tid=%d set=%llx pool=%llx setLayout=%llx init=%s index=%u binding=%u type=%u allocated=%u "
+            "resource=%llx view=%llx offset=%llu range=%llu format=%u usage=0x%X flags=0x%X samples=%u layout=%u",
+            reason, int(result), writeRecord.operation, tooie::android::descriptorContext(), int(gettid()), (unsigned long long)vk, (unsigned long long)descriptorPool,
+            (unsigned long long)(setLayout ? setLayout->vk : VK_NULL_HANDLE), initializationFailure,
+            index, binding, type, count, (unsigned long long)writeRecord.resource, (unsigned long long)writeRecord.view,
+            (unsigned long long)writeRecord.offset, (unsigned long long)writeRecord.range,
+            writeRecord.format, writeRecord.usage, writeRecord.flags, writeRecord.samples, writeRecord.layout);
+        tooie_android_debug_log(record);
+        std::fprintf(stderr, "%s\n", record);
+        std::_Exit(EXIT_FAILURE);
+    }
 
+    void VulkanDescriptorSet::validateDescriptorIndex(uint32_t index) const {
+        if (!device->vk) rejectDescriptor(index, "null-device-handle");
+        if (!vk || !descriptorPool || !setLayout || !setLayout->vk ||
+            !device->descriptorResources.live(this, VK_OBJECT_TYPE_DESCRIPTOR_SET))
+            rejectDescriptor(index, "descriptor-set-not-initialized-or-live");
+        if (device->descriptorResources.objects.at(this).handle != uint64_t(vk)) rejectDescriptor(index, "descriptor-set-handle-mismatch");
+        for (const auto &sampler : setLayout->immutableSamplerResources) {
+            if (!device->descriptorResources.live(sampler.first, VK_OBJECT_TYPE_SAMPLER) ||
+                device->descriptorResources.objects.at(sampler.first).generation != sampler.second)
+                rejectDescriptor(index, "immutable-sampler-not-live");
+        }
+        if (index >= setLayout->descriptorBindingIndices.size() || index >= setLayout->descriptorIndexBases.size())
+            rejectDescriptor(index, "descriptor-index-out-of-bounds");
+        const uint32_t binding = setLayout->descriptorBindingIndices[index];
+        if (binding >= setLayout->setBindings.size() || binding >= allocatedCounts.size() ||
+            index < setLayout->descriptorIndexBases[index]) rejectDescriptor(index, "invalid-binding-metadata");
+        if (index - setLayout->descriptorIndexBases[index] >= allocatedCounts[binding])
+            rejectDescriptor(index, "descriptor-array-element-not-allocated");
+    }
+#endif
+
+    void VulkanDescriptorSet::setBuffer(uint32_t descriptorIndex, const RenderBuffer *buffer, uint64_t bufferSize, const RenderBufferStructuredView *bufferStructuredView, const RenderBufferFormattedView *bufferFormattedView) {
+#if defined(__ANDROID__)
+        const std::lock_guard lock(device->descriptorResources.mutex);
+        writeRecord = {}; writeRecord.operation = "buffer";
+        validateDescriptorIndex(descriptorIndex);
+        if (!buffer) rejectDescriptor(descriptorIndex, "null-buffer-object");
+        if (!device->descriptorResources.live(buffer, VK_OBJECT_TYPE_BUFFER)) rejectDescriptor(descriptorIndex, "buffer-not-live-or-wrong-device");
+#else
+        if (buffer == nullptr) return;
+#endif
         const VulkanBuffer *interfaceBuffer = static_cast<const VulkanBuffer *>(buffer);
         const VkBufferView *bufferView = nullptr;
         VkDescriptorBufferInfo bufferInfo = {};
         bufferInfo.buffer = interfaceBuffer->vk;
         bufferInfo.range = (bufferSize > 0) ? bufferSize : interfaceBuffer->desc.size;
 
+#if defined(__ANDROID__)
+        writeRecord.resource = uint64_t(interfaceBuffer->vk);
+        writeRecord.usage = interfaceBuffer->bufferUsage;
+        writeRecord.flags = interfaceBuffer->desc.flags;
+        if (device->descriptorResources.objects.at(buffer).handle != uint64_t(interfaceBuffer->vk)) rejectDescriptor(descriptorIndex, "buffer-handle-mismatch");
+        if (!interfaceBuffer->vk) rejectDescriptor(descriptorIndex, "null-buffer-handle");
+        if (bufferFormattedView && bufferStructuredView) rejectDescriptor(descriptorIndex, "conflicting-buffer-views");
+#endif
         if (bufferFormattedView != nullptr) {
+#if defined(__ANDROID__)
+            if (!device->descriptorResources.live(bufferFormattedView, VK_OBJECT_TYPE_BUFFER_VIEW)) rejectDescriptor(descriptorIndex, "buffer-view-not-live-or-wrong-device");
+#endif
             assert((bufferStructuredView == nullptr) && "Can't use structured views and formatted views at the same time.");
 
             const VulkanBufferFormattedView *interfaceBufferFormattedView = static_cast<const VulkanBufferFormattedView *>(bufferFormattedView);
+#if defined(__ANDROID__)
+            writeRecord.view = uint64_t(interfaceBufferFormattedView->vk);
+            writeRecord.format = toVk(interfaceBufferFormattedView->format);
+            if (interfaceBufferFormattedView->buffer != interfaceBuffer) rejectDescriptor(descriptorIndex, "buffer-view-parent-mismatch");
+            if (device->descriptorResources.objects.at(bufferFormattedView).handle != uint64_t(interfaceBufferFormattedView->vk)) rejectDescriptor(descriptorIndex, "buffer-view-handle-mismatch");
+            if (!interfaceBufferFormattedView->vk) rejectDescriptor(descriptorIndex, "null-buffer-view");
+#endif
             bufferView = &interfaceBufferFormattedView->vk;
         }
         else if (bufferStructuredView != nullptr) {
             assert((bufferFormattedView == nullptr) && "Can't use structured views and formatted views at the same time.");
             assert(bufferStructuredView->structureByteStride > 0);
 
-            bufferInfo.offset = bufferStructuredView->firstElement * bufferStructuredView->structureByteStride;
+#if defined(__ANDROID__)
+            if (!bufferStructuredView->structureByteStride) rejectDescriptor(descriptorIndex, "zero-structured-stride");
+#endif
+            bufferInfo.offset = uint64_t(bufferStructuredView->firstElement) * bufferStructuredView->structureByteStride;
         }
         else {
             bufferInfo.offset = 0;
         }
 
+#if defined(__ANDROID__)
+        if (!bufferView) {
+            if (bufferInfo.offset >= interfaceBuffer->desc.size) rejectDescriptor(descriptorIndex, "buffer-offset-out-of-bounds");
+            if (!bufferSize) bufferInfo.range = interfaceBuffer->desc.size - bufferInfo.offset;
+            writeRecord.offset = bufferInfo.offset;
+            writeRecord.range = bufferInfo.range == VK_WHOLE_SIZE ? interfaceBuffer->desc.size - bufferInfo.offset : bufferInfo.range;
+            if (!bufferInfo.range || (bufferInfo.range != VK_WHOLE_SIZE && bufferInfo.range > interfaceBuffer->desc.size - bufferInfo.offset))
+                rejectDescriptor(descriptorIndex, "buffer-range-out-of-bounds");
+        }
+        setDescriptor(descriptorIndex, bufferView ? nullptr : &bufferInfo, nullptr, bufferView, nullptr);
+#else
         setDescriptor(descriptorIndex, &bufferInfo, nullptr, bufferView, nullptr);
+#endif
     }
 
     void VulkanDescriptorSet::setTexture(uint32_t descriptorIndex, const RenderTexture *texture, const RenderTextureLayout textureLayout, const RenderTextureView *textureView) {
-        if (texture == nullptr) {
-            return;
-        }
-
+#if defined(__ANDROID__)
+        const std::lock_guard lock(device->descriptorResources.mutex);
+        writeRecord = {}; writeRecord.operation = "texture";
+        validateDescriptorIndex(descriptorIndex);
+        if (!texture) rejectDescriptor(descriptorIndex, "null-texture-object");
+        if (!device->descriptorResources.live(texture, VK_OBJECT_TYPE_IMAGE)) rejectDescriptor(descriptorIndex, "image-not-live-or-wrong-device");
+#else
+        if (texture == nullptr) return;
+#endif
         const VulkanTexture *interfaceTexture = static_cast<const VulkanTexture *>(texture);
         VkDescriptorImageInfo imageInfo = {};
         imageInfo.imageLayout = toImageLayout(textureLayout);
+#if defined(__ANDROID__)
+        writeRecord.resource = uint64_t(interfaceTexture->vk);
+        writeRecord.format = interfaceTexture->imageFormat;
+        writeRecord.usage = interfaceTexture->imageUsage;
+        writeRecord.samples = interfaceTexture->desc.multisampling.sampleCount;
+        writeRecord.layout = imageInfo.imageLayout;
+        if (device->descriptorResources.objects.at(texture).handle != uint64_t(interfaceTexture->vk)) rejectDescriptor(descriptorIndex, "image-handle-mismatch");
+        if (!interfaceTexture->vk) rejectDescriptor(descriptorIndex, "null-image-handle");
+#endif
 
         if (textureView != nullptr) {
+#if defined(__ANDROID__)
+            if (!device->descriptorResources.live(textureView, VK_OBJECT_TYPE_IMAGE_VIEW)) rejectDescriptor(descriptorIndex, "image-view-not-live-or-wrong-device");
+#endif
             const VulkanTextureView *interfaceTextureView = static_cast<const VulkanTextureView *>(textureView);
+#if defined(__ANDROID__)
+            if (device->descriptorResources.objects.at(textureView).handle != uint64_t(interfaceTextureView->vk)) rejectDescriptor(descriptorIndex, "image-view-handle-mismatch");
+            if (interfaceTextureView->texture != interfaceTexture) rejectDescriptor(descriptorIndex, "image-view-parent-mismatch");
+#endif
             imageInfo.imageView = interfaceTextureView->vk;
         }
         else {
             imageInfo.imageView = (interfaceTexture != nullptr) ? interfaceTexture->imageView : VK_NULL_HANDLE;
         }
 
+#if defined(__ANDROID__)
+        writeRecord.view = uint64_t(imageInfo.imageView);
+        if (!imageInfo.imageView) rejectDescriptor(descriptorIndex, "null-image-view");
+#endif
         setDescriptor(descriptorIndex, nullptr, &imageInfo, nullptr, nullptr);
     }
 
     void VulkanDescriptorSet::setSampler(uint32_t descriptorIndex, const RenderSampler *sampler) {
-        if (sampler == nullptr) {
-            return;
-        }
-
+#if defined(__ANDROID__)
+        const std::lock_guard lock(device->descriptorResources.mutex);
+        writeRecord = {}; writeRecord.operation = "sampler";
+        validateDescriptorIndex(descriptorIndex);
+        if (!sampler) rejectDescriptor(descriptorIndex, "null-sampler-object");
+        if (!device->descriptorResources.live(sampler, VK_OBJECT_TYPE_SAMPLER)) rejectDescriptor(descriptorIndex, "sampler-not-live-or-wrong-device");
+#else
+        if (sampler == nullptr) return;
+#endif
         const VulkanSampler *interfaceSampler = static_cast<const VulkanSampler *>(sampler);
         VkDescriptorImageInfo imageInfo = {};
         imageInfo.sampler = interfaceSampler->vk;
+#if defined(__ANDROID__)
+        writeRecord.resource = uint64_t(interfaceSampler->vk);
+        if (device->descriptorResources.objects.at(sampler).handle != uint64_t(interfaceSampler->vk)) rejectDescriptor(descriptorIndex, "sampler-handle-mismatch");
+        if (!interfaceSampler->vk) rejectDescriptor(descriptorIndex, "null-sampler-handle");
+#endif
         setDescriptor(descriptorIndex, nullptr, &imageInfo, nullptr, nullptr);
     }
 
     void VulkanDescriptorSet::setAccelerationStructure(uint32_t descriptorIndex, const RenderAccelerationStructure *accelerationStructure) {
-        if (accelerationStructure == nullptr) {
-            return;
-        }
-
+#if defined(__ANDROID__)
+        const std::lock_guard lock(device->descriptorResources.mutex);
+        writeRecord = {}; writeRecord.operation = "acceleration";
+        validateDescriptorIndex(descriptorIndex);
+        if (!accelerationStructure) rejectDescriptor(descriptorIndex, "null-acceleration-object");
+        if (!device->descriptorResources.live(accelerationStructure, VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR))
+            rejectDescriptor(descriptorIndex, "acceleration-not-live-or-wrong-device");
+#else
+        if (accelerationStructure == nullptr) return;
+#endif
         const VulkanAccelerationStructure *interfaceAccelerationStructure = static_cast<const VulkanAccelerationStructure *>(accelerationStructure);
+#if defined(__ANDROID__)
+        writeRecord.resource = uint64_t(interfaceAccelerationStructure->vk);
+#endif
         VkWriteDescriptorSetAccelerationStructureKHR setAccelerationStructure = {};
         setAccelerationStructure.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
         setAccelerationStructure.pAccelerationStructures = &interfaceAccelerationStructure->vk;
@@ -2089,6 +2411,10 @@ namespace plume {
     }
 
     void VulkanDescriptorSet::setDescriptor(uint32_t descriptorIndex, const VkDescriptorBufferInfo *bufferInfo, const VkDescriptorImageInfo *imageInfo, const VkBufferView *texelBufferView, void *pNext) {
+#if defined(__ANDROID__)
+        const std::lock_guard lock(device->descriptorResources.mutex);
+        validateDescriptorIndex(descriptorIndex);
+#endif
         assert(descriptorIndex < setLayout->descriptorBindingIndices.size());
 
         const uint32_t indexBase = setLayout->descriptorIndexBases[descriptorIndex];
@@ -2106,14 +2432,88 @@ namespace plume {
         writeDescriptor.pImageInfo = imageInfo;
         writeDescriptor.pTexelBufferView = texelBufferView;
 
+#if defined(__ANDROID__)
+        const auto type = writeDescriptor.descriptorType;
+        if (bufferInfo) {
+            if (imageInfo || texelBufferView || pNext || (type != VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER && type != VK_DESCRIPTOR_TYPE_STORAGE_BUFFER))
+                rejectDescriptor(descriptorIndex, "buffer-payload-type-mismatch");
+            const bool uniform = type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            const uint32_t required = uniform ? VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            if (!(writeRecord.usage & required)) rejectDescriptor(descriptorIndex, "buffer-usage-mismatch");
+            const auto &limits = device->physicalDeviceProperties.limits;
+            const uint64_t alignment = uniform ? limits.minUniformBufferOffsetAlignment : limits.minStorageBufferOffsetAlignment;
+            const uint64_t maximum = uniform ? limits.maxUniformBufferRange : limits.maxStorageBufferRange;
+            if (alignment && bufferInfo->offset % alignment) rejectDescriptor(descriptorIndex, "buffer-offset-misaligned");
+            if (maximum && writeRecord.range > maximum) rejectDescriptor(descriptorIndex, "buffer-range-exceeds-device-limit");
+        }
+        else if (texelBufferView) {
+            if (imageInfo || pNext || (type != VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER && type != VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER))
+                rejectDescriptor(descriptorIndex, "texel-payload-type-mismatch");
+            const uint32_t required = type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ? VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
+            if ((writeRecord.usage & required) != required) rejectDescriptor(descriptorIndex, "texel-buffer-usage-mismatch");
+            if (!*texelBufferView) rejectDescriptor(descriptorIndex, "null-buffer-view");
+        }
+        else if (imageInfo) {
+            if (pNext) rejectDescriptor(descriptorIndex, "image-payload-type-mismatch");
+            if (type == VK_DESCRIPTOR_TYPE_SAMPLER) {
+                if (imageInfo->imageView || !imageInfo->sampler) rejectDescriptor(descriptorIndex, "sampler-payload-type-mismatch");
+                if (setLayoutBinding.pImmutableSamplers) rejectDescriptor(descriptorIndex, "immutable-sampler-update");
+            }
+            else if (type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+                if (imageInfo->sampler || !imageInfo->imageView) rejectDescriptor(descriptorIndex, "image-payload-type-mismatch");
+                const VkImageUsageFlags required = type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ? VK_IMAGE_USAGE_STORAGE_BIT : VK_IMAGE_USAGE_SAMPLED_BIT;
+                if (!(writeRecord.usage & required)) rejectDescriptor(descriptorIndex, "image-usage-mismatch");
+                if (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE && imageInfo->imageLayout != VK_IMAGE_LAYOUT_GENERAL)
+                    rejectDescriptor(descriptorIndex, "storage-image-layout-not-general");
+                if (type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE && imageInfo->imageLayout != VK_IMAGE_LAYOUT_GENERAL &&
+                    imageInfo->imageLayout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
+                    imageInfo->imageLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
+                    rejectDescriptor(descriptorIndex, "sampled-image-layout-invalid");
+            }
+            else rejectDescriptor(descriptorIndex, "image-payload-type-mismatch");
+        }
+        else if (pNext) {
+            const auto *as = static_cast<const VkWriteDescriptorSetAccelerationStructureKHR *>(pNext);
+            if (type != VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR || as->sType != VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR ||
+                as->accelerationStructureCount != 1 || !as->pAccelerationStructures || !*as->pAccelerationStructures)
+                rejectDescriptor(descriptorIndex, "acceleration-payload-type-mismatch");
+        }
+        else rejectDescriptor(descriptorIndex, "missing-required-payload");
+
+        // Logging survives launcher warm-up: first writes per set and the first
+        // (descriptor type, format) on each thread are recorded independently.
+        thread_local std::unordered_set<uint64_t> loggedTypes;
+        const uint64_t signature = uint64_t(type) << 32 | writeRecord.format;
+        const bool logWrite = diagnosticWrites < 16 || loggedTypes.find(signature) == loggedTypes.end();
+        char record[512];
+        if (logWrite) {
+            std::snprintf(record, sizeof(record),
+                "Descriptor write begin: tid=%d op=%s ctx=%s set=%llx index=%u binding=%u element=%u type=%u allocated=%u resource=%llx view=%llx offset=%llu range=%llu format=%u usage=0x%X flags=0x%X samples=%u layout=%u",
+                int(gettid()), writeRecord.operation, tooie::android::descriptorContext(), (unsigned long long)vk, descriptorIndex, writeDescriptor.dstBinding, writeDescriptor.dstArrayElement,
+                unsigned(type), allocatedCounts[bindingIndex], (unsigned long long)writeRecord.resource, (unsigned long long)writeRecord.view,
+                (unsigned long long)writeRecord.offset, (unsigned long long)writeRecord.range, writeRecord.format, writeRecord.usage, writeRecord.flags, writeRecord.samples, writeRecord.layout);
+            tooie_android_debug_log(record);
+            std::fprintf(stderr, "%s\n", record);
+        }
+#endif
+
         vkUpdateDescriptorSets(device->vk, 1, &writeDescriptor, 0, nullptr);
+#if defined(__ANDROID__)
+        ++diagnosticWrites;
+        if (logWrite) {
+            loggedTypes.insert(signature);
+            std::snprintf(record, sizeof(record), "Descriptor write returned: tid=%d set=%llx index=%u binding=%u type=%u",
+                int(gettid()), (unsigned long long)vk, descriptorIndex, writeDescriptor.dstBinding, unsigned(type));
+            tooie_android_debug_log(record);
+        }
+#endif
     }
 
     VkDescriptorPool VulkanDescriptorSet::createDescriptorPool(VulkanDevice *device, const std::unordered_map<VkDescriptorType, uint32_t> &typeCounts, bool lastRangeIsBoundless) {
         thread_local std::vector<VkDescriptorPoolSize> poolSizes;
         poolSizes.clear();
 
-        VkDescriptorPool descriptorPool;
+        VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
         for (auto it : typeCounts) {
             VkDescriptorPoolSize poolSize = {};
             poolSize.type = it.first;
@@ -2137,6 +2537,11 @@ namespace plume {
         }
         else {
             fprintf(stderr, "vkCreateDescriptorPool failed with error code 0x%X.\n", res);
+#if defined(__ANDROID__)
+            char record[256];
+            std::snprintf(record, sizeof(record), "Descriptor pool creation failed: result=%d typeCount=%u variable=%u", int(res), unsigned(poolSizes.size()), unsigned(lastRangeIsBoundless));
+            tooie_android_debug_log(record);
+#endif
             return VK_NULL_HANDLE;
         }
     }
@@ -2902,6 +3307,10 @@ namespace plume {
 
     void VulkanSwapChain::releaseImageViews() {
         for (VulkanTexture &texture : textures) {
+#if defined(__ANDROID__)
+            const std::lock_guard lock(commandQueue->device->descriptorResources.mutex);
+            commandQueue->device->descriptorResources.erase(&texture);
+#endif
             if (texture.imageView != VK_NULL_HANDLE) {
                 vkDestroyImageView(commandQueue->device->vk, texture.imageView, nullptr);
                 texture.imageView = VK_NULL_HANDLE;

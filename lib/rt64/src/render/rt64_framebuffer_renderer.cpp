@@ -2,6 +2,10 @@
 // RT64
 //
 
+#if defined(__ANDROID__)
+#include "../../../../src/android_descriptor_context.h"
+#endif
+
 #include "rt64_framebuffer_renderer.h"
 
 #include "../include/rt64_extended_gbi.h"
@@ -465,7 +469,15 @@ namespace RT64 {
     }
 
     void FramebufferRenderer::updateShaderViews(RenderWorker *worker, const DrawBuffers *drawBuffers, const OutputBuffers *outputBuffers, const bool raytracingEnabled) {
+#if defined(__ANDROID__)
+        tooie::android::DescriptorContextScope descriptorContext("framebuffer-shader-views");
+#endif
         updateShaderDescriptorSet(worker, drawBuffers, outputBuffers, raytracingEnabled);
+#if defined(__ANDROID__)
+        const bool usesVertexTestZ = std::any_of(instanceDrawCallVector.begin(), instanceDrawCallVector.end(),
+            [](const InstanceDrawCall &call) { return call.type == InstanceDrawCall::Type::VertexTestZ; });
+        if (usesVertexTestZ)
+#endif
         updateRSPVertexTestZSet(worker, drawBuffers, outputBuffers);
 
 #   if RT_ENABLED
