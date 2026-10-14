@@ -22,6 +22,9 @@ namespace recompui {
         std::string game_display_name;
         std::span<const char> game_thumbnail;
         bool rom_valid = false;
+#if defined(__ANDROID__)
+        bool rom_selection_pending = false;
+#endif
         GameOptionsMenuLayout layout;
 
         std::string_view get_type_name() override { return "GameOptionsMenu"; }

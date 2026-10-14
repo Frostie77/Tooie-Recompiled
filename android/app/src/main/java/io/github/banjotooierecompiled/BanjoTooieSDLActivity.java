@@ -1,5 +1,9 @@
 package io.github.banjotooierecompiled;
 
+import android.app.Activity;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -15,9 +19,25 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BanjoTooieSDLActivity extends SDLActivity {
     private static final String TAG = "BanjoTooieSDL";
+    private static final int ROM_PICKER_REQUEST = 0x544F;
+    private long pendingRomRequest;
+    private boolean romImportInProgress;
+    private boolean romPickerDestroyed;
+    private final AtomicBoolean romImportCancelled = new AtomicBoolean();
+    private final ExecutorService romImportWorker = Executors.newSingleThreadExecutor(task -> {
+        Thread worker = new Thread(task, "Tooie-ROM-import");
+        worker.setDaemon(true);
+        return worker;
+    });
+    // Status values match the native DialogRequests protocol: selected/cancelled/error.
+    private static native void nativeFileDialogResult(long request, int status, String path, String error);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,11 +63,89 @@ public class BanjoTooieSDLActivity extends SDLActivity {
         // start the game thread after this main-thread onCreate callback returns.
         SDLActivity.nativeSetenv("APP_PROGRAM_PATH", programDir.getAbsolutePath());
         SDLActivity.nativeSetenv("APP_FOLDER_PATH", dataDir.getAbsolutePath());
+        RomImporter.cleanAbandonedImports(new File(dataDir, "rom-import"));
 
         Log.i(TAG, "Program path: " + programDir.getAbsolutePath());
         Log.i(TAG, "Data path: " + dataDir.getAbsolutePath());
 
         applyImmersiveFullscreen();
+    }
+
+    /** Called through SDL JNI on the native UI thread; Activity work stays on main. */
+    public void openRomPicker(long request) {
+        runOnUiThread(() -> {
+            if (romPickerDestroyed || isFinishing() || isDestroyed()) {
+                nativeFileDialogResult(request, 2, null, "ROM selection is unavailable while the application is closing.");
+                return;
+            }
+            if (pendingRomRequest != 0) {
+                nativeFileDialogResult(request, 1, null, null);
+                return;
+            }
+            pendingRomRequest = request;
+            romImportCancelled.set(false);
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            // Providers label N64 ROMs inconsistently. Validation uses bytes, not names/MIME types.
+            intent.setType("*/*");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            try {
+                startActivityForResult(intent, ROM_PICKER_REQUEST);
+            } catch (ActivityNotFoundException | SecurityException failure) {
+                finishRomRequest(request, 2, null, "Android could not open the document picker. Please enable a document provider and retry.");
+            }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != ROM_PICKER_REQUEST || pendingRomRequest == 0 || romImportInProgress || romPickerDestroyed) return;
+        final long request = pendingRomRequest;
+        if (resultCode == Activity.RESULT_CANCELED) {
+            finishRomRequest(request, 1, null, null);
+            return;
+        }
+        final Uri uri = data == null ? null : data.getData();
+        if (resultCode != Activity.RESULT_OK || uri == null || !"content".equals(uri.getScheme())) {
+            finishRomRequest(request, 2, null, "The document picker returned no readable document. Please select the ROM again.");
+            return;
+        }
+        romImportInProgress = true;
+        try {
+            romImportWorker.execute(() -> {
+                // Stream the URI; never resolve it to a public-storage filesystem path.
+                RomImporter.Result result = RomImporter.select(() -> getContentResolver().openInputStream(uri),
+                    new File(new File(getFilesDir(), "data"), "rom-import"), romImportCancelled::get);
+                runOnUiThread(() -> finishRomRequest(request, result.status, result.file, result.error));
+            });
+        } catch (RejectedExecutionException failure) {
+            finishRomRequest(request, 2, null, "ROM import is unavailable while the application is closing.");
+        }
+    }
+
+    // Only main-thread code touches Activity/request state; JNI merely queues the native callback.
+    private void finishRomRequest(long request, int status, File imported, String error) {
+        if (romPickerDestroyed || request != pendingRomRequest) {
+            if (imported != null) imported.delete();
+            return;
+        }
+        pendingRomRequest = 0;
+        romImportInProgress = false;
+        nativeFileDialogResult(request, status, imported == null ? null : imported.getAbsolutePath(), error);
+        applyImmersiveFullscreen();
+    }
+
+    @Override
+    protected void onDestroy() {
+        romPickerDestroyed = true;
+        romImportCancelled.set(true);
+        if (pendingRomRequest != 0) {
+            nativeFileDialogResult(pendingRomRequest, 1, null, null);
+            pendingRomRequest = 0;
+        }
+        romImportWorker.shutdownNow(); // Do not block SDL teardown waiting for a provider.
+        super.onDestroy();
     }
 
     @Override

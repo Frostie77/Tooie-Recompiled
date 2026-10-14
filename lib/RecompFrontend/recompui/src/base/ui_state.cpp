@@ -515,6 +515,9 @@ void init_hook(plume::RenderInterface* interface, plume::RenderDevice* device) {
     std::locale::global(std::locale::classic());
 #endif
     tooie_android_debug_log("UI: init_hook entered");
+#if defined(__ANDROID__)
+    recompui::file::start_file_dialog_callbacks();
+#endif
     ui_state = std::make_unique<UIState>(window, interface, device);
     tooie_android_debug_log("UI: UIState constructed");
     ui_state->create_menus();
@@ -671,6 +674,10 @@ void draw_hook(plume::RenderCommandList* command_list, plume::RenderFramebuffer*
     }
 
     std::lock_guard lock{ ui_state_mutex };
+#if defined(__ANDROID__)
+    // Deliver asynchronous picker results on the RmlUi thread, before input/render.
+    const bool file_dialog_completed = recompui::file::poll_file_dialog_callbacks();
+#endif
 
     SDL_Event cur_event{};
 
@@ -689,6 +696,11 @@ void draw_hook(plume::RenderCommandList* command_list, plume::RenderFramebuffer*
     constexpr clock::duration repeat_rate = std::chrono::milliseconds{50};
     static clock::time_point next_repeat_time = {};
     static int latest_controller_key_pressed = SDLK_UNKNOWN;
+#if defined(__ANDROID__)
+    // A system picker can consume the controller release while SDL is paused.
+    // Do not repeat Select ROM or start the game from the pre-picker key hold.
+    if (file_dialog_completed) latest_controller_key_pressed = SDLK_UNKNOWN;
+#endif
 
     bool all_input_is_disabled = recompinput::all_input_disabled();
 
@@ -901,6 +913,10 @@ void draw_hook(plume::RenderCommandList* command_list, plume::RenderFramebuffer*
 }
 
 void deinit_hook() {
+#if defined(__ANDROID__)
+    std::lock_guard dialog_guard{ ui_state_mutex };
+    recompui::file::cancel_file_dialog_callbacks();
+#endif
     recompui::destroy_all_contexts();
 
     std::lock_guard lock {ui_state_mutex};
