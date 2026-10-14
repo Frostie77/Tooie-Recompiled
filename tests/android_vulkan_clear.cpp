@@ -33,6 +33,8 @@ struct PassRecord {
 };
 static std::unordered_map<VkRenderPass, PassRecord> passes;
 static std::unordered_map<VkFramebuffer, VkRenderPass> framebufferPasses;
+static VkExtent2D expectedFramebufferExtent = {640, 480};
+static std::unordered_map<VkFramebuffer, VkExtent2D> framebufferExtents;
 static std::unordered_map<VkImage, VkImageLayout> imageLayouts;
 static std::vector<char> commands;
 static bool isolation = false, acquireFails = false, colorFeature = true;
@@ -111,9 +113,8 @@ static VkResult imageProperties(VkPhysicalDevice, VkFormat format,
   if (usage == (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)) {
     ++swapImageQueries;
-    REQUIRE(format == expectedSwapchainFormat &&
-            type == VK_IMAGE_TYPE_2D && tiling == VK_IMAGE_TILING_OPTIMAL &&
-            flags == 0);
+    REQUIRE(format == expectedSwapchainFormat && type == VK_IMAGE_TYPE_2D &&
+            tiling == VK_IMAGE_TILING_OPTIMAL && flags == 0);
     *out = {};
     out->maxExtent = {4096, 4096, 1};
     out->maxMipLevels = out->maxArrayLayers = 1;
@@ -323,9 +324,11 @@ static void destroyPass(VkDevice, VkRenderPass pass,
 }
 static VkResult createFb(VkDevice, const VkFramebufferCreateInfo *p,
                          const VkAllocationCallbacks *, VkFramebuffer *out) {
-  REQUIRE(p->width == 640 && p->height == 480 && p->layers == 1);
+  REQUIRE(p->width == expectedFramebufferExtent.width &&
+          p->height == expectedFramebufferExtent.height && p->layers == 1);
   REQUIRE(p->attachmentCount == passes.at(p->renderPass).attachments.size());
   *out = handle<VkFramebuffer>();
+  framebufferExtents[*out] = {p->width, p->height};
   framebufferPasses[*out] = p->renderPass;
   const auto &attachments = passes.at(p->renderPass).attachments;
   for (unsigned i = 0; i < p->attachmentCount; ++i)
@@ -336,6 +339,7 @@ static VkResult createFb(VkDevice, const VkFramebufferCreateInfo *p,
 }
 static void destroyFb(VkDevice, VkFramebuffer fb,
                       const VkAllocationCallbacks *) {
+  REQUIRE(framebufferExtents.erase(fb) == 1);
   framebufferPasses.erase(fb);
 }
 static VkResult createView(VkDevice, const VkImageViewCreateInfo *info,
@@ -397,8 +401,9 @@ static void beginPass(VkCommandBuffer, const VkRenderPassBeginInfo *p,
       REQUIRE(a.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD);
   }
   REQUIRE(p->renderArea.offset.x == 0 && p->renderArea.offset.y == 0);
-  REQUIRE(p->renderArea.extent.width == 640 &&
-          p->renderArea.extent.height == 480);
+  const VkExtent2D extent = framebufferExtents.at(p->framebuffer);
+  REQUIRE(p->renderArea.extent.width == extent.width &&
+          p->renderArea.extent.height == extent.height);
 }
 static void endPass(VkCommandBuffer) {
   REQUIRE(inPass);
@@ -950,6 +955,57 @@ static void testPresentationPipelineFormats(VulkanDevice &device) {
   std::puts("PASS: VI nearest/linear/pixel and UI direct/offscreen/composite "
             "pipeline formats and alpha factors");
 }
+#if !defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) &&                              \
+    !defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK)
+static void testAttachmentClearDomain(VulkanDevice &device,
+                                      VulkanCommandList &list) {
+  selectedIndex = 0;
+  expectedFramebufferExtent = {320, 241};
+  for (bool mipView : {false, true}) {
+    list.begin();
+    VulkanTexture texture;
+    initialize(texture, device, mipView ? 1 : 2, RenderFormat::R8G8B8A8_UNORM);
+    texture.desc.width = mipView ? 640 : 320;
+    texture.desc.height = mipView ? 482 : 241;
+    texture.desc.mipLevels = mipView ? 2 : 1;
+    std::unique_ptr<RenderTextureView> view;
+    if (mipView) {
+      auto desc = RenderTextureViewDesc::Texture2D(texture.desc.format);
+      desc.mipSlice = 1;
+      desc.mipLevels = desc.arraySize = 1;
+      view = texture.createTextureView(desc);
+    }
+    const RenderTexture *color = &texture;
+    const RenderTextureView *attachmentView = view.get();
+    RenderFramebufferDesc desc(&color, 1);
+    desc.colorAttachmentViews = &attachmentView;
+    VulkanFramebuffer framebuffer(&device, desc);
+    REQUIRE(framebuffer.getWidth() == 320 && framebuffer.getHeight() == 241);
+    list.setFramebuffer(&framebuffer);
+    commands.clear();
+    clearDrawScissors.clear();
+    const RenderRect original = {310, 230, 331, 263};
+    list.clearColor(0, RenderColor(), &original, 1);
+    REQUIRE(commands == std::vector<char>({'M', 'B', 'D'}) &&
+            clearDrawScissors.size() == 1);
+    const VkRect2D &scissor = clearDrawScissors[0];
+    REQUIRE(scissor.offset.x == 310 && scissor.offset.y == 230 &&
+            scissor.extent.width == 10 && scissor.extent.height == 11);
+    RenderRect pushedRectangle;
+    std::memcpy(&pushedRectangle, pushed.data() + 16, sizeof(pushedRectangle));
+    REQUIRE(pushedRectangle == RenderRect(310, 230, 320, 241));
+    REQUIRE(passes.at(framebuffer.renderPass).attachments[0].samples ==
+            (mipView ? VK_SAMPLE_COUNT_1_BIT : VK_SAMPLE_COUNT_2_BIT));
+    list.setFramebuffer(nullptr);
+    list.end();
+    std::printf("PASS: clipping domain fbExtent=320x241 imageExtent=%ux%u "
+                "viewMip=%u samples=%u\n",
+                texture.desc.width, texture.desc.height, unsigned(mipView),
+                texture.desc.multisampling.sampleCount);
+  }
+  expectedFramebufferExtent = {640, 480};
+}
+#endif
 int main(int argc, char **argv) {
   simulateTimeout = argc > 1 && std::strcmp(argv[1], "--timeout") == 0;
   invalidState = argc > 1 && std::strcmp(argv[1], "--invalid-state") == 0;
@@ -1018,9 +1074,8 @@ int main(int argc, char **argv) {
     rejectBeforeRecording = true;
     auto rejected = recompui::CreateUiPipeline(
         &device, base,
-        std::strcmp(argv[1] + 18, "bgra") == 0
-            ? RenderFormat::B8G8R8A8_UNORM
-            : RenderFormat::R8G8B8A8_UNORM,
+        std::strcmp(argv[1] + 18, "bgra") == 0 ? RenderFormat::B8G8R8A8_UNORM
+                                               : RenderFormat::R8G8B8A8_UNORM,
         RenderMultisampling(8), recompui::UiPipelinePath::Offscreen);
     REQUIRE(false); // Must stop before render-pass/pipeline creation or submit.
   }
@@ -1108,7 +1163,7 @@ int main(int argc, char **argv) {
     list.setFramebuffer(nullptr);
     warmup.ownership = false;
   }
-  for (uint32_t samples : {1u, 8u})
+  for (uint32_t samples : {1u, 2u, 8u})
     for (unsigned count : {1u, 2u}) {
 #if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) &&                               \
     TOOIE_VULKAN_TRANSFER_CLEAR_TEST &&                                        \
@@ -1133,7 +1188,7 @@ int main(int argc, char **argv) {
       selectedIndex = count - 1;
       auto &selected = count == 1 ? first : second;
       // Synthetic offscreen ownership metadata; never hand mock images to VMA.
-      selected.ownership = samples == 8;
+      selected.ownership = samples > 1;
       selected.isSwapChainImage = samples == 1;
       unsigned base = createdPasses;
       {
@@ -1258,8 +1313,20 @@ int main(int argc, char **argv) {
     !defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK)
         RenderRect rectangles[] = {{0, 0, 32, 32}, {8, 16, 40, 48}};
         if (drawReject) {
-          if (!std::strcmp(drawReject, "rectangle-out-of-bounds"))
-            rectangles[1].right = 641;
+          if (!std::strcmp(drawReject, "inverted-x"))
+            rectangles[1] = {40, 16, 8, 48};
+          if (!std::strcmp(drawReject, "inverted-y"))
+            rectangles[1] = {8, 48, 40, 16};
+          if (!std::strcmp(drawReject, "zero-width"))
+            rectangles[1] = {8, 16, 8, 48};
+          if (!std::strcmp(drawReject, "zero-height"))
+            rectangles[1] = {8, 16, 40, 16};
+          if (!std::strcmp(drawReject, "outside-malformed"))
+            rectangles[1] = {-1, -3, -5, -1};
+          if (!std::strcmp(drawReject, "framebuffer-extent-unrepresentable"))
+            framebuffer.width = uint32_t(INT32_MAX) + 1;
+          if (!std::strcmp(drawReject, "empty-framebuffer"))
+            framebuffer.width = 0;
           if (!std::strcmp(drawReject, "unsupported-draw-format"))
             framebuffer.colorAttachmentFormats[selectedIndex] =
                 VK_FORMAT_R8G8B8A8_UINT;
@@ -1274,6 +1341,15 @@ int main(int argc, char **argv) {
             selected.textureLayout = RenderTextureLayout::PRESENT;
           if (!std::strcmp(drawReject, "missing-graphics-stage"))
             selected.barrierStages = RenderBarrierStage::NONE;
+          if (!std::strcmp(drawReject, "outside-unsupported-format")) {
+            rectangles[0] = rectangles[1] = {-8, -8, -1, -1};
+            framebuffer.colorAttachmentFormats[selectedIndex] =
+                VK_FORMAT_R8G8B8A8_UINT;
+          }
+          if (!std::strcmp(drawReject, "outside-unsafe-layout")) {
+            rectangles[0] = rectangles[1] = {640, 480, 650, 490};
+            selected.textureLayout = RenderTextureLayout::PRESENT;
+          }
           rejectBeforeRecording = true;
           commands.clear();
           list.clearColor(selectedIndex, RenderColor(), rectangles, 2);
@@ -1304,6 +1380,26 @@ int main(int argc, char **argv) {
         commands.clear();
         clearDrawScissors.clear();
         const unsigned pipelineCount = drawPipelineCreates;
+        // Fully outside input must not even create a helper or restart a pass.
+        const RenderRect outside[] = {{-40, -30, -10, -1},
+                                      {640, 0, 641, 20},
+                                      {0, 480, 10, 481},
+                                      {0, -2, 2, 0},
+                                      {INT32_MIN, INT32_MIN, -1, -1}};
+        const VkPipeline beforeOutside = boundPipeline;
+        const bool passBeforeOutside = inPass;
+        list.clearColor(selectedIndex, RenderColor(), outside,
+                        std::size(outside));
+        REQUIRE(commands.empty() && clearDrawScissors.empty() &&
+                drawPipelineCreates == pipelineCount &&
+                inPass == passBeforeOutside);
+        REQUIRE(boundPipeline == beforeOutside &&
+                list.graphicsPipeline == callerPipeline &&
+                boundViewports.size() == 2 && boundViewports[0].x == 1 &&
+                boundScissors.size() == 2 && boundScissors[0].offset.x == 1);
+        REQUIRE(boundDepthBias[0] == 2 && boundDepthBias[2] == 3 &&
+                pushed.size() == 48 &&
+                std::memcmp(pushed.data(), constants, 48) == 0);
         list.clearColor(selectedIndex, RenderColor(0.2f, 0.3f, 0.4f, 0.0f),
                         rectangles, 2);
         REQUIRE(commands == (inPass ? std::vector<char>({'M', 'B', 'D', 'D'})
@@ -1320,10 +1416,59 @@ int main(int argc, char **argv) {
                 std::memcmp(pushed.data(), constants, 48) == 0);
         REQUIRE(list.activeGraphicsPipelineLayout == &layout &&
                 list.graphicsPushConstantWrites.size() == 2);
+        // An empty intersection also preserves a render pass already in flight.
+        REQUIRE(inPass);
+        commands.clear();
+        clearDrawScissors.clear();
+        list.clearColor(selectedIndex, RenderColor(), outside,
+                        std::size(outside));
+        REQUIRE(commands.empty() && clearDrawScissors.empty() && inPass &&
+                drawPipelineCreates == pipelineCount + 1 &&
+                boundPipeline == callerPipeline && pushed.size() == 48 &&
+                std::memcmp(pushed.data(), constants, 48) == 0);
         commands.clear();
         list.clearColor(selectedIndex, RenderColor(), rectangles, 1);
         REQUIRE(commands == std::vector<char>({'E', 'M', 'B', 'D'}) &&
                 drawPipelineCreates == pipelineCount + 1);
+        struct ClipCase {
+          RenderRect original, expected;
+        };
+        for (const ClipCase &clip : std::vector<ClipCase>{
+                 {{-5, -7, 9, 13}, {0, 0, 9, 13}},
+                 {{630, 470, 700, 700}, {630, 470, 640, 480}},
+                 {{639, 479, 641, 481}, {639, 479, 640, 480}},
+                 {{INT32_MIN, 1, 1, 2}, {0, 1, 1, 2}},
+                 {{0, 0, 641, 1}, {0, 0, 640, 1}},
+                 {{INT32_MIN, INT32_MIN, INT32_MAX, INT32_MAX},
+                  {0, 0, 640, 480}}}) {
+          // An outside rectangle in the same batch must contribute no draw.
+          const RenderRect mixed[] = {outside[0], clip.original, outside[1]};
+          commands.clear();
+          clearDrawScissors.clear();
+          list.clearColor(selectedIndex, RenderColor(), mixed,
+                          std::size(mixed));
+          REQUIRE(commands == std::vector<char>({'E', 'M', 'B', 'D'}) &&
+                  drawPipelineCreates == pipelineCount + 1 &&
+                  clearDrawScissors.size() == 1);
+          const VkRect2D &scissor = clearDrawScissors[0];
+          REQUIRE(scissor.offset.x == clip.expected.left &&
+                  scissor.offset.y == clip.expected.top &&
+                  scissor.extent.width ==
+                      uint32_t(clip.expected.right - clip.expected.left) &&
+                  scissor.extent.height ==
+                      uint32_t(clip.expected.bottom - clip.expected.top));
+          // draw() independently checks pushed rectangle == Vulkan scissor.
+          REQUIRE(boundPipeline == callerPipeline &&
+                  boundViewports.size() == 2 && boundViewports[0].x == 1 &&
+                  boundScissors.size() == 2 && boundScissors[0].offset.x == 1 &&
+                  boundDepthBias[0] == 2 && boundDepthBias[2] == 3 &&
+                  pushed.size() == 48 &&
+                  std::memcmp(pushed.data(), constants, 48) == 0);
+        }
+        std::printf(
+            "PASS: clipped/empty/mixed rectangles, shared scissor/push bounds, "
+            "no transfer, state restoration samples=%u attachment=%u\n",
+            samples, selectedIndex);
         list.graphicsPushConstantWrites.clear();
         list.activeGraphicsPipelineLayout = nullptr;
 #endif
@@ -1389,7 +1534,11 @@ int main(int argc, char **argv) {
       }
       selected.ownership = false;
     }
-  REQUIRE(destroyedPasses == createdPasses);
+#if !defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) &&                              \
+    !defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK)
+  testAttachmentClearDomain(device, list);
+#endif
+  REQUIRE(destroyedPasses == createdPasses && framebufferExtents.empty());
   list.begin();
   REQUIRE(list.graphicsPipeline == VK_NULL_HANDLE &&
           list.graphicsViewports.empty() && list.graphicsScissors.empty() &&

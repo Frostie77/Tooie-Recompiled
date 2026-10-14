@@ -62,10 +62,23 @@ for reason in explicit-attachment-view not-2d linear-tiling \
     null-render-pass layout-not-color-write missing-graphics-stage; do
     expect_rejection proposal "--reject=$reason" "$reason"
 done
-for reason in rectangle-out-of-bounds unsupported-draw-format format-color-attachment-unsupported \
+for reason in unsupported-draw-format format-color-attachment-unsupported \
     missing-color-attachment-usage null-attachment-view layout-not-color-write missing-graphics-stage; do
     expect_rejection proposal "--draw-reject=$reason" "$reason"
 done
+for geometry in inverted-x inverted-y zero-width zero-height outside-malformed; do
+    expect_rejection proposal "--draw-reject=$geometry" malformed-rectangle
+    grep -q 'rectIndex=1 rectCount=2 originalRect=.* fbExtent=640x480' "$test_dir/rejection.out"
+done
+expect_rejection proposal --draw-reject=framebuffer-extent-unrepresentable framebuffer-extent-unrepresentable
+expect_rejection proposal --draw-reject=empty-framebuffer empty-framebuffer
+expect_rejection proposal --draw-reject=outside-unsupported-format unsupported-draw-format
+expect_rejection proposal --draw-reject=outside-unsafe-layout layout-not-color-write
+grep -q 'PASS: clipped/empty/mixed rectangles.*samples=2' "$test_dir/proposal.out"
+grep -q 'PASS: clipping domain fbExtent=320x241 imageExtent=320x241 viewMip=0 samples=2' "$test_dir/proposal.out"
+grep -q 'PASS: clipping domain fbExtent=320x241 imageExtent=640x482 viewMip=1 samples=1' "$test_dir/proposal.out"
+grep -q 'originalRect=-40,-30..-10,-1 .*intersection=empty-no-draw fbExtent=640x480' "$test_dir/log-proposal/banjotooi-debug.log"
+grep -q 'originalRect=-5,-7..9,13 rect=0,0..9,13 intersection=nonempty fbExtent=640x480' "$test_dir/log-proposal/banjotooi-debug.log"
 # Exercise the production isolation entry point, including startup failures.
 for mode in proposal legacy-transfer load-op-control barrier-control; do
     for argument in --isolation --isolation-rgba --isolation-acquire-fails --isolation-surface-fails; do
@@ -114,7 +127,7 @@ mkdir -p "$test_dir/log-late"
 APP_FOLDER_PATH="$test_dir/log-late" "$test_dir/proposal" --late-categories >"$test_dir/late.out" 2>&1
 # Category records must survive 32 earlier unrelated clears on the same thread.
 grep -q 'owned=0 swapchain=1' "$test_dir/log-late/banjotooi-debug.log"
-grep -q 'samples=8 .*owned=1 swapchain=0' "$test_dir/log-late/banjotooi-debug.log"
+grep -q 'samples=2 .*owned=1 swapchain=0' "$test_dir/log-late/banjotooi-debug.log"
 
 if "$test_dir/proposal" --timeout >"$test_dir/timeout.log" 2>&1; then
     echo 'FAIL: timed-out fence was accepted' >&2

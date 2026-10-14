@@ -9,6 +9,144 @@
 #include <vector>
 using namespace plume;
 #include "android_vulkan_validation_common.h"
+// Independent expected image: test membership of each framebuffer pixel in the
+// original rectangle, rather than reimplementing the backend's min/max
+// clipping.
+static void paintOriginalRectangle(std::vector<RenderColor> &pixels,
+                                   unsigned width, unsigned height,
+                                   RenderRect original, RenderColor color) {
+  for (unsigned y = 0; y < height; ++y)
+    for (unsigned x = 0; x < width; ++x)
+      if (int32_t(x) >= original.left && int32_t(x) < original.right &&
+          int32_t(y) >= original.top && int32_t(y) < original.bottom)
+        pixels[y * width + x] = color;
+}
+
+static void clippedPixels(VulkanDevice &device, RenderCommandQueue *queue,
+                          RenderCommandList *list, RenderCommandFence *fence) {
+  auto vertex = device.createShader(ColorClearVertex, sizeof(ColorClearVertex),
+                                    "main", RenderShaderFormat::SPIRV);
+  auto fragment =
+      device.createShader(OrdinaryDrawFragment, sizeof(OrdinaryDrawFragment),
+                          "main", RenderShaderFormat::SPIRV);
+  RenderPushConstantRange range(0, 0, 0, sizeof(RenderColor),
+                                RenderShaderStageFlag::PIXEL);
+  auto layout = device.createPipelineLayout(
+      RenderPipelineLayoutDesc(&range, 1, nullptr, 0));
+  for (auto format :
+       {RenderFormat::R8G8B8A8_UNORM, RenderFormat::B8G8R8A8_UNORM}) {
+    VkImageFormatProperties limits = {};
+    REQUIRE(
+        vkGetPhysicalDeviceImageFormatProperties(
+            device.physicalDevice,
+            format == RenderFormat::R8G8B8A8_UNORM ? VK_FORMAT_R8G8B8A8_UNORM
+                                                   : VK_FORMAT_B8G8R8A8_UNORM,
+            VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                VK_IMAGE_USAGE_SAMPLED_BIT,
+            0, &limits) == VK_SUCCESS);
+    REQUIRE((limits.sampleCounts &
+             (VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_4_BIT)) ==
+            (VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_4_BIT));
+    for (uint32_t samples : {1u, 2u, 4u}) {
+      if (!(limits.sampleCounts & samples)) {
+        std::printf("SKIP: clipped pixel execution samples=%u format=%u "
+                    "unsupported by host image configuration\n",
+                    samples, unsigned(format));
+        continue;
+      }
+      for (RenderRect extent :
+           {RenderRect{0, 0, 1, 1}, RenderRect{0, 0, 16, 16},
+            RenderRect{0, 0, 320, 241}}) {
+        const int32_t width = extent.right, height = extent.bottom;
+        const RenderMultisampling ms(samples);
+        auto target = device.createTexture(
+            RenderTextureDesc::ColorTarget(width, height, format, ms));
+        auto resolved = device.createTexture(
+            RenderTextureDesc::ColorTarget(width, height, format));
+        const RenderTexture *attachment = target.get();
+        auto framebuffer =
+            device.createFramebuffer(RenderFramebufferDesc(&attachment, 1));
+        REQUIRE(framebuffer->getWidth() == uint32_t(width) &&
+                framebuffer->getHeight() == uint32_t(height));
+        RenderGraphicsPipelineDesc desc;
+        desc.vertexShader = vertex.get();
+        desc.pixelShader = fragment.get();
+        desc.pipelineLayout = layout.get();
+        desc.multisampling = ms;
+        desc.renderTargetCount = 1;
+        desc.renderTargetFormat[0] = format;
+        desc.renderTargetBlend[0] = RenderBlendDesc::Copy();
+        desc.depthClipEnabled = true;
+        auto pipeline = device.createGraphicsPipeline(desc);
+        REQUIRE(static_cast<VulkanGraphicsPipeline *>(pipeline.get())->vk !=
+                VK_NULL_HANDLE);
+        const RenderColor background(0.1f, 0.2f, 0.3f, 0.7f),
+            clear(0.8f, 0.3f, 0.1f, 0.0f);
+        const RenderRect cases[] = {
+            {-3, 0, 1, height},
+            {0, -3, width, 1},
+            {width - 1, 0, width + 3, height},
+            {0, height - 1, width, height + 3},
+            {-4, -5, width + 4, height + 5},
+            {width - 1, height - 1, width + 1, height + 1},
+            {-8, 0, -1, height},
+            {0, -8, width, -1},
+            {width, 0, width + 3, height},
+            {0, height, width, height + 3},
+            {-1, 0, 0, height},
+            {0, -1, width, 0},
+            {INT32_MIN, 0, 1, height},
+            {0, INT32_MIN, width, 1},
+            {width - 1, 0, INT32_MAX, height},
+            {0, height - 1, width, INT32_MAX},
+            {INT32_MIN, INT32_MIN, INT32_MAX, INT32_MAX},
+            {INT32_MAX - 1, 0, INT32_MAX, height}};
+        auto check = [&](const RenderRect *rectangles, uint32_t count) {
+          std::vector<RenderColor> expected(width * height, background);
+          list->begin();
+          list->barriers(RenderBarrierStage::GRAPHICS,
+                         RenderTextureBarrier(
+                             target.get(), RenderTextureLayout::COLOR_WRITE));
+          list->setFramebuffer(framebuffer.get());
+          list->setPipeline(pipeline.get());
+          list->setGraphicsPipelineLayout(layout.get());
+          list->setGraphicsPushConstants(0, &background);
+          list->setViewports(RenderViewport(0, 0, width, height));
+          list->setScissors(extent);
+          list->drawInstanced(3, 1, 0,
+                              0); // Background independent of all clear paths.
+          list->clearColor(0, clear, rectangles, count);
+          for (uint32_t i = 0; i < count; ++i)
+            paintOriginalRectangle(expected, width, height, rectangles[i],
+                                   clear);
+          RenderTexture *source = target.get();
+          if (samples > 1) {
+            RenderTextureBarrier barriers[] = {
+                {target.get(), RenderTextureLayout::RESOLVE_SOURCE},
+                {resolved.get(), RenderTextureLayout::RESOLVE_DEST}};
+            list->barriers(RenderBarrierStage::COPY, barriers, 2);
+            list->resolveTexture(resolved.get(), target.get());
+            source = resolved.get();
+          }
+          expectPixels(
+              readImage(device, list, queue, fence, source, width, height, 4),
+              expected, format);
+        };
+        for (const RenderRect &rectangle : cases)
+          check(&rectangle, 1);
+        const RenderRect mixed[] = {cases[6], cases[0], cases[8]};
+        check(mixed, std::size(mixed));
+        std::printf("PASS: %zu clipped/fully-outside/mixed pixel cases "
+                    "extent=%dx%d format=%u samples=%u; original-domain "
+                    "RGB/alpha and outside pixels preserved\n",
+                    std::size(cases) + 1, width, height, unsigned(format),
+                    samples);
+      }
+    }
+  }
+}
 static void partialPixels(VulkanDevice &device, RenderCommandQueue *queue,
                           RenderCommandList *list, RenderCommandFence *fence) {
   auto vertex = device.createShader(ColorClearVertex, sizeof(ColorClearVertex),
@@ -153,12 +291,17 @@ static void attachmentViewPixels(VulkanDevice &device,
   list->setFramebuffer(framebuffer.get());
   RenderRect rectangle = {1, 1, 6, 5};
   list->clearColor(0, clear, &rectangle, 1);
+  const RenderRect oversized = {-3, 2, 12, 7};
+  const RenderColor clippedColor(0.2f, 0.7f, 0.4f, 0.5f);
+  list->clearColor(0, clippedColor, &oversized, 1);
   for (unsigned mip = 0; mip < 2; ++mip) {
     for (unsigned layer = 0; layer < 2; ++layer) {
       const unsigned width = 16 >> mip;
       std::vector<RenderColor> expected(width * width, background);
-      if (mip == 1 && layer == 1)
+      if (mip == 1 && layer == 1) {
         paint(expected, width, rectangle, clear);
+        paintOriginalRectangle(expected, width, width, oversized, clippedColor);
+      }
       expectPixels(readImage(device, list, queue, fence, texture.get(), width,
                              width, 4, mip, layer),
                    expected, desc.format);
@@ -378,6 +521,7 @@ int main() {
     }
 #if !defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST)
     partialPixels(device, queue.get(), list.get(), fence.get());
+    clippedPixels(device, queue.get(), list.get(), fence.get());
     attachmentViewPixels(device, queue.get(), list.get(), fence.get());
     multipleAttachmentPixels(device, queue.get(), list.get(), fence.get());
 #endif

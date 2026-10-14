@@ -5,7 +5,80 @@ first physical-device test. This document describes a review proposal, not a
 verified launcher fix. No new Portal test is requested until this proposal has
 been reviewed.
 
-## Latest device evidence: d0e64bf confirms RGBA8 surface support, no BGRA8
+## Latest device evidence: normal gameplay stops at the rectangle guard
+
+The user reports that A–E isolation passed on the Odin and a normal gameplay APK
+based on `32398a7fe145655c787a5efd291fa75cf3c023dc` successfully initialized the
+RGBA8 swapchain (`requested=44 selected=37`), VI pipelines, SDL event loop and RT64
+context. The first offscreen MSAA framebuffer was RGBA8, 320×241, samples=2.
+After recording a full transfer clear, it reported:
+
+```text
+Clear record: path=draw-rejected ... imageFormat=37 viewFormat=37 samples=2 ... fbExtent=320x241
+Partial color clear rejected: reason=rectangle-out-of-bounds
+```
+
+The application returned to Android home. This matches the strict guard's
+`std::_Exit(EXIT_FAILURE)` path, which terminates before recording the partial
+clear. The full transfer record alone does not establish GPU completion of that
+MSAA clear. The supplied log contains no rectangle coordinates, so its exact
+offending rectangle cannot be reconstructed from this evidence.
+
+### FillRect origin and extent audit
+
+`RDP::fillRect`/`drawRect` in `rt64_rdp.cpp` retain the original game rectangle in
+`drawCall.rect`. Draw-bound tracking separately intersects it with the N64
+scissor and merges that intersection into `fbPair.drawColorRect`. In
+`rt64_workload_queue.cpp`, native target width comes from the colour image width,
+and height comes from the scissored draw bounds; `computeScaledSize` scales,
+rounds and bounds the allocation dimensions. The original rectangle can therefore
+legitimately extend outside the allocated image, including before scaling.
+
+`FramebufferRenderer` converts that original rectangle using resolution/aspect
+scale, origins and alignment. Unless it exactly equals the chosen target extent,
+its `InstanceDrawCall::Type::FillRect` passes the converted rectangle unchanged to
+`clearColor`. Conversion can also introduce negative coordinates or rounded
+overshoot. The strict draw guard incorrectly required all such input to lie
+inside the framebuffer, treating a valid intersection as unsafe geometry.
+
+No framebuffer/view extent defect was found in the inspected path. Android
+Plume derives framebuffer dimensions from the selected mip view and the minimum
+extent across colour/depth attachments. That is the correct Vulkan render domain,
+which can be smaller than an image's base extent. The log does not include enough
+geometry/view detail to prove the exact mismatch for this device frame; the new
+recordings test a real 320×241/2× creation description and a 320×241 mip-1 view of
+a 640×482 single-sample image independently. Pixel tests also verify clipping to
+an actual mip-1/layer-1 view with sibling subresources unchanged.
+
+### Corrected partial-clear recording
+
+The default Android scissored draw now validates every original rectangle for
+strictly ordered, nonempty bounds, then intersects it with `[0, framebufferWidth)`
+and `[0, framebufferHeight)`. Comparisons precede any subtraction or unsigned
+conversion, so extreme signed coordinates cannot wrap into large Vulkan extents.
+Framebuffer dimensions outside the shader's signed coordinate range remain
+rejected, as do zero extents, malformed geometry and all existing unsupported
+format/view/handle/layout/sample/synchronization conditions.
+
+The same clipped rectangle supplies both `VkRect2D` and the fragment shader's
+integer push-constant bounds. A fully outside rectangle contributes no draw;
+an entirely outside batch creates no helper pipeline and records no pass restart,
+barrier, draw or transfer clear. All resource/state safeguards still run even
+for an empty intersection. A malformed later rectangle stops the whole batch
+before an earlier rectangle can record any clear commands. Explicit rectangles
+always stay on the draw path, including a legitimate intersection covering the
+whole framebuffer; they are never widened or converted to a full-image clear.
+
+Rejections now include `rectIndex`, `rectCount`, `originalRect` and `fbExtent`.
+Bounded success logs include original and clipped coordinates, view mip/layer and
+`intersection=nonempty` or `empty-no-draw`; an empty batch has
+`path=scissored-draw-empty`. Logging preserves the first actual draw category
+independently of empty operations. The existing LOAD/STORE preservation barrier,
+MSAA all-sample replacement, fragment pixel guard and caller-state restoration
+are unchanged. Full transfer clears, all comparison controls, early A–E,
+strict rejection and the five-second fence timeout are retained.
+
+## Earlier device evidence: d0e64bf confirms RGBA8 surface support, no BGRA8
 
 The user-supplied Odin log establishes that surface creation and both format
 enumeration calls succeeded. The Vulkan 1.2 instance (`0x402000`) runs on a device
@@ -405,10 +478,12 @@ explicit rectangles uses a dedicated graphics pipeline. Full base-view clears
 continue to use the existing transfer implementation and its eligibility checks.
 No caller changes in `FramebufferRenderer` are needed.
 
-- Validate every rectangle before recording any command for this clear: nonempty,
-  nonnegative, and contained in the framebuffer render area. Invalid input stops
-  with `Partial color clear rejected: reason=rectangle-out-of-bounds`. Rectangles
-  are never clipped, dropped, or expanded into whole-image clears.
+- Validate every original rectangle before recording any command for this clear:
+  ordered/nonempty geometry, followed by intersection with the actual framebuffer
+  domain. Negative and oversized coordinates are clipped safely; fully outside
+  rectangles issue no draw. Malformed geometry stops with
+  `Partial color clear rejected: reason=malformed-rectangle` and original
+  coordinates/extent. Rectangles are never expanded into whole-image clears.
 - Use the actual framebuffer attachment view and format. Supported view formats
   are RGBA8/BGRA8 UNORM, RGBA16 UNORM (RT64's high-colour target), RGBA16 float,
   and RGBA32 float. The fragment shader writes logical RGBA floats; Vulkan performs
@@ -536,7 +611,7 @@ results below. PR #1 must not be merged on the basis of host test results.
 
 ## Validation and limitations
 
-Passed again for the Android RGBA8 presentation revision in this cloud instance:
+Passed again for the partial-clear clipping revision based on 32398a7:
 
 - All six host recording modes, including 19 constructor-failure/enumeration
   cases and six successful selection cases per mode. Tests cover count/data
@@ -584,6 +659,29 @@ Passed again for the Android RGBA8 presentation revision in this cloud instance:
   zero errors in both software modes. Lavapipe is a CPU implementation: it does not exercise Android WSI,
   Adreno, or the Portal's 8× hardware path. The load-op control's software success
   does not override its reported hardware failure.
+- New recording coverage checks clipped, empty and mixed rectangle batches at
+  1×, 2× and 8×, including MRT attachment selection. It verifies scissor/push
+  bounds agree, one draw per nonempty intersection, no transfer promotion,
+  helper reuse and state restoration. Fully outside batches preserve both idle
+  and active render passes without recording commands. Negative controls reject
+  reversed/zero bounds (including a malformed second rectangle), unrepresentable
+  or zero framebuffer dimensions, unsupported formats and unsafe layouts even
+  when rectangles are outside. Rejection logs identify the original coordinates,
+  failing index/count and framebuffer extent. Framebuffer creation/render-area
+  recordings verify the 320×241/2× base attachment and a smaller mip view.
+- **228 new clipping pixel-readback cases** (19 cases × 3 extents × 2 formats ×
+  2 supported sample counts) exercise negative/partly outside and fully outside
+  rectangles, exact edge contact, last-pixel intersections, mixed batches,
+  `INT32_MIN/MAX` and oversized covering rectangles. Extents are 1×1, 16×16 and
+  the reported 320×241; formats are RGBA8/BGRA8 and sample counts 1×/4×. Every
+  pixel's expected colour/alpha is computed by checking membership in the
+  **original** rectangle, independently of the implementation's clipping.
+  Backgrounds come from an ordinary draw. All pixels outside the intersection
+  remain unchanged, including after MSAA resolve. The retained mip/layer readback
+  also includes an oversized negative rectangle. Core and synchronization
+  validation report zero errors. Lavapipe rejects the complete 2× image
+  configuration, so that execution case is explicitly skipped; 2×/8× have host
+  recording coverage, not software pixel-execution coverage.
 - Twenty additional pixel-readback cases use the **production HLSL shaders**,
   compiled with the repository's DXC SPIR-V flags and validated by `spirv-val`,
   and the same VI/UI pipeline factories as the application. Twelve VI cases cover
@@ -640,10 +738,10 @@ cmake --build build-plume-android -j 4
 ```
 
 No new APK was built, installed or tested on the Portal for this revision.
-The user tested 9d981ac through A–C, then d0e64bf confirmed successful enumeration
-and correct rejection of unsupported BGRA before A. Neither run exercised the
-new RGBA selection/presentation or completed D. The scissored partial draw and
-full MSAA transfer-clear execution also remain unverified on Adreno. Host WSI
+The user subsequently reports successful A–E isolation and normal RGBA/VI
+initialization, followed by the partial-rectangle guard failure above. The current
+clipping revision has not been executed on Adreno, and the full MSAA transfer
+record does not establish completion. Host WSI
 enumeration tests use mocks; software
 Vulkan readback does not exercise Android surface enumeration or swapchain
 creation. 2×/8× clear execution and normal graphical launcher rendering remain

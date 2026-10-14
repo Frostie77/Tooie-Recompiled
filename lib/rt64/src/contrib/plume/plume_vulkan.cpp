@@ -3570,15 +3570,19 @@ namespace plume {
         static thread_local bool loggedSwapchain = false;
         static thread_local bool loggedOffscreenMSAA = false;
         static thread_local bool loggedDraw = false;
+        static thread_local bool loggedEmptyDraw = false;
         const VulkanTexture *texture = framebuffer->colorAttachments[attachmentIndex];
         const bool offscreenMSAA = texture->ownership && texture->desc.multisampling.sampleCount > 1;
+        const bool draw = std::strcmp(path, "scissored-draw") == 0;
+        const bool emptyDraw = std::strcmp(path, "scissored-draw-empty") == 0;
         const bool firstCategory = (texture->isSwapChainImage && !loggedSwapchain) ||
-            (offscreenMSAA && !loggedOffscreenMSAA) || (!loggedDraw && std::strcmp(path, "scissored-draw") == 0);
+            (offscreenMSAA && !loggedOffscreenMSAA) || (!loggedDraw && draw) || (!loggedEmptyDraw && emptyDraw);
         if (records >= 16 && !firstCategory && !force) return false;
         if (records < 16) ++records;
         loggedSwapchain |= texture->isSwapChainImage;
         loggedOffscreenMSAA |= offscreenMSAA;
-        loggedDraw |= std::strcmp(path, "scissored-draw") == 0;
+        loggedDraw |= draw;
+        loggedEmptyDraw |= emptyDraw;
         char message[640];
         std::snprintf(message, sizeof(message),
             "Clear record: path=%s cb=%llx fb=%llx loadPass=%llx image=%llx boundView=%llx attachment=%u "
@@ -3623,10 +3627,21 @@ namespace plume {
 
 #if defined(__ANDROID__)
     static void rejectColorClearDraw(const VulkanFramebuffer *framebuffer, uint32_t index,
-        VkCommandBuffer commandBuffer, const char *reason) {
+        VkCommandBuffer commandBuffer, const char *reason, const RenderRect *rectangles,
+        uint32_t rectangleCount, uint32_t rectangleIndex) {
         logColorClearRecord(framebuffer, index, "draw-rejected", commandBuffer, true);
-        char message[256];
-        std::snprintf(message, sizeof(message), "Partial color clear rejected: reason=%s", reason);
+        char message[384];
+        if (rectangles && rectangleIndex < rectangleCount) {
+            const RenderRect &rect = rectangles[rectangleIndex];
+            std::snprintf(message, sizeof(message),
+                "Partial color clear rejected: reason=%s rectIndex=%u rectCount=%u originalRect=%d,%d..%d,%d fbExtent=%ux%u",
+                reason, rectangleIndex, rectangleCount, rect.left, rect.top, rect.right, rect.bottom, framebuffer->width, framebuffer->height);
+        }
+        else {
+            std::snprintf(message, sizeof(message),
+                "Partial color clear rejected: reason=%s rectCount=%u originalRect=unavailable fbExtent=%ux%u",
+                reason, rectangleCount, framebuffer->width, framebuffer->height);
+        }
         tooie_android_debug_log(message);
         std::fprintf(stderr, "%s\n", message);
         std::_Exit(EXIT_FAILURE); // Never select vkCmdClearAttachments here.
@@ -3726,7 +3741,9 @@ namespace plume {
     void VulkanCommandList::clearColorDraw(uint32_t attachmentIndex, RenderColor colorValue,
         const RenderRect *clearRects, uint32_t clearRectsCount) {
         const VulkanTexture *texture = targetFramebuffer->colorAttachments[attachmentIndex];
-        const auto reject = [&](const char *reason) { rejectColorClearDraw(targetFramebuffer, attachmentIndex, vk, reason); };
+        const auto reject = [&](const char *reason, uint32_t rectangleIndex = 0) {
+            rejectColorClearDraw(targetFramebuffer, attachmentIndex, vk, reason, clearRects, clearRectsCount, rectangleIndex);
+        };
         // Validate before ending a pass or recording any command for this clear.
         if (!clearRects || !clearRectsCount) reject("missing-rectangles");
         if (texture->vk == VK_NULL_HANDLE) reject("null-image");
@@ -3734,6 +3751,7 @@ namespace plume {
         if (targetFramebuffer->vk == VK_NULL_HANDLE) reject("null-framebuffer");
         if (targetFramebuffer->renderPass == VK_NULL_HANDLE) reject("null-render-pass");
         if (!targetFramebuffer->width || !targetFramebuffer->height) reject("empty-framebuffer");
+        if (targetFramebuffer->width > INT32_MAX || targetFramebuffer->height > INT32_MAX) reject("framebuffer-extent-unrepresentable");
         if (texture->desc.dimension != RenderTextureDimension::TEXTURE_2D) reject("not-2d");
         if (!(texture->imageUsage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) reject("missing-color-attachment-usage");
         if (attachmentIndex >= ColorClearMaxAttachments) reject("attachment-location-unsupported");
@@ -3766,15 +3784,45 @@ namespace plume {
             if (!(depth->barrierStages & RenderBarrierStage::GRAPHICS)) reject("depth-missing-graphics-stage");
             if (depth->desc.multisampling.sampleCount != texture->desc.multisampling.sampleCount) reject("depth-sample-count-mismatch");
         }
-        // Vulkan clear rectangles must be contained by the render area. Reject
-        // malformed/out-of-bounds input rather than clip, expand or drop it.
+        // FillRect retains the original game rectangle, while target sizing uses
+        // its scissor intersection. Oversized/negative coordinates are valid;
+        // intersect them with the actual framebuffer/view domain. Validate the
+        // entire batch before touching commands, including empty intersections.
+        thread_local std::vector<RenderRect> clippedRectangles;
+        clippedRectangles.clear();
+        clippedRectangles.reserve(clearRectsCount);
+        bool hasIntersection = false;
         for (uint32_t i = 0; i < clearRectsCount; ++i) {
             const RenderRect &rect = clearRects[i];
-            if (rect.left < 0 || rect.top < 0 || rect.right <= rect.left || rect.bottom <= rect.top ||
-                uint32_t(rect.right) > targetFramebuffer->width || uint32_t(rect.bottom) > targetFramebuffer->height) reject("rectangle-out-of-bounds");
+            if (rect.right <= rect.left || rect.bottom <= rect.top) reject("malformed-rectangle", i);
+            // No subtraction or unsigned conversion until the clipped bounds
+            // are nonempty and nonnegative; INT32_MIN/MAX inputs cannot wrap.
+            RenderRect clipped(std::max(rect.left, 0), std::max(rect.top, 0),
+                std::min(rect.right, int32_t(targetFramebuffer->width)), std::min(rect.bottom, int32_t(targetFramebuffer->height)));
+            hasIntersection |= !clipped.isEmpty();
+            clippedRectangles.emplace_back(clipped);
         }
-        const VkPipeline pipeline = targetFramebuffer->getColorClearDrawPipeline(attachmentIndex);
-        const bool record = logColorClearRecord(targetFramebuffer, attachmentIndex, "scissored-draw", vk);
+        const VkPipeline pipeline = hasIntersection ? targetFramebuffer->getColorClearDrawPipeline(attachmentIndex) : VK_NULL_HANDLE;
+        const bool record = logColorClearRecord(targetFramebuffer, attachmentIndex,
+            hasIntersection ? "scissored-draw" : "scissored-draw-empty", vk);
+        if (record) {
+            const auto &view = targetFramebuffer->colorAttachmentViewDescs[attachmentIndex];
+            for (uint32_t i = 0; i < clearRectsCount; ++i) {
+                const RenderRect &original = clearRects[i], &clipped = clippedRectangles[i];
+                char message[448];
+                std::snprintf(message, sizeof(message),
+                    "Clear draw: attachment=%u rectIndex=%u originalRect=%d,%d..%d,%d rect=%d,%d..%d,%d intersection=%s "
+                    "fbExtent=%ux%u viewMip=%u viewLayer=%u rgba=%g,%g,%g,%g LOAD/STORE no layout change",
+                    attachmentIndex, i, original.left, original.top, original.right, original.bottom,
+                    clipped.left, clipped.top, clipped.right, clipped.bottom, clipped.isEmpty() ? "empty-no-draw" : "nonempty",
+                    targetFramebuffer->width, targetFramebuffer->height, view.mipSlice, view.arrayIndex,
+                    colorValue.r, colorValue.g, colorValue.b, colorValue.a);
+                tooie_android_debug_log(message);
+            }
+        }
+        // A valid fully outside batch is a no-op: no pipeline creation, pass
+        // restart, barrier, draw, transfer clear or caller-state changes.
+        if (!hasIntersection) return;
         // Preserve previous attachment writes across STORE -> LOAD, including
         // every other colour and depth/stencil target. No image layout change:
         // the draw uses COLOR_ATTACHMENT_OPTIMAL and the actual bound view.
@@ -3792,17 +3840,9 @@ namespace plume {
         const VkViewport viewport = { 0.0f, 0.0f, float(targetFramebuffer->width), float(targetFramebuffer->height), 0.0f, 1.0f };
         vkCmdSetViewport(vk, 0, 1, &viewport);
         vkCmdSetDepthBias(vk, 0.0f, 0.0f, 0.0f);
-        for (uint32_t i = 0; i < clearRectsCount; ++i) {
-            const RenderRect &rect = clearRects[i];
+        for (const RenderRect &rect : clippedRectangles) {
+            if (rect.isEmpty()) continue;
             const VkRect2D scissor = { { rect.left, rect.top }, { uint32_t(rect.right - rect.left), uint32_t(rect.bottom - rect.top) } };
-            if (record) {
-                const auto &view = targetFramebuffer->colorAttachmentViewDescs[attachmentIndex];
-                char message[320];
-                std::snprintf(message, sizeof(message), "Clear draw: attachment=%u rect=%d,%d..%d,%d viewMip=%u viewLayer=%u rgba=%g,%g,%g,%g LOAD/STORE no layout change",
-                    attachmentIndex, rect.left, rect.top, rect.right, rect.bottom, view.mipSlice, view.arrayIndex,
-                    colorValue.r, colorValue.g, colorValue.b, colorValue.a);
-                tooie_android_debug_log(message);
-            }
             struct ClearConstants { RenderColor color; RenderRect rectangle; } constants = { colorValue, rect };
             static_assert(sizeof(ClearConstants) == 32, "Clear shader push constant ABI");
             vkCmdPushConstants(vk, targetFramebuffer->colorClearDrawLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(constants), &constants);
