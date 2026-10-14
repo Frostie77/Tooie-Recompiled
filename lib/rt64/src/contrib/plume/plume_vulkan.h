@@ -239,6 +239,8 @@ namespace plume {
         uint32_t height = 0;
         VkSwapchainCreateInfoKHR createInfo = {};
         VkSurfaceFormatKHR pickedSurfaceFormat = {};
+        bool initialized = false;
+        const char *initializationFailure = "not-initialized";
         VkPresentModeKHR createdPresentMode = VK_PRESENT_MODE_FIFO_KHR;
         VkPresentModeKHR requiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
         VkCompositeAlphaFlagBitsKHR pickedAlphaFlag = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -248,6 +250,7 @@ namespace plume {
         bool mailboxPresentModeSupported = false;
 
         VulkanSwapChain(VulkanCommandQueue *commandQueue, const RenderSwapChainDesc &desc);
+        void failInitialization(const char *reason, VkResult result = VK_SUCCESS);
         ~VulkanSwapChain() override;
         bool present(uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, uint32_t waitSemaphoreCount) override;
         void wait() override;

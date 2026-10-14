@@ -2129,6 +2129,13 @@ namespace plume {
 
         this->commandQueue = commandQueue;
         this->desc = desc;
+        char requestedRecord[256];
+        std::snprintf(requestedRecord, sizeof(requestedRecord),
+            "Surface format request: vkFormat=%u rhiFormat=%u instanceApi=0x%X deviceApi=0x%X",
+            unsigned(toVk(desc.format)), unsigned(desc.format), commandQueue->device->renderInterface->appInfo.apiVersion,
+            commandQueue->device->physicalDeviceProperties.apiVersion);
+        tooie_android_debug_log(requestedRecord);
+        std::fprintf(stderr, "%s\n", requestedRecord);
 
         VkResult res;
 
@@ -2143,6 +2150,7 @@ namespace plume {
         res = vkCreateWin32SurfaceKHR(renderInterface->instance, &surfaceCreateInfo, nullptr, &surface);
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateWin32SurfaceKHR failed with error code 0x%X.\n", res);
+            failInitialization("surface-creation-failed", res);
             return;
         }
 #   elif defined(__ANDROID__)
@@ -2157,6 +2165,7 @@ namespace plume {
         if (res != VK_SUCCESS) {
             tooie_android_debug_log("Plume: Android surface creation failed");
             fprintf(stderr, "vkCreateAndroidSurfaceKHR failed with error code 0x%X.\n", res);
+            failInitialization("surface-creation-failed", res);
             return;
         }
         tooie_android_debug_log("Plume: Android surface created");
@@ -2165,6 +2174,7 @@ namespace plume {
         SDL_bool sdlRes = SDL_Vulkan_CreateSurface(desc.renderWindow, renderInterface->instance, &surface);
         if (sdlRes == SDL_FALSE) {
             fprintf(stderr, "SDL_Vulkan_CreateSurface failed with error %s.\n", SDL_GetError());
+            failInitialization("surface-creation-failed");
             return;
         }
 #   elif defined(__linux__)
@@ -2179,6 +2189,7 @@ namespace plume {
         res = vkCreateXlibSurfaceKHR(renderInterface->instance, &surfaceCreateInfo, nullptr, &surface);
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateXlibSurfaceKHR failed with error code 0x%X.\n", res);
+            failInitialization("surface-creation-failed", res);
             return;
         }
 #   elif defined(__APPLE__)
@@ -2204,11 +2215,13 @@ namespace plume {
         res = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, commandQueue->familyIndex, surface, &presentSupported);
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkGetPhysicalDeviceSurfaceSupportKHR failed with error code 0x%X.\n", res);
+            failInitialization("present-support-query-failed", res);
             return;
         }
 
         if (!presentSupported) {
             fprintf(stderr, "Command queue does not support present.\n");
+            failInitialization("queue-present-unsupported");
             return;
         }
 
@@ -2217,6 +2230,7 @@ namespace plume {
         if (res != VK_SUCCESS) {
             std::fprintf(stderr, "Swapchain capabilities query failed: result=%d\n", int(res));
             tooie_android_debug_log("Swapchain rejected: surface-capabilities-query-failed");
+            failInitialization("surface-capabilities-query-failed", res);
             return;
         }
 
@@ -2229,6 +2243,7 @@ namespace plume {
         }
         else {
             fprintf(stderr, "No known supported alpha compositing mode\n");
+            failInitialization("composite-alpha-unsupported");
             return;
         }
 
@@ -2238,46 +2253,101 @@ namespace plume {
         // Clamp the requested buffer count between the bounds of the surface capabilities.
         this->desc.textureCount = std::clamp(desc.textureCount, surfaceCapabilities.minImageCount, surfaceCapabilities.maxImageCount);
 
-        uint32_t surfaceFormatCount = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfaceFormatCount, nullptr);
-
-        std::vector<VkSurfaceFormatKHR> surfaceFormats(surfaceFormatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfaceFormatCount, surfaceFormats.data());
-
-        uint32_t presentModeCount = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
-
-        std::vector<VkPresentModeKHR> presentModes(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data());
-        immediatePresentModeSupported = std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_IMMEDIATE_KHR) != presentModes.end();
-        mailboxPresentModeSupported = std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_MAILBOX_KHR) != presentModes.end();
-
-        // Check if the format we requested is part of the supported surface formats.
-        std::vector<VkSurfaceFormatKHR> compatibleSurfaceFormats;
-        VkFormat requestedFormat = toVk(desc.format);
-        for (uint32_t i = 0; i < surfaceFormatCount; i++) {
-            if (surfaceFormats[i].format == requestedFormat) {
-                compatibleSurfaceFormats.emplace_back(surfaceFormats[i]);
-                break;
-            }
+        const VkFormat requestedFormat = toVk(desc.format);
+        if (requestedFormat == VK_FORMAT_UNDEFINED || requestedFormat == VK_FORMAT_MAX_ENUM) {
+            failInitialization("invalid-requested-format");
+            return;
         }
-
-        if (compatibleSurfaceFormats.empty()) {
-            fprintf(stderr, "No compatible surface formats were found.\n");
+        // The list can change between count/data queries. Never select from a
+        // partial list or from zero-filled slots after an unchecked query error.
+        std::vector<VkSurfaceFormatKHR> surfaceFormats;
+        bool completeFormats = false;
+        constexpr uint32_t MaxFormatAttempts = 4;
+        for (uint32_t attempt = 0; attempt < MaxFormatAttempts; ++attempt) {
+            uint32_t count = 0;
+            res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &count, nullptr);
+            char record[256];
+            std::snprintf(record, sizeof(record),
+                "Surface format count: attempt=%u result=%d count=%u requested=%u",
+                attempt + 1, int(res), count, unsigned(requestedFormat));
+            tooie_android_debug_log(record);
+            std::fprintf(stderr, "%s\n", record);
+            if (res != VK_SUCCESS || count == 0) {
+                failInitialization(res != VK_SUCCESS ? "surface-format-count-query-failed" : "surface-format-count-zero", res);
+                return;
+            }
+            surfaceFormats.assign(count, VkSurfaceFormatKHR{});
+            const uint32_t capacity = count;
+            res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &count, surfaceFormats.data());
+            std::snprintf(record, sizeof(record),
+                "Surface format data: attempt=%u result=%d written=%u capacity=%u requested=%u",
+                attempt + 1, int(res), count, capacity, unsigned(requestedFormat));
+            tooie_android_debug_log(record);
+            std::fprintf(stderr, "%s\n", record);
+            if (res != VK_SUCCESS && res != VK_INCOMPLETE) {
+                failInitialization("surface-format-data-query-failed", res);
+                return;
+            }
+            // Log every valid returned pair, including the prefix of an
+            // incomplete list, before deciding whether selection is possible.
+            for (uint32_t i = 0; i < std::min(count, capacity); ++i) {
+                std::snprintf(record, sizeof(record),
+                    "Surface format pair: attempt=%u index=%u format=%u colorSpace=%u complete=%u",
+                    attempt + 1, i, unsigned(surfaceFormats[i].format), unsigned(surfaceFormats[i].colorSpace), unsigned(res == VK_SUCCESS));
+                tooie_android_debug_log(record);
+                std::fprintf(stderr, "%s\n", record);
+            }
+            if (count == 0 || count > capacity) {
+                failInitialization("surface-format-data-count-invalid", res);
+                return;
+            }
+            if (res == VK_INCOMPLETE) continue;
+            surfaceFormats.resize(count); // A smaller successful result is valid.
+            completeFormats = true;
+            break;
+        }
+        if (!completeFormats) {
+            failInitialization("surface-format-enumeration-incomplete", VK_INCOMPLETE);
             return;
         }
 
-        // Pick the preferred color space, if not available, pick whatever first shows up on the list.
-        for (const VkSurfaceFormatKHR &surfaceFormat : compatibleSurfaceFormats) {
-            if (surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-                pickedSurfaceFormat = surfaceFormat;
-                break;
+        // VK_FORMAT_UNDEFINED was a Vulkan 1.0 'any format' convention. Vulkan
+        // 1.1+ forbids it in this query. This backend requests Vulkan 1.2: do not
+        // treat the sentinel as a reported BGRA8 capability or pass it to WSI.
+        VkSurfaceFormatKHR selectedFormat = {};
+        for (const VkSurfaceFormatKHR &format : surfaceFormats) {
+            if (format.format == VK_FORMAT_UNDEFINED) {
+                failInitialization("undefined-surface-format-vulkan-1.2");
+                return;
+            }
+            if (format.format == requestedFormat &&
+                (selectedFormat.format == VK_FORMAT_UNDEFINED || format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)) {
+                selectedFormat = format;
             }
         }
-
-        if (pickedSurfaceFormat.format == VK_FORMAT_UNDEFINED) {
-            pickedSurfaceFormat = compatibleSurfaceFormats[0];
+        if (selectedFormat.format == VK_FORMAT_UNDEFINED) {
+            // Launcher UI and VI pipelines assume BGRA8. Reject unsupported
+            // requests instead of changing only image/view/descriptor formats.
+            failInitialization("requested-surface-format-unsupported");
+            return;
         }
+
+        uint32_t presentModeCount = 0;
+        res = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
+        if (res != VK_SUCCESS || presentModeCount == 0) {
+            failInitialization("present-mode-count-query-failed", res);
+            return;
+        }
+        std::vector<VkPresentModeKHR> presentModes(presentModeCount);
+        const uint32_t presentModeCapacity = presentModeCount;
+        res = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data());
+        if (res != VK_SUCCESS || presentModeCount == 0 || presentModeCount > presentModeCapacity) {
+            failInitialization("present-mode-data-query-failed", res);
+            return;
+        }
+        presentModes.resize(presentModeCount);
+        immediatePresentModeSupported = std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_IMMEDIATE_KHR) != presentModes.end();
+        mailboxPresentModeSupported = std::find(presentModes.begin(), presentModes.end(), VK_PRESENT_MODE_MAILBOX_KHR) != presentModes.end();
 
         // Sets the required presentation mode.
         setVsyncEnabled(true);
@@ -2291,11 +2361,34 @@ namespace plume {
         }
         else {
             fprintf(stderr, "No supported alpha compositing mode was found.\n");
+            failInitialization("composite-alpha-unsupported");
             return;
         }
 
+        // Publish selection only after every constructor prerequisite succeeds.
+        pickedSurfaceFormat = selectedFormat;
+        initialized = true;
+        initializationFailure = "none";
+        char selectedRecord[256];
+        std::snprintf(selectedRecord, sizeof(selectedRecord),
+            "Surface format selected: requested=%u selected=%u colorSpace=%u rhiFormat=%u initialized=1",
+            unsigned(requestedFormat), unsigned(pickedSurfaceFormat.format), unsigned(pickedSurfaceFormat.colorSpace), unsigned(this->desc.format));
+        tooie_android_debug_log(selectedRecord);
+        std::fprintf(stderr, "%s\n", selectedRecord);
         // Parent command queue should track this swap chain.
         commandQueue->swapChains.insert(this);
+    }
+
+    void VulkanSwapChain::failInitialization(const char *reason, VkResult result) {
+        initialized = false;
+        initializationFailure = reason;
+        pickedSurfaceFormat = {};
+        char message[256];
+        std::snprintf(message, sizeof(message),
+            "Swapchain initialization rejected: reason=%s result=%d requestedFormat=%u rhiFormat=%u",
+            reason, int(result), unsigned(toVk(desc.format)), unsigned(desc.format));
+        tooie_android_debug_log(message);
+        std::fprintf(stderr, "%s\n", message);
     }
 
     VulkanSwapChain::~VulkanSwapChain() {
@@ -2312,6 +2405,7 @@ namespace plume {
     }
 
     bool VulkanSwapChain::present(uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, uint32_t waitSemaphoreCount) {
+        if (isEmpty()) return false;
         thread_local std::vector<VkSemaphore> waitSemaphoresVector;
         waitSemaphoresVector.clear();
         for (uint32_t i = 0; i < waitSemaphoreCount; i++) {
@@ -2359,6 +2453,7 @@ namespace plume {
     }
 
     void VulkanSwapChain::wait() {
+        if (isEmpty()) return;
         assert(desc.enablePresentWait && "Present wait should've been explicitly enabled during swap chain creation before using the wait function.");
 
         if (currentPresentId >= desc.maxFrameLatency) {
@@ -2368,6 +2463,19 @@ namespace plume {
     }
 
     bool VulkanSwapChain::resize() {
+        // C++ constructor early returns leave an object behind. No WSI call or
+        // resource mutation is legal until all initialization has succeeded.
+        if (!initialized || surface == VK_NULL_HANDLE || pickedSurfaceFormat.format == VK_FORMAT_UNDEFINED ||
+            pickedSurfaceFormat.format != toVk(desc.format)) {
+            char message[320];
+            std::snprintf(message, sizeof(message),
+                "Swapchain resize rejected: initialized=%u initReason=%s selectedFormat=%u requestedFormat=%u surface=%llx",
+                unsigned(initialized), initializationFailure, unsigned(pickedSurfaceFormat.format), unsigned(toVk(desc.format)),
+                (unsigned long long)surface);
+            tooie_android_debug_log(message);
+            std::fprintf(stderr, "%s\n", message);
+            return false;
+        }
         getWindowSize(width, height);
 
         // Don't recreate the swap chain at all if the window doesn't have a valid size.
@@ -2425,8 +2533,8 @@ namespace plume {
 #if defined(__ANDROID__)
         char swapchainRecord[256];
         std::snprintf(swapchainRecord, sizeof(swapchainRecord),
-            "Swapchain record: format=%u extent=%ux%u usage=0x%X supportedUsage=0x%X transform=0x%X family=%u",
-            unsigned(createInfo.imageFormat), width, height, createInfo.imageUsage,
+            "Swapchain record: format=%u colorSpace=%u rhiFormat=%u initialized=%u extent=%ux%u usage=0x%X supportedUsage=0x%X transform=0x%X family=%u",
+            unsigned(createInfo.imageFormat), unsigned(createInfo.imageColorSpace), unsigned(desc.format), unsigned(initialized), width, height, createInfo.imageUsage,
             surfaceCapabilities.supportedUsageFlags, createInfo.preTransform, commandQueue->familyIndex);
         tooie_android_debug_log(swapchainRecord);
         const VkImageUsageFlags missingUsage = createInfo.imageUsage & ~surfaceCapabilities.supportedUsageFlags;
@@ -2501,6 +2609,7 @@ namespace plume {
     }
 
     bool VulkanSwapChain::needsResize() const {
+        if (!initialized) return true;
         uint32_t windowWidth, windowHeight;
         getWindowSize(windowWidth, windowHeight);
         return (vk == VK_NULL_HANDLE) || (windowWidth != width) || (windowHeight != height) || (requiredPresentMode != createdPresentMode);
@@ -2543,10 +2652,11 @@ namespace plume {
     }
 
     bool VulkanSwapChain::isEmpty() const {
-        return (vk == VK_NULL_HANDLE) || (width == 0) || (height == 0);
+        return !initialized || (vk == VK_NULL_HANDLE) || (width == 0) || (height == 0);
     }
 
     uint32_t VulkanSwapChain::getRefreshRate() const {
+        if (isEmpty()) return 0;
         VkRefreshCycleDurationGOOGLE refreshCycle = {};
         VkResult res = vkGetRefreshCycleDurationGOOGLE(commandQueue->device->vk, vk, &refreshCycle);
         if (res != VK_SUCCESS) {
@@ -2583,6 +2693,7 @@ namespace plume {
     }
 
     bool VulkanSwapChain::acquireTexture(RenderCommandSemaphore *signalSemaphore, uint32_t *textureIndex) {
+        if (isEmpty()) return false;
         assert(signalSemaphore != nullptr);
 
         VulkanCommandSemaphore *interfaceSemaphore = static_cast<VulkanCommandSemaphore *>(signalSemaphore);

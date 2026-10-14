@@ -21,7 +21,15 @@ build_and_record() {
         cat "$test_dir/$mode.out"
         return 1
     fi
-    echo "PASS: $mode recording, image-configuration queries, and swapchain usage validation"
+    grep -q 'PASS: failed/incomplete surface enumeration' "$test_dir/$mode.out"
+    grep -q 'Surface format request: vkFormat=44' "$test_dir/log-$mode/banjotooi-debug.log"
+    grep -q 'Surface format pair: attempt=1 index=2 format=44 colorSpace=0 complete=1' "$test_dir/log-$mode/banjotooi-debug.log"
+    grep -q 'Surface format data: attempt=1 result=5 written=1 capacity=1' "$test_dir/log-$mode/banjotooi-debug.log"
+    grep -q 'Surface format data: attempt=2 result=0 written=2 capacity=2' "$test_dir/log-$mode/banjotooi-debug.log"
+    if grep -q 'Swapchain record: format=0 ' "$test_dir/log-$mode/banjotooi-debug.log"; then
+        echo 'FAIL: undefined chosen image format was logged' >&2; exit 1
+    fi
+    echo "PASS: $mode recording, surface enumeration/initialization/format consistency, image queries and swapchain usage validation"
 }
 expect_rejection() {
     local binary=$1 argument=$2 reason=$3

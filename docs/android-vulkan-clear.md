@@ -5,7 +5,97 @@ first physical-device test. This document describes a review proposal, not a
 verified launcher fix. No new Portal test is requested until this proposal has
 been reviewed.
 
-## Latest device evidence: c053e0d did not reach A–E
+## Latest device evidence: 9d981ac reached A–C, then rejected format zero
+
+The physical Odin 2 Portal test reached the early synchronous diagnostic:
+
+```text
+DIAG isolation: synchronous A-E before raster queues start
+Swapchain record: format=0 extent=1920x1080 usage=0x16 supportedUsage=0x9F transform=0x1 family=0
+DIAG A: fence signaled (GPU queue works without acquire wait)
+DIAG B: fence signaled (acquire semaphore works)
+DIAG C: fence signaled (COLOR_WRITE transition completed)
+DIAG D: swapchain clear begin
+Clear record: path=transfer-rejected ... imageFormat=0 viewFormat=44 samples=1 usage=0x16 owned=0 swapchain=1
+Transfer clear rejected: reason=attachment-format-mismatch
+```
+
+A–C passed; D stopped before recording/submitting its clear, and E was not reached.
+The device remained responsive and no new GPU fence timeout was reported. This
+verifies that startup raster work no longer prevents entry to A–E. It does not
+verify the transfer clear or the normal launcher on this device.
+
+## Surface-format root cause and correction
+
+`pickedSurfaceFormat` was zero-initialized. The old constructor could return after
+surface creation, present-support/capabilities/alpha checks, failed or empty format
+enumeration, or a list with no requested format. It did not record successful
+initialization. The returned C++ object still existed, its `vk` handle was null,
+and `needsResize()` returned true. `resize()` then used the unselected zero format
+in `VkSwapchainCreateInfoKHR`, copied it to `VulkanTexture::imageFormat`, and passed
+it to `vkCreateImageView`, while keeping `desc.format = B8G8R8A8_UNORM`.
+
+That explains the logged image/framebuffer mismatch: `imageFormat=0` came from
+the unselected Vulkan field, while `viewFormat=44` came from the framebuffer's RHI
+attachment format. The latter log does not prove an actual valid BGRA Vulkan image
+view: its old creation arguments also used zero. A successful old BGRA selection
+would have assigned 44. This is an application initialization/state defect;
+successful A–C fences do not validate earlier WSI creation arguments.
+
+The supplied hardware log does **not** identify which constructor prerequisite
+failed or what formats the Odin reported. BGRA absence, enumeration failure and
+earlier constructor failures remain distinguishable possibilities. The revision
+records the exact constructor rejection reason, requested Vulkan/RHI formats,
+instance/device API versions, both enumeration results/counts, every returned
+format/colour-space pair and the final selected pair. It does not label an
+unobserved device format list or driver error as confirmed.
+
+The separate correction keeps the requested format unchanged and:
+
+- Checks both `vkGetPhysicalDeviceSurfaceFormatsKHR` results and nonzero counts.
+  A data result cannot exceed its allocated capacity. `VK_INCOMPLETE` discards
+  the partial selection and repeats the count/data pair, up to four attempts;
+  exhausting them rejects initialization. A smaller successful result is resized
+  to its actual count so unfilled zero entries cannot participate in selection.
+  Logs include every valid returned pair, including incomplete prefixes.
+- Requires the exact requested Vulkan format in a complete list and considers
+  all matching colour spaces, preferring `SRGB_NONLINEAR`. It publishes the chosen
+  format and `initialized=true` only after every constructor prerequisite succeeds,
+  including checked present-mode enumeration. Failures retain a reason and remain
+  uninitialized; they are not registered as valid swapchains on the command queue.
+- Rejects unsupported BGRA8 with `requested-surface-format-unsupported`. The UI
+  presentation pipeline (`ui_renderer.cpp`) and VI pipelines (`rt64_shader_library.cpp`)
+  hardcode BGRA8. Substituting RGBA8 in this class alone would leave incompatible
+  pipelines. A format fallback therefore requires a separate coordinated renderer
+  change; this revision safely rejects it without changing any RHI/image metadata.
+- Checks initialization, the surface handle, a concrete selected format, and
+  agreement with the RHI descriptor before any resize query, creation or resource
+  mutation. Invalid objects remain empty and cannot acquire/present, wait on a
+  nonexistent presentation or query its refresh cycle. The early A–E helper then
+  reports an unavailable swapchain and stops before A. These guards preserve old
+  image views if a replacement configuration is rejected.
+- Creates images/views/framebuffers using the same concrete requested format.
+  Neither `VK_FORMAT_UNDEFINED` nor a format that disagrees with the RHI descriptor
+  can reach `vkCreateSwapchainKHR` or chosen-image metadata, even if an initialized
+  object's selected-format field is malformed.
+
+Vulkan-version convention: Vulkan 1.0 specified that a *single* reported
+`VK_FORMAT_UNDEFINED` entry means no preferred format; the application must still
+choose a valid concrete format. Vulkan 1.1+ forbids undefined entries in this
+query. Plume explicitly requests **Vulkan 1.2**, so this revision rejects any
+undefined entry with `undefined-surface-format-vulkan-1.2` rather than treating
+it as advertised BGRA support or lowering the API version. References:
+[older 1.0 convention](https://github.com/KhronosGroup/Vulkan-Docs/blob/v1.0.68-core/doc/specs/vulkan/chapters/VK_KHR_surface/wsi.txt),
+[current project 1.2 requirements](https://github.com/KhronosGroup/Vulkan-Docs/blob/v1.2.198/chapters/VK_KHR_surface/wsi.txt).
+
+This fixes the invalid state path. It does not establish that the earlier
+attachment/load-op timeouts had the same constructor failure, nor that the Odin
+supports BGRA8 or will complete D after this revision. Early A–E, all clear paths
+and controls, strict rejection and the five-second GPU fence timeout are retained.
+No new Odin APK/build/install, hardware test, merge or PR #1 update is part of this
+revision; the configurations below remain available for review.
+
+## Earlier device evidence: c053e0d did not reach A–E
 
 The c053e0d APK remained responsive but stopped during startup raster recording:
 
@@ -56,7 +146,7 @@ Authoritative references:
 
 ## State and command audit
 
-For the swapchain, creation and selection use `B8G8R8A8_UNORM`, one sample,
+After successful format initialization, the swapchain uses `B8G8R8A8_UNORM`, one sample,
 one mip/layer, and `COLOR_ATTACHMENT | TRANSFER_DST | SAMPLED` usage. Its image
 view uses the same chosen format. The proposal records the format and usage
 from the actual creation parameters, rather than inferring transfer support
@@ -76,12 +166,13 @@ The framebuffer's normal pass has one subpass, `LOAD/STORE`, and
 `COLOR_ATTACHMENT_OPTIMAL` in its initial, subpass, and final layouts. The load-op
 variant differs only in the selected color attachment's load operation. Its
 formats, samples, attachment references, depth operations, and dependency count
-match the base pass. Those passes are compatible under Vulkan's rules. The clear
-values cover the highest cleared attachment index, and zero initialization gives
-a zero-offset full render area. No compatibility violation was found for the
-reported swapchain case. This does not certify every possible attachment view:
-the existing framebuffer sizing uses base-image dimensions, so nonzero mip views
-need separate investigation. They are excluded from the new transfer path.
+match the base pass. With valid and consistent image/view formats, those passes
+are compatible under Vulkan's rules. The clear values cover the highest cleared
+attachment index, and zero initialization gives a zero-offset full render area.
+That pass comparison did not establish valid WSI/image-view creation: the newer
+9d981ac evidence exposes a path that violates the assumed format consistency.
+Android mip-view framebuffer sizing was corrected by the partial-draw revision;
+explicit views remain excluded from the full transfer path.
 
 Both normal passes use explicit barriers, not automatic layout transitions. No
 implicit external dependency should be assumed when the initial, subpass, and
@@ -105,9 +196,10 @@ entire underlying image is not a correct substitute for clearing an arbitrary
 attachment view. The proposal records the actual bound view handle and view
 format, accepts only the ordinary base view and full matching extent, and limits
 the transfer's subresource range to color aspect, mip 0, layer 0, each count 1.
-It does not reinterpret view formats or adjust the existing mip-view framebuffer
-sizing. Rejected views stop the strict path; their attachment-clear behavior is
-available only in the explicit fallback comparison.
+The transfer path does not reinterpret view formats. Full non-base-view clears
+remain strict; explicit rectangles use the view-local draw described below.
+The original attachment-clear behavior remains available only in the explicit
+fallback comparison.
 
 The two image barriers use `VK_QUEUE_FAMILY_IGNORED`: the render and present
 queue use the same family. Android acquisition waits at `ALL_COMMANDS`, so the
@@ -352,8 +444,19 @@ results below. PR #1 must not be merged on the basis of host test results.
 
 ## Validation and limitations
 
-Passed in this cloud instance:
+Passed again for the surface-format revision in this cloud instance:
 
+- All six host recording modes, including 16 constructor-failure/enumeration
+  cases and four successful selection cases per mode. Tests cover count/data
+  errors, zero/invalid returned counts, persistent incompleteness, a changing list
+  with a successful retry, shrinking enumeration, no BGRA, undefined entries,
+  pre-enumeration failures and present-mode failure after a valid format list.
+  Failed objects must make no subsequent WSI capability/create/acquire/present
+  calls. Successful cases check actual creation arguments, RHI metadata, image-view
+  formats and framebuffer render-pass formats. Defensive resize tests reject
+  undefined/mismatched selection without releasing old views. Logging tests check
+  all three reported pairs, incomplete and completed attempts, requested format,
+  and absence of a `Swapchain record: format=0` chosen-image record.
 - Recording tests of the production Android backend cover the strict proposal,
   prior transfer-only diagnostic, failed load-op and barrier-only controls, and
   the explicit fallback comparisons. They inspect 1×/8× commands, compatibility,
@@ -384,8 +487,8 @@ Passed in this cloud instance:
   Adreno, or the Portal's 8× hardware path. The load-op control's software success
   does not override its reported hardware failure.
 - Android ARM64 Plume cross-builds using NDK r27d, API 24, Release, for the
-  strict proposal, retained clear controls, and fallback comparison. Earlier
-  Android ARM64 presentation compilation in normal mode and the new
+  strict proposal, retained clear controls, and fallback comparison.
+  Android ARM64 presentation compilation in normal mode and the
   `Application::setup` isolation entry point also pass as standalone object
   compilations. Full application linking is still blocked by the dependencies
   described below.
@@ -420,9 +523,12 @@ cmake --build build-plume-android -j 4
 ```
 
 No new APK was built, installed or tested on the Portal for this revision.
-Neither the isolated entry point nor the scissored draw has been tested on Adreno;
-2×/8× hardware execution, Android WSI and normal graphical launcher rendering
-remain unverified. Keep all controls and the timeout until that review and
+The user tested the 9d981ac early entry point through A–C on Adreno, but its
+D clear was rejected. The new surface-format guards/selection and scissored draw
+have not been tested on Adreno. Host WSI enumeration tests use mocks; software
+Vulkan readback does not exercise Android surface enumeration or swapchain
+creation. 2×/8× clear execution and normal graphical launcher rendering remain
+unverified. Keep all controls and the timeout until that review and
 verification are complete. Full cloud APK
 setup still lacks Android SDL2/FreeType development prefixes and
 `lib/rt64/src/contrib/zstd/build/cmake`. The missing zstd directory may be a

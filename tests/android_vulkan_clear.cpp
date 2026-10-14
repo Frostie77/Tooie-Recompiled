@@ -57,7 +57,24 @@ static unsigned imageQueries = 0, swapchainCreates = 0;
 static VkImageUsageFlags surfaceUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                                         VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                                         VK_IMAGE_USAGE_SAMPLED_BIT;
-static VkResult surfaceQueryResult = VK_SUCCESS;
+static VkResult surfaceQueryResult = VK_SUCCESS,
+                surfaceCreateResult = VK_SUCCESS;
+static VkResult supportQueryResult = VK_SUCCESS, formatCountResult = VK_SUCCESS,
+                formatDataResult = VK_SUCCESS;
+static VkResult modeCountResult = VK_SUCCESS, modeDataResult = VK_SUCCESS;
+static VkBool32 queuePresentSupport = VK_TRUE;
+static VkCompositeAlphaFlagsKHR surfaceAlpha =
+    VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+static std::vector<VkSurfaceFormatKHR> reportedSurfaceFormats = {
+    {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+static bool formatsGrowOnce = false, formatsAlwaysIncomplete = false,
+            formatsShrink = false;
+static bool formatsOverreported = false, formatsZeroWritten = false;
+static unsigned formatCountQueries = 0, formatDataQueries = 0,
+                capabilitiesQueries = 0;
+static VkFormat createdSwapchainFormat = VK_FORMAT_UNDEFINED;
+static std::unordered_map<VkImage, VkFormat> swapImageFormats;
+static std::unordered_map<VkImageView, VkFormat> actualViewFormats;
 static unsigned createdPasses = 0, destroyedPasses = 0, selectedIndex = 0;
 static VkResult enumerate(VkInstance, uint32_t *count, VkPhysicalDevice *) {
   *count = 0;
@@ -86,18 +103,20 @@ static VkResult imageProperties(VkPhysicalDevice, VkFormat format,
 static VkResult createSurface(VkInstance, const VkAndroidSurfaceCreateInfoKHR *,
                               const VkAllocationCallbacks *,
                               VkSurfaceKHR *out) {
-  *out = handle<VkSurfaceKHR>();
-  return VK_SUCCESS;
+  *out = surfaceCreateResult == VK_SUCCESS ? handle<VkSurfaceKHR>()
+                                           : VK_NULL_HANDLE;
+  return surfaceCreateResult;
 }
 static void destroySurface(VkInstance, VkSurfaceKHR,
                            const VkAllocationCallbacks *) {}
 static VkResult presentSupport(VkPhysicalDevice, uint32_t, VkSurfaceKHR,
                                VkBool32 *out) {
-  *out = VK_TRUE;
-  return VK_SUCCESS;
+  *out = queuePresentSupport;
+  return supportQueryResult;
 }
 static VkResult surfaceCaps(VkPhysicalDevice, VkSurfaceKHR,
                             VkSurfaceCapabilitiesKHR *out) {
+  ++capabilitiesQueries;
   *out = {};
   out->minImageCount = 2;
   out->maxImageCount = 3;
@@ -105,7 +124,7 @@ static VkResult surfaceCaps(VkPhysicalDevice, VkSurfaceKHR,
   out->minImageExtent = {16, 16};
   out->maxImageExtent = {4096, 4096};
   out->maxImageArrayLayers = 1;
-  out->supportedCompositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  out->supportedCompositeAlpha = surfaceAlpha;
   out->supportedTransforms = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
   out->currentTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
   out->supportedUsageFlags = surfaceUsage;
@@ -113,22 +132,41 @@ static VkResult surfaceCaps(VkPhysicalDevice, VkSurfaceKHR,
 }
 static VkResult surfaceFormats(VkPhysicalDevice, VkSurfaceKHR, uint32_t *count,
                                VkSurfaceFormatKHR *out) {
-  *count = 1;
-  if (out)
-    *out = {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
-  return VK_SUCCESS;
+  if (!out) {
+    ++formatCountQueries;
+    *count = uint32_t(reportedSurfaceFormats.size());
+    if (formatsGrowOnce && formatCountQueries == 1)
+      --*count;
+    return formatCountResult;
+  }
+  ++formatDataQueries;
+  const unsigned capacity = *count;
+  const unsigned written =
+      formatsZeroWritten
+          ? 0
+          : std::min(capacity, unsigned(reportedSurfaceFormats.size()) -
+                                   unsigned(formatsShrink));
+  for (unsigned i = 0; i < written; ++i)
+    out[i] = reportedSurfaceFormats[i];
+  *count = formatsOverreported ? capacity + 1 : written;
+  if (formatsAlwaysIncomplete || (formatsGrowOnce && formatDataQueries == 1))
+    return VK_INCOMPLETE;
+  return formatDataResult;
 }
 static VkResult presentModes(VkPhysicalDevice, VkSurfaceKHR, uint32_t *count,
                              VkPresentModeKHR *out) {
   *count = 1;
   if (out)
     *out = VK_PRESENT_MODE_FIFO_KHR;
-  return VK_SUCCESS;
+  return out ? modeDataResult : modeCountResult;
 }
 static VkResult createSwapchain(VkDevice, const VkSwapchainCreateInfoKHR *p,
                                 const VkAllocationCallbacks *,
                                 VkSwapchainKHR *out) {
   ++swapchainCreates;
+  REQUIRE(p->imageFormat != VK_FORMAT_UNDEFINED &&
+          p->imageFormat == VK_FORMAT_B8G8R8A8_UNORM);
+  createdSwapchainFormat = p->imageFormat;
   REQUIRE((p->imageUsage & ~surfaceUsage) == 0);
   REQUIRE(p->imageUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT);
   *out = handle<VkSwapchainKHR>();
@@ -143,6 +181,8 @@ static VkResult swapchainImages(VkDevice, VkSwapchainKHR, uint32_t *count,
     out[0] = handle<VkImage>();
     out[1] = handle<VkImage>();
     imageLayouts[out[0]] = imageLayouts[out[1]] = VK_IMAGE_LAYOUT_UNDEFINED;
+    swapImageFormats[out[0]] = swapImageFormats[out[1]] =
+        createdSwapchainFormat;
   }
   return VK_SUCCESS;
 }
@@ -257,15 +297,24 @@ static VkResult createFb(VkDevice, const VkFramebufferCreateInfo *p,
   REQUIRE(p->attachmentCount == passes.at(p->renderPass).attachments.size());
   *out = handle<VkFramebuffer>();
   framebufferPasses[*out] = p->renderPass;
+  const auto &attachments = passes.at(p->renderPass).attachments;
+  for (unsigned i = 0; i < p->attachmentCount; ++i)
+    if (actualViewFormats.count(p->pAttachments[i]))
+      REQUIRE(actualViewFormats.at(p->pAttachments[i]) ==
+              attachments.at(i).format);
   return VK_SUCCESS;
 }
 static void destroyFb(VkDevice, VkFramebuffer fb,
                       const VkAllocationCallbacks *) {
   framebufferPasses.erase(fb);
 }
-static VkResult createView(VkDevice, const VkImageViewCreateInfo *,
+static VkResult createView(VkDevice, const VkImageViewCreateInfo *info,
                            const VkAllocationCallbacks *, VkImageView *out) {
+  REQUIRE(info->format != VK_FORMAT_UNDEFINED);
+  if (swapImageFormats.count(info->image))
+    REQUIRE(info->format == swapImageFormats.at(info->image));
   *out = handle<VkImageView>();
+  actualViewFormats[*out] = info->format;
   return VK_SUCCESS;
 }
 static void destroyView(VkDevice, VkImageView, const VkAllocationCallbacks *) {}
@@ -574,6 +623,181 @@ static void initialize(VulkanTexture &texture, VulkanDevice &device,
   texture.barrierStages = RenderBarrierStage::GRAPHICS;
   imageLayouts[texture.vk] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 }
+static void resetSurfaceEnumeration() {
+  surfaceCreateResult = supportQueryResult = surfaceQueryResult =
+      formatCountResult = formatDataResult = modeCountResult = modeDataResult =
+          VK_SUCCESS;
+  queuePresentSupport = VK_TRUE;
+  surfaceAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  reportedSurfaceFormats = {
+      {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+  formatsGrowOnce = formatsAlwaysIncomplete = formatsShrink =
+      formatsOverreported = formatsZeroWritten = false;
+  formatCountQueries = formatDataQueries = 0;
+}
+static void testSurfaceFormatInitialization(VulkanCommandQueue &queue) {
+  RenderSwapChainDesc desc;
+  desc.renderWindow = reinterpret_cast<ANativeWindow *>(1);
+  desc.textureCount = 2;
+  desc.format = RenderFormat::B8G8R8A8_UNORM;
+  struct Failure {
+    const char *reason;
+    unsigned mode;
+  };
+  for (const auto &failure :
+       std::vector<Failure>{{"surface-creation-failed", 0},
+                            {"present-support-query-failed", 1},
+                            {"queue-present-unsupported", 2},
+                            {"surface-capabilities-query-failed", 3},
+                            {"composite-alpha-unsupported", 4},
+                            {"surface-format-count-query-failed", 5},
+                            {"surface-format-count-zero", 6},
+                            {"surface-format-data-query-failed", 7},
+                            {"surface-format-data-count-invalid", 8},
+                            {"surface-format-data-count-invalid", 9},
+                            {"surface-format-enumeration-incomplete", 10},
+                            {"requested-surface-format-unsupported", 11},
+                            {"undefined-surface-format-vulkan-1.2", 12},
+                            {"present-mode-count-query-failed", 13},
+                            {"present-mode-data-query-failed", 14},
+                            {"undefined-surface-format-vulkan-1.2", 15}}) {
+    resetSurfaceEnumeration();
+    switch (failure.mode) {
+    case 0:
+      surfaceCreateResult = VK_ERROR_SURFACE_LOST_KHR;
+      break;
+    case 1:
+      supportQueryResult = VK_ERROR_DEVICE_LOST;
+      break;
+    case 2:
+      queuePresentSupport = VK_FALSE;
+      break;
+    case 3:
+      surfaceQueryResult = VK_ERROR_SURFACE_LOST_KHR;
+      break;
+    case 4:
+      surfaceAlpha = 0;
+      break;
+    case 5:
+      formatCountResult = VK_ERROR_SURFACE_LOST_KHR;
+      break;
+    case 6:
+      reportedSurfaceFormats.clear();
+      break;
+    case 7:
+      formatDataResult = VK_ERROR_SURFACE_LOST_KHR;
+      break;
+    case 8:
+      formatsOverreported = true;
+      break;
+    case 9:
+      formatsZeroWritten = true;
+      break;
+    case 10:
+      formatsAlwaysIncomplete = true;
+      break;
+    case 11:
+      reportedSurfaceFormats = {
+          {VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+      break;
+    case 12:
+      reportedSurfaceFormats = {
+          {VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+      break;
+    case 13:
+      modeCountResult = VK_ERROR_SURFACE_LOST_KHR;
+      break;
+    case 14:
+      modeDataResult = VK_INCOMPLETE;
+      break;
+    case 15:
+      reportedSurfaceFormats.push_back(
+          {VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR});
+      break;
+    }
+    const unsigned creates = swapchainCreates;
+    VulkanSwapChain rejected(&queue, desc);
+    REQUIRE(!rejected.initialized &&
+            !std::strcmp(rejected.initializationFailure, failure.reason));
+    REQUIRE(rejected.pickedSurfaceFormat.format == VK_FORMAT_UNDEFINED &&
+            rejected.isEmpty());
+    REQUIRE(queue.swapChains.count(&rejected) == 0);
+    // Reproduce the old constructor-return -> needsResize -> resize path. It
+    // must now stop before even querying capabilities, regardless of the
+    // reason.
+    const unsigned queried = capabilitiesQueries;
+    REQUIRE(rejected.needsResize() && !rejected.resize());
+    REQUIRE(!rejected.acquireTexture(nullptr, nullptr));
+    REQUIRE(!rejected.present(0, nullptr, 0));
+    REQUIRE(rejected.getRefreshRate() == 0);
+    rejected.wait();
+    REQUIRE(swapchainCreates == creates && capabilitiesQueries == queried &&
+            rejected.textures.empty());
+    if (failure.mode == 5 || failure.mode == 6)
+      REQUIRE(formatDataQueries == 0);
+    if (failure.mode == 10)
+      REQUIRE(formatCountQueries == 4 && formatDataQueries == 4);
+  }
+  for (unsigned mode = 0; mode < 4; ++mode) {
+    resetSurfaceEnumeration();
+    if (mode == 0)
+      reportedSurfaceFormats = {
+          {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT},
+          {VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
+          {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+    if (mode == 1) {
+      reportedSurfaceFormats.push_back(
+          {VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR});
+      formatsGrowOnce = true;
+    }
+    if (mode == 2) {
+      reportedSurfaceFormats.push_back(
+          {VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR});
+      formatsShrink = true;
+    }
+    if (mode == 3)
+      reportedSurfaceFormats[0].colorSpace =
+          VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT;
+    const unsigned creates = swapchainCreates;
+    VulkanSwapChain accepted(&queue, desc);
+    REQUIRE(accepted.initialized &&
+            !std::strcmp(accepted.initializationFailure, "none"));
+    REQUIRE(accepted.pickedSurfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM);
+    REQUIRE(accepted.pickedSurfaceFormat.colorSpace ==
+            (mode == 3 ? VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT
+                       : VK_COLOR_SPACE_SRGB_NONLINEAR_KHR));
+    REQUIRE(accepted.desc.format == desc.format && accepted.resize() &&
+            swapchainCreates == creates + 1);
+    REQUIRE(accepted.createInfo.imageFormat == VK_FORMAT_B8G8R8A8_UNORM);
+    if (mode == 1)
+      REQUIRE(formatCountQueries == 2 && formatDataQueries == 2);
+    for (auto &texture : accepted.textures) {
+      REQUIRE(texture.imageFormat == accepted.createInfo.imageFormat &&
+              texture.desc.format == desc.format);
+      REQUIRE(actualViewFormats.at(texture.imageView) == texture.imageFormat);
+      const RenderTexture *color = &texture;
+      VulkanFramebuffer fb(queue.device, RenderFramebufferDesc(&color, 1));
+      REQUIRE(fb.colorAttachmentFormats[0] == texture.imageFormat &&
+              fb.colorAttachmentImageViews[0] == texture.imageView);
+      REQUIRE(passes.at(fb.renderPass).attachments[0].format ==
+              texture.imageFormat);
+    }
+    // Defence in depth: even a malformed initialized object cannot pass format
+    // zero or stale RHI/image format metadata into vkCreateSwapchainKHR.
+    const unsigned queried = capabilitiesQueries;
+    const auto oldView = accepted.textures[0].imageView;
+    accepted.pickedSurfaceFormat.format = VK_FORMAT_UNDEFINED;
+    REQUIRE(!accepted.resize());
+    accepted.pickedSurfaceFormat.format = VK_FORMAT_R8G8B8A8_UNORM;
+    REQUIRE(!accepted.resize() && swapchainCreates == creates + 1 &&
+            capabilitiesQueries == queried);
+    REQUIRE(accepted.textures[0].imageView == oldView);
+  }
+  resetSurfaceEnumeration();
+  std::puts(
+      "PASS: failed/incomplete surface enumeration, constructor early returns, "
+      "invalid-object guards, and image/view/framebuffer format consistency");
+}
 int main(int argc, char **argv) {
   simulateTimeout = argc > 1 && std::strcmp(argv[1], "--timeout") == 0;
   invalidState = argc > 1 && std::strcmp(argv[1], "--invalid-state") == 0;
@@ -700,6 +924,7 @@ int main(int argc, char **argv) {
   if (clearRejectionCase == nullptr && !invalidState) {
     testImageConfigurations(device);
     testSwapchainUsage(queue);
+    testSurfaceFormatInitialization(queue);
   }
   if (argc > 1 && std::strcmp(argv[1], "--late-categories") == 0) {
     VulkanTexture warmup;
