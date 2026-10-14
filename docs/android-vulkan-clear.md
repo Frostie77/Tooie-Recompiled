@@ -81,6 +81,15 @@ the one-color/no-depth launcher targets:
 5. Later drawing begins the ordinary `LOAD` render pass. The image layout and
    RT64's tracked `COLOR_WRITE/GRAPHICS` state agree on return.
 
+All explicit `colorAttachmentViews` are excluded from the new transfer path,
+including an explicit view that happens to cover mip/layer zero. Clearing an
+entire underlying image is not a correct substitute for clearing an arbitrary
+attachment view. The proposal records the actual bound view handle and view
+format, accepts only the ordinary base view and full matching extent, and limits
+the transfer's subresource range to color aspect, mip 0, layer 0, each count 1.
+It does not reinterpret view formats or adjust the existing mip-view framebuffer
+sizing. Rejected views take the documented attachment-clear fallback.
+
 The two image barriers use `VK_QUEUE_FAMILY_IGNORED`: the render and present
 queue use the same family. Android acquisition waits at `ALL_COMMANDS`, so the
 first transfer operation cannot run before acquisition. The per-image draw
@@ -91,16 +100,75 @@ follow B's fence and must not wait on that binary semaphore again.
 If a pass with other color/depth attachments is split, an additional attachment
 memory dependency preserves those attachments before the next `LOAD`. The
 launcher has a single color target and no depth, so its path does not record
-that extra memory barrier. The host recording tests inspect both cases.
+that extra memory barrier. For other attachments, its scopes include color output
+and early/late fragment tests, with prior color/depth writes made visible to the
+subsequent color/depth reads and writes. The host recording tests inspect both
+cases. The intermediate transfer layout is handled by the explicit Vulkan image
+barriers; CPU tracking remains `COLOR_WRITE/GRAPHICS` because that state is restored
+before the clear returns. This is a recording contract, not proof of GPU execution.
+
+## Eligibility checks and capability limits in `af1b17c`
+
+The implementation distinguishes **requested/recorded usage**, **format feature
+support**, and **the full image configuration**. The checks below describe what
+this commit actually enforces; the logs alone do not establish support.
+
+| Resource | Usage recorded and tested before a transfer clear | Capability checks and limits |
+| --- | --- | --- |
+| Swapchain image | `VulkanSwapChain::resize` requests `COLOR_ATTACHMENT`, `TRANSFER_DST`, and `SAMPLED`; after successful swapchain creation it copies the requested usage and chosen format into each `VulkanTexture`. `clearColor` requires the recorded `VK_IMAGE_USAGE_TRANSFER_DST_BIT`. | `vkGetPhysicalDeviceFormatProperties` must report `VK_FORMAT_FEATURE_TRANSFER_DST_BIT` in `optimalTilingFeatures` for the chosen image format. `VkSurfaceCapabilitiesKHR::supportedUsageFlags` is queried and logged alongside requested usage, but **this commit does not explicitly reject an unsupported usage combination** before `vkCreateSwapchainKHR`. That check remains a review requirement. |
+| Owned offscreen MSAA image | `VulkanTexture` records `VkImageCreateInfo::usage`, which includes `TRANSFER_SRC`, `TRANSFER_DST`, `SAMPLED`, and the color-attachment bit. `clearColor` requires the recorded transfer-destination bit. | The same optimal-tiling format-feature check applies. The UI chooses 8× from `getSampleCountsSupported`, which returns the device-wide `framebufferColorSampleCounts` limit. **It does not query format-specific image limits for the complete usage/sample configuration with `vkGetPhysicalDeviceImageFormatProperties`.** Successful `vmaCreateImage`, image-view creation, and framebuffer creation remain prerequisites; their non-null handles are checked before the eligible transfer path records commands. Those handles alone do not replace full capability validation. |
+
+For either resource, the default transfer path additionally requires:
+
+- A full clear (`clearRectsCount == 0`), a base attachment view, a 2D image, one
+  mip level, one array layer, and optimal rather than linear tiling.
+- Equal image and framebuffer extents, equal image and attachment formats, and
+  either `VK_FORMAT_R8G8B8A8_UNORM` or `VK_FORMAT_B8G8R8A8_UNORM`.
+- Valid image/view/framebuffer/render-pass handles and tracked
+  `COLOR_WRITE` with a `GRAPHICS` barrier stage. If an otherwise eligible image
+  fails these handle/state checks, the process logs the problem and exits with
+  failure; it does not record the transfer or use the fallback.
+
+There is no default single-sample or external-ownership restriction. The separate
+legacy transfer diagnostic (`TOOIE_VULKAN_TRANSFER_CLEAR_TEST=1`) additionally
+requires an externally owned, single-sample image. This preserves that control's
+original scope.
+
+These capability gaps are documented for review, not repaired by this
+documentation-only follow-up. A transfer-feature bit proves that the format
+supports that operation; it does not certify every requested usage combination,
+sample count, or Android WSI condition. No new hardware test is approved by
+publishing this branch.
+
+## Ineligible images and the known failing fallback
+
+In the default proposal (transfer flag **undefined**), a failed eligibility or
+format-feature check logs `path=attachment-fallback`. The code then calls
+`checkActiveRenderPass`, opening the framebuffer's ordinary `LOAD` pass if
+necessary, constructs the requested clear attachment/rectangles, and invokes
+**`vkCmdClearAttachments` inside that render pass**.
+
+**This fallback can therefore invoke the same command that previously timed out
+on the Portal.** It is not a tested safe fallback for Adreno, does not disable the
+five-second fence timeout, and must be considered when reviewing the proposal.
+It does not silently drop a clear, switch off MSAA, or use a clear draw pipeline.
+The fallback is not `VK_ATTACHMENT_LOAD_OP_CLEAR`; that failed load-op operation
+is retained only in the explicit transfer-flag `=0` control. Depth/stencil clears
+also retain their existing `vkCmdClearAttachments` path.
+
+In the legacy transfer diagnostic (`=1`), an ineligible color clear opens/uses the
+normal pass but deliberately skips the attachment-clear command and logs the
+skip, matching the previous experiment. This diagnostic behavior does not make
+an uncleared offscreen target correct and is not the default proposal.
 
 ## Proposed implementation and boundaries
 
 The default Android full-clear path uses transfer clears for plain base-view
 2D RGBA/BGRA UNORM images only. It checks matching framebuffer/image format and
 extent, one mip/layer, optimal tiling, recorded transfer-destination usage, and
-`VK_FORMAT_FEATURE_TRANSFER_DST_BIT`. It checks resource handles and the tracked layout/stages before
-recording and stops on invalid state. A readback test verifies channel conversion,
-alpha, MSAA resolve, and repeated clears.
+`VK_FORMAT_FEATURE_TRANSFER_DST_BIT`. It checks resource handles and the tracked
+layout/stages before recording and stops on invalid state. A readback test verifies
+channel conversion, alpha, MSAA resolve, and repeated clears.
 
 This avoids both failing clear mechanisms for the eligible launcher targets and
 retains MSAA. A separate MSAA clear method is not required by Vulkan. Adreno's
@@ -133,6 +201,33 @@ The transfer flag now deliberately distinguishes **omitted** from **zero**:
 | `TOOIE_VULKAN_TRANSFER_CLEAR_TEST=1` | Prior swapchain-only transfer diagnostic; retains offscreen skips |
 | `TOOIE_VULKAN_TRANSFER_CLEAR_TEST=0` | The failed memory-barrier + load-op control |
 | Transfer flag `=0`, `TOOIE_VULKAN_CLEAR_BARRIER_TEST=1` | Only the failed control's memory barrier; no render pass or clear |
+
+The exact barrier-only configuration, consistently applied as C++ definitions
+to **both RT64 and Plume**, is:
+
+```text
+TOOIE_VULKAN_QUEUE_ISOLATION_TEST=1
+TOOIE_VULKAN_TRANSFER_CLEAR_TEST=0
+TOOIE_VULKAN_CLEAR_BARRIER_TEST=1
+```
+
+For example, in a separate root CMake build directory:
+
+```sh
+-DCMAKE_CXX_FLAGS='-DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=1 -DTOOIE_VULKAN_TRANSFER_CLEAR_TEST=0 -DTOOIE_VULKAN_CLEAR_BARRIER_TEST=1'
+```
+
+A–C remain unchanged; D ends any active pass, records only the original load-op
+control's attachment memory barrier, and returns **before** beginning the CLEAR
+pass or recording a transfer clear. Its success log explicitly says no clear.
+E retains the present-layout transition, and the one-shot sequence exits. This
+isolates the added D barrier; it does not test launcher pixels or rendering.
+
+For the **new transfer proposal within A–E**, set only
+`TOOIE_VULKAN_QUEUE_ISOLATION_TEST=1`; leave both the transfer and barrier flags
+**undefined**. Setting the transfer flag to zero is not equivalent to omitting
+it and deliberately selects the failed load-op control. These flag descriptions
+are provided for code review, not as a request for another device test.
 
 The barrier-only control is the smallest added diagnostic. It distinguishes a
 stall in D's added barrier from a stall requiring the clear render pass. It is a
