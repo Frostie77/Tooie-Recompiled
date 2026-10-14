@@ -72,5 +72,8 @@ namespace RT64 {
         void notifyPresentId(const Present &present);
         void threadAdvanceBarrier();
         void threadLoop();
+#if defined(__ANDROID__)
+        void suspendAndroidSurface();
+#endif
     };
 };

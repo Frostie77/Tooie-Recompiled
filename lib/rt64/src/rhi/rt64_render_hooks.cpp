@@ -8,6 +8,11 @@ namespace RT64 {
     static RenderHookInit *init = nullptr;
     static RenderHookDraw *draw = nullptr;
     static RenderHookDeinit *deinit = nullptr;
+#if defined(__ANDROID__)
+    static RenderHookPrepare *prepare = nullptr;
+    RenderHookPrepare *GetRenderHookPrepare() { return prepare; }
+    void SetRenderHookPrepare(RenderHookPrepare *hook) { prepare = hook; }
+#endif
 
     RenderHookInit *GetRenderHookInit() {
         return init;

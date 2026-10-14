@@ -4,6 +4,9 @@
 //
 
 #include "rt64_application.h"
+#if defined(__ANDROID__)
+#include "../../../../src/android_presentation_lifecycle.h"
+#endif
 #if defined(__ANDROID__) && defined(TOOIE_VULKAN_QUEUE_ISOLATION_TEST) && TOOIE_VULKAN_QUEUE_ISOLATION_TEST
 #include "rt64_vulkan_queue_diagnostic.h"
 #include <cstdlib>
@@ -352,7 +355,22 @@ namespace RT64 {
             swapChainDesc.enablePresentWait = true;
         }
 
+#if defined(__ANDROID__)
+        {
+            auto &lifecycle = tooie::android::presentationLifecycle();
+            auto lock = lifecycle.waitReady();
+            if (!lifecycle.available()) return SetupResult::InvalidGraphicsAPI;
+            SDL_SysWMinfo info = {};
+            SDL_VERSION(&info.version);
+            if (SDL_GetWindowWMInfo(appWindow->sdlWindow, &info) != SDL_TRUE || !info.info.android.window)
+                return SetupResult::InvalidGraphicsAPI;
+            appWindow->windowHandle = swapChainDesc.renderWindow = info.info.android.window;
+#endif
         swapChain = presentGraphicsWorker->commandQueue->createSwapChain(swapChainDesc);
+#if defined(__ANDROID__)
+        // Covers the interval before PresentQueue takes ownership of WSI teardown.
+        lifecycle.attach(this, [this] { swapChain->waitForIdle(); swapChain->suspendSurface(); });
+#endif
 
 #if defined(__ANDROID__) && defined(TOOIE_VULKAN_QUEUE_ISOLATION_TEST) && TOOIE_VULKAN_QUEUE_ISOLATION_TEST
         // Diagnostic-only entry: no shader caches, workload/present threads or
@@ -363,6 +381,9 @@ namespace RT64 {
         std::_Exit(diagnosticComplete ? EXIT_SUCCESS : EXIT_FAILURE);
 #endif
 
+#if defined(__ANDROID__)
+        }
+#endif
         // Before configuring multisampling, make sure the device actually supports it for the formats we'll use. If it doesn't, turn off antialiasing in the configuration.
         const RenderSampleCounts colorSampleCounts = device->getSampleCountsSupported(RenderTarget::colorBufferFormat(usesHDR));
         const RenderSampleCounts depthSampleCounts = device->getSampleCountsSupported(RenderTarget::depthBufferFormat());
@@ -497,7 +518,12 @@ namespace RT64 {
         return SetupResult::Success;
     }
 
-    Application::~Application() {}
+    Application::~Application() {
+#if defined(__ANDROID__)
+        auto lock = tooie::android::presentationLifecycle().lock();
+        tooie::android::presentationLifecycle().detach(this);
+#endif
+    }
 
     void Application::processDisplayLists(uint8_t *memory, uint32_t dlStartAddress, uint32_t dlEndAddress, bool isHLE) {
         if (state->debuggerInspector.paused) {
@@ -702,6 +728,12 @@ namespace RT64 {
     }
 
     void Application::end() {
+#if defined(__ANDROID__)
+        {
+            auto lock = tooie::android::presentationLifecycle().lock();
+            tooie::android::presentationLifecycle().detach(this);
+        }
+#endif
 #   if SCRIPT_ENABLED
         if (currentScript != nullptr) {
             currentScript->finalize();

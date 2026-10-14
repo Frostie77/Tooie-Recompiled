@@ -8,6 +8,9 @@
 #include <chrono>
 
 #include "rt64_render_hooks.h"
+#if defined(__ANDROID__)
+#include "../../../../../src/android_presentation_lifecycle.h"
+#endif
 
 #include "concurrentqueue.h"
 
@@ -653,6 +656,21 @@ void recompui::activate_mouse() {
     ui_state->update_focus(true, false);
 }
 
+#if defined(__ANDROID__)
+static bool file_dialog_completed = false;
+void prepare_hook() {
+    {
+        auto &lifecycle = tooie::android::presentationLifecycle();
+        auto lock = lifecycle.lock();
+        if (!lifecycle.available()) return;
+    }
+    // Never hold the WSI lease across a callback: validation/error dialogs can
+    // synchronously wait on Android's UI thread and generate focus/pause events.
+    std::lock_guard lock{ ui_state_mutex };
+    if (ui_state) file_dialog_completed |= recompui::file::poll_file_dialog_callbacks();
+}
+#endif
+
 void draw_hook(plume::RenderCommandList* command_list, plume::RenderFramebuffer* swap_chain_framebuffer) {
     static int tooie_draw_probe_count = 0;
     const bool tooie_log_draw = tooie_draw_probe_count++ < 3;
@@ -674,11 +692,6 @@ void draw_hook(plume::RenderCommandList* command_list, plume::RenderFramebuffer*
     }
 
     std::lock_guard lock{ ui_state_mutex };
-#if defined(__ANDROID__)
-    // Deliver asynchronous picker results on the RmlUi thread, before input/render.
-    const bool file_dialog_completed = recompui::file::poll_file_dialog_callbacks();
-#endif
-
     SDL_Event cur_event{};
 
     bool mouse_moved = false;
@@ -699,7 +712,10 @@ void draw_hook(plume::RenderCommandList* command_list, plume::RenderFramebuffer*
 #if defined(__ANDROID__)
     // A system picker can consume the controller release while SDL is paused.
     // Do not repeat Select ROM or start the game from the pre-picker key hold.
-    if (file_dialog_completed) latest_controller_key_pressed = SDLK_UNKNOWN;
+    if (file_dialog_completed) {
+        latest_controller_key_pressed = SDLK_UNKNOWN;
+        file_dialog_completed = false;
+    }
 #endif
 
     bool all_input_is_disabled = recompinput::all_input_disabled();
@@ -928,6 +944,9 @@ void deinit_hook() {
 
 void recompui::set_render_hooks() {
     RT64::SetRenderHooks(init_hook, draw_hook, deinit_hook);
+#if defined(__ANDROID__)
+    RT64::SetRenderHookPrepare(prepare_hook);
+#endif
 }
 
 void recompui::message_box(const char* msg) {

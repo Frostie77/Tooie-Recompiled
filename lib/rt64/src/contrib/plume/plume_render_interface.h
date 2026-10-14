@@ -100,6 +100,12 @@ namespace plume {
 #if defined(__ANDROID__)
         // Concrete selected presentation format, available before first resize.
         virtual RenderFormat getFormat() const = 0;
+        // Call under the Android presentation lifecycle lock. Drain before
+        // destroying external framebuffers, then release the WSI resources.
+        virtual void waitForIdle() { }
+        virtual void suspendSurface() { }
+        virtual bool isSurfaceSuspended() const { return false; }
+        virtual bool resumeSurface(RenderWindow window) { return false; }
 #endif
         virtual bool acquireTexture(RenderCommandSemaphore *signalSemaphore, uint32_t *textureIndex) = 0;
         virtual RenderWindow getWindow() const = 0;

@@ -14,6 +14,8 @@ using namespace plume;
       std::abort();                                                            \
     }                                                                          \
   } while (0)
+extern "C" void ANativeWindow_acquire(ANativeWindow *) {}
+extern "C" void ANativeWindow_release(ANativeWindow *) {}
 extern "C" int32_t ANativeWindow_getWidth(ANativeWindow *) { return 1; }
 extern "C" int32_t ANativeWindow_getHeight(ANativeWindow *) { return 1; }
 static unsigned validationErrors = 0;

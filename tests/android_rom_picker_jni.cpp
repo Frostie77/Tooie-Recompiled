@@ -5,6 +5,7 @@
 #include <fstream>
 #include <jni.h>
 #include <thread>
+#include "../src/android_presentation_lifecycle.h"
 
 #define REQUIRE(test)                                                          \
   do {                                                                         \
@@ -33,6 +34,11 @@ struct SDL_Window;
 extern "C" int SDL_ShowSimpleMessageBox(uint32_t, const char *, const char *,
                                         SDL_Window *) {
   REQUIRE(std::this_thread::get_id() == uiThread);
+  // A real Android message box changes window focus. Its callback must not
+  // hold the presentation lease and deadlock this UI lifecycle notification.
+  auto &lifecycle = tooie::android::presentationLifecycle();
+  lifecycle.update(tooie::android::PresentationLifecycle::Event::FocusLost);
+  lifecycle.update(tooie::android::PresentationLifecycle::Event::FocusGained);
   ++errorCalls;
   return 0;
 }
@@ -71,6 +77,13 @@ Java_io_github_banjotooierecompiled_RomPickerJniTest_begin(JNIEnv *, jclass) {
 }
 extern "C" JNIEXPORT jint JNICALL
 Java_io_github_banjotooierecompiled_RomPickerJniTest_poll(JNIEnv *, jclass) {
+  // Same foreground check as the production preparation hook, releasing the
+  // WSI lease before callbacks that can open focus-changing Android dialogs.
+  {
+    auto &lifecycle = tooie::android::presentationLifecycle();
+    auto lock = lifecycle.lock();
+    if (!lifecycle.available()) return false;
+  }
   return recompui::file::poll_file_dialog_callbacks();
 }
 extern "C" JNIEXPORT jint JNICALL

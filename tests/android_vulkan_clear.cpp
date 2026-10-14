@@ -5,6 +5,8 @@
 #include "../lib/rt64/src/hle/rt64_vulkan_queue_diagnostic.h"
 #include "../lib/rt64/src/render/rt64_vi_pipeline.h"
 #include "plume_vulkan.h"
+#include "../src/android_presentation_lifecycle.h"
+#include "../lib/rt64/src/hle/rt64_android_surface.h"
 #include "plume_vulkan_clear_shaders.h"
 #include <cstdio>
 #include <cstdlib>
@@ -19,6 +21,9 @@ using namespace plume;
       std::abort();                                                            \
     }                                                                          \
   } while (0)
+static std::unordered_map<ANativeWindow *, int> windowReferences;
+extern "C" void ANativeWindow_acquire(ANativeWindow *window) { ++windowReferences[window]; }
+extern "C" void ANativeWindow_release(ANativeWindow *window) { REQUIRE(windowReferences[window] > 0); --windowReferences[window]; }
 extern "C" int32_t ANativeWindow_getWidth(ANativeWindow *) { return 640; }
 extern "C" int32_t ANativeWindow_getHeight(ANativeWindow *) { return 480; }
 template <class T> T handle() {
@@ -58,6 +63,14 @@ static VkImageCreateInfo expectedImageInfo = {};
 static VkImageFormatProperties imageLimits = {};
 static VkResult imageQueryResult = VK_SUCCESS;
 static unsigned imageQueries = 0, swapchainCreates = 0;
+static VkResult swapchainCreateResult = VK_SUCCESS, swapchainImageCountResult = VK_SUCCESS, acquireResult = VK_SUCCESS;
+static bool viewCreateFails = false;
+static int imageDataCount = -1;
+static bool lifecycleRecording = false, idleRetired = false;
+static std::unordered_map<VkFramebuffer, std::vector<VkImageView>> framebufferViews;
+static std::vector<char> lifecycleOrder;
+static VkResult queueIdle(VkQueue) { idleRetired = true; lifecycleOrder.push_back('Q'); return VK_SUCCESS; }
+static VkResult queuePresent(VkQueue, const VkPresentInfoKHR *) { idleRetired = false; return VK_SUCCESS; }
 static VkImageUsageFlags surfaceUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                                         VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                                         VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -138,7 +151,7 @@ static VkResult createSurface(VkInstance, const VkAndroidSurfaceCreateInfoKHR *,
   return surfaceCreateResult;
 }
 static void destroySurface(VkInstance, VkSurfaceKHR,
-                           const VkAllocationCallbacks *) {}
+                           const VkAllocationCallbacks *) { if (lifecycleRecording) lifecycleOrder.push_back('S'); }
 static VkResult presentSupport(VkPhysicalDevice, uint32_t, VkSurfaceKHR,
                                VkBool32 *out) {
   *out = queuePresentSupport;
@@ -197,31 +210,35 @@ static VkResult createSwapchain(VkDevice, const VkSwapchainCreateInfoKHR *p,
   REQUIRE(p->imageFormat != VK_FORMAT_UNDEFINED &&
           p->imageFormat == expectedSwapchainFormat);
   createdSwapchainFormat = p->imageFormat;
+  REQUIRE(p->minImageCount >= 2);
   REQUIRE((p->imageUsage & ~surfaceUsage) == 0);
   REQUIRE(p->imageUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-  *out = handle<VkSwapchainKHR>();
-  return VK_SUCCESS;
+  *out = swapchainCreateResult == VK_SUCCESS ? handle<VkSwapchainKHR>() : VK_NULL_HANDLE;
+  return swapchainCreateResult;
 }
 static void destroySwapchain(VkDevice, VkSwapchainKHR,
-                             const VkAllocationCallbacks *) {}
+                             const VkAllocationCallbacks *) { if (lifecycleRecording) { REQUIRE(idleRetired); lifecycleOrder.push_back('W'); } }
 static VkResult swapchainImages(VkDevice, VkSwapchainKHR, uint32_t *count,
                                 VkImage *out) {
   *count = 2;
+  if (!out && swapchainImageCountResult != VK_SUCCESS) return swapchainImageCountResult;
   if (out) {
     out[0] = handle<VkImage>();
     out[1] = handle<VkImage>();
     imageLayouts[out[0]] = imageLayouts[out[1]] = VK_IMAGE_LAYOUT_UNDEFINED;
     swapImageFormats[out[0]] = swapImageFormats[out[1]] =
         createdSwapchainFormat;
+    if (imageDataCount >= 0) *count = unsigned(imageDataCount);
   }
   return VK_SUCCESS;
 }
-static VkResult acquireImage(VkDevice, VkSwapchainKHR, uint64_t,
+static VkResult acquireImage(VkDevice, VkSwapchainKHR, uint64_t timeout,
                              VkSemaphore semaphore, VkFence, uint32_t *out) {
+  REQUIRE(timeout == 100000000ULL);
   ++acquireCalls;
   acquired = semaphore;
   *out = 0;
-  return acquireFails ? VK_ERROR_OUT_OF_DATE_KHR : VK_SUCCESS;
+  return acquireFails ? VK_ERROR_OUT_OF_DATE_KHR : acquireResult;
 }
 static void testImageConfigurations(VulkanDevice &device) {
   expectedImageInfo = {};
@@ -290,6 +307,10 @@ static void testSwapchainUsage(VulkanCommandQueue &queue) {
   surfaceQueryResult = VK_ERROR_SURFACE_LOST_KHR;
   REQUIRE(!swapchain.resize() && swapchainCreates == 0);
   surfaceQueryResult = VK_SUCCESS;
+  REQUIRE(swapchain.isSurfaceSuspended());
+  swapchain.waitForIdle();
+  swapchain.suspendSurface();
+  REQUIRE(swapchain.resumeSurface(desc.renderWindow));
   REQUIRE(swapchain.resize() && swapchainCreates == 1);
   REQUIRE(swapchain.textures[0].imageUsage == required &&
           swapchain.textures[0].isSwapChainImage);
@@ -330,6 +351,7 @@ static VkResult createFb(VkDevice, const VkFramebufferCreateInfo *p,
   *out = handle<VkFramebuffer>();
   framebufferExtents[*out] = {p->width, p->height};
   framebufferPasses[*out] = p->renderPass;
+  framebufferViews[*out] = std::vector<VkImageView>(p->pAttachments, p->pAttachments + p->attachmentCount);
   const auto &attachments = passes.at(p->renderPass).attachments;
   for (unsigned i = 0; i < p->attachmentCount; ++i)
     if (actualViewFormats.count(p->pAttachments[i]))
@@ -339,6 +361,8 @@ static VkResult createFb(VkDevice, const VkFramebufferCreateInfo *p,
 }
 static void destroyFb(VkDevice, VkFramebuffer fb,
                       const VkAllocationCallbacks *) {
+  if (lifecycleRecording) { REQUIRE(idleRetired); lifecycleOrder.push_back('F'); }
+  framebufferViews.erase(fb);
   REQUIRE(framebufferExtents.erase(fb) == 1);
   framebufferPasses.erase(fb);
 }
@@ -347,11 +371,16 @@ static VkResult createView(VkDevice, const VkImageViewCreateInfo *info,
   REQUIRE(info->format != VK_FORMAT_UNDEFINED);
   if (swapImageFormats.count(info->image))
     REQUIRE(info->format == swapImageFormats.at(info->image));
+  if (viewCreateFails) { *out = VK_NULL_HANDLE; return VK_ERROR_OUT_OF_DEVICE_MEMORY; }
   *out = handle<VkImageView>();
   actualViewFormats[*out] = info->format;
   return VK_SUCCESS;
 }
-static void destroyView(VkDevice, VkImageView, const VkAllocationCallbacks *) {}
+static void destroyView(VkDevice, VkImageView view, const VkAllocationCallbacks *) {
+  for (const auto &entry : framebufferViews)
+    for (auto attachment : entry.second) REQUIRE(attachment != view);
+  if (lifecycleRecording) { REQUIRE(idleRetired); lifecycleOrder.push_back('V'); }
+}
 static VkResult createPool(VkDevice, const VkCommandPoolCreateInfo *,
                            const VkAllocationCallbacks *, VkCommandPool *out) {
   *out = handle<VkCommandPool>();
@@ -1006,6 +1035,118 @@ static void testAttachmentClearDomain(VulkanDevice &device,
   expectedFramebufferExtent = {640, 480};
 }
 #endif
+static void testAndroidSurfaceLifecycle(VulkanCommandQueue &queue, VulkanCommandList &list) {
+  using Lifecycle = tooie::android::PresentationLifecycle;
+  for (bool rgba : {false, true}) {
+    resetSurfaceEnumeration();
+    if (rgba) {
+      reportedSurfaceFormats = {{VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+      expectedSwapchainFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    }
+    expectedImageInfo = {};
+    expectedImageInfo.imageType = VK_IMAGE_TYPE_2D;
+    expectedImageInfo.format = expectedSwapchainFormat;
+    expectedImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    expectedImageInfo.usage = surfaceUsage;
+    expectedImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageLimits.maxExtent = {4096, 4096, 1};
+    imageLimits.maxMipLevels = imageLimits.maxArrayLayers = 1;
+    imageLimits.sampleCounts = VK_SAMPLE_COUNT_1_BIT;
+    RenderSwapChainDesc desc;
+    desc.format = RenderFormat::B8G8R8A8_UNORM;
+    desc.textureCount = 2;
+    desc.renderWindow = reinterpret_cast<ANativeWindow *>(uintptr_t(100));
+    VulkanSwapChain chain(&queue, desc);
+    REQUIRE(chain.initialized && chain.resize());
+    const RenderFormat format = chain.getFormat();
+    Lifecycle lifecycle;
+    std::vector<std::unique_ptr<RenderFramebuffer>> frames;
+    std::vector<std::unique_ptr<RenderCommandSemaphore>> draws;
+    std::unique_ptr<RenderCommandSemaphore> acquire;
+    lifecycleRecording = true;
+    { auto lock = lifecycle.lock(); lifecycle.attach(&chain, [&] {
+        RT64::ResetAndroidPresentation(&chain, &list, frames, draws, acquire);
+        chain.suspendSurface();
+      }); }
+    for (unsigned cycle = 0; cycle < 24; ++cycle) {
+      { auto lock = lifecycle.lock();
+        REQUIRE(lifecycle.available());
+        if (chain.isSurfaceSuspended()) {
+          REQUIRE(chain.resumeSurface(reinterpret_cast<ANativeWindow *>(uintptr_t(101 + cycle))));
+          REQUIRE(chain.resize());
+        }
+        REQUIRE(chain.getFormat() == format && chain.createInfo.imageFormat == expectedSwapchainFormat);
+        for (auto &texture : chain.textures) {
+          const RenderTexture *color = &texture;
+          frames.emplace_back(std::make_unique<VulkanFramebuffer>(queue.device, RenderFramebufferDesc(&color, 1)));
+          REQUIRE(frames.back()->getColorAttachmentFormat(0) == format);
+          draws.emplace_back(queue.device->createCommandSemaphore());
+        }
+        acquire = queue.device->createCommandSemaphore();
+        uint32_t index = 0;
+        REQUIRE(chain.acquireTexture(acquire.get(), &index));
+        REQUIRE(chain.present(index, nullptr, 0));
+        lifecycle.markLive();
+      }
+      lifecycleOrder.clear();
+      lifecycle.update(cycle % 2 ? Lifecycle::Event::FocusLost : Lifecycle::Event::Pause);
+      REQUIRE(frames.empty() && draws.empty() && !acquire && chain.isEmpty());
+      REQUIRE(chain.vk == VK_NULL_HANDLE && chain.surface == VK_NULL_HANDLE && chain.getWindow() == nullptr);
+      REQUIRE(lifecycleOrder == std::vector<char>({'Q','F','F','V','V','W','S'}));
+      // Repeated pause/stop/destroy-surface notifications must be idempotent.
+      lifecycle.update(Lifecycle::Event::SurfaceUnavailable);
+      lifecycle.update(Lifecycle::Event::Pause);
+      REQUIRE(lifecycleOrder.size() == 7);
+      REQUIRE(!chain.acquireTexture(nullptr, nullptr) && !chain.present(0, nullptr, 0) && !chain.resize());
+      lifecycle.update(Lifecycle::Event::Resume);
+      { auto lock = lifecycle.lock(); REQUIRE(!lifecycle.available()); }
+      lifecycle.update(Lifecycle::Event::SurfaceReady);
+      lifecycle.update(Lifecycle::Event::FocusGained);
+    }
+    // A replacement surface may fail validation. Do not change the format or
+    // reuse the old window/views; allow a later valid surface to recover.
+    reportedSurfaceFormats.clear();
+    REQUIRE(!chain.resumeSurface(reinterpret_cast<ANativeWindow *>(uintptr_t(999))));
+    REQUIRE(chain.isSurfaceSuspended() && chain.isEmpty() && !chain.resize());
+    reportedSurfaceFormats = {{expectedSwapchainFormat, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+    REQUIRE(chain.resumeSurface(reinterpret_cast<ANativeWindow *>(uintptr_t(1000))));
+    REQUIRE(chain.resize() && chain.getFormat() == format);
+    chain.waitForIdle();
+    swapchainCreateResult = VK_ERROR_OUT_OF_DATE_KHR;
+    REQUIRE(!chain.resize() && chain.isEmpty());
+    swapchainCreateResult = VK_SUCCESS;
+    REQUIRE(chain.resize());
+    viewCreateFails = true;
+    REQUIRE(!chain.resize() && chain.isEmpty());
+    viewCreateFails = false;
+    REQUIRE(chain.resize());
+    swapchainImageCountResult = VK_ERROR_SURFACE_LOST_KHR;
+    REQUIRE(!chain.resize() && chain.isEmpty());
+    swapchainImageCountResult = VK_SUCCESS;
+    REQUIRE(chain.resize());
+    for (int incompleteCount : {0, 1, 3}) {
+      imageDataCount = incompleteCount;
+      REQUIRE(!chain.resize() && chain.isEmpty() && chain.getTextureCount() == 2);
+      imageDataCount = -1;
+      REQUIRE(chain.resize()); // Required creation count remains valid.
+    }
+    acquire = queue.device->createCommandSemaphore();
+    acquireResult = VK_TIMEOUT;
+    uint32_t index = 0;
+    REQUIRE(!chain.acquireTexture(acquire.get(), &index) && !chain.isSurfaceSuspended());
+    acquireResult = VK_ERROR_SURFACE_LOST_KHR;
+    REQUIRE(!chain.acquireTexture(acquire.get(), &index) && chain.isSurfaceSuspended() && chain.isEmpty());
+    acquireResult = VK_SUCCESS;
+    { auto lock = lifecycle.lock(); lifecycle.markLive(); }
+    lifecycle.update(Lifecycle::Event::Destroy);
+    { auto lock = lifecycle.lock(); lifecycle.detach(&chain); }
+    lifecycleRecording = false;
+    for (const auto &entry : windowReferences) REQUIRE(entry.second == 0);
+  }
+  resetSurfaceEnumeration();
+  std::puts("PASS: Android WSI lifecycle BGRA/RGBA pause/resume, native-window ownership, queue retirement, framebuffer/view ordering, failed creation and surface-loss recovery");
+}
+
 int main(int argc, char **argv) {
   simulateTimeout = argc > 1 && std::strcmp(argv[1], "--timeout") == 0;
   invalidState = argc > 1 && std::strcmp(argv[1], "--invalid-state") == 0;
@@ -1055,6 +1196,8 @@ int main(int argc, char **argv) {
   vkCmdSetDepthBias = setBias;
   vkCmdPushConstants = pushConstants;
   vkAcquireNextImageKHR = acquireImage;
+  vkQueueWaitIdle = queueIdle;
+  vkQueuePresentKHR = queuePresent;
   vkCreateSemaphore = createSem;
   vkDestroySemaphore = destroySem;
   vkQueueSubmit = submit;
@@ -1068,6 +1211,19 @@ int main(int argc, char **argv) {
   VulkanCommandQueue queue(&device, RenderCommandListType::DIRECT);
   VulkanCommandList list(&queue);
   device.independentBlendSupported = true;
+  if (argc > 1 && std::strncmp(argv[1], "--framebuffer-reject=", 21) == 0) {
+    VulkanTexture texture;
+    initialize(texture, device, 1, RenderFormat::R8G8B8A8_UNORM);
+    texture.isSwapChainImage = true;
+    const char *reason = argv[1] + 21;
+    if (!std::strcmp(reason, "null-image")) texture.vk = VK_NULL_HANDLE;
+    if (!std::strcmp(reason, "null-view")) texture.imageView = VK_NULL_HANDLE;
+    if (!std::strcmp(reason, "format-mismatch")) texture.desc.format = RenderFormat::B8G8R8A8_UNORM;
+    rejectBeforeRecording = true;
+    const RenderTexture *color = &texture;
+    VulkanFramebuffer fb(&device, RenderFramebufferDesc(&color, 1));
+    REQUIRE(false); // Must reject before the driver's vkCreateFramebuffer.
+  }
   if (argc > 1 && std::strncmp(argv[1], "--pipeline-reject=", 18) == 0) {
     RenderGraphicsPipelineDesc base;
     presentationFeatures &= ~VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
@@ -1148,6 +1304,7 @@ int main(int argc, char **argv) {
   if (clearRejectionCase == nullptr && !invalidState) {
     testImageConfigurations(device);
     testSwapchainUsage(queue);
+    testAndroidSurfaceLifecycle(queue, list);
     testSurfaceFormatInitialization(queue);
     testPresentationPipelineFormats(device);
   }

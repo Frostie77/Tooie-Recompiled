@@ -3,8 +3,10 @@
 Base: `06b2f6cc87e24f8111718edab73bad2bfc83416d`. The user reports that the Odin 2
 Portal reaches the graphical launcher and can navigate Controls, Settings and
 Mods. Select ROM previously returned immediately because Android's single-file
-dialog called `callback(false, {})`. This revision changes selection only; it
-does not change Vulkan rendering or establish that gameplay works.
+dialog called `callback(false, {})`. The original selection implementation did
+not establish that gameplay works. The later picker-transition crash and
+Android WSI lifetime fix are documented in
+[Android Vulkan lifecycle](android-vulkan-lifecycle.md).
 
 ## Selection and import
 
@@ -46,13 +48,14 @@ data/uninstalling removes this private selection.
 ## Threads, cancellation and lifetime
 
 - Activity/result/request fields and Intent launches stay on Android's main
-  thread. Provider IO runs on a cancellable worker; SDL's superclass retains
-  ownership of pause/resume and surface handling. No manual SDL lifecycle
-  signaling or new `JNI_OnLoad` replaces SDL's setup.
-- JNI result functions only enqueue completions under a mutex. Native UI frame
-  processing delivers callbacks while holding the existing RmlUi mutex, before
-  input/render, so validation and title changes run on the same thread as the
-  launcher. JNI environment pointers are not retained between threads; local
+  thread. Provider IO runs on a cancellable worker. The later confirmed native
+  surface crash requires an explicit RT64 quiescence barrier before SDL's
+  lifecycle handlers; see [Android Vulkan lifecycle](android-vulkan-lifecycle.md).
+  SDL's superclass handlers still run, and no new `JNI_OnLoad` replaces SDL setup.
+- JNI result functions only enqueue completions under a mutex. An Android UI
+  preparation hook delivers callbacks while holding the existing RmlUi mutex,
+  before the presentation lease and input/render, so validation and title changes
+  run on the same thread as the launcher. JNI environment pointers are not retained between threads; local
   Activity/class references are released.
 - There is one active request, with monotonically increasing tokens and guards
   against repeated clicks/duplicate Activity results. Accepted completions are
@@ -107,7 +110,8 @@ Passed:
   validation, 228 clipping readback cases, existing partial/view/MRT tests and
   all 20 production VI/UI presentation cases. Khronos core and synchronization
   validation report zero errors. The five-second GPU timeout and all controls
-  remain intact. Vulkan/renderer/shader sources are unchanged by this revision.
+  remain intact. Shader and clear implementations remain unchanged by the
+  lifecycle revision; WSI lifetime/queue changes are documented separately.
 
 Run the selection tests on a Linux host with a JDK 17+, C++20 compiler and SDL2
 development headers/pkg-config:
@@ -126,7 +130,11 @@ mkdir -p /tmp/tooie-java-classes /tmp/tooie-jni-headers
   $(rg --files android/app/src/main/java -g '*.java')
 ```
 
-The real Android picker/provider UI, SDL surface pause/resume on a device, the
+The user subsequently confirmed that the picker opens on `cf2d780`, but SDL
+pause/surface transition crashes the native Vulkan process before a selection can
+return. The separate lifecycle revision and its tests are described in
+[Android Vulkan lifecycle](android-vulkan-lifecycle.md). For that fix, the real
+Android picker/provider return and SDL surface pause/resume on a device, the
 retail USA hash validation and the rendered Select ROM → Start Game transition
 have not been executed in this environment. Host JNI tests use a fixture Activity,
 not an Android framework runtime. No APK was built, installed, launched or

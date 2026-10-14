@@ -21,6 +21,7 @@ build_and_record() {
         cat "$test_dir/$mode.out"
         return 1
     fi
+    grep -q 'PASS: Android WSI lifecycle BGRA/RGBA' "$test_dir/$mode.out"
     grep -q 'PASS: failed/incomplete surface enumeration' "$test_dir/$mode.out"
     grep -q 'PASS: VI nearest/linear/pixel and UI' "$test_dir/$mode.out"
     grep -q 'Surface format selected: requested=44 selected=37 colorSpace=0' "$test_dir/log-$mode/banjotooi-debug.log"
@@ -61,6 +62,9 @@ for reason in explicit-attachment-view not-2d linear-tiling \
     format-transfer-dst-unsupported null-image null-image-view null-framebuffer \
     null-render-pass layout-not-color-write missing-graphics-stage; do
     expect_rejection proposal "--reject=$reason" "$reason"
+done
+for reason in null-image null-view format-mismatch; do
+    expect_rejection proposal "--framebuffer-reject=$reason" invalid-color-attachment-image-view-or-format
 done
 for reason in unsupported-draw-format format-color-attachment-unsupported \
     missing-color-attachment-usage null-attachment-view layout-not-color-write missing-graphics-stage; do

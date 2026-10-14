@@ -1,5 +1,6 @@
 #if defined(__ANDROID__)
 #include "../../../../../src/android_debug_log.h"
+#include "../../../../../src/android_presentation_lifecycle.h"
 #include "android_file_dialog_state.h"
 #include "file.h"
 #include <SDL.h>
@@ -128,5 +129,15 @@ extern "C" JNIEXPORT void JNICALL Java_io_github_banjotooierecompiled_BanjoTooie
                                                                                                                    jstring path,
                                                                                                                    jstring error) {
     recompui::file::android::result(env, token, status, path, error);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_io_github_banjotooierecompiled_BanjoTooieSDLActivity_nativePresentationLifecycle(JNIEnv *, jclass, jint event) {
+    if (event < 0 || event > 7) tooie::android::lifecycleFailure("invalid-lifecycle-event");
+    char message[128];
+    std::snprintf(message, sizeof(message), "Android Vulkan lifecycle: event=%d begin", int(event));
+    tooie_android_debug_log(message);
+    tooie::android::presentationLifecycle().update(static_cast<tooie::android::PresentationLifecycle::Event>(event));
+    std::snprintf(message, sizeof(message), "Android Vulkan lifecycle: event=%d acknowledged", int(event));
+    tooie_android_debug_log(message);
 }
 #endif

@@ -10,5 +10,6 @@ public final class BanjoTooieSDLActivity {
         opens++;
         if (fail) throw new IllegalStateException("Activity unavailable");
     }
+    static native void nativePresentationLifecycle(int event);
     static native void nativeFileDialogResult(long request, int status, String path, String error);
 }

@@ -94,6 +94,11 @@ void exit_error(const char* str, const char* arg) {
 ultramodern::gfx_callbacks_t::gfx_data_t create_gfx() {
     std::fprintf(stderr, "[tooie] create_gfx enter\n");
     tooie_android_debug_log("[tooie] create_gfx enter"); std::fflush(stderr);
+#ifdef __ANDROID__
+    // Keep SDL's event pump live while RT64's independent presentation worker
+    // is suspended by the explicit Android surface-lifecycle handshake.
+    SDL_SetHint(SDL_HINT_ANDROID_BLOCK_ON_PAUSE, "0");
+#endif
     SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
     SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, "1");

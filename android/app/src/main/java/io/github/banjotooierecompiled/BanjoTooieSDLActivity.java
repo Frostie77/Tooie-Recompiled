@@ -2,17 +2,20 @@ package io.github.banjotooierecompiled;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.SurfaceHolder;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 
 import org.libsdl.app.SDLActivity;
+import org.libsdl.app.SDLSurface;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -30,12 +33,48 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     private long pendingRomRequest;
     private boolean romImportInProgress;
     private boolean romPickerDestroyed;
+    private boolean presentationResumed;
     private final AtomicBoolean romImportCancelled = new AtomicBoolean();
     private final ExecutorService romImportWorker = Executors.newSingleThreadExecutor(task -> {
         Thread worker = new Thread(task, "Tooie-ROM-import");
         worker.setDaemon(true);
         return worker;
     });
+    private static native void nativePresentationLifecycle(int event);
+    private static void presentationLifecycle(int event) {
+        if (!SDLActivity.mBrokenLibraries) nativePresentationLifecycle(event);
+    }
+
+    // Run before SDL's pause semaphore and native-window release. SDL protects
+    // its main thread/EGL context, not RT64's independent presentation worker.
+    @Override protected void onPause() {
+        presentationResumed = false;
+        presentationLifecycle(1);
+        super.onPause();
+    }
+    @Override protected void onResume() {
+        super.onResume();
+        presentationResumed = true;
+        presentationLifecycle(2);
+    }
+    @Override protected void onStop() {
+        presentationLifecycle(1); // Includes SDL multi-window pause behavior.
+        super.onStop();
+    }
+    @Override protected SDLSurface createSDLSurface(Context context) {
+        return new SDLSurface(context) {
+            @Override public void surfaceDestroyed(SurfaceHolder holder) {
+                presentationLifecycle(5);
+                super.surfaceDestroyed(holder);
+            }
+            @Override public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                presentationLifecycle(5); // Also serialize size/format changes.
+                super.surfaceChanged(holder, format, width, height);
+                if (mIsSurfaceReady) presentationLifecycle(6);
+            }
+        };
+    }
+
     // Status values match the native DialogRequests protocol: selected/cancelled/error.
     private static native void nativeFileDialogResult(long request, int status, String path, String error);
 
@@ -48,6 +87,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
         }
 
         super.onCreate(savedInstanceState);
+        presentationLifecycle(0);
 
         File programDir = new File(getFilesDir(), "program");
         File dataDir = new File(getFilesDir(), "data");
@@ -89,9 +129,13 @@ public class BanjoTooieSDLActivity extends SDLActivity {
             // Providers label N64 ROMs inconsistently. Validation uses bytes, not names/MIME types.
             intent.setType("*/*");
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            // Retire WSI before WindowManager starts the external Activity,
+            // rather than waiting for the later asynchronous onPause callback.
+            presentationLifecycle(1);
             try {
                 startActivityForResult(intent, ROM_PICKER_REQUEST);
             } catch (ActivityNotFoundException | SecurityException failure) {
+                if (presentationResumed) presentationLifecycle(2);
                 finishRomRequest(request, 2, null, "Android could not open the document picker. Please enable a document provider and retry.");
             }
         });
@@ -101,6 +145,8 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != ROM_PICKER_REQUEST || pendingRomRequest == 0 || romImportInProgress || romPickerDestroyed) return;
+        // Also recover when a provider returns without pausing this Activity.
+        if (presentationResumed) presentationLifecycle(2);
         final long request = pendingRomRequest;
         if (resultCode == Activity.RESULT_CANCELED) {
             finishRomRequest(request, 1, null, null);
@@ -138,6 +184,8 @@ public class BanjoTooieSDLActivity extends SDLActivity {
 
     @Override
     protected void onDestroy() {
+        presentationResumed = false;
+        presentationLifecycle(7);
         romPickerDestroyed = true;
         romImportCancelled.set(true);
         if (pendingRomRequest != 0) {
@@ -160,7 +208,9 @@ public class BanjoTooieSDLActivity extends SDLActivity {
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
+        if (!hasFocus) presentationLifecycle(3);
         super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) presentationLifecycle(4);
         if (hasFocus) {
             applyImmersiveFullscreen();
         }

@@ -11,6 +11,7 @@
 
 #include "plume_vulkan.h"
 #if defined(__ANDROID__)
+#include "../../../../../src/android_presentation_lifecycle.h"
 #include "plume_vulkan_clear_shaders.h"
 #endif
 
@@ -2149,6 +2150,10 @@ namespace plume {
 
         this->commandQueue = commandQueue;
         this->desc = desc;
+        initializeSurface(desc);
+    }
+
+    void VulkanSwapChain::initializeSurface(const RenderSwapChainDesc &desc) {
         char requestedRecord[256];
         std::snprintf(requestedRecord, sizeof(requestedRecord),
             "Surface format request: vkFormat=%u rhiFormat=%u instanceApi=0x%X deviceApi=0x%X",
@@ -2174,7 +2179,14 @@ namespace plume {
             return;
         }
 #   elif defined(__ANDROID__)
-        assert(desc.renderWindow != nullptr);
+        if (!desc.renderWindow) {
+            failInitialization("null-native-window");
+            return;
+        }
+        // SDL releases its own reference in onNativeSurfaceDestroyed. WSI owns
+        // a separate reference until its VkSurfaceKHR has been destroyed.
+        ANativeWindow_acquire(desc.renderWindow);
+        surfaceSuspended = false;
         VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
         surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.window = desc.renderWindow;
@@ -2451,6 +2463,9 @@ namespace plume {
             vkDestroySurfaceKHR(renderInterface->instance, surface, nullptr);
         }
 
+#if defined(__ANDROID__)
+        if (!surfaceSuspended && desc.renderWindow) ANativeWindow_release(desc.renderWindow);
+#endif
         // Remove tracking from the parent command queue.
         commandQueue->swapChains.erase(this);
     }
@@ -2489,6 +2504,11 @@ namespace plume {
             res = vkQueuePresentKHR(commandQueue->queue->vk, &presentInfo);
         }
 
+#if defined(__ANDROID__)
+        if (res == VK_ERROR_SURFACE_LOST_KHR) surfaceLost = true;
+        if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR)
+            std::fprintf(stderr, "Android present unavailable: result=%d\n", int(res));
+#endif
 #if defined(__APPLE__)
         // Under MoltenVK, VK_SUBOPTIMAL_KHR does not result in a valid state for rendering. We intentionally
         // only check for this error during present to avoid having to synchronize manually against the semaphore
@@ -2527,6 +2547,9 @@ namespace plume {
             std::fprintf(stderr, "%s\n", message);
             return false;
         }
+#if defined(__ANDROID__)
+        if (surfaceSuspended || surfaceLost) return false;
+#endif
         getWindowSize(width, height);
 
         // Don't recreate the swap chain at all if the window doesn't have a valid size.
@@ -2540,6 +2563,9 @@ namespace plume {
         if (capabilitiesResult != VK_SUCCESS) {
             std::fprintf(stderr, "Swapchain capabilities query failed: result=%d\n", int(capabilitiesResult));
             tooie_android_debug_log("Swapchain rejected: surface-capabilities-query-failed");
+#if defined(__ANDROID__)
+            if (capabilitiesResult == VK_ERROR_SURFACE_LOST_KHR) surfaceLost = true;
+#endif
             return false;
         }
 
@@ -2619,11 +2645,18 @@ namespace plume {
 #endif
         // Only release the old views after the replacement configuration passes.
         releaseImageViews();
-        VkResult res = vkCreateSwapchainKHR(commandQueue->device->vk, &createInfo, nullptr, &vk);
+        VkSwapchainKHR replacement = VK_NULL_HANDLE;
+        VkResult res = vkCreateSwapchainKHR(commandQueue->device->vk, &createInfo, nullptr, &replacement);
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateSwapchainKHR failed with error code 0x%X.\n", res);
+#if defined(__ANDROID__)
+            if (res == VK_ERROR_SURFACE_LOST_KHR) surfaceLost = true;
+            releaseSwapChain();
+#endif
             return false;
         }
+
+        vk = replacement;
 
         // Store the chosen present mode to identify later whether the swapchain needs to be recreated.
         createdPresentMode = requiredPresentMode;
@@ -2636,8 +2669,8 @@ namespace plume {
         }
 
         uint32_t retrievedImageCount = 0;
-        vkGetSwapchainImagesKHR(commandQueue->device->vk, vk, &retrievedImageCount, nullptr);
-        if (retrievedImageCount < desc.textureCount) {
+        res = vkGetSwapchainImagesKHR(commandQueue->device->vk, vk, &retrievedImageCount, nullptr);
+        if (res != VK_SUCCESS || retrievedImageCount < desc.textureCount) {
             releaseSwapChain();
             fprintf(stderr, "Image count differs from the texture count.\n");
             return false;
@@ -2646,8 +2679,12 @@ namespace plume {
         desc.textureCount = retrievedImageCount;
 
         std::vector<VkImage> images(desc.textureCount);
-        res = vkGetSwapchainImagesKHR(commandQueue->device->vk, vk, &desc.textureCount, images.data());
-        if (res != VK_SUCCESS) {
+        const uint32_t imageCapacity = desc.textureCount;
+        uint32_t writtenImageCount = imageCapacity;
+        res = vkGetSwapchainImagesKHR(commandQueue->device->vk, vk, &writtenImageCount, images.data());
+        // Image count is fixed for a created swapchain. Never mutate the RHI
+        // descriptor from a failed/incomplete or inconsistent data query.
+        if (res != VK_SUCCESS || writtenImageCount != imageCapacity) {
             releaseSwapChain();
             fprintf(stderr, "vkGetSwapchainImagesKHR failed with error code 0x%X.\n", res);
             return false;
@@ -2671,6 +2708,14 @@ namespace plume {
             textures[i].desc.flags = RenderTextureFlag::RENDER_TARGET;
             textures[i].fillSubresourceRange();
             textures[i].createImageView(pickedSurfaceFormat.format);
+#if defined(__ANDROID__)
+            if (textures[i].imageView == VK_NULL_HANDLE) {
+                releaseImageViews();
+                releaseSwapChain();
+                tooie_android_debug_log("Swapchain rejected: image-view-creation-failed");
+                return false;
+            }
+#endif
         }
 
         return true;
@@ -2678,6 +2723,9 @@ namespace plume {
 
     bool VulkanSwapChain::needsResize() const {
         if (!initialized) return true;
+#if defined(__ANDROID__)
+        if (surfaceSuspended || surfaceLost) return true;
+#endif
         uint32_t windowWidth, windowHeight;
         getWindowSize(windowWidth, windowHeight);
         return (vk == VK_NULL_HANDLE) || (windowWidth != width) || (windowHeight != height) || (requiredPresentMode != createdPresentMode);
@@ -2719,6 +2767,54 @@ namespace plume {
     RenderFormat VulkanSwapChain::getFormat() const {
         return initialized ? desc.format : RenderFormat::UNKNOWN;
     }
+
+    void VulkanSwapChain::waitForIdle() {
+        if (vk == VK_NULL_HANDLE) return;
+        const std::scoped_lock queueLock(*commandQueue->queue->mutex);
+        tooie::android::boundedQueueIdle([&] {
+            const VkResult result = vkQueueWaitIdle(commandQueue->queue->vk);
+            if (result != VK_SUCCESS) tooie::android::lifecycleFailure("queue-idle-error");
+        });
+    }
+
+    void VulkanSwapChain::suspendSurface() {
+        // The owner has drained the queue and destroyed its framebuffers first.
+        releaseImageViews();
+        textures.clear();
+        releaseSwapChain();
+        if (surface != VK_NULL_HANDLE) {
+            vkDestroySurfaceKHR(commandQueue->device->renderInterface->instance, surface, nullptr);
+            surface = VK_NULL_HANDLE;
+        }
+        if (!surfaceSuspended && desc.renderWindow) ANativeWindow_release(desc.renderWindow);
+        desc.renderWindow = nullptr;
+        surfaceSuspended = true;
+        surfaceLost = false;
+        width = height = 0;
+        currentPresentId = 0;
+        tooie_android_debug_log("Android Vulkan lifecycle: WSI released before SDL surface teardown");
+    }
+
+    bool VulkanSwapChain::isSurfaceSuspended() const { return surfaceSuspended || surfaceLost; }
+
+    bool VulkanSwapChain::resumeSurface(RenderWindow window) {
+        if (!surfaceSuspended) return initialized && !surfaceLost;
+        if (!window) return false;
+        RenderSwapChainDesc resumedDesc = desc;
+        resumedDesc.renderWindow = window;
+        const bool vsync = requiredPresentMode != VK_PRESENT_MODE_IMMEDIATE_KHR;
+        desc = resumedDesc;
+        initialized = false;
+        pickedSurfaceFormat = {};
+        initializeSurface(resumedDesc);
+        setVsyncEnabled(vsync);
+        // Request the already selected concrete format: changing it here would
+        // invalidate the existing VI/UI pipelines. Every capability is queried
+        // again on the replacement surface; failure leaves presentation stopped.
+        if (!initialized) { suspendSurface(); return false; }
+        tooie_android_debug_log("Android Vulkan lifecycle: replacement surface validated");
+        return true;
+    }
 #endif
 
     RenderWindow VulkanSwapChain::getWindow() const {
@@ -2726,6 +2822,9 @@ namespace plume {
     }
 
     bool VulkanSwapChain::isEmpty() const {
+#if defined(__ANDROID__)
+        if (surfaceSuspended || surfaceLost) return true;
+#endif
         return !initialized || (vk == VK_NULL_HANDLE) || (width == 0) || (height == 0);
     }
 
@@ -2748,8 +2847,11 @@ namespace plume {
         dstWidth = rect.right - rect.left;
         dstHeight = rect.bottom - rect.top;
 #   elif defined(__ANDROID__)
-        dstWidth = ANativeWindow_getWidth(desc.renderWindow);
-        dstHeight = ANativeWindow_getHeight(desc.renderWindow);
+        if (!desc.renderWindow || surfaceSuspended) { dstWidth = dstHeight = 0; return; }
+        const int32_t w = ANativeWindow_getWidth(desc.renderWindow);
+        const int32_t h = ANativeWindow_getHeight(desc.renderWindow);
+        dstWidth = w > 0 ? uint32_t(w) : 0;
+        dstHeight = h > 0 ? uint32_t(h) : 0;
 #   elif defined(PLUME_SDL_VULKAN_ENABLED)
         SDL_GetWindowSizeInPixels(desc.renderWindow, (int *)(&dstWidth), (int *)(&dstHeight));
 #   elif defined(__linux__)
@@ -2771,7 +2873,19 @@ namespace plume {
         assert(signalSemaphore != nullptr);
 
         VulkanCommandSemaphore *interfaceSemaphore = static_cast<VulkanCommandSemaphore *>(signalSemaphore);
-        VkResult res = vkAcquireNextImageKHR(commandQueue->device->vk, vk, UINT64_MAX, interfaceSemaphore->vk, VK_NULL_HANDLE, textureIndex);
+#if defined(__ANDROID__)
+        // A surface can lose forward progress during an Activity transition.
+        // Retry on another frame; never strand the pause handshake in acquire.
+        constexpr uint64_t acquireTimeout = 100000000ULL;
+#else
+        constexpr uint64_t acquireTimeout = UINT64_MAX;
+#endif
+        VkResult res = vkAcquireNextImageKHR(commandQueue->device->vk, vk, acquireTimeout, interfaceSemaphore->vk, VK_NULL_HANDLE, textureIndex);
+#if defined(__ANDROID__)
+        if (res == VK_ERROR_SURFACE_LOST_KHR) surfaceLost = true;
+        if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR)
+            std::fprintf(stderr, "Android acquire unavailable: result=%d\n", int(res));
+#endif
         if ((res != VK_SUCCESS) && (res != VK_SUBOPTIMAL_KHR)) {
             return false;
         }
@@ -2852,6 +2966,19 @@ namespace plume {
                 attachmentViewDesc.arraySize = colorAttachment->desc.arraySize;
 #endif
             }
+#if defined(__ANDROID__)
+            if (!colorAttachment->vk || !colorAttachmentImageView || toVk(colorAttachmentFormat) == VK_FORMAT_UNDEFINED ||
+                (colorAttachment->isSwapChainImage && colorAttachment->imageFormat != toVk(colorAttachmentFormat))) {
+                char rejection[256];
+                std::snprintf(rejection, sizeof(rejection),
+                    "Framebuffer rejected: reason=invalid-color-attachment-image-view-or-format attachment=%u image=%llx view=%llx imageFormat=%u viewFormat=%u swapchain=%u",
+                    i, (unsigned long long)colorAttachment->vk, (unsigned long long)colorAttachmentImageView,
+                    unsigned(colorAttachment->imageFormat), unsigned(toVk(colorAttachmentFormat)), unsigned(colorAttachment->isSwapChainImage));
+                tooie_android_debug_log(rejection);
+                std::fprintf(stderr, "%s\n", rejection);
+                std::_Exit(EXIT_FAILURE);
+            }
+#endif
             assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
             colorAttachments.emplace_back(colorAttachment);
             imageViews.emplace_back(colorAttachmentImageView);

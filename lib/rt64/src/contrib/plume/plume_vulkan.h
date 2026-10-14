@@ -250,6 +250,7 @@ namespace plume {
         bool mailboxPresentModeSupported = false;
 
         VulkanSwapChain(VulkanCommandQueue *commandQueue, const RenderSwapChainDesc &desc);
+        void initializeSurface(const RenderSwapChainDesc &desc);
         void failInitialization(const char *reason, VkResult result = VK_SUCCESS);
         ~VulkanSwapChain() override;
         bool present(uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, uint32_t waitSemaphoreCount) override;
@@ -264,6 +265,12 @@ namespace plume {
         uint32_t getTextureCount() const override;
 #if defined(__ANDROID__)
         RenderFormat getFormat() const override;
+        bool surfaceSuspended = false;
+        bool surfaceLost = false;
+        void waitForIdle() override;
+        void suspendSurface() override;
+        bool isSurfaceSuspended() const override;
+        bool resumeSurface(RenderWindow window) override;
 #endif
         bool acquireTexture(RenderCommandSemaphore *signalSemaphore, uint32_t *textureIndex) override;
         RenderWindow getWindow() const override;

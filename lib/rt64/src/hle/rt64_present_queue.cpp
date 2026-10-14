@@ -9,6 +9,10 @@
 #include "rhi/rt64_render_hooks.h"
 
 #include "rt64_workload_queue.h"
+#if defined(__ANDROID__)
+#include "../../../../src/android_presentation_lifecycle.h"
+#include "rt64_android_surface.h"
+#endif
 
 namespace RT64 {
     // PresentQueue
@@ -18,6 +22,12 @@ namespace RT64 {
     }
 
     PresentQueue::~PresentQueue() {
+#if defined(__ANDROID__)
+        {
+            auto lock = tooie::android::presentationLifecycle().lock();
+            tooie::android::presentationLifecycle().detach(this);
+        }
+#endif
         presentThreadRunning = false;
         cursorCondition.notify_all();
 
@@ -88,6 +98,12 @@ namespace RT64 {
         this->ext = ext;
 
         viRenderer = std::make_unique<VIRenderer>();
+#if defined(__ANDROID__)
+        {
+            auto lock = tooie::android::presentationLifecycle().lock();
+            tooie::android::presentationLifecycle().attach(this, [this] { suspendAndroidSurface(); });
+        }
+#endif
 
         presentThreadRunning = true;
         presentThread = new std::thread(&PresentQueue::threadLoop, this);
@@ -443,9 +459,21 @@ namespace RT64 {
         barrierCursor = (barrierCursor + 1) % presents.size();
     }
 
+#if defined(__ANDROID__)
+    void PresentQueue::suspendAndroidSurface() {
+        // Lifecycle lock excludes every WSI operation on the presentation worker.
+        // Offscreen workload rendering may continue: it does not own the surface.
+        ResetAndroidPresentation(ext.swapChain, ext.presentGraphicsWorker->commandList.get(),
+            swapChainFramebuffers, drawSemaphores, acquiredSemaphore);
+        ext.swapChain->suspendSurface();
+        presentTimestamp = Timestamp();
+    }
+#endif
+
     void PresentQueue::threadLoop() {
         Thread::setCurrentThreadName("RT64 Present");
 
+#if !defined(__ANDROID__)
         // Create the semaphore the acquire method will use.
         acquiredSemaphore = ext.device->createCommandSemaphore();
 
@@ -454,6 +482,7 @@ namespace RT64 {
             drawSemaphores.emplace_back(ext.device->createCommandSemaphore());
         }
 
+#endif
         // Since the swap chain might not need a resize right away, detect present wait.
         presentWaitEnabled = ext.device->getCapabilities().presentWait;
 
@@ -461,7 +490,11 @@ namespace RT64 {
         bool skipPresent = false;
         uint32_t displayTimingRate = UINT32_MAX;
         const bool displayTiming = ext.device->getCapabilities().displayTiming;
+#if defined(__ANDROID__)
+        bool swapChainValid = false;
+#else
         bool swapChainValid = !ext.swapChain->needsResize();
+#endif
         while (presentThreadRunning) {
             {
                 std::unique_lock<std::mutex> cursorLock(cursorMutex);
@@ -478,16 +511,50 @@ namespace RT64 {
 
             if (processCursor >= 0) {
                 std::unique_lock<std::mutex> threadLock(threadMutex);
+#if defined(__ANDROID__)
+                // Do not hold the lifecycle lease while waiting for a producer.
+                ext.workloadQueue->waitForWorkloadId(presents[processCursor].workloadId);
+                // May display an SDL/Android error dialog and lose focus. No
+                // WSI lease or recorded swapchain work may exist at this point.
+                if (RenderHookPrepare *prepare = GetRenderHookPrepare()) prepare();
+                auto &lifecycle = tooie::android::presentationLifecycle();
+                auto surfaceLock = lifecycle.lock();
+                const bool surfaceAvailable = lifecycle.available();
+                if (surfaceAvailable && ext.swapChain->isSurfaceSuspended()) {
+                    suspendAndroidSurface();
+                    SDL_SysWMinfo info = {};
+                    SDL_VERSION(&info.version);
+                    if (SDL_GetWindowWMInfo(ext.appWindow->sdlWindow, &info) == SDL_TRUE && info.info.android.window) {
+                        ext.appWindow->windowHandle = info.info.android.window;
+                        swapChainValid = ext.swapChain->resumeSurface(info.info.android.window);
+                        if (swapChainValid) lifecycle.markLive();
+                    }
+                    else swapChainValid = false;
+                }
+                const bool needsResize = surfaceAvailable && (ext.swapChain->needsResize() || !swapChainValid);
+#else
                 const bool needsResize = ext.swapChain->needsResize() || !swapChainValid;
+#endif
                 if (needsResize) {
                     ext.presentGraphicsWorker->commandList->begin();
                     ext.presentGraphicsWorker->commandList->end();
                     ext.presentGraphicsWorker->execute();
                     ext.presentGraphicsWorker->wait();
+#if defined(__ANDROID__)
+                    // A submit fence does not retire queued presentation waits.
+                    ResetAndroidPresentation(ext.swapChain, ext.presentGraphicsWorker->commandList.get(),
+                        swapChainFramebuffers, drawSemaphores, acquiredSemaphore);
+                    acquiredSemaphore = ext.device->createCommandSemaphore();
+#endif
                     swapChainValid = ext.swapChain->resize();
+#if !defined(__ANDROID__)
                     swapChainFramebuffers.clear();
+#endif
 
                     if (swapChainValid) {
+#if defined(__ANDROID__)
+                        lifecycle.markLive();
+#endif
                         ext.sharedResources->setSwapChainSize(ext.swapChain->getWidth(), ext.swapChain->getHeight());
                         
                         // Texture count could've changed after resize, so new semaphores are needed.
@@ -497,12 +564,20 @@ namespace RT64 {
                     }
                 }
 
-                if (needsResize || ext.appWindow->detectWindowMoved()) {
+                if (
+#if defined(__ANDROID__)
+                    surfaceAvailable &&
+#endif
+                    (needsResize || ext.appWindow->detectWindowMoved())) {
                     ext.appWindow->detectRefreshRate();
                     ext.sharedResources->setSwapChainRate(std::min(ext.appWindow->getRefreshRate(), displayTimingRate));
                 }
 
-                if (displayTiming) {
+                if (displayTiming
+#if defined(__ANDROID__)
+                    && surfaceAvailable && swapChainValid
+#endif
+                ) {
                     uint32_t newDisplayTimingRate = ext.swapChain->getRefreshRate();
                     if (newDisplayTimingRate == 0) {
                         newDisplayTimingRate = UINT32_MAX;
@@ -515,9 +590,14 @@ namespace RT64 {
                 }
 
                 skipPresent = skipPresent || ext.swapChain->isEmpty();
+#if defined(__ANDROID__)
+                skipPresent = skipPresent || !surfaceAvailable || !swapChainValid;
+#endif
 
                 Present &present = presents[processCursor];
+#if !defined(__ANDROID__)
                 ext.workloadQueue->waitForWorkloadId(present.workloadId);
+#endif
 
                 if (!presentThreadRunning) {
                     continue;
@@ -545,6 +625,10 @@ namespace RT64 {
             }
         }
 
+#if defined(__ANDROID__)
+        auto surfaceLock = tooie::android::presentationLifecycle().lock();
+        if (!tooie::android::presentationLifecycle().available()) return;
+#endif
         // Transition the active swap chain render target out of the present state to avoid live references to the resource.
         uint32_t swapChainIndex = 0;
         if (!ext.swapChain->isEmpty() && ext.swapChain->acquireTexture(acquiredSemaphore.get(), &swapChainIndex)) {

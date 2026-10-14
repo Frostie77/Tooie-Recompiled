@@ -4,3 +4,6 @@
 struct ANativeWindow;
 extern "C" int32_t ANativeWindow_getWidth(ANativeWindow *);
 extern "C" int32_t ANativeWindow_getHeight(ANativeWindow *);
+
+extern "C" void ANativeWindow_acquire(ANativeWindow *);
+extern "C" void ANativeWindow_release(ANativeWindow *);

@@ -80,6 +80,27 @@ public final class RomPickerJniTest {
             begin(); result(activity.request, 1, null, null);
             RomImporterTest.require(poll() == 1);
         }
+        // Real lifecycle JNI entry and real ROM-result JNI queue in the same DSO.
+        begin();
+        File pausedImport = copy(data);
+        int priorCalls = calls();
+        BanjoTooieSDLActivity.nativePresentationLifecycle(1); // onPause
+        BanjoTooieSDLActivity.nativePresentationLifecycle(3); // focus lost
+        BanjoTooieSDLActivity.nativePresentationLifecycle(5); // surface lost
+        result(activity.request, 0, pausedImport, null);
+        RomImporterTest.require(poll() == 0 && calls() == priorCalls && pausedImport.exists());
+        BanjoTooieSDLActivity.nativePresentationLifecycle(2); // onResume, no surface yet
+        BanjoTooieSDLActivity.nativePresentationLifecycle(4); // focus gained
+        RomImporterTest.require(poll() == 0 && calls() == priorCalls);
+        BanjoTooieSDLActivity.nativePresentationLifecycle(6); // SDL surface ready
+        RomImporterTest.require(poll() == 1 && calls() == priorCalls + 1 && success() && !pausedImport.exists());
+        begin();
+        BanjoTooieSDLActivity.nativePresentationLifecycle(1);
+        result(activity.request, 1, null, null);
+        RomImporterTest.require(poll() == 0);
+        BanjoTooieSDLActivity.nativePresentationLifecycle(2);
+        RomImporterTest.require(poll() == 1 && !success() && calls() == priorCalls + 2);
+        System.out.println("PASS: picker selection/cancellation survive Activity pause and surface recreation; callback waits for resumed, focused SDL surface");
         stop();
         protectedFile.delete(); new File(data, "rom-import").delete(); data.delete();
         System.out.println("PASS: real JVM/production JNI bridge, queued UI-thread callback, readable import lifetime, cancellation/errors, duplicate/stale results, teardown, retries/ref cleanup");

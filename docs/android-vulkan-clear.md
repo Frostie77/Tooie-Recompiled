@@ -5,7 +5,18 @@ first physical-device test. This document describes a review proposal, not a
 verified launcher fix. No new Portal test is requested until this proposal has
 been reviewed.
 
-## Latest device evidence: normal gameplay stops at the rectangle guard
+## Latest device evidence: launcher works, document-picker transition crashes
+
+The user reports that `06b2f6c` reaches a usable graphical launcher with working
+menu navigation, and previous A–E isolation passed. On `cf2d780`, the ROM picker
+opens but Android/SDL pause and surface transition triggers a native Adreno
+framebuffer crash and process restart. See
+[the lifecycle investigation and fix](android-vulkan-lifecycle.md). These reports
+verify launcher progress; they do not establish gameplay verification or device
+verification of the lifecycle revision. Existing clear shaders/semantics and all
+diagnostic controls are retained.
+
+## Previous device evidence: normal gameplay stops at the rectangle guard
 
 The user reports that A–E isolation passed on the Odin and a normal gameplay APK
 based on `32398a7fe145655c787a5efd291fa75cf3c023dc` successfully initialized the
@@ -737,16 +748,14 @@ cmake -S lib/rt64/src/contrib/plume -B build-plume-android -G Ninja \
 cmake --build build-plume-android -j 4
 ```
 
-No new APK was built, installed or tested on the Portal for this revision.
-The user subsequently reports successful A–E isolation and normal RGBA/VI
-initialization, followed by the partial-rectangle guard failure above. The current
-clipping revision has not been executed on Adreno, and the full MSAA transfer
-record does not establish completion. Host WSI
-enumeration tests use mocks; software
-Vulkan readback does not exercise Android surface enumeration or swapchain
-creation. 2×/8× clear execution and normal graphical launcher rendering remain
-unverified. Keep all controls and the timeout until that review and
-verification are complete. Full cloud APK
+No new APK was built, installed or tested on the Portal in this environment.
+The user subsequently reports successful A–E isolation and graphical launcher
+rendering after the clipping fix, followed by the document-picker lifecycle crash
+on `cf2d780`. See the latest evidence above and the separate lifecycle document.
+Host WSI enumeration tests use mocks; software Vulkan readback does not exercise
+Android surface enumeration or swapchain creation. Software 2×/8× clear execution
+remains unsupported here. Keep all controls and the five-second timeout during
+separately arranged review and device verification. Full cloud APK
 setup still lacks Android SDL2/FreeType development prefixes and
 `lib/rt64/src/contrib/zstd/build/cmake`. The missing zstd directory may be a
 snapshot artifact: the repository snapshot process excluded directories named
