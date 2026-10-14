@@ -374,7 +374,16 @@ namespace RT64 {
         // Create the shader library.
         const RenderMultisampling multisampling = RasterShader::generateMultisamplingPattern(userConfig.msaaSampleCount(), device->getCapabilities().sampleLocations);
         shaderLibrary = std::make_unique<ShaderLibrary>(usesHDR, usesHardwareResolve);
+#if defined(__ANDROID__)
+        const RenderFormat presentationFormat = swapChain->getFormat();
+        if (presentationFormat == RenderFormat::UNKNOWN) {
+            tooie_android_debug_log("Application setup rejected: swapchain format was not initialized");
+            return SetupResult::InvalidGraphicsAPI;
+        }
+        shaderLibrary->setupCommonShaders(renderInterface.get(), device.get(), presentationFormat);
+#else
         shaderLibrary->setupCommonShaders(renderInterface.get(), device.get());
+#endif
         shaderLibrary->setupMultisamplingShaders(renderInterface.get(), device.get(), multisampling);
 
         // Create the shader caches.

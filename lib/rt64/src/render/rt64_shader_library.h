@@ -60,7 +60,7 @@ namespace RT64 {
 
         ShaderLibrary(bool usesHDR, bool usesHardwareResolve);
         ~ShaderLibrary();
-        void setupCommonShaders(RenderInterface *rhi, RenderDevice *device);
+        void setupCommonShaders(RenderInterface *rhi, RenderDevice *device, RenderFormat presentationFormat = RenderFormat::B8G8R8A8_UNORM);
         void setupMultisamplingShaders(RenderInterface *rhi, RenderDevice *device, const RenderMultisampling &multisampling);
     };
 };

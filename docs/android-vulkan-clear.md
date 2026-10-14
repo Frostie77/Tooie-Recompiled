@@ -1,11 +1,104 @@
-# Tooie-Recompiled: Android clear reassessment and proposal
+# Tooie-Recompiled: Android Vulkan clears and RGBA presentation proposal
 
 Target: AYN Odin 2 Portal (Adreno 740). PR #1's load-op workaround failed its
 first physical-device test. This document describes a review proposal, not a
 verified launcher fix. No new Portal test is requested until this proposal has
 been reviewed.
 
-## Latest device evidence: 9d981ac reached A–C, then rejected format zero
+## Latest device evidence: d0e64bf confirms RGBA8 surface support, no BGRA8
+
+The user-supplied Odin log establishes that surface creation and both format
+enumeration calls succeeded. The Vulkan 1.2 instance (`0x402000`) runs on a device
+advertising API `0x403080`. Its complete surface-format list was:
+
+| Vulkan format | Value | Colour space |
+| --- | --- | --- |
+| `R8G8B8A8_UNORM` | 37 | `SRGB_NONLINEAR_KHR` (0) |
+| `R8G8B8A8_SRGB` | 43 | 0 |
+| `R5G6B5_UNORM_PACK16` | 4 | 0 |
+| `R16G16B16A16_SFLOAT` | 97 | 0 |
+| `A2B10G10R10_UNORM_PACK32` | 64 | 0 |
+| `R8_UNORM` | 9 | 1000104013 |
+
+```text
+Surface format request: vkFormat=44 rhiFormat=24 instanceApi=0x402000 deviceApi=0x403080
+Plume: Android surface created
+Surface format count: attempt=1 result=0 count=6 requested=44
+Surface format data: attempt=1 result=0 written=6 capacity=6 requested=44
+Swapchain initialization rejected: reason=requested-surface-format-unsupported result=0 requestedFormat=44 rhiFormat=24
+DIAG isolation: swapchain unavailable; stopping before A
+```
+
+BGRA8 UNORM (44) was absent. The strict rejection was correct: no A–E GPU
+submissions happened, and the device remained responsive. This resolves the
+earlier uncertainty about the constructor failure. It does not establish the
+cause of the earlier attachment/load-op clear timeouts.
+
+## Android RGBA8 presentation implementation
+
+The application still requests BGRA8. Android Vulkan now prefers the exact
+requested format if enumerated; when BGRA8 UNORM is absent it selects only an
+actually enumerated **RGBA8 UNORM / SRGB_NONLINEAR** pair. It does not substitute
+RGBA8 sRGB, HDR, or a different fallback colour space. Missing compatible pairs,
+enumeration failures and undefined formats still reject initialization. Desktop
+selection and other backends keep their previous behavior.
+
+The selected concrete format must pass optimal-tiling `COLOR_ATTACHMENT`,
+`COLOR_ATTACHMENT_BLEND`, `TRANSFER_DST` and `SAMPLED_IMAGE` feature checks.
+`resize()` retains the surface `supportedUsageFlags` check for the complete
+`COLOR_ATTACHMENT | TRANSFER_DST | SAMPLED` usage (`0x16`). It additionally queries
+`vkGetPhysicalDeviceImageFormatProperties` for the selected format, 2D optimal
+tiling, that complete usage, zero image flags, the chosen extent, one mip/layer
+and one sample. Failure stops before swapchain creation or releasing old views.
+
+Selection publishes both `pickedSurfaceFormat` and the RHI swapchain descriptor
+after successful initialization. `VkSwapchainCreateInfoKHR.imageFormat`, every
+swapchain texture's `imageFormat` and `desc.format`, image views, framebuffer
+attachment formats and their render passes therefore agree. Existing mismatch
+guards are retained. Android RHI accessors expose the initialized swapchain
+format and each framebuffer's actual colour-attachment/view format; an invalid
+swapchain returns `UNKNOWN` and cannot provide a VI pipeline target.
+
+The BGRA assumption audit changes three consumers:
+
+- `rt64_application.cpp` passes the selected swapchain format to shader setup.
+  All three VI pipelines (nearest, linear and pixel) use it. The unchanged
+  presentation queue binds the associated swapchain framebuffer. The optional
+  Vulkan inspector already constructs its render pass from `pickedSurfaceFormat`.
+- `rt64_shader_library.cpp` uses a shared production VI pipeline factory with
+  the chosen target format. The default remains BGRA for other callers/backends.
+- `ui_renderer.cpp` initializes before the swapchain exists. Android now caches
+  single-sample direct/composite pipelines by the destination framebuffer's
+  actual format. It retains the input-element storage required for lazy pipeline
+  creation. The offscreen MSAA pipeline and resolve image remain BGRA8; the final
+  composite pipeline targets RGBA8 or BGRA8 according to its destination.
+
+The surface list says nothing about owned BGRA image support. Offscreen images
+retain the full owned-image configuration query (usage `0x17`, optimal tiling,
+requested samples, extent and subresources) before allocation. Android Vulkan
+also checks colour-attachment/blend format features before creating any enabled
+blend pipeline, including the BGRA UI pipeline, and logs/fails before recording
+an unsupported pipeline. It does not silently change or downgrade the MSAA target.
+
+Shaders and sampled textures keep logical RGBA values. Vulkan handles the BGRA
+storage ordering; no red/blue swap is added. Direct UI/owned offscreen UI draws
+use straight-alpha blending (`SRC_ALPHA / ONE_MINUS_SRC_ALPHA` for RGB,
+`ONE / ONE_MINUS_SRC_ALPHA` for alpha). Rendering into transparent BGRA stores
+premultiplied RGB; resolve preserves it. The Android composite now uses
+`ONE / ONE_MINUS_SRC_ALPHA` for RGB and alpha, avoiding a second alpha
+multiplication. The original desktop UI behavior is unchanged. Android VI/UI
+presentation pipelines enable depth clipping, avoiding an unnecessary depth-clamp
+feature requirement for their full-screen draws.
+
+Early A–E scheduling, transfer clears, scissored partial clears, strict rejection,
+all diagnostic controls and the five-second fence timeout are unchanged. The
+isolated proposal still uses `TOOIE_VULKAN_QUEUE_ISOLATION_TEST=1` with the transfer
+and barrier flags **unset** and fallback disabled. The barrier-only control uses
+isolation `1`, transfer `0`, barrier `1`; the old swapchain transfer diagnostic
+uses isolation `1`, transfer `1`, barrier unset. These configurations remain
+review options; this revision does not request or perform another hardware test.
+
+## Earlier device evidence: 9d981ac reached A–C, then rejected format zero
 
 The physical Odin 2 Portal test reached the early synchronous diagnostic:
 
@@ -42,15 +135,14 @@ view: its old creation arguments also used zero. A successful old BGRA selection
 would have assigned 44. This is an application initialization/state defect;
 successful A–C fences do not validate earlier WSI creation arguments.
 
-The supplied hardware log does **not** identify which constructor prerequisite
-failed or what formats the Odin reported. BGRA absence, enumeration failure and
-earlier constructor failures remain distinguishable possibilities. The revision
-records the exact constructor rejection reason, requested Vulkan/RHI formats,
+The 9d981ac log did not identify which constructor prerequisite failed. The
+subsequent d0e64bf test above confirms absent BGRA surface support. The guards
+record the exact constructor rejection reason, requested Vulkan/RHI formats,
 instance/device API versions, both enumeration results/counts, every returned
-format/colour-space pair and the final selected pair. It does not label an
-unobserved device format list or driver error as confirmed.
+format/colour-space pair and the final selected pair. It does not claim a
+driver error without evidence.
 
-The separate correction keeps the requested format unchanged and:
+The d0e64bf correction introduced these initialization safeguards:
 
 - Checks both `vkGetPhysicalDeviceSurfaceFormatsKHR` results and nonzero counts.
   A data result cannot exceed its allocated capacity. `VK_INCOMPLETE` discards
@@ -63,11 +155,10 @@ The separate correction keeps the requested format unchanged and:
   format and `initialized=true` only after every constructor prerequisite succeeds,
   including checked present-mode enumeration. Failures retain a reason and remain
   uninitialized; they are not registered as valid swapchains on the command queue.
-- Rejects unsupported BGRA8 with `requested-surface-format-unsupported`. The UI
-  presentation pipeline (`ui_renderer.cpp`) and VI pipelines (`rt64_shader_library.cpp`)
-  hardcode BGRA8. Substituting RGBA8 in this class alone would leave incompatible
-  pipelines. A format fallback therefore requires a separate coordinated renderer
-  change; this revision safely rejects it without changing any RHI/image metadata.
+- Rejected unsupported BGRA8 with `requested-surface-format-unsupported`, because
+  UI and VI pipelines still hardcoded BGRA8. The current coordinated RGBA revision
+  above updates those consumers together and retains rejection when neither
+  compatible format is available.
 - Checks initialization, the surface handle, a concrete selected format, and
   agreement with the RHI descriptor before any resize query, creation or resource
   mutation. Invalid objects remain empty and cannot acquire/present, wait on a
@@ -89,8 +180,8 @@ it as advertised BGRA support or lowering the API version. References:
 [current project 1.2 requirements](https://github.com/KhronosGroup/Vulkan-Docs/blob/v1.2.198/chapters/VK_KHR_surface/wsi.txt).
 
 This fixes the invalid state path. It does not establish that the earlier
-attachment/load-op timeouts had the same constructor failure, nor that the Odin
-supports BGRA8 or will complete D after this revision. Early A–E, all clear paths
+attachment/load-op timeouts had the same constructor failure, or that the Odin
+will complete D with the new RGBA selection. Early A–E, all clear paths
 and controls, strict rejection and the five-second GPU fence timeout are retained.
 No new Odin APK/build/install, hardware test, merge or PR #1 update is part of this
 revision; the configurations below remain available for review.
@@ -146,7 +237,8 @@ Authoritative references:
 
 ## State and command audit
 
-After successful format initialization, the swapchain uses `B8G8R8A8_UNORM`, one sample,
+After successful format initialization, the swapchain uses the selected BGRA8 or
+Android RGBA8 UNORM format, one sample,
 one mip/layer, and `COLOR_ATTACHMENT | TRANSFER_DST | SAMPLED` usage. Its image
 view uses the same chosen format. The proposal records the format and usage
 from the actual creation parameters, rather than inferring transfer support
@@ -444,17 +536,23 @@ results below. PR #1 must not be merged on the basis of host test results.
 
 ## Validation and limitations
 
-Passed again for the surface-format revision in this cloud instance:
+Passed again for the Android RGBA8 presentation revision in this cloud instance:
 
-- All six host recording modes, including 16 constructor-failure/enumeration
-  cases and four successful selection cases per mode. Tests cover count/data
+- All six host recording modes, including 19 constructor-failure/enumeration
+  cases and six successful selection cases per mode. Tests cover count/data
   errors, zero/invalid returned counts, persistent incompleteness, a changing list
-  with a successful retry, shrinking enumeration, no BGRA, undefined entries,
+  with a successful retry, shrinking enumeration, the exact RGBA-only Odin list,
+  BGRA preference when both formats are available, incompatible fallback colour
+  spaces, missing blend/sample features, undefined entries,
   pre-enumeration failures and present-mode failure after a valid format list.
   Failed objects must make no subsequent WSI capability/create/acquire/present
   calls. Successful cases check actual creation arguments, RHI metadata, image-view
-  formats and framebuffer render-pass formats. Defensive resize tests reject
-  undefined/mismatched selection without releasing old views. Logging tests check
+  formats and framebuffer render-pass formats. Recording tests inspect all three
+  VI pipelines and both direct/composite UI variants for each destination format,
+  BGRA 8× offscreen UI, blend factors and cache reuse. Separate negative controls
+  reject unsupported RGBA/BGRA blend pipelines before pipeline creation/submission.
+  Defensive resize tests reject undefined/mismatched selection and unsupported
+  complete image configurations without releasing old views. Logging tests check
   all three reported pairs, incomplete and completed attempts, requested format,
   and absence of a `Swapchain record: format=0` chosen-image record.
 - Recording tests of the production Android backend cover the strict proposal,
@@ -462,7 +560,7 @@ Passed again for the surface-format revision in this cloud instance:
   the explicit fallback comparisons. They inspect 1×/8× commands, compatibility,
   layouts/ranges and access/stage masks, pass restarts, other attachments, and
   per-semaphore waits. New recording tests exercise isolated A–E in all four
-  diagnostic configurations, surface/acquire failure, and stopping at A on a
+  diagnostic configurations for BGRA and RGBA swapchains, surface/acquire failure, and stopping at A on a
   timeout, with no raster draw. They verify rectangle/pixel-bound push data,
   draw-pipeline state, overlapping push restoration, multiple viewports/scissors,
   depth bias, helper caching and reset invalidation. Child-process controls check every eligibility reason and
@@ -486,11 +584,27 @@ Passed again for the surface-format revision in this cloud instance:
   zero errors in both software modes. Lavapipe is a CPU implementation: it does not exercise Android WSI,
   Adreno, or the Portal's 8× hardware path. The load-op control's software success
   does not override its reported hardware failure.
+- Twenty additional pixel-readback cases use the **production HLSL shaders**,
+  compiled with the repository's DXC SPIR-V flags and validated by `spirv-val`,
+  and the same VI/UI pipeline factories as the application. Twelve VI cases cover
+  RGBA/BGRA input and output across nearest, linear and pixel shaders; four direct
+  UI cases cover both input/output orders and straight-alpha blending; four BGRA
+  offscreen cases cover 1× and actual 4× resolve/composition into RGBA/BGRA.
+  Every pixel of each 16×16 target is compared with independent CPU expected
+  logical RGB/alpha values (8-bit quantization tolerance of one). Unequal R/G/B
+  values expose channel swaps; fractional source and destination alpha expose
+  incorrect alpha factors and double alpha multiplication. Core and synchronization
+  validation report zero errors. These tests execute owned optimal-tiling images;
+  Android swapchain enumeration/creation remains covered by recordings, not real WSI.
 - Android ARM64 Plume cross-builds using NDK r27d, API 24, Release, for the
   strict proposal, retained clear controls, and fallback comparison.
-  Android ARM64 presentation compilation in normal mode and the
-  `Application::setup` isolation entry point also pass as standalone object
-  compilations. Full application linking is still blocked by the dependencies
+  Standalone ARM64 object compilation also passes for shader library, VI renderer,
+  UI renderer, UI draw-hook caller, application setup in normal/isolation modes
+  and presentation queue. The shader library/UI objects use generated **actual**
+  production shader headers, not stubs: 44 common shaders and the VI/UI shaders
+  were compiled with DXC v1.8.2505.1 and SPIR-V validated (scalar block layout
+  enabled for common RT64 shaders where required). RT64 uses C++17 and RecompUI
+  uses its configured C++20. Full application linking is still blocked by the dependencies
   described below.
 
 Recording tests:
@@ -505,6 +619,9 @@ necessary):
 
 ```sh
 bash tools/test_android_vulkan_transfer_validation.sh
+# Production VI/UI shader and pipeline readback checks (requires DXC + spirv-val):
+DXC=/path/to/dxc SPIRV_VAL=/path/to/spirv-val \
+  bash tools/test_android_vulkan_presentation.sh
 ```
 
 The expected initial Android-surface rejection in these host tests is followed
@@ -523,9 +640,11 @@ cmake --build build-plume-android -j 4
 ```
 
 No new APK was built, installed or tested on the Portal for this revision.
-The user tested the 9d981ac early entry point through A–C on Adreno, but its
-D clear was rejected. The new surface-format guards/selection and scissored draw
-have not been tested on Adreno. Host WSI enumeration tests use mocks; software
+The user tested 9d981ac through A–C, then d0e64bf confirmed successful enumeration
+and correct rejection of unsupported BGRA before A. Neither run exercised the
+new RGBA selection/presentation or completed D. The scissored partial draw and
+full MSAA transfer-clear execution also remain unverified on Adreno. Host WSI
+enumeration tests use mocks; software
 Vulkan readback does not exercise Android surface enumeration or swapchain
 creation. 2×/8× clear execution and normal graphical launcher rendering remain
 unverified. Keep all controls and the timeout until that review and

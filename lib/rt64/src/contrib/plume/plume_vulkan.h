@@ -262,6 +262,9 @@ namespace plume {
         uint32_t getHeight() const override;
         RenderTexture *getTexture(uint32_t textureIndex) override;
         uint32_t getTextureCount() const override;
+#if defined(__ANDROID__)
+        RenderFormat getFormat() const override;
+#endif
         bool acquireTexture(RenderCommandSemaphore *signalSemaphore, uint32_t *textureIndex) override;
         RenderWindow getWindow() const override;
         bool isEmpty() const override;
@@ -278,6 +281,7 @@ namespace plume {
 #if defined(__ANDROID__)
         std::vector<VkRenderPass> colorClearRenderPasses;
         std::vector<VkFormat> colorAttachmentFormats;
+        std::vector<RenderFormat> colorAttachmentRhiFormats;
         std::vector<VkImageView> colorAttachmentImageViews;
         std::vector<bool> colorAttachmentUsesBaseView;
         std::vector<RenderTextureViewDesc> colorAttachmentViewDescs;
@@ -297,6 +301,9 @@ namespace plume {
         uint32_t getWidth() const override;
         uint32_t getHeight() const override;
         bool contains(const VulkanTexture *attachment) const;
+#if defined(__ANDROID__)
+        RenderFormat getColorAttachmentFormat(uint32_t attachmentIndex) const override;
+#endif
     };
 
     struct VulkanQueryPool : RenderQueryPool {

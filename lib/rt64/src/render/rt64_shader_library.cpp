@@ -3,6 +3,7 @@
 //
 
 #include "rt64_shader_library.h"
+#include "rt64_vi_pipeline.h"
 
 #include "common/rt64_common.h"
 #include "shared/rt64_render_target_copy.h"
@@ -183,7 +184,7 @@ namespace RT64 {
 
     ShaderLibrary::~ShaderLibrary() { }
 
-    void ShaderLibrary::setupCommonShaders(RenderInterface *rhi, RenderDevice *device) {
+    void ShaderLibrary::setupCommonShaders(RenderInterface *rhi, RenderDevice *device, RenderFormat presentationFormat) {
         assert(rhi != nullptr);
         assert(device != nullptr);
 
@@ -596,14 +597,8 @@ namespace RT64 {
             layoutBuilder.end();
             videoInterfaceNearest.pipelineLayout = layoutBuilder.create(device);
 
-            RenderGraphicsPipelineDesc pipelineDesc;
-            pipelineDesc.vertexShader = fullScreenVertexShader.get();
-            pipelineDesc.pixelShader = regularShader.get();
-            pipelineDesc.renderTargetFormat[0] = RenderFormat::B8G8R8A8_UNORM; // TODO: Use whatever format the swap chain was created with.
-            pipelineDesc.renderTargetBlend[0] = RenderBlendDesc::Copy();
-            pipelineDesc.renderTargetCount = 1;
-            pipelineDesc.pipelineLayout = videoInterfaceNearest.pipelineLayout.get();
-            videoInterfaceNearest.pipeline = device->createGraphicsPipeline(pipelineDesc);
+            videoInterfaceNearest.pipeline = CreateVideoInterfacePipeline(device, presentationFormat,
+                fullScreenVertexShader.get(), regularShader.get(), videoInterfaceNearest.pipelineLayout.get());
 
             layoutBuilder.begin();
             layoutBuilder.addPushConstant(0, 0, sizeof(interop::VideoInterfaceCB), RenderShaderStageFlag::PIXEL);
@@ -612,12 +607,10 @@ namespace RT64 {
             videoInterfaceLinear.pipelineLayout = layoutBuilder.create(device);
             videoInterfacePixel.pipelineLayout = layoutBuilder.create(device);
 
-            pipelineDesc.pipelineLayout = videoInterfaceLinear.pipelineLayout.get();
-            videoInterfaceLinear.pipeline = device->createGraphicsPipeline(pipelineDesc);
-
-            pipelineDesc.pixelShader = pixelShader.get();
-            pipelineDesc.pipelineLayout = videoInterfacePixel.pipelineLayout.get();
-            videoInterfacePixel.pipeline = device->createGraphicsPipeline(pipelineDesc);
+            videoInterfaceLinear.pipeline = CreateVideoInterfacePipeline(device, presentationFormat,
+                fullScreenVertexShader.get(), regularShader.get(), videoInterfaceLinear.pipelineLayout.get());
+            videoInterfacePixel.pipeline = CreateVideoInterfacePipeline(device, presentationFormat,
+                fullScreenVertexShader.get(), pixelShader.get(), videoInterfacePixel.pipelineLayout.get());
         }
     }
 

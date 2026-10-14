@@ -97,6 +97,10 @@ namespace plume {
         virtual uint32_t getHeight() const = 0;
         virtual RenderTexture *getTexture(uint32_t textureIndex) = 0;
         virtual uint32_t getTextureCount() const = 0;
+#if defined(__ANDROID__)
+        // Concrete selected presentation format, available before first resize.
+        virtual RenderFormat getFormat() const = 0;
+#endif
         virtual bool acquireTexture(RenderCommandSemaphore *signalSemaphore, uint32_t *textureIndex) = 0;
         virtual RenderWindow getWindow() const = 0;
         virtual bool isEmpty() const = 0;
@@ -107,6 +111,9 @@ namespace plume {
 
     struct RenderFramebuffer {
         virtual ~RenderFramebuffer() { }
+#if defined(__ANDROID__)
+        virtual RenderFormat getColorAttachmentFormat(uint32_t attachmentIndex) const = 0;
+#endif
         virtual uint32_t getWidth() const = 0;
         virtual uint32_t getHeight() const = 0;
     };

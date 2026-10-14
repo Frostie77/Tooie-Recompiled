@@ -882,7 +882,7 @@ void draw_hook(plume::RenderCommandList* command_list, plume::RenderFramebuffer*
         // Scale the UI based on the window size with 1080 vertical resolution as the reference point.
         ui_state->context->SetDensityIndependentPixelRatio((height) / 1080.0f);
 
-        ui_state->render_interface.start(command_list, width, height);
+        ui_state->render_interface.start(command_list, width, height, swap_chain_framebuffer);
 
         static int prev_width = 0;
         static int prev_height = 0;

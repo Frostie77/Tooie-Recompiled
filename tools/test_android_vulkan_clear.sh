@@ -22,6 +22,9 @@ build_and_record() {
         return 1
     fi
     grep -q 'PASS: failed/incomplete surface enumeration' "$test_dir/$mode.out"
+    grep -q 'PASS: VI nearest/linear/pixel and UI' "$test_dir/$mode.out"
+    grep -q 'Surface format selected: requested=44 selected=37 colorSpace=0' "$test_dir/log-$mode/banjotooi-debug.log"
+    grep -q 'UI pipeline: path=composite format=20 samples=1' "$test_dir/log-$mode/banjotooi-debug.log"
     grep -q 'Surface format request: vkFormat=44' "$test_dir/log-$mode/banjotooi-debug.log"
     grep -q 'Surface format pair: attempt=1 index=2 format=44 colorSpace=0 complete=1' "$test_dir/log-$mode/banjotooi-debug.log"
     grep -q 'Surface format data: attempt=1 result=5 written=1 capacity=1' "$test_dir/log-$mode/banjotooi-debug.log"
@@ -65,7 +68,7 @@ for reason in rectangle-out-of-bounds unsupported-draw-format format-color-attac
 done
 # Exercise the production isolation entry point, including startup failures.
 for mode in proposal legacy-transfer load-op-control barrier-control; do
-    for argument in --isolation --isolation-acquire-fails --isolation-surface-fails; do
+    for argument in --isolation --isolation-rgba --isolation-acquire-fails --isolation-surface-fails; do
         APP_FOLDER_PATH="$test_dir/log-$mode" "$test_dir/$mode" "$argument" >"$test_dir/isolation.out" 2>&1 || { cat "$test_dir/isolation.out"; exit 1; }
     done
 done
@@ -104,6 +107,8 @@ expect_rejection proposal --image-reject=samples sample-count-unsupported
 expect_rejection proposal --image-reject=extent image-extent-unsupported
 expect_rejection proposal --image-reject=mips mip-level-count-unsupported
 expect_rejection proposal --image-reject=layers array-layer-count-unsupported
+expect_rejection proposal --pipeline-reject=bgra attachment-blend-unsupported
+expect_rejection proposal --pipeline-reject=rgba attachment-blend-unsupported
 
 mkdir -p "$test_dir/log-late"
 APP_FOLDER_PATH="$test_dir/log-late" "$test_dir/proposal" --late-categories >"$test_dir/late.out" 2>&1

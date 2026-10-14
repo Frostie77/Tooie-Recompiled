@@ -1,7 +1,9 @@
 // Recording tests of production Android code, not GPU execution. Synthetic
 // images describe the launcher's state; Vulkan entry points check every
 // command.
+#include "../lib/RecompFrontend/recompui/src/renderer/ui_presentation.h"
 #include "../lib/rt64/src/hle/rt64_vulkan_queue_diagnostic.h"
+#include "../lib/rt64/src/render/rt64_vi_pipeline.h"
 #include "plume_vulkan.h"
 #include "plume_vulkan_clear_shaders.h"
 #include <cstdio>
@@ -73,6 +75,19 @@ static bool formatsOverreported = false, formatsZeroWritten = false;
 static unsigned formatCountQueries = 0, formatDataQueries = 0,
                 capabilitiesQueries = 0;
 static VkFormat createdSwapchainFormat = VK_FORMAT_UNDEFINED;
+static VkFormat expectedSwapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
+static VkFormatFeatureFlags presentationFeatures =
+    VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
+    VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+static bool swapImageConfigSupported = true;
+static unsigned swapImageQueries = 0;
+static bool presentationPipelines = false;
+struct PresentationPipelineRecord {
+  VkFormat format;
+  VkSampleCountFlagBits samples;
+  VkPipelineColorBlendAttachmentState blend;
+};
+static std::vector<PresentationPipelineRecord> presentationRecords;
 static std::unordered_map<VkImage, VkFormat> swapImageFormats;
 static std::unordered_map<VkImageView, VkFormat> actualViewFormats;
 static unsigned createdPasses = 0, destroyedPasses = 0, selectedIndex = 0;
@@ -85,13 +100,27 @@ static void formatProperties(VkPhysicalDevice, VkFormat,
   *out = {};
   out->optimalTilingFeatures =
       (transferFeature ? VK_FORMAT_FEATURE_TRANSFER_DST_BIT : 0) |
-      (colorFeature ? VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT : 0);
+      (colorFeature ? VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT : 0) |
+      presentationFeatures;
 }
 static VkResult imageProperties(VkPhysicalDevice, VkFormat format,
                                 VkImageType type, VkImageTiling tiling,
                                 VkImageUsageFlags usage,
                                 VkImageCreateFlags flags,
                                 VkImageFormatProperties *out) {
+  if (usage == (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)) {
+    ++swapImageQueries;
+    REQUIRE(format == expectedSwapchainFormat &&
+            type == VK_IMAGE_TYPE_2D && tiling == VK_IMAGE_TILING_OPTIMAL &&
+            flags == 0);
+    *out = {};
+    out->maxExtent = {4096, 4096, 1};
+    out->maxMipLevels = out->maxArrayLayers = 1;
+    out->sampleCounts = VK_SAMPLE_COUNT_1_BIT;
+    return swapImageConfigSupported ? VK_SUCCESS
+                                    : VK_ERROR_FORMAT_NOT_SUPPORTED;
+  }
   ++imageQueries;
   REQUIRE(format == expectedImageInfo.format &&
           type == expectedImageInfo.imageType);
@@ -165,7 +194,7 @@ static VkResult createSwapchain(VkDevice, const VkSwapchainCreateInfoKHR *p,
                                 VkSwapchainKHR *out) {
   ++swapchainCreates;
   REQUIRE(p->imageFormat != VK_FORMAT_UNDEFINED &&
-          p->imageFormat == VK_FORMAT_B8G8R8A8_UNORM);
+          p->imageFormat == expectedSwapchainFormat);
   createdSwapchainFormat = p->imageFormat;
   REQUIRE((p->imageUsage & ~surfaceUsage) == 0);
   REQUIRE(p->imageUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT);
@@ -271,6 +300,7 @@ static void testSwapchainUsage(VulkanCommandQueue &queue) {
 }
 static VkResult createPass(VkDevice, const VkRenderPassCreateInfo *p,
                            const VkAllocationCallbacks *, VkRenderPass *out) {
+  REQUIRE(!rejectBeforeRecording);
   REQUIRE(p->subpassCount == 1 && p->dependencyCount == 0);
   *out = handle<VkRenderPass>();
   ++createdPasses;
@@ -501,6 +531,17 @@ static VkResult createPipeline(VkDevice, VkPipelineCache, uint32_t count,
                                const VkGraphicsPipelineCreateInfo *p,
                                const VkAllocationCallbacks *, VkPipeline *out) {
   REQUIRE(!rejectBeforeRecording && count == 1 && p->subpass == 0);
+  if (presentationPipelines) {
+    REQUIRE(p->pColorBlendState->attachmentCount == 1 &&
+            p->pRasterizationState->depthClampEnable == VK_FALSE);
+    const auto &attachment = passes.at(p->renderPass).attachments[0];
+    REQUIRE(attachment.samples == p->pMultisampleState->rasterizationSamples &&
+            attachment.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD);
+    presentationRecords.push_back({attachment.format, attachment.samples,
+                                   p->pColorBlendState->pAttachments[0]});
+    *out = handle<VkPipeline>();
+    return VK_SUCCESS;
+  }
   REQUIRE(passes.at(p->renderPass).attachments[selectedIndex].loadOp ==
           VK_ATTACHMENT_LOAD_OP_LOAD);
   REQUIRE(p->pVertexInputState->vertexBindingDescriptionCount == 0);
@@ -627,6 +668,10 @@ static void resetSurfaceEnumeration() {
   surfaceCreateResult = supportQueryResult = surfaceQueryResult =
       formatCountResult = formatDataResult = modeCountResult = modeDataResult =
           VK_SUCCESS;
+  presentationFeatures = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
+                         VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+  swapImageConfigSupported = true;
+  expectedSwapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
   queuePresentSupport = VK_TRUE;
   surfaceAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   reportedSurfaceFormats = {
@@ -660,7 +705,10 @@ static void testSurfaceFormatInitialization(VulkanCommandQueue &queue) {
                             {"undefined-surface-format-vulkan-1.2", 12},
                             {"present-mode-count-query-failed", 13},
                             {"present-mode-data-query-failed", 14},
-                            {"undefined-surface-format-vulkan-1.2", 15}}) {
+                            {"undefined-surface-format-vulkan-1.2", 15},
+                            {"surface-format-features-unsupported", 16},
+                            {"requested-surface-format-unsupported", 17},
+                            {"surface-format-features-unsupported", 18}}) {
     resetSurfaceEnumeration();
     switch (failure.mode) {
     case 0:
@@ -698,7 +746,7 @@ static void testSurfaceFormatInitialization(VulkanCommandQueue &queue) {
       break;
     case 11:
       reportedSurfaceFormats = {
-          {VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+          {VK_FORMAT_R8G8B8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
       break;
     case 12:
       reportedSurfaceFormats = {
@@ -714,6 +762,18 @@ static void testSurfaceFormatInitialization(VulkanCommandQueue &queue) {
       reportedSurfaceFormats.push_back(
           {VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR});
       break;
+    case 16:
+      presentationFeatures &= ~VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+      break;
+    case 17:
+      reportedSurfaceFormats = {
+          {VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT}};
+      break;
+    case 18:
+      reportedSurfaceFormats = {
+          {VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+      presentationFeatures &= ~VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+      break;
     }
     const unsigned creates = swapchainCreates;
     VulkanSwapChain rejected(&queue, desc);
@@ -721,7 +781,8 @@ static void testSurfaceFormatInitialization(VulkanCommandQueue &queue) {
             !std::strcmp(rejected.initializationFailure, failure.reason));
     REQUIRE(rejected.pickedSurfaceFormat.format == VK_FORMAT_UNDEFINED &&
             rejected.isEmpty());
-    REQUIRE(queue.swapChains.count(&rejected) == 0);
+    REQUIRE(queue.swapChains.count(&rejected) == 0 &&
+            rejected.getFormat() == RenderFormat::UNKNOWN);
     // Reproduce the old constructor-return -> needsResize -> resize path. It
     // must now stop before even querying capabilities, regardless of the
     // reason.
@@ -738,7 +799,7 @@ static void testSurfaceFormatInitialization(VulkanCommandQueue &queue) {
     if (failure.mode == 10)
       REQUIRE(formatCountQueries == 4 && formatDataQueries == 4);
   }
-  for (unsigned mode = 0; mode < 4; ++mode) {
+  for (unsigned mode = 0; mode < 6; ++mode) {
     resetSurfaceEnumeration();
     if (mode == 0)
       reportedSurfaceFormats = {
@@ -758,25 +819,46 @@ static void testSurfaceFormatInitialization(VulkanCommandQueue &queue) {
     if (mode == 3)
       reportedSurfaceFormats[0].colorSpace =
           VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT;
+    if (mode == 4) {
+      // Exact format list from the d0e64bf Odin test (BGRA8 is absent).
+      reportedSurfaceFormats = {
+          {VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
+          {VK_FORMAT_R8G8B8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
+          {VK_FORMAT_R5G6B5_UNORM_PACK16, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
+          {VK_FORMAT_R16G16B16A16_SFLOAT, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
+          {VK_FORMAT_A2B10G10R10_UNORM_PACK32,
+           VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
+          {VK_FORMAT_R8_UNORM, VK_COLOR_SPACE_EXTENDED_SRGB_NONLINEAR_EXT}};
+      expectedSwapchainFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    }
+    if (mode == 5)
+      reportedSurfaceFormats.insert(
+          reportedSurfaceFormats.begin(),
+          {VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR});
+    const RenderFormat expectedRhi =
+        mode == 4 ? RenderFormat::R8G8B8A8_UNORM : desc.format;
     const unsigned creates = swapchainCreates;
     VulkanSwapChain accepted(&queue, desc);
     REQUIRE(accepted.initialized &&
             !std::strcmp(accepted.initializationFailure, "none"));
-    REQUIRE(accepted.pickedSurfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM);
+    REQUIRE(accepted.pickedSurfaceFormat.format == expectedSwapchainFormat);
     REQUIRE(accepted.pickedSurfaceFormat.colorSpace ==
             (mode == 3 ? VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT
                        : VK_COLOR_SPACE_SRGB_NONLINEAR_KHR));
-    REQUIRE(accepted.desc.format == desc.format && accepted.resize() &&
+    REQUIRE(accepted.desc.format == expectedRhi &&
+            accepted.getFormat() == expectedRhi && accepted.resize() &&
             swapchainCreates == creates + 1);
-    REQUIRE(accepted.createInfo.imageFormat == VK_FORMAT_B8G8R8A8_UNORM);
+    REQUIRE(accepted.createInfo.imageFormat == expectedSwapchainFormat);
     if (mode == 1)
       REQUIRE(formatCountQueries == 2 && formatDataQueries == 2);
     for (auto &texture : accepted.textures) {
       REQUIRE(texture.imageFormat == accepted.createInfo.imageFormat &&
-              texture.desc.format == desc.format);
+              texture.desc.format == expectedRhi);
       REQUIRE(actualViewFormats.at(texture.imageView) == texture.imageFormat);
       const RenderTexture *color = &texture;
       VulkanFramebuffer fb(queue.device, RenderFramebufferDesc(&color, 1));
+      REQUIRE(fb.getColorAttachmentFormat(0) == expectedRhi &&
+              fb.getColorAttachmentFormat(1) == RenderFormat::UNKNOWN);
       REQUIRE(fb.colorAttachmentFormats[0] == texture.imageFormat &&
               fb.colorAttachmentImageViews[0] == texture.imageView);
       REQUIRE(passes.at(fb.renderPass).attachments[0].format ==
@@ -788,15 +870,85 @@ static void testSurfaceFormatInitialization(VulkanCommandQueue &queue) {
     const auto oldView = accepted.textures[0].imageView;
     accepted.pickedSurfaceFormat.format = VK_FORMAT_UNDEFINED;
     REQUIRE(!accepted.resize());
-    accepted.pickedSurfaceFormat.format = VK_FORMAT_R8G8B8A8_UNORM;
+    accepted.pickedSurfaceFormat.format =
+        mode == 4 ? VK_FORMAT_B8G8R8A8_UNORM : VK_FORMAT_R8G8B8A8_UNORM;
     REQUIRE(!accepted.resize() && swapchainCreates == creates + 1 &&
             capabilitiesQueries == queried);
     REQUIRE(accepted.textures[0].imageView == oldView);
+    // Complete image usage/tiling/sample-count support is a separate query
+    // from the surface format list. A rejected replacement keeps old views.
+    accepted.pickedSurfaceFormat.format = expectedSwapchainFormat;
+    swapImageConfigSupported = false;
+    const unsigned imageQueriesBefore = swapImageQueries;
+    REQUIRE(!accepted.resize() && swapImageQueries == imageQueriesBefore + 1);
+    REQUIRE(swapchainCreates == creates + 1 &&
+            accepted.textures[0].imageView == oldView);
   }
   resetSurfaceEnumeration();
   std::puts(
       "PASS: failed/incomplete surface enumeration, constructor early returns, "
       "invalid-object guards, and image/view/framebuffer format consistency");
+}
+static void testPresentationPipelineFormats(VulkanDevice &device) {
+  selectedIndex = 0;
+  presentationPipelines = true;
+  const auto count = presentationRecords.size();
+  VulkanShader vertex(&device, ColorClearVertex, sizeof(ColorClearVertex),
+                      "main", RenderShaderFormat::SPIRV);
+  VulkanShader pixel(&device, ColorClearFragment, sizeof(ColorClearFragment),
+                     "main", RenderShaderFormat::SPIRV);
+  RenderPushConstantRange range(0, 0, 0, 32, RenderShaderStageFlag::PIXEL);
+  VulkanPipelineLayout layout(&device,
+                              RenderPipelineLayoutDesc(&range, 1, nullptr, 0));
+  RenderGraphicsPipelineDesc base;
+  base.vertexShader = &vertex;
+  base.pixelShader = &pixel;
+  base.pipelineLayout = &layout;
+  recompui::UiPresentationPipelines cache;
+  for (auto format :
+       {RenderFormat::R8G8B8A8_UNORM, RenderFormat::B8G8R8A8_UNORM}) {
+    VulkanTexture texture;
+    initialize(texture, device, 1, format);
+    const RenderTexture *color = &texture;
+    VulkanFramebuffer fb(&device, RenderFramebufferDesc(&color, 1));
+    for (unsigned variant = 0; variant < 3; ++variant) {
+      auto vi = RT64::CreateVideoInterfacePipeline(
+          &device, fb.getColorAttachmentFormat(0), &vertex, &pixel, &layout);
+      const auto &record = presentationRecords.back();
+      REQUIRE(record.format == texture.imageFormat &&
+              record.samples == VK_SAMPLE_COUNT_1_BIT &&
+              !record.blend.blendEnable);
+    }
+    for (bool composite : {false, true}) {
+      auto *pipeline = cache.get(&device, base, &fb, composite);
+      const auto &record = presentationRecords.back();
+      REQUIRE(record.format == texture.imageFormat &&
+              record.samples == VK_SAMPLE_COUNT_1_BIT &&
+              record.blend.blendEnable);
+      REQUIRE(record.blend.srcColorBlendFactor ==
+              (composite ? VK_BLEND_FACTOR_ONE : VK_BLEND_FACTOR_SRC_ALPHA));
+      REQUIRE(record.blend.dstColorBlendFactor ==
+                  VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA &&
+              record.blend.srcAlphaBlendFactor == VK_BLEND_FACTOR_ONE &&
+              record.blend.dstAlphaBlendFactor ==
+                  VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA &&
+              record.blend.colorWriteMask == 15);
+      const auto records = presentationRecords.size();
+      REQUIRE(cache.get(&device, base, &fb, composite) == pipeline &&
+              presentationRecords.size() == records);
+    }
+  }
+  auto offscreen = recompui::CreateUiPipeline(
+      &device, base, recompui::UiOffscreenFormat, RenderMultisampling(8),
+      recompui::UiPipelinePath::Offscreen);
+  REQUIRE(presentationRecords.back().format == VK_FORMAT_B8G8R8A8_UNORM &&
+          presentationRecords.back().samples == VK_SAMPLE_COUNT_8_BIT &&
+          presentationRecords.back().blend.srcColorBlendFactor ==
+              VK_BLEND_FACTOR_SRC_ALPHA);
+  REQUIRE(presentationRecords.size() == count + 11);
+  presentationPipelines = false;
+  std::puts("PASS: VI nearest/linear/pixel and UI direct/offscreen/composite "
+            "pipeline formats and alpha factors");
 }
 int main(int argc, char **argv) {
   simulateTimeout = argc > 1 && std::strcmp(argv[1], "--timeout") == 0;
@@ -860,6 +1012,18 @@ int main(int argc, char **argv) {
   VulkanCommandQueue queue(&device, RenderCommandListType::DIRECT);
   VulkanCommandList list(&queue);
   device.independentBlendSupported = true;
+  if (argc > 1 && std::strncmp(argv[1], "--pipeline-reject=", 18) == 0) {
+    RenderGraphicsPipelineDesc base;
+    presentationFeatures &= ~VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+    rejectBeforeRecording = true;
+    auto rejected = recompui::CreateUiPipeline(
+        &device, base,
+        std::strcmp(argv[1] + 18, "bgra") == 0
+            ? RenderFormat::B8G8R8A8_UNORM
+            : RenderFormat::R8G8B8A8_UNORM,
+        RenderMultisampling(8), recompui::UiPipelinePath::Offscreen);
+    REQUIRE(false); // Must stop before render-pass/pipeline creation or submit.
+  }
   if (argc > 1 && std::strncmp(argv[1], "--isolation", 11) == 0) {
     isolation = true;
     acquireFails = std::strcmp(argv[1], "--isolation-acquire-fails") == 0;
@@ -868,6 +1032,11 @@ int main(int argc, char **argv) {
     desc.renderWindow = reinterpret_cast<ANativeWindow *>(1);
     desc.format = RenderFormat::B8G8R8A8_UNORM;
     desc.textureCount = 2;
+    if (std::strcmp(argv[1], "--isolation-rgba") == 0) {
+      reportedSurfaceFormats = {
+          {VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}};
+      expectedSwapchainFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    }
     VulkanSwapChain swapchain(&queue, desc);
     if (std::strcmp(argv[1], "--isolation-surface-fails") == 0)
       surfaceUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -925,6 +1094,7 @@ int main(int argc, char **argv) {
     testImageConfigurations(device);
     testSwapchainUsage(queue);
     testSurfaceFormatInitialization(queue);
+    testPresentationPipelineFormats(device);
   }
   if (argc > 1 && std::strcmp(argv[1], "--late-categories") == 0) {
     VulkanTexture warmup;

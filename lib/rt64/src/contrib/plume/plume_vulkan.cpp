@@ -1466,6 +1466,26 @@ namespace plume {
     VulkanGraphicsPipeline::VulkanGraphicsPipeline(VulkanDevice *device, const RenderGraphicsPipelineDesc &desc) : VulkanPipeline(device, Type::Graphics) {
         assert(desc.pipelineLayout != nullptr);
 
+#if defined(__ANDROID__)
+        // Image-usage support does not establish blend support. This also checks
+        // owned BGRA UI targets independently of the Android surface format list.
+        for (uint32_t i = 0; i < desc.renderTargetCount; ++i) {
+            if (!desc.renderTargetBlend[i].blendEnabled) continue;
+            const VkFormat format = toVk(desc.renderTargetFormat[i]);
+            VkFormatProperties properties = {};
+            vkGetPhysicalDeviceFormatProperties(device->physicalDevice, format, &properties);
+            const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+            if ((properties.optimalTilingFeatures & required) != required) {
+                char message[256];
+                std::snprintf(message, sizeof(message),
+                    "Graphics pipeline rejected: reason=attachment-blend-unsupported attachment=%u format=%u optimal=0x%X required=0x%X",
+                    i, unsigned(format), properties.optimalTilingFeatures, required);
+                tooie_android_debug_log(message);
+                std::fprintf(stderr, "%s\n", message);
+                std::_Exit(EXIT_FAILURE);
+            }
+        }
+#endif
         thread_local std::vector<VkPipelineShaderStageCreateInfo> stages;
         stages.clear();
 
@@ -2325,13 +2345,43 @@ namespace plume {
                 selectedFormat = format;
             }
         }
+        RenderFormat selectedRhiFormat = desc.format;
+#if defined(__ANDROID__)
+        // Android native surfaces commonly omit BGRA8 even when owned BGRA
+        // images are supported. Use only an actually enumerated RGBA8 UNORM /
+        // sRGB nonlinear pair, after the preferred requested format is absent.
+        if (selectedFormat.format == VK_FORMAT_UNDEFINED && requestedFormat == VK_FORMAT_B8G8R8A8_UNORM) {
+            for (const VkSurfaceFormatKHR &format : surfaceFormats) {
+                if (format.format == VK_FORMAT_R8G8B8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                    selectedFormat = format;
+                    selectedRhiFormat = RenderFormat::R8G8B8A8_UNORM;
+                    break;
+                }
+            }
+        }
+#endif
         if (selectedFormat.format == VK_FORMAT_UNDEFINED) {
-            // Launcher UI and VI pipelines assume BGRA8. Reject unsupported
-            // requests instead of changing only image/view/descriptor formats.
             failInitialization("requested-surface-format-unsupported");
             return;
         }
 
+#if defined(__ANDROID__)
+        VkFormatProperties formatProperties = {};
+        vkGetPhysicalDeviceFormatProperties(physicalDevice, selectedFormat.format, &formatProperties);
+        const VkFormatFeatureFlags requiredFeatures = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
+            VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT | VK_FORMAT_FEATURE_TRANSFER_DST_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+        const VkFormatFeatureFlags missingFeatures = requiredFeatures & ~formatProperties.optimalTilingFeatures;
+        char featuresRecord[256];
+        std::snprintf(featuresRecord, sizeof(featuresRecord),
+            "Surface format features: selected=%u optimal=0x%X required=0x%X missing=0x%X",
+            unsigned(selectedFormat.format), formatProperties.optimalTilingFeatures, requiredFeatures, missingFeatures);
+        tooie_android_debug_log(featuresRecord);
+        std::fprintf(stderr, "%s\n", featuresRecord);
+        if (missingFeatures != 0) {
+            failInitialization("surface-format-features-unsupported");
+            return;
+        }
+#endif
         uint32_t presentModeCount = 0;
         res = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
         if (res != VK_SUCCESS || presentModeCount == 0) {
@@ -2367,6 +2417,7 @@ namespace plume {
 
         // Publish selection only after every constructor prerequisite succeeds.
         pickedSurfaceFormat = selectedFormat;
+        this->desc.format = selectedRhiFormat;
         initialized = true;
         initializationFailure = "none";
         char selectedRecord[256];
@@ -2549,6 +2600,23 @@ namespace plume {
             return false;
         }
 #endif
+#if defined(__ANDROID__)
+        // Validate the complete selected 2D optimal-tiling image configuration,
+        // independently of surface usage and before creation/view destruction.
+        VkImageCreateInfo imageInfo = {};
+        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.format = createInfo.imageFormat;
+        imageInfo.extent = { width, height, 1 };
+        imageInfo.mipLevels = imageInfo.arrayLayers = 1;
+        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.usage = createInfo.imageUsage;
+        if (!VulkanTexture::validateImageConfiguration(commandQueue->device, imageInfo)) {
+            tooie_android_debug_log("Swapchain rejected: selected-image-configuration-unsupported");
+            return false;
+        }
+#endif
         // Only release the old views after the replacement configuration passes.
         releaseImageViews();
         VkResult res = vkCreateSwapchainKHR(commandQueue->device->vk, &createInfo, nullptr, &vk);
@@ -2646,6 +2714,12 @@ namespace plume {
     uint32_t VulkanSwapChain::getTextureCount() const {
         return desc.textureCount;
     }
+
+#if defined(__ANDROID__)
+    RenderFormat VulkanSwapChain::getFormat() const {
+        return initialized ? desc.format : RenderFormat::UNKNOWN;
+    }
+#endif
 
     RenderWindow VulkanSwapChain::getWindow() const {
         return desc.renderWindow;
@@ -2783,6 +2857,7 @@ namespace plume {
             imageViews.emplace_back(colorAttachmentImageView);
 #if defined(__ANDROID__)
             colorAttachmentFormats.emplace_back(toVk(colorAttachmentFormat));
+            colorAttachmentRhiFormats.emplace_back(colorAttachmentFormat);
             colorAttachmentImageViews.emplace_back(colorAttachmentImageView);
             colorAttachmentUsesBaseView.emplace_back(!(desc.colorAttachmentViews && desc.colorAttachmentViews[i]));
             colorAttachmentViewDescs.emplace_back(attachmentViewDesc);
@@ -2950,6 +3025,12 @@ namespace plume {
     uint32_t VulkanFramebuffer::getHeight() const {
         return height;
     }
+
+#if defined(__ANDROID__)
+    RenderFormat VulkanFramebuffer::getColorAttachmentFormat(uint32_t attachmentIndex) const {
+        return attachmentIndex < colorAttachmentRhiFormats.size() ? colorAttachmentRhiFormats[attachmentIndex] : RenderFormat::UNKNOWN;
+    }
+#endif
 
     bool VulkanFramebuffer::contains(const VulkanTexture *attachment) const {
         assert(attachment != nullptr);
