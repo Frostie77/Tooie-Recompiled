@@ -5,6 +5,24 @@ first physical-device test. This document describes a review proposal, not a
 verified launcher fix. No new Portal test is requested until this proposal has
 been reviewed.
 
+## Latest device evidence: c053e0d did not reach A–E
+
+The c053e0d APK remained responsive but stopped during startup raster recording:
+
+```text
+Clear record: path=transfer ... samples=2 ... owned=1 swapchain=0 ... fbExtent=320x241
+Clear record: COLOR->TRANSFER_DST; clear mip=0 layer=0; TRANSFER_DST->COLOR
+Clear record: path=transfer-rejected ... samples=2 ... fbExtent=320x241
+Transfer clear rejected: reason=partial-rectangles
+```
+
+No A–E fence completions or new GPU timeout were reported. The first record
+proves command recording, not completion of an MSAA transfer clear on the GPU.
+`FramebufferRenderer`'s `InstanceDrawCall::Type::FillRect` supplies rectangles to
+`clearColor` when the fill does not cover the target. The strict guard correctly
+refused to turn that operation into a whole-image clear. It exposed a missing
+partial-clear implementation and the isolation test's scheduling problem.
+
 ## Evidence and correction
 
 | Device operation | Reported outcome |
@@ -177,15 +195,16 @@ replace blending, all color channels and samples covered, no alpha-to-coverage,
 and no depth/stencil writes. That needs an explicit clear pipeline and state
 restoration; it is not implemented in this focused proposal.
 
-Rectangular clears, attachment views, smaller framebuffer extents, integer or
-reinterpreted formats, linear tiling, and missing transfer support now stop the
-strict Android path with an exact rejection reason. Their previous behavior is
-retained only for the explicit fallback comparison. These calls are not claimed
-fixed for hardware rendering.
+A full clear that is ineligible for transfer still stops the strict Android path
+with an exact rejection reason. The new partial-colour draw below is a separate
+operation selected only for explicit rectangles in the proposal. The old
+attachment-clear behavior remains available only for the explicit fallback
+comparison; the retained transfer/load-op diagnostic controls keep their previous
+strict rejection policy. None of these paths is claimed fixed on hardware.
 
 `Clear record:` logs the first 16 ordinary selections per thread and independently
-reserves the first swapchain selection and first owned offscreen MSAA selection,
-even if each arrives after more than 16 unrelated clears. Rejections always force
+reserves the first swapchain selection, first owned offscreen MSAA selection,
+and first scissored draw, even if each arrives after more than 16 unrelated clears. Rejections always force
 a state record. A swapchain marker is assigned during swapchain image creation,
 so logging does not classify every externally owned image as a swapchain.
 Records include command buffer, framebuffer/pass, image/bound-view handles,
@@ -194,6 +213,93 @@ extents/subresources. These are CPU recording observations, not observations of
 GPU execution. A category is only logged when its clear is reached: the one-shot
 A–E isolation exits before the UI draw hook and cannot exercise the offscreen UI
 MSAA clear. The logging guarantee does not manufacture an unexecuted clear.
+
+## Partial-colour proposal: view-local scissored draw
+
+With the transfer flag and fallback-comparison flag undefined, `clearColor` with
+explicit rectangles uses a dedicated graphics pipeline. Full base-view clears
+continue to use the existing transfer implementation and its eligibility checks.
+No caller changes in `FramebufferRenderer` are needed.
+
+- Validate every rectangle before recording any command for this clear: nonempty,
+  nonnegative, and contained in the framebuffer render area. Invalid input stops
+  with `Partial color clear rejected: reason=rectangle-out-of-bounds`. Rectangles
+  are never clipped, dropped, or expanded into whole-image clears.
+- Use the actual framebuffer attachment view and format. Supported view formats
+  are RGBA8/BGRA8 UNORM, RGBA16 UNORM (RT64's high-colour target), RGBA16 float,
+  and RGBA32 float. The fragment shader writes logical RGBA floats; Vulkan performs
+  attachment conversion, including BGRA storage and normalized rounding. Integer,
+  sRGB and other unimplemented formats stop with `unsupported-draw-format`; the
+  Plume RHI does not currently expose sRGB render formats.
+- Require `COLOR_ATTACHMENT` image usage and the matching tiling's
+  `VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT`, valid resource handles and
+  `COLOR_WRITE/GRAPHICS` tracking. Transfer-destination eligibility is irrelevant
+  to the draw. Complete owned-image configuration queries and swapchain usage
+  checks from c053e0d remain in place. MRT requires enabled `independentBlend`;
+  attachment sample counts and depth layout/stages are checked before recording.
+- The framebuffer uses valid 2D, single-mip, identity-component attachment views.
+  Its Android extent now comes from the selected mip and the minimum extent of
+  its colour/depth views, rather than the base texture. The RHI framebuffer has
+  one layer: the draw targets layer zero relative to the bound view, preserving
+  other layers/mips. A view beginning at mip 1/layer 1 therefore clears that
+  subresource, not mip 0/layer 0. Full non-base-view clears without rectangles
+  remain transfer-ineligible and strict.
+- End any active pass and record an attachment memory dependency covering colour
+  and early/late depth/stencil access before restarting the framebuffer's exact
+  LOAD/STORE render pass. Keep image layouts and CPU tracking unchanged. This
+  preserves previous contents, including other attachments, across STORE/LOAD.
+- Draw an oversized triangle with a scissor for each rectangle and an explicit
+  integer pixel-domain check in the fragment shader. The latter is necessary:
+  development readback of the scissor-only 4× prototype changed samples just
+  outside the top/left borders on lavapipe. The bounded shader passes the same
+  checks. This software observation does not establish the cause of the Adreno
+  fence timeouts. No test expectation was relaxed to accept the extra pixels.
+- Match the attachment's sample count; use all samples, no alpha-to-coverage,
+  blending, logic operations, depth/stencil testing or depth/stencil writes.
+  Output Location selects the requested colour attachment, with zero write masks
+  on the others. Transparent colour still writes alpha zero.
+- Restore the caller's graphics pipeline, every cached viewport/scissor, dynamic
+  depth bias, and graphics push-constant updates (including partial overlaps and
+  incompatible layout ranges). Descriptor sets, vertex/index buffers and pipeline
+  layout pointers remain untouched. This preserves `FramebufferRenderer` and UI
+  binding caches. Reset the state cache when a command buffer begins recording.
+
+Helper pipelines/layouts are cached per framebuffer and released with it; shader
+modules are released after pipeline creation. Checked-in SPIR-V removes runtime
+shader-compiler requirements. `tools/generate_vulkan_clear_shaders.py` reproduces
+it with NDK r27d's `glslc` and validates the fragment output Location variants 0–7
+with `spirv-val`. The separate ordinary-draw test shader has no rectangle logic.
+
+Unsupported inputs or helper setup failures log and stop before recording or
+submitting the rejected clear. This path never invokes `vkCmdClearAttachments`
+or `VK_ATTACHMENT_LOAD_OP_CLEAR`. The explicit fallback-comparison build still
+selects the original path, separately from the proposal, and remains forbidden
+in debug/queue-isolation builds.
+
+## Isolation scheduling and review configurations
+
+`Application::setup` now runs the shared, synchronous `RunVulkanQueueDiagnostic`
+immediately after swapchain creation, before shader-cache setup, workload/present
+queue startup or interpreter-state setup. It does not wait for a workload or enter
+`PresentQueue::threadPresent`, so ordinary startup FillRects cannot run first.
+The normal build's queue setup and raster processing remain unchanged.
+
+A runs before acquisition. Acquisition uses its own semaphore; B consumes it once
+with the retained `ALL_COMMANDS` wait stage. C transitions the acquired image to
+`COLOR_WRITE`, D records the selected policy, and E transitions it to `PRESENT`.
+Each phase submits and waits on its own reset fence before command-buffer reuse.
+The five-second wait remains fatal on timeout. Failed resize/acquire stops with
+an explicit log, without recording a clear or advancing through missing phases.
+After E the diagnostic exits without presenting/reusing the acquired image.
+
+The A–E run tests the swapchain only. To review the partial-clear launcher path,
+use a normal build with queue isolation and both old clear-test flags undefined
+(or queue isolation explicitly zero); keep fallback comparison undefined. That
+path performs ordinary startup raster work using full transfer clears plus
+partial draws. Review `path=scissored-draw`, `Clear draw:` rectangles/view indices,
+and both swapchain/offscreen MSAA categories. Recording logs alone do not prove
+completion or correct launcher pixels. These configurations are review guidance;
+no new Odin APK or hardware run is requested or authorized by this revision.
 
 ## Retained controls and next minimal diagnostic
 
@@ -222,7 +328,7 @@ For example, in a separate root CMake build directory:
 -DCMAKE_CXX_FLAGS='-DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=1 -DTOOIE_VULKAN_TRANSFER_CLEAR_TEST=0 -DTOOIE_VULKAN_CLEAR_BARRIER_TEST=1'
 ```
 
-A–C remain unchanged; D ends any active pass, records only the original load-op
+A–C retain their submission content (A now precedes acquisition); D ends any active pass, records only the original load-op
 control's attachment memory barrier, and returns **before** beginning the CLEAR
 pass or recording a transfer clear. Its success log explicitly says no clear.
 E retains the present-layout transition, and the one-shot sequence exits. This
@@ -252,7 +358,11 @@ Passed in this cloud instance:
   prior transfer-only diagnostic, failed load-op and barrier-only controls, and
   the explicit fallback comparisons. They inspect 1×/8× commands, compatibility,
   layouts/ranges and access/stage masks, pass restarts, other attachments, and
-  per-semaphore waits. Child-process controls check every eligibility reason and
+  per-semaphore waits. New recording tests exercise isolated A–E in all four
+  diagnostic configurations, surface/acquire failure, and stopping at A on a
+  timeout, with no raster draw. They verify rectangle/pixel-bound push data,
+  draw-pipeline state, overlapping push restoration, multiple viewports/scissors,
+  depth bias, helper caching and reset invalidation. Child-process controls check every eligibility reason and
   prohibit fallback-pass/clear/barrier/submit calls before rejection. Tests verify
   that unsupported owned-image configurations stop before VMA allocation and
   unsupported surface usage stops before swapchain creation, preserving old views.
@@ -263,13 +373,22 @@ Passed in this cloud instance:
   25.0.7 with Khronos core and synchronization validation. The transfer proposal
   and retained load-op control both produced correct 1×/4× BGRA pixels, MSAA
   resolve/readback, repeated clears, and transparent alpha, with no validation
-  errors. Lavapipe is a CPU implementation: it does not exercise Android WSI,
+  errors. The new proposal also passes 13 partial-clear pixel-readback cases:
+  five formats at 1×/4×; an actual mip-1/layer-1 view with all sibling subresources
+  checked; and MRT attachment 1 with explicit views and preserved colour/depth
+  at 1×/4×. Tests compare every pixel against a CPU expected image, including
+  borders, overlapping rectangles, transparent alpha, and an ordinary draw
+  afterward without rebinding state. Depth preservation is checked by an EQUAL
+  test at the previously stored depth. Core and synchronization validation report
+  zero errors in both software modes. Lavapipe is a CPU implementation: it does not exercise Android WSI,
   Adreno, or the Portal's 8× hardware path. The load-op control's software success
   does not override its reported hardware failure.
 - Android ARM64 Plume cross-builds using NDK r27d, API 24, Release, for the
   strict proposal, retained clear controls, and fallback comparison. Earlier
-  Android ARM64 presentation compilation in normal, isolation, and barrier-only
-  modes also passed; presentation code is unchanged in this safety revision.
+  Android ARM64 presentation compilation in normal mode and the new
+  `Application::setup` isolation entry point also pass as standalone object
+  compilations. Full application linking is still blocked by the dependencies
+  described below.
 
 Recording tests:
 
@@ -300,7 +419,11 @@ cmake -S lib/rt64/src/contrib/plume -B build-plume-android -G Ninja \
 cmake --build build-plume-android -j 4
 ```
 
-No new APK was built or tested on the Portal in this reassessment. Full cloud APK
+No new APK was built, installed or tested on the Portal for this revision.
+Neither the isolated entry point nor the scissored draw has been tested on Adreno;
+2×/8× hardware execution, Android WSI and normal graphical launcher rendering
+remain unverified. Keep all controls and the timeout until that review and
+verification are complete. Full cloud APK
 setup still lacks Android SDL2/FreeType development prefixes and
 `lib/rt64/src/contrib/zstd/build/cmake`. The missing zstd directory may be a
 snapshot artifact: the repository snapshot process excluded directories named

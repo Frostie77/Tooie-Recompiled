@@ -4,6 +4,10 @@
 //
 
 #include "rt64_application.h"
+#if defined(__ANDROID__) && defined(TOOIE_VULKAN_QUEUE_ISOLATION_TEST) && TOOIE_VULKAN_QUEUE_ISOLATION_TEST
+#include "rt64_vulkan_queue_diagnostic.h"
+#include <cstdlib>
+#endif
 #include "rhi/rt64_render_hooks.h"
 
 #include <cinttypes>
@@ -349,6 +353,15 @@ namespace RT64 {
         }
 
         swapChain = presentGraphicsWorker->commandQueue->createSwapChain(swapChainDesc);
+
+#if defined(__ANDROID__) && defined(TOOIE_VULKAN_QUEUE_ISOLATION_TEST) && TOOIE_VULKAN_QUEUE_ISOLATION_TEST
+        // Diagnostic-only entry: no shader caches, workload/present threads or
+        // interpreter state can record ordinary N64 raster commands first.
+        const bool diagnosticComplete = RunVulkanQueueDiagnostic(device.get(), swapChain.get(),
+            presentGraphicsWorker->commandList.get(), presentGraphicsWorker->commandQueue.get(),
+            presentGraphicsWorker->commandFence.get());
+        std::_Exit(diagnosticComplete ? EXIT_SUCCESS : EXIT_FAILURE);
+#endif
 
         // Before configuring multisampling, make sure the device actually supports it for the formats we'll use. If it doesn't, turn off antialiasing in the configuration.
         const RenderSampleCounts colorSampleCounts = device->getSampleCountsSupported(RenderTarget::colorBufferFormat(usesHDR));

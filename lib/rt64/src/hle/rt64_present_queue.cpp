@@ -5,12 +5,6 @@
 
 #include "rt64_present_queue.h"
 
-#include <cstdlib>
-
-// Opt in with -DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=1. The isolation
-// sequence consumes the acquired semaphore and exits; it must not run in
-// a normal launcher build.
-
 #include "common/rt64_thread.h"
 #include "rhi/rt64_render_hooks.h"
 
@@ -319,72 +313,6 @@ namespace RT64 {
                 RenderTexture *swapChainTexture = ext.swapChain->getTexture(swapChainIndex);
                 RenderFramebuffer *swapChainFramebuffer = swapChainFramebuffers[swapChainIndex].get();
                 RenderCommandList *commandList = ext.presentGraphicsWorker->commandList.get();
-#if defined(__ANDROID__) && defined(TOOIE_VULKAN_QUEUE_ISOLATION_TEST) && TOOIE_VULKAN_QUEUE_ISOLATION_TEST
-                // Android-only one-shot diagnostic. Never render or present this acquired image.
-                // Exit after the diagnostic fences so that the acquired image is not reused.
-                tooie_android_debug_log("DIAG A: empty submit with no semaphore begin");
-                commandList->begin();
-                commandList->end();
-                const RenderCommandList *diagnosticList = commandList;
-                ext.presentGraphicsWorker->commandQueue->executeCommandLists(
-                    &diagnosticList, 1, nullptr, 0, nullptr, 0,
-                    ext.presentGraphicsWorker->commandFence.get());
-                ext.presentGraphicsWorker->wait();
-                tooie_android_debug_log("DIAG A: fence signaled (GPU queue works without acquire wait)");
-
-                tooie_android_debug_log("DIAG B: empty submit waiting on acquired semaphore begin");
-                commandList->begin();
-                commandList->end();
-                RenderCommandSemaphore *diagnosticWait = acquiredSemaphore.get();
-                ext.presentGraphicsWorker->commandQueue->executeCommandLists(
-                    &diagnosticList, 1, &diagnosticWait, 1, nullptr, 0,
-                    ext.presentGraphicsWorker->commandFence.get());
-                ext.presentGraphicsWorker->wait();
-                tooie_android_debug_log("DIAG B: fence signaled (acquire semaphore works)");
-
-                // C: Isolate the first swapchain layout transition.
-                tooie_android_debug_log("DIAG C: transition to COLOR_WRITE begin");
-                commandList->begin();
-                commandList->barriers(RenderBarrierStage::GRAPHICS,
-                    RenderTextureBarrier(swapChainTexture, RenderTextureLayout::COLOR_WRITE));
-                commandList->end();
-                ext.presentGraphicsWorker->commandQueue->executeCommandLists(
-                    &diagnosticList, 1, nullptr, 0, nullptr, 0,
-                    ext.presentGraphicsWorker->commandFence.get());
-                ext.presentGraphicsWorker->wait();
-                tooie_android_debug_log("DIAG C: fence signaled (COLOR_WRITE transition completed)");
-
-                // D: Isolate the selected clear policy. Omitted transfer flag:
-                // proposed transfer path; =1: prior swapchain-only transfer;
-                // =0: failed load-op control (optionally its barrier alone).
-                tooie_android_debug_log("DIAG D: swapchain clear begin");
-                commandList->begin();
-                commandList->setFramebuffer(swapChainFramebuffer);
-                commandList->clearColor();
-                commandList->end();
-                ext.presentGraphicsWorker->commandQueue->executeCommandLists(
-                    &diagnosticList, 1, nullptr, 0, nullptr, 0,
-                    ext.presentGraphicsWorker->commandFence.get());
-                ext.presentGraphicsWorker->wait();
-#if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && !TOOIE_VULKAN_TRANSFER_CLEAR_TEST && defined(TOOIE_VULKAN_CLEAR_BARRIER_TEST) && TOOIE_VULKAN_CLEAR_BARRIER_TEST
-                tooie_android_debug_log("DIAG D: fence signaled (load-op memory barrier only; no clear)");
-#else
-                tooie_android_debug_log("DIAG D: fence signaled (swapchain clear completed)");
-#endif
-
-                // E: Isolate the final transition to the present layout.
-                tooie_android_debug_log("DIAG E: transition to PRESENT begin");
-                commandList->begin();
-                commandList->barriers(RenderBarrierStage::NONE,
-                    RenderTextureBarrier(swapChainTexture, RenderTextureLayout::PRESENT));
-                commandList->end();
-                ext.presentGraphicsWorker->commandQueue->executeCommandLists(
-                    &diagnosticList, 1, nullptr, 0, nullptr, 0,
-                    ext.presentGraphicsWorker->commandFence.get());
-                ext.presentGraphicsWorker->wait();
-                tooie_android_debug_log("DIAG E: fence signaled (PRESENT transition completed)");
-                std::_Exit(0);
-#endif
                 commandList->begin();
                 commandList->barriers(RenderBarrierStage::GRAPHICS, RenderTextureBarrier(swapChainTexture, RenderTextureLayout::COLOR_WRITE));
                 

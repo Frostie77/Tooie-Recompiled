@@ -1,8 +1,12 @@
 // Executes the production Android clear code through a host Vulkan driver.
+#include "android_vulkan_draw_test_shaders.h"
 #include "plume_vulkan.h"
+#include "plume_vulkan_clear_shaders.h"
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 using namespace plume;
 #define REQUIRE(x)                                                             \
   do {                                                                         \
@@ -24,7 +28,376 @@ report(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
   }
   return VK_FALSE;
 }
+// Keep a CPU expected image independent of the shader/recording implementation.
+static std::vector<unsigned char>
+readImage(VulkanDevice &device, RenderCommandList *list,
+          RenderCommandQueue *queue, RenderCommandFence *fence,
+          RenderTexture *texture, uint32_t width, uint32_t height,
+          unsigned stride, uint32_t mip = 0, uint32_t layer = 0) {
+  auto buffer = device.createBuffer(
+      RenderBufferDesc::ReadbackBuffer(width * height * stride));
+  auto *vkBuffer = static_cast<VulkanBuffer *>(buffer.get());
+  auto *vkList = static_cast<VulkanCommandList *>(list);
+  list->barriers(
+      RenderBarrierStage::COPY,
+      RenderTextureBarrier(texture, RenderTextureLayout::COPY_SOURCE));
+  VkBufferImageCopy region = {};
+  region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, mip, layer, 1};
+  region.imageExtent = {width, height, 1};
+  vkCmdCopyImageToBuffer(vkList->vk, static_cast<VulkanTexture *>(texture)->vk,
+                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vkBuffer->vk, 1,
+                         &region);
+  VkBufferMemoryBarrier host = {};
+  host.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+  host.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  host.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+  host.srcQueueFamilyIndex = host.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  host.buffer = vkBuffer->vk;
+  host.size = VK_WHOLE_SIZE;
+  vkCmdPipelineBarrier(vkList->vk, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                       VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1, &host, 0,
+                       nullptr);
+  list->end();
+  const RenderCommandList *commands = list;
+  queue->executeCommandLists(&commands, 1, nullptr, 0, nullptr, 0, fence);
+  queue->waitForCommandFence(fence);
+  REQUIRE(vmaInvalidateAllocation(device.allocator, vkBuffer->allocation, 0,
+                                  VK_WHOLE_SIZE) == VK_SUCCESS);
+  const auto *bytes = static_cast<const unsigned char *>(buffer->map());
+  REQUIRE(bytes);
+  std::vector<unsigned char> pixels(bytes, bytes + width * height * stride);
+  buffer->unmap();
+  return pixels;
+}
+static unsigned pixelStride(RenderFormat format) {
+  return format == RenderFormat::R32G32B32A32_FLOAT ? 16
+         : format == RenderFormat::R16G16B16A16_UNORM ||
+                 format == RenderFormat::R16G16B16A16_FLOAT
+             ? 8
+             : 4;
+}
+static void expectPixels(const std::vector<unsigned char> &bytes,
+                         const std::vector<RenderColor> &expected,
+                         RenderFormat format) {
+  const unsigned stride = pixelStride(format);
+  const bool bgra = format == RenderFormat::B8G8R8A8_UNORM;
+  REQUIRE(bytes.size() == expected.size() * stride);
+  for (size_t pixel = 0; pixel < expected.size(); ++pixel) {
+    for (unsigned channel = 0; channel < 4; ++channel) {
+      const unsigned logical = bgra && channel != 3 ? 2 - channel : channel;
+      float value = expected[pixel].rgba[logical];
+      if (stride == 4) {
+        if (std::abs(int(bytes[pixel * stride + channel]) -
+                     int(std::round(value * 255))) > 1)
+          std::fprintf(stderr,
+                       "pixel=%zu channel=%u actual=%u expected=%g format=%u\n",
+                       pixel, channel, bytes[pixel * stride + channel],
+                       value * 255, unsigned(format));
+        REQUIRE(std::abs(int(bytes[pixel * stride + channel]) -
+                         int(std::round(value * 255))) <= 1);
+      } else if (format == RenderFormat::R16G16B16A16_UNORM) {
+        uint16_t word;
+        std::memcpy(&word, &bytes[pixel * stride + channel * 2], 2);
+        REQUIRE(std::abs(int(word) - int(std::round(value * 65535))) <= 1);
+      } else if (format == RenderFormat::R16G16B16A16_FLOAT) {
+        uint16_t word;
+        std::memcpy(&word, &bytes[pixel * stride + channel * 2], 2);
+        float actual = (word & 0x7c00)
+                           ? std::ldexp(1.0f + (word & 1023) / 1024.0f,
+                                        int((word >> 10) & 31) - 15)
+                           : std::ldexp(float(word & 1023), -24);
+        if (word & 0x8000)
+          actual = -actual;
+        REQUIRE(std::abs(actual - value) < 0.001f);
+      } else {
+        float actual;
+        std::memcpy(&actual, &bytes[pixel * stride + channel * 4], 4);
+        REQUIRE(std::abs(actual - value) < 0.0001f);
+      }
+    }
+  }
+}
+static void paint(std::vector<RenderColor> &pixels, unsigned width,
+                  RenderRect rectangle, RenderColor color) {
+  for (int y = rectangle.top; y < rectangle.bottom; ++y)
+    for (int x = rectangle.left; x < rectangle.right; ++x)
+      pixels[y * width + x] = color;
+}
+static void partialPixels(VulkanDevice &device, RenderCommandQueue *queue,
+                          RenderCommandList *list, RenderCommandFence *fence) {
+  auto vertex = device.createShader(ColorClearVertex, sizeof(ColorClearVertex),
+                                    "main", RenderShaderFormat::SPIRV);
+  auto fragment =
+      device.createShader(OrdinaryDrawFragment, sizeof(OrdinaryDrawFragment),
+                          "main", RenderShaderFormat::SPIRV);
+  RenderPushConstantRange range(
+      0, 0, 0, 48,
+      RenderShaderStageFlag::PIXEL); // Deliberately incompatible with helper's
+                                     // 32-byte range.
+  auto layout = device.createPipelineLayout(
+      RenderPipelineLayoutDesc(&range, 1, nullptr, 0));
+  for (RenderFormat format :
+       {RenderFormat::R8G8B8A8_UNORM, RenderFormat::B8G8R8A8_UNORM,
+        RenderFormat::R16G16B16A16_UNORM, RenderFormat::R16G16B16A16_FLOAT,
+        RenderFormat::R32G32B32A32_FLOAT}) {
+    for (uint32_t samples : {1u, 4u}) {
+      RenderMultisampling ms;
+      ms.sampleCount = samples;
+      auto target = device.createTexture(
+          RenderTextureDesc::ColorTarget(16, 16, format, ms));
+      auto resolved =
+          device.createTexture(RenderTextureDesc::ColorTarget(16, 16, format));
+      const RenderTexture *color = target.get();
+      auto framebuffer =
+          device.createFramebuffer(RenderFramebufferDesc(&color, 1));
+      RenderGraphicsPipelineDesc desc;
+      desc.pipelineLayout = layout.get();
+      desc.vertexShader = vertex.get();
+      desc.pixelShader = fragment.get();
+      desc.multisampling = ms;
+      desc.renderTargetCount = 1;
+      desc.renderTargetFormat[0] = format;
+      desc.depthClipEnabled = true;
+      desc.dynamicDepthBiasEnabled = true;
+      desc.renderTargetBlend[0] = RenderBlendDesc::Copy();
+      auto pipeline = device.createGraphicsPipeline(desc);
+      REQUIRE(static_cast<VulkanGraphicsPipeline *>(pipeline.get())->vk !=
+              VK_NULL_HANDLE);
+      const RenderColor background(0.1f, 0.2f, 0.3f, 0.7f),
+          red(0.8f, 0.2f, 0.4f, 0.0f), green(0.2f, 0.7f, 0.3f, 0.5f),
+          blue(0.1f, 0.3f, 0.9f, 0.2f);
+      std::vector<RenderColor> expected(16 * 16, background);
+      list->begin();
+      list->barriers(
+          RenderBarrierStage::GRAPHICS,
+          RenderTextureBarrier(target.get(), RenderTextureLayout::COLOR_WRITE));
+      list->setFramebuffer(framebuffer.get());
+      list->setPipeline(pipeline.get());
+      list->setGraphicsPipelineLayout(layout.get());
+      RenderViewport viewport(0, 0, 16, 16);
+      RenderRect scissor = {0, 0, 16, 16};
+      list->setViewports(&viewport, 1);
+      list->setScissors(&scissor, 1);
+      list->setDepthBias(0, 0, 0);
+      float constants[12] = {
+          background.r, background.g, background.b, background.a, 9, 8, 7, 6};
+      list->setGraphicsPushConstants(0, constants);
+      list->drawInstanced(
+          3, 1, 0,
+          0); // Background is an ordinary draw, independently of clear code.
+      constants[0] = blue.r;
+      constants[1] = 0.0f;
+      constants[2] = blue.b;
+      constants[3] = blue.a;
+      list->setGraphicsPushConstants(0, constants);
+      list->setGraphicsPushConstants(
+          0, &blue.g, 4, 4); // Partial write must survive both clears.
+      viewport = RenderViewport(12, 12, 3, 3);
+      scissor = {12, 12, 16, 16};
+      list->setViewports(&viewport, 1);
+      list->setScissors(&scissor, 1);
+      RenderRect rectangles[] = {{0, 1, 7, 9}, {5, 5, 11, 13}};
+      list->clearColor(0, red, rectangles, 2);
+      for (auto rect : rectangles)
+        paint(expected, 16, rect, red);
+      RenderRect inner = {2, 3, 6, 6};
+      list->clearColor(0, green, &inner, 1);
+      paint(expected, 16, inner, green);
+      // No rebind: validates pipeline, viewport, scissor and push restoration.
+      list->drawInstanced(3, 1, 0, 0);
+      paint(expected, 16, {12, 12, 15, 15}, blue);
+      RenderTexture *source = target.get();
+      if (samples > 1) {
+        RenderTextureBarrier barriers[] = {
+            {target.get(), RenderTextureLayout::RESOLVE_SOURCE},
+            {resolved.get(), RenderTextureLayout::RESOLVE_DEST}};
+        list->barriers(RenderBarrierStage::COPY, barriers, 2);
+        list->resolveTexture(resolved.get(), target.get());
+        source = resolved.get();
+      }
+      expectPixels(readImage(device, list, queue, fence, source, 16, 16,
+                             pixelStride(format)),
+                   expected, format);
+      std::printf("PASS: partial rectangles/overlap/alpha/preserved "
+                  "outside/state restoration format=%u samples=%u\n",
+                  unsigned(format), samples);
+    }
+  }
+}
+
+static void attachmentViewPixels(VulkanDevice &device,
+                                 RenderCommandQueue *queue,
+                                 RenderCommandList *list,
+                                 RenderCommandFence *fence) {
+  auto desc =
+      RenderTextureDesc::ColorTarget(16, 16, RenderFormat::R8G8B8A8_UNORM);
+  desc.arraySize = 2;
+  desc.mipLevels = 2;
+  auto texture = device.createTexture(desc);
+  RenderTextureViewDesc viewDesc =
+      RenderTextureViewDesc::Texture2D(desc.format);
+  viewDesc.mipSlice = 1;
+  viewDesc.mipLevels = 1;
+  viewDesc.arrayIndex = 1;
+  viewDesc.arraySize = 1;
+  auto view = texture->createTextureView(viewDesc);
+  const RenderTextureView *attachment = view.get();
+  RenderFramebufferDesc fbDesc;
+  fbDesc.colorAttachmentViews = &attachment;
+  fbDesc.colorAttachmentsCount = 1;
+  auto framebuffer = device.createFramebuffer(fbDesc);
+  REQUIRE(framebuffer->getWidth() == 8 && framebuffer->getHeight() == 8);
+  const RenderColor background(0.1f, 0.2f, 0.3f, 0.7f),
+      clear(0.8f, 0.3f, 0.1f, 0.0f);
+  list->begin();
+  list->barriers(
+      RenderBarrierStage::COPY,
+      RenderTextureBarrier(texture.get(), RenderTextureLayout::COPY_DEST));
+  // Fixture initialization only: whole image/siblings are deliberate here.
+  auto *vkTexture = static_cast<VulkanTexture *>(texture.get());
+  auto *vkList = static_cast<VulkanCommandList *>(list);
+  VkClearColorValue color;
+  std::memcpy(color.float32, background.rgba, sizeof(color.float32));
+  vkCmdClearColorImage(vkList->vk, vkTexture->vk,
+                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &color, 1,
+                       &vkTexture->imageSubresourceRange);
+  list->barriers(
+      RenderBarrierStage::GRAPHICS,
+      RenderTextureBarrier(texture.get(), RenderTextureLayout::COLOR_WRITE));
+  list->setFramebuffer(framebuffer.get());
+  RenderRect rectangle = {1, 1, 6, 5};
+  list->clearColor(0, clear, &rectangle, 1);
+  for (unsigned mip = 0; mip < 2; ++mip) {
+    for (unsigned layer = 0; layer < 2; ++layer) {
+      const unsigned width = 16 >> mip;
+      std::vector<RenderColor> expected(width * width, background);
+      if (mip == 1 && layer == 1)
+        paint(expected, width, rectangle, clear);
+      expectPixels(readImage(device, list, queue, fence, texture.get(), width,
+                             width, 4, mip, layer),
+                   expected, desc.format);
+      if (mip != 1 || layer != 1)
+        list->begin();
+    }
+  }
+  std::puts("PASS: actual view mip=1/layer=1 extent=8x8, all sibling "
+            "mips/layers preserved");
+}
+static void multipleAttachmentPixels(VulkanDevice &device,
+                                     RenderCommandQueue *queue,
+                                     RenderCommandList *list,
+                                     RenderCommandFence *fence) {
+  for (uint32_t samples : {1u, 4u}) {
+    RenderMultisampling ms;
+    ms.sampleCount = samples;
+    auto first = device.createTexture(RenderTextureDesc::ColorTarget(
+        16, 16, RenderFormat::R8G8B8A8_UNORM, ms));
+    auto second = device.createTexture(RenderTextureDesc::ColorTarget(
+        16, 16, RenderFormat::B8G8R8A8_UNORM, ms));
+    auto depth = device.createTexture(
+        RenderTextureDesc::DepthTarget(16, 16, RenderFormat::D32_FLOAT, ms));
+    // Use an explicit view on MSAA as well as single-sample targets.
+    RenderTextureViewDesc viewDesc =
+        RenderTextureViewDesc::Texture2D(RenderFormat::B8G8R8A8_UNORM);
+    viewDesc.mipLevels = viewDesc.arraySize = 1;
+    auto view = second->createTextureView(viewDesc);
+    const RenderTexture *colors[] = {first.get(), second.get()};
+    const RenderTextureView *views[] = {nullptr, view.get()};
+    RenderFramebufferDesc fbDesc(colors, 2, depth.get());
+    fbDesc.colorAttachmentViews = views;
+    auto framebuffer = device.createFramebuffer(fbDesc);
+    auto vertex =
+        device.createShader(ColorClearVertex, sizeof(ColorClearVertex), "main",
+                            RenderShaderFormat::SPIRV);
+    auto fragment =
+        device.createShader(OrdinaryDrawFragment, sizeof(OrdinaryDrawFragment),
+                            "main", RenderShaderFormat::SPIRV);
+    RenderPushConstantRange range(0, 0, 0, 16, RenderShaderStageFlag::PIXEL);
+    auto layout = device.createPipelineLayout(
+        RenderPipelineLayoutDesc(&range, 1, nullptr, 0));
+    RenderGraphicsPipelineDesc desc;
+    desc.vertexShader = vertex.get();
+    desc.pixelShader = fragment.get();
+    desc.pipelineLayout = layout.get();
+    desc.depthClipEnabled = true;
+    desc.multisampling = ms;
+    desc.renderTargetCount = 2;
+    desc.renderTargetFormat[0] = RenderFormat::R8G8B8A8_UNORM;
+    desc.renderTargetFormat[1] = RenderFormat::B8G8R8A8_UNORM;
+    desc.renderTargetBlend[0] = desc.renderTargetBlend[1] =
+        RenderBlendDesc::Copy();
+    desc.renderTargetBlend[1].renderTargetWriteMask = 0;
+    desc.depthTargetFormat = RenderFormat::D32_FLOAT;
+    desc.depthEnabled = true;
+    desc.depthFunction = RenderComparisonFunction::EQUAL;
+    auto pipeline = device.createGraphicsPipeline(desc);
+    const RenderColor background(0.1f, 0.2f, 0.3f, 0.7f),
+        clear(0.8f, 0.3f, 0.1f, 0), blue(0.2f, 0.4f, 0.9f, 0.5f);
+    list->begin();
+    list->barriers(
+        RenderBarrierStage::COPY,
+        RenderTextureBarrier(depth.get(), RenderTextureLayout::COPY_DEST));
+    auto *vkList = static_cast<VulkanCommandList *>(list);
+    auto *vkDepth = static_cast<VulkanTexture *>(depth.get());
+    VkClearDepthStencilValue depthValue = {0.25f, 0};
+    vkCmdClearDepthStencilImage(
+        vkList->vk, vkDepth->vk, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        &depthValue, 1, &vkDepth->imageSubresourceRange);
+    RenderTextureBarrier barriers[] = {
+        {first.get(), RenderTextureLayout::COLOR_WRITE},
+        {second.get(), RenderTextureLayout::COLOR_WRITE},
+        {depth.get(), RenderTextureLayout::DEPTH_WRITE}};
+    list->barriers(RenderBarrierStage::GRAPHICS, barriers, 3);
+    list->setFramebuffer(framebuffer.get());
+    // Explicit full rectangle is a draw, never a whole-image transfer, because
+    // the second attachment uses a non-base view.
+    RenderRect entire = {0, 0, 16, 16};
+    list->clearColor(0, background);
+    list->clearColor(1, background, &entire, 1);
+    list->setPipeline(pipeline.get());
+    list->setGraphicsPipelineLayout(layout.get());
+    list->setGraphicsPushConstants(0, &blue);
+    RenderViewport viewports[] = {RenderViewport(12, 12, 3, 3, 0.25f, 0.25f),
+                                  RenderViewport(12, 12, 3, 3, 0.25f, 0.25f)};
+    RenderRect scissors[] = {{12, 12, 15, 15}, {12, 12, 15, 15}};
+    list->setViewports(viewports, 2);
+    list->setScissors(scissors, 2);
+    RenderRect rectangle = {1, 2, 7, 10};
+    list->clearColor(1, clear, &rectangle, 1);
+    list->drawInstanced(3, 1, 0,
+                        0); // EQUAL passes only if depth stayed at 0.25.
+    for (unsigned index = 0; index < 2; ++index) {
+      auto resolved = device.createTexture(RenderTextureDesc::ColorTarget(
+          16, 16,
+          index == 0 ? RenderFormat::R8G8B8A8_UNORM
+                     : RenderFormat::B8G8R8A8_UNORM));
+      RenderTexture *source = index == 0 ? first.get() : second.get();
+      if (samples > 1) {
+        RenderTextureBarrier resolveBarriers[] = {
+            {source, RenderTextureLayout::RESOLVE_SOURCE},
+            {resolved.get(), RenderTextureLayout::RESOLVE_DEST}};
+        list->barriers(RenderBarrierStage::COPY, resolveBarriers, 2);
+        list->resolveTexture(resolved.get(), source);
+        source = resolved.get();
+      }
+      std::vector<RenderColor> expected(16 * 16, background);
+      paint(expected, 16, index == 0 ? scissors[0] : rectangle,
+            index == 0 ? blue : clear);
+      expectPixels(readImage(device, list, queue, fence, source, 16, 16, 4),
+                   expected,
+                   index == 0 ? RenderFormat::R8G8B8A8_UNORM
+                              : RenderFormat::B8G8R8A8_UNORM);
+      if (index == 0)
+        list->begin();
+    }
+    std::printf("PASS: selected attachment=1 explicit view, other colour/depth "
+                "preserved, samples=%u\n",
+                samples);
+  }
+}
+
 int main() {
+  std::setvbuf(stdout, nullptr, _IONBF, 0);
   VulkanInterface
       interface; // Expected Android-surface rejection on a host loader.
   const char *layers[] = {"VK_LAYER_KHRONOS_validation"};
@@ -151,6 +524,11 @@ int main() {
                   "transparent alpha\n",
                   samples);
     }
+#if !defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST)
+    partialPixels(device, queue.get(), list.get(), fence.get());
+    attachmentViewPixels(device, queue.get(), list.get(), fence.get());
+    multipleAttachmentPixels(device, queue.get(), list.get(), fence.get());
+#endif
   }
   vkDestroyDebugUtilsMessengerEXT(interface.instance, messenger, nullptr);
   REQUIRE(validationErrors == 0);

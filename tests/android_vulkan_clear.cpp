@@ -1,7 +1,9 @@
 // Recording tests of production Android code, not GPU execution. Synthetic
 // images describe the launcher's state; Vulkan entry points check every
 // command.
+#include "../lib/rt64/src/hle/rt64_vulkan_queue_diagnostic.h"
 #include "plume_vulkan.h"
+#include "plume_vulkan_clear_shaders.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -31,6 +33,16 @@ static std::unordered_map<VkRenderPass, PassRecord> passes;
 static std::unordered_map<VkFramebuffer, VkRenderPass> framebufferPasses;
 static std::unordered_map<VkImage, VkImageLayout> imageLayouts;
 static std::vector<char> commands;
+static bool isolation = false, acquireFails = false, colorFeature = true;
+static unsigned isolationSubmits = 0, isolationWaits = 0, acquireCalls = 0;
+static VkSemaphore acquired = VK_NULL_HANDLE;
+static VkPipeline boundPipeline = VK_NULL_HANDLE;
+static std::unordered_set<VkPipeline> clearPipelines;
+static std::vector<VkViewport> boundViewports;
+static std::vector<VkRect2D> boundScissors, clearDrawScissors;
+static float boundDepthBias[3] = {};
+static std::vector<uint8_t> pushed;
+static unsigned clearDraws = 0, drawPipelineCreates = 0;
 static VkRenderPass selectedPass;
 static VkClearColorValue selectedValue;
 static VkImage selectedImage;
@@ -55,7 +67,8 @@ static void formatProperties(VkPhysicalDevice, VkFormat,
                              VkFormatProperties *out) {
   *out = {};
   out->optimalTilingFeatures =
-      transferFeature ? VK_FORMAT_FEATURE_TRANSFER_DST_BIT : 0;
+      (transferFeature ? VK_FORMAT_FEATURE_TRANSFER_DST_BIT : 0) |
+      (colorFeature ? VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT : 0);
 }
 static VkResult imageProperties(VkPhysicalDevice, VkFormat format,
                                 VkImageType type, VkImageTiling tiling,
@@ -129,8 +142,16 @@ static VkResult swapchainImages(VkDevice, VkSwapchainKHR, uint32_t *count,
   if (out) {
     out[0] = handle<VkImage>();
     out[1] = handle<VkImage>();
+    imageLayouts[out[0]] = imageLayouts[out[1]] = VK_IMAGE_LAYOUT_UNDEFINED;
   }
   return VK_SUCCESS;
+}
+static VkResult acquireImage(VkDevice, VkSwapchainKHR, uint64_t,
+                             VkSemaphore semaphore, VkFence, uint32_t *out) {
+  ++acquireCalls;
+  acquired = semaphore;
+  *out = 0;
+  return acquireFails ? VK_ERROR_OUT_OF_DATE_KHR : VK_SUCCESS;
 }
 static void testImageConfigurations(VulkanDevice &device) {
   expectedImageInfo = {};
@@ -341,6 +362,12 @@ static void barrier(VkCommandBuffer, VkPipelineStageFlags src,
     REQUIRE(image->dstAccessMask == VK_ACCESS_TRANSFER_WRITE_BIT);
     REQUIRE(src & VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     REQUIRE(dst & VK_PIPELINE_STAGE_TRANSFER_BIT);
+  } else if (isolation && image->oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+    REQUIRE(image->newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    REQUIRE(image->srcAccessMask == 0);
+  } else if (isolation && image->newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+    REQUIRE(image->oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    REQUIRE(src & VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
   } else {
     REQUIRE(image->oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     REQUIRE(image->newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -373,8 +400,108 @@ static void clearAttachments(VkCommandBuffer, uint32_t,
   commands.push_back('C');
 }
 static void draw(VkCommandBuffer, uint32_t, uint32_t, uint32_t, uint32_t) {
-  REQUIRE(inPass);
+  REQUIRE(!rejectBeforeRecording && inPass);
   commands.push_back('D');
+  if (clearPipelines.count(boundPipeline)) {
+    REQUIRE(pushed.size() >= 32);
+    RenderRect rectangle;
+    std::memcpy(&rectangle, pushed.data() + 16, sizeof(rectangle));
+    REQUIRE(rectangle.left == boundScissors[0].offset.x &&
+            rectangle.top == boundScissors[0].offset.y);
+    REQUIRE(uint32_t(rectangle.right - rectangle.left) ==
+            boundScissors[0].extent.width);
+    REQUIRE(uint32_t(rectangle.bottom - rectangle.top) ==
+            boundScissors[0].extent.height);
+    ++clearDraws;
+    clearDrawScissors.push_back(boundScissors.at(0));
+  }
+}
+static VkResult resetCommands(VkCommandBuffer, VkCommandBufferResetFlags) {
+  REQUIRE(!inPass);
+  return VK_SUCCESS;
+}
+static VkResult beginCommands(VkCommandBuffer,
+                              const VkCommandBufferBeginInfo *) {
+  return VK_SUCCESS;
+}
+static VkResult endCommands(VkCommandBuffer) {
+  REQUIRE(!inPass);
+  return VK_SUCCESS;
+}
+static VkResult createLayout(VkDevice, const VkPipelineLayoutCreateInfo *p,
+                             const VkAllocationCallbacks *,
+                             VkPipelineLayout *out) {
+  REQUIRE(p->setLayoutCount == 0 && p->pushConstantRangeCount == 1);
+  *out = handle<VkPipelineLayout>();
+  return VK_SUCCESS;
+}
+static void destroyLayout(VkDevice, VkPipelineLayout,
+                          const VkAllocationCallbacks *) {}
+static VkResult createShader(VkDevice, const VkShaderModuleCreateInfo *p,
+                             const VkAllocationCallbacks *,
+                             VkShaderModule *out) {
+  REQUIRE(p->pCode[0] == 0x07230203);
+  if (p->codeSize == sizeof(ColorClearFragment))
+    REQUIRE(p->pCode[ColorClearFragmentLocationWord] == selectedIndex);
+  *out = handle<VkShaderModule>();
+  return VK_SUCCESS;
+}
+static void destroyShader(VkDevice, VkShaderModule,
+                          const VkAllocationCallbacks *) {}
+static VkResult createPipeline(VkDevice, VkPipelineCache, uint32_t count,
+                               const VkGraphicsPipelineCreateInfo *p,
+                               const VkAllocationCallbacks *, VkPipeline *out) {
+  REQUIRE(!rejectBeforeRecording && count == 1 && p->subpass == 0);
+  REQUIRE(passes.at(p->renderPass).attachments[selectedIndex].loadOp ==
+          VK_ATTACHMENT_LOAD_OP_LOAD);
+  REQUIRE(p->pVertexInputState->vertexBindingDescriptionCount == 0);
+  REQUIRE(p->pViewportState->viewportCount == 1);
+  REQUIRE(!p->pRasterizationState->depthBiasEnable &&
+          p->pRasterizationState->cullMode == VK_CULL_MODE_NONE);
+  REQUIRE(p->pMultisampleState->pSampleMask == nullptr &&
+          !p->pMultisampleState->alphaToCoverageEnable);
+  REQUIRE(!p->pDepthStencilState->depthTestEnable &&
+          !p->pDepthStencilState->depthWriteEnable &&
+          !p->pDepthStencilState->stencilTestEnable);
+  for (unsigned i = 0; i < p->pColorBlendState->attachmentCount; ++i) {
+    REQUIRE(!p->pColorBlendState->pAttachments[i].blendEnable);
+    REQUIRE(p->pColorBlendState->pAttachments[i].colorWriteMask ==
+            (i == selectedIndex ? 15 : 0));
+  }
+  ++drawPipelineCreates;
+  *out = handle<VkPipeline>();
+  clearPipelines.insert(*out);
+  return VK_SUCCESS;
+}
+static void destroyPipeline(VkDevice, VkPipeline,
+                            const VkAllocationCallbacks *) {}
+static void bindPipeline(VkCommandBuffer, VkPipelineBindPoint point,
+                         VkPipeline pipeline) {
+  REQUIRE(point == VK_PIPELINE_BIND_POINT_GRAPHICS);
+  boundPipeline = pipeline;
+}
+static void setViewport(VkCommandBuffer, uint32_t first, uint32_t count,
+                        const VkViewport *values) {
+  REQUIRE(first == 0);
+  boundViewports.assign(values, values + count);
+}
+static void setScissor(VkCommandBuffer, uint32_t first, uint32_t count,
+                       const VkRect2D *values) {
+  REQUIRE(first == 0);
+  boundScissors.assign(values, values + count);
+}
+static void setBias(VkCommandBuffer, float bias, float clamp, float slope) {
+  boundDepthBias[0] = bias;
+  boundDepthBias[1] = clamp;
+  boundDepthBias[2] = slope;
+}
+static void pushConstants(VkCommandBuffer, VkPipelineLayout,
+                          VkShaderStageFlags stages, uint32_t offset,
+                          uint32_t size, const void *data) {
+  REQUIRE(stages == VK_SHADER_STAGE_FRAGMENT_BIT);
+  if (pushed.size() < offset + size)
+    pushed.resize(offset + size);
+  std::memcpy(pushed.data() + offset, data, size);
 }
 static VkResult createSem(VkDevice, const VkSemaphoreCreateInfo *,
                           const VkAllocationCallbacks *, VkSemaphore *out) {
@@ -385,8 +512,33 @@ static void destroySem(VkDevice, VkSemaphore, const VkAllocationCallbacks *) {}
 static VkResult submit(VkQueue, uint32_t count, const VkSubmitInfo *p,
                        VkFence) {
   REQUIRE(!rejectBeforeRecording);
-  REQUIRE(count == 1 && p->waitSemaphoreCount == 2);
-  for (unsigned i = 0; i < 2; ++i)
+  REQUIRE(count == 1);
+  if (isolation) {
+    REQUIRE(isolationSubmits < 5);
+    REQUIRE(p->waitSemaphoreCount == (isolationSubmits == 1 ? 1 : 0));
+    if (isolationSubmits == 1)
+      REQUIRE(p->pWaitSemaphores[0] == acquired && acquireCalls == 1);
+    if (isolationSubmits <= 1)
+      REQUIRE(commands.empty());
+    if (isolationSubmits == 2 || isolationSubmits == 4)
+      REQUIRE(commands == std::vector<char>{'I'});
+    if (isolationSubmits == 3) {
+#if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) &&                               \
+    !TOOIE_VULKAN_TRANSFER_CLEAR_TEST
+#if defined(TOOIE_VULKAN_CLEAR_BARRIER_TEST) && TOOIE_VULKAN_CLEAR_BARRIER_TEST
+      REQUIRE(commands == std::vector<char>{'M'});
+#else
+      REQUIRE(commands == std::vector<char>({'M', 'B', 'E'}));
+#endif
+#else
+      REQUIRE(commands == std::vector<char>({'I', 'K', 'I'}));
+#endif
+    }
+    commands.clear();
+    ++isolationSubmits;
+  } else
+    REQUIRE(p->waitSemaphoreCount == 2);
+  for (unsigned i = 0; i < p->waitSemaphoreCount; ++i)
     REQUIRE(p->pWaitDstStageMask[i] == VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
   return VK_SUCCESS;
 }
@@ -399,6 +551,8 @@ static void destroyFence(VkDevice, VkFence, const VkAllocationCallbacks *) {}
 static VkResult waitFence(VkDevice, uint32_t, const VkFence *, VkBool32,
                           uint64_t timeout) {
   REQUIRE(timeout == 5000000000ULL);
+  if (isolation)
+    ++isolationWaits;
   return simulateTimeout ? VK_TIMEOUT : VK_SUCCESS;
 }
 static VkResult resetFence(VkDevice, uint32_t, const VkFence *) {
@@ -454,6 +608,21 @@ int main(int argc, char **argv) {
   vkCmdClearColorImage = clearImage;
   vkCmdClearAttachments = clearAttachments;
   vkCmdDraw = draw;
+  vkResetCommandBuffer = resetCommands;
+  vkBeginCommandBuffer = beginCommands;
+  vkEndCommandBuffer = endCommands;
+  vkCreatePipelineLayout = createLayout;
+  vkDestroyPipelineLayout = destroyLayout;
+  vkCreateShaderModule = createShader;
+  vkDestroyShaderModule = destroyShader;
+  vkCreateGraphicsPipelines = createPipeline;
+  vkDestroyPipeline = destroyPipeline;
+  vkCmdBindPipeline = bindPipeline;
+  vkCmdSetViewport = setViewport;
+  vkCmdSetScissor = setScissor;
+  vkCmdSetDepthBias = setBias;
+  vkCmdPushConstants = pushConstants;
+  vkAcquireNextImageKHR = acquireImage;
   vkCreateSemaphore = createSem;
   vkDestroySemaphore = destroySem;
   vkQueueSubmit = submit;
@@ -466,6 +635,37 @@ int main(int argc, char **argv) {
   device.queueFamilies[0].queues[0].mutex = std::make_unique<std::mutex>();
   VulkanCommandQueue queue(&device, RenderCommandListType::DIRECT);
   VulkanCommandList list(&queue);
+  device.independentBlendSupported = true;
+  if (argc > 1 && std::strncmp(argv[1], "--isolation", 11) == 0) {
+    isolation = true;
+    acquireFails = std::strcmp(argv[1], "--isolation-acquire-fails") == 0;
+    simulateTimeout = std::strcmp(argv[1], "--isolation-timeout") == 0;
+    RenderSwapChainDesc desc;
+    desc.renderWindow = reinterpret_cast<ANativeWindow *>(1);
+    desc.format = RenderFormat::B8G8R8A8_UNORM;
+    desc.textureCount = 2;
+    VulkanSwapChain swapchain(&queue, desc);
+    if (std::strcmp(argv[1], "--isolation-surface-fails") == 0)
+      surfaceUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    VulkanCommandFence fence(&device);
+    const bool done = RT64::RunVulkanQueueDiagnostic(&device, &swapchain, &list,
+                                                     &queue, &fence);
+    REQUIRE(done == (!acquireFails &&
+                     (surfaceUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT)));
+    REQUIRE(isolationSubmits == (done ? 5 : acquireFails ? 1 : 0));
+    REQUIRE(isolationWaits == isolationSubmits && clearDraws == 0);
+    if (done)
+      REQUIRE(imageLayouts.at(
+                  static_cast<VulkanTexture *>(swapchain.getTexture(0))->vk) ==
+              VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    std::puts("PASS: isolated A-E submissions, single acquire wait, per-phase "
+              "fence, no raster work");
+    return 0;
+  }
+  const char *drawReject =
+      argc > 1 && std::strncmp(argv[1], "--draw-reject=", 14) == 0
+          ? argv[1] + 14
+          : nullptr;
   if (argc > 1 && std::strncmp(argv[1], "--image-reject=", 15) == 0) {
     const char *mode = argv[1] + 15;
     RenderMultisampling ms;
@@ -529,6 +729,11 @@ int main(int argc, char **argv) {
       depth.desc =
           RenderTextureDesc::DepthTarget(640, 480, RenderFormat::D32_FLOAT);
       depth.desc.multisampling.sampleCount = samples;
+      depth.textureLayout = RenderTextureLayout::DEPTH_WRITE;
+      depth.barrierStages = RenderBarrierStage::GRAPHICS;
+      depth.device = &device;
+      depth.vk = handle<VkImage>();
+      depth.imageView = handle<VkImageView>();
       const RenderTexture *colors[] = {&first, &second};
       selectedIndex = count - 1;
       auto &selected = count == 1 ? first : second;
@@ -654,6 +859,79 @@ int main(int argc, char **argv) {
 #if !defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST)
         REQUIRE(commands == std::vector<char>({'E', 'I', 'K', 'I'}));
 #endif
+#if !defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) &&                              \
+    !defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK)
+        RenderRect rectangles[] = {{0, 0, 32, 32}, {8, 16, 40, 48}};
+        if (drawReject) {
+          if (!std::strcmp(drawReject, "rectangle-out-of-bounds"))
+            rectangles[1].right = 641;
+          if (!std::strcmp(drawReject, "unsupported-draw-format"))
+            framebuffer.colorAttachmentFormats[selectedIndex] =
+                VK_FORMAT_R8G8B8A8_UINT;
+          if (!std::strcmp(drawReject, "format-color-attachment-unsupported"))
+            colorFeature = false;
+          if (!std::strcmp(drawReject, "missing-color-attachment-usage"))
+            selected.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+          if (!std::strcmp(drawReject, "null-attachment-view"))
+            framebuffer.colorAttachmentImageViews[selectedIndex] =
+                VK_NULL_HANDLE;
+          if (!std::strcmp(drawReject, "layout-not-color-write"))
+            selected.textureLayout = RenderTextureLayout::PRESENT;
+          if (!std::strcmp(drawReject, "missing-graphics-stage"))
+            selected.barrierStages = RenderBarrierStage::NONE;
+          rejectBeforeRecording = true;
+          commands.clear();
+          list.clearColor(selectedIndex, RenderColor(), rectangles, 2);
+          REQUIRE(false);
+        }
+        // Capture a caller with multiple viewports/scissors, a non-default
+        // depth bias, and partially overlapping push updates in an incompatible
+        // range.
+        RenderViewport viewports[] = {{1, 2, 100, 200, 0, 1},
+                                      {3, 4, 50, 60, 0, 1}};
+        RenderRect scissors[] = {{1, 2, 99, 199}, {3, 4, 49, 59}};
+        list.setViewports(viewports, 2);
+        list.setScissors(scissors, 2);
+        list.setDepthBias(2.0f, 0.0f, 3.0f);
+        const VkPipeline callerPipeline = handle<VkPipeline>();
+        list.graphicsPipeline = callerPipeline;
+        RenderPushConstantRange range(0, 0, 0, 48,
+                                      RenderShaderStageFlag::PIXEL);
+        VulkanPipelineLayout layout(
+            &device, RenderPipelineLayoutDesc(&range, 1, nullptr, 0));
+        list.setGraphicsPipelineLayout(&layout);
+        uint8_t constants[48];
+        std::memset(constants, 17, sizeof(constants));
+        list.setGraphicsPushConstants(0, constants, 0, sizeof(constants));
+        uint32_t patch = 0x76543210;
+        list.setGraphicsPushConstants(0, &patch, 4, sizeof(patch));
+        std::memcpy(constants + 4, &patch, 4);
+        commands.clear();
+        clearDrawScissors.clear();
+        const unsigned pipelineCount = drawPipelineCreates;
+        list.clearColor(selectedIndex, RenderColor(0.2f, 0.3f, 0.4f, 0.0f),
+                        rectangles, 2);
+        REQUIRE(commands == (inPass ? std::vector<char>({'M', 'B', 'D', 'D'})
+                                    : std::vector<char>{}));
+        REQUIRE(drawPipelineCreates == pipelineCount + 1);
+        REQUIRE(clearDrawScissors.size() == 2 &&
+                clearDrawScissors[1].offset.x == 8 &&
+                clearDrawScissors[1].extent.height == 32);
+        REQUIRE(boundPipeline == callerPipeline && boundViewports.size() == 2 &&
+                boundViewports[0].x == 1 && boundScissors.size() == 2 &&
+                boundScissors[0].offset.x == 1);
+        REQUIRE(boundDepthBias[0] == 2 && boundDepthBias[2] == 3);
+        REQUIRE(pushed.size() == 48 &&
+                std::memcmp(pushed.data(), constants, 48) == 0);
+        REQUIRE(list.activeGraphicsPipelineLayout == &layout &&
+                list.graphicsPushConstantWrites.size() == 2);
+        commands.clear();
+        list.clearColor(selectedIndex, RenderColor(), rectangles, 1);
+        REQUIRE(commands == std::vector<char>({'E', 'M', 'B', 'D'}) &&
+                drawPipelineCreates == pipelineCount + 1);
+        list.graphicsPushConstantWrites.clear();
+        list.activeGraphicsPipelineLayout = nullptr;
+#endif
 #if defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK) &&                   \
     TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK
         RenderRect rect = {0, 0, 32, 32};
@@ -717,6 +995,12 @@ int main(int argc, char **argv) {
       selected.ownership = false;
     }
   REQUIRE(destroyedPasses == createdPasses);
+  list.begin();
+  REQUIRE(list.graphicsPipeline == VK_NULL_HANDLE &&
+          list.graphicsViewports.empty() && list.graphicsScissors.empty() &&
+          list.graphicsPushConstantWrites.empty() &&
+          !list.graphicsDepthBiasSet);
+  list.end();
   VulkanCommandSemaphore first(&device), second(&device);
   RenderCommandSemaphore *waits[] = {&first, &second};
   const RenderCommandList *lists[] = {&list};

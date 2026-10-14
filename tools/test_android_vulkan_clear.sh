@@ -32,7 +32,7 @@ expect_rejection() {
         result=$?
         test "$result" -eq 1 || { cat "$test_dir/rejection.out"; exit 1; }
     fi
-    grep -q "reason=$reason" "$test_dir/rejection.out"
+    grep -q "reason=$reason" "$test_dir/rejection.out" || { cat "$test_dir/rejection.out"; echo "FAIL: expected rejection $reason"; exit 1; }
 }
 
 build_and_record proposal -DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=1
@@ -44,13 +44,45 @@ build_and_record legacy-skip-comparison -DTOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FA
 
 # Each child prohibits begin/clear/barrier/submit callbacks before its expected
 # rejection, so a return through the former fallback cannot masquerade as a pass.
-for reason in partial-rectangles explicit-attachment-view not-2d linear-tiling \
+for reason in explicit-attachment-view not-2d linear-tiling \
     multiple-mip-levels multiple-array-layers framebuffer-extent-mismatch \
     missing-transfer-dst-usage attachment-format-mismatch unsupported-clear-format \
     format-transfer-dst-unsupported null-image null-image-view null-framebuffer \
     null-render-pass layout-not-color-write missing-graphics-stage; do
     expect_rejection proposal "--reject=$reason" "$reason"
 done
+for reason in rectangle-out-of-bounds unsupported-draw-format format-color-attachment-unsupported \
+    missing-color-attachment-usage null-attachment-view layout-not-color-write missing-graphics-stage; do
+    expect_rejection proposal "--draw-reject=$reason" "$reason"
+done
+# Exercise the production isolation entry point, including startup failures.
+for mode in proposal legacy-transfer load-op-control barrier-control; do
+    for argument in --isolation --isolation-acquire-fails --isolation-surface-fails; do
+        APP_FOLDER_PATH="$test_dir/log-$mode" "$test_dir/$mode" "$argument" >"$test_dir/isolation.out" 2>&1 || { cat "$test_dir/isolation.out"; exit 1; }
+    done
+done
+mkdir -p "$test_dir/log-isolation-timeout"
+if APP_FOLDER_PATH="$test_dir/log-isolation-timeout" "$test_dir/proposal" --isolation-timeout >"$test_dir/isolation-timeout.out" 2>&1; then
+    echo 'FAIL: isolation accepted fence timeout' >&2; exit 1
+else
+    test "$?" -eq 1
+fi
+grep -q 'DIAG A: empty submit' "$test_dir/log-isolation-timeout/banjotooi-debug.log"
+if grep -q 'DIAG B:' "$test_dir/log-isolation-timeout/banjotooi-debug.log"; then
+    echo 'FAIL: isolation continued after A timeout' >&2; exit 1
+fi
+# Guard scheduling location as well as command sequencing: never move the test
+# back behind shader setup/workload threads or into per-frame raster work.
+python3 - "$repo_root" <<'PYTEST'
+from pathlib import Path
+import sys
+root = Path(sys.argv[1])
+s = (root / 'lib/rt64/src/hle/rt64_application.cpp').read_text()
+start = s.index('RunVulkanQueueDiagnostic(')
+assert s.index('createSwapChain(swapChainDesc)') < start < s.index('shaderLibrary->setupCommonShaders')
+assert start < s.index('workloadQueue->setup(') < s.index('presentQueue->setup(') < s.index('state->setup(')
+assert 'RunVulkanQueueDiagnostic' not in (root / 'lib/rt64/src/hle/rt64_present_queue.cpp').read_text()
+PYTEST
 expect_rejection legacy-transfer --reject=legacy-requires-external-image legacy-requires-external-image
 expect_rejection legacy-transfer --reject=legacy-requires-single-sample legacy-requires-single-sample
 expect_rejection load-op-control --reject=partial-rectangles partial-rectangles

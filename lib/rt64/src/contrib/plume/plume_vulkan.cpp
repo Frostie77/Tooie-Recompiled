@@ -10,6 +10,9 @@
 #define VOLK_IMPLEMENTATION 
 
 #include "plume_vulkan.h"
+#if defined(__ANDROID__)
+#include "plume_vulkan_clear_shaders.h"
+#endif
 
 #include <algorithm>
 #include <cmath>
@@ -2609,6 +2612,24 @@ namespace plume {
 
     // VulkanFramebuffer
     
+#if defined(__ANDROID__)
+    static VkExtent2D attachmentViewExtent(const VulkanTexture *texture, const RenderTextureViewDesc &view) {
+        const auto &mapping = view.componentMapping;
+        const bool valid = texture->desc.dimension == RenderTextureDimension::TEXTURE_2D &&
+            view.dimension == RenderTextureViewDimension::TEXTURE_2D && view.mipSlice < texture->desc.mipLevels &&
+            view.mipSlice < 32 && view.arrayIndex < texture->desc.arraySize && view.arraySize != 0 &&
+            std::min(view.mipLevels, texture->desc.mipLevels - view.mipSlice) == 1 &&
+            mapping.r == RenderSwizzle::IDENTITY && mapping.g == RenderSwizzle::IDENTITY &&
+            mapping.b == RenderSwizzle::IDENTITY && mapping.a == RenderSwizzle::IDENTITY;
+        if (!valid) {
+            tooie_android_debug_log("Framebuffer rejected: attachment requires a valid 2D single-mip identity view");
+            std::fprintf(stderr, "Framebuffer rejected: attachment requires a valid 2D single-mip identity view\n");
+            std::_Exit(EXIT_FAILURE);
+        }
+        return { std::max(1u, texture->desc.width >> view.mipSlice), std::max(1u, texture->desc.height >> view.mipSlice) };
+    }
+#endif
+
     VulkanFramebuffer::VulkanFramebuffer(VulkanDevice *device, const RenderFramebufferDesc &desc) {
         assert(device != nullptr);
 
@@ -2624,15 +2645,27 @@ namespace plume {
             const VulkanTexture *colorAttachment;
             VkImageView colorAttachmentImageView;
             RenderFormat colorAttachmentFormat;
+#if defined(__ANDROID__)
+            RenderTextureViewDesc attachmentViewDesc;
+#endif
             if (desc.colorAttachmentViews && desc.colorAttachmentViews[i]) {
                 const VulkanTextureView* colorAttachmentView = static_cast<const VulkanTextureView *>(desc.colorAttachmentViews[i]);
                 colorAttachment = colorAttachmentView->texture;
                 colorAttachmentImageView = colorAttachmentView->vk;
                 colorAttachmentFormat = colorAttachmentView->desc.format;
+#if defined(__ANDROID__)
+                attachmentViewDesc = colorAttachmentView->desc;
+#endif
             } else {
                 colorAttachment = static_cast<const VulkanTexture *>(desc.colorAttachments[i]);
                 colorAttachmentImageView = colorAttachment->imageView;
                 colorAttachmentFormat = colorAttachment->desc.format;
+#if defined(__ANDROID__)
+                attachmentViewDesc.format = colorAttachmentFormat;
+                attachmentViewDesc.dimension = RenderTextureDimensionToView(colorAttachment->desc.dimension);
+                attachmentViewDesc.mipLevels = colorAttachment->desc.mipLevels;
+                attachmentViewDesc.arraySize = colorAttachment->desc.arraySize;
+#endif
             }
             assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
             colorAttachments.emplace_back(colorAttachment);
@@ -2641,12 +2674,18 @@ namespace plume {
             colorAttachmentFormats.emplace_back(toVk(colorAttachmentFormat));
             colorAttachmentImageViews.emplace_back(colorAttachmentImageView);
             colorAttachmentUsesBaseView.emplace_back(!(desc.colorAttachmentViews && desc.colorAttachmentViews[i]));
+            colorAttachmentViewDescs.emplace_back(attachmentViewDesc);
+            const VkExtent2D extent = attachmentViewExtent(colorAttachment, attachmentViewDesc);
+            width = (i == 0) ? extent.width : std::min(width, extent.width);
+            height = (i == 0) ? extent.height : std::min(height, extent.height);
 #endif
 
+#if !defined(__ANDROID__)
             if (i == 0) {
                 width = uint32_t(colorAttachment->desc.width);
                 height = colorAttachment->desc.height;
             }
+#endif
 
             VkAttachmentReference reference = {};
             reference.attachment = uint32_t(attachments.size());
@@ -2688,10 +2727,16 @@ namespace plume {
             assert((depthAttachment->desc.flags & RenderTextureFlag::DEPTH_TARGET) && "Depth attachment must be a depth target.");
             imageViews.emplace_back(depthAttachmentImageView);
 
+#if defined(__ANDROID__)
+            const VkExtent2D extent = attachmentViewExtent(depthAttachment, depthAttachmentViewDesc);
+            width = (desc.colorAttachmentsCount == 0) ? extent.width : std::min(width, extent.width);
+            height = (desc.colorAttachmentsCount == 0) ? extent.height : std::min(height, extent.height);
+#else
             if (desc.colorAttachmentsCount == 0) {
                 width = uint32_t(depthAttachment->desc.width);
                 height = depthAttachment->desc.height;
             }
+#endif
 
             depthReference.attachment = uint32_t(attachments.size());
             depthReference.layout = desc.depthAttachmentReadOnly ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -2768,6 +2813,10 @@ namespace plume {
 
     VulkanFramebuffer::~VulkanFramebuffer() {
 #if defined(__ANDROID__)
+        for (VkPipeline pipeline : colorClearDrawPipelines) {
+            if (pipeline != VK_NULL_HANDLE) vkDestroyPipeline(device->vk, pipeline, nullptr);
+        }
+        if (colorClearDrawLayout != VK_NULL_HANDLE) vkDestroyPipelineLayout(device->vk, colorClearDrawLayout, nullptr);
         for (VkRenderPass clearPass : colorClearRenderPasses) {
             if (clearPass != VK_NULL_HANDLE) {
                 vkDestroyRenderPass(device->vk, clearPass, nullptr);
@@ -2919,6 +2968,14 @@ namespace plume {
     }
 
     void VulkanCommandList::begin() {
+#if defined(__ANDROID__)
+        // Command-buffer reset invalidates every previous graphics binding.
+        graphicsPipeline = VK_NULL_HANDLE;
+        graphicsViewports.clear();
+        graphicsScissors.clear();
+        graphicsPushConstantWrites.clear();
+        graphicsDepthBiasSet = false;
+#endif
         vkResetCommandBuffer(vk, 0);
 
         VkCommandBufferBeginInfo beginInfo = {};
@@ -3090,6 +3147,9 @@ namespace plume {
         case VulkanPipeline::Type::Graphics: {
             const VulkanGraphicsPipeline *graphicsPipeline = static_cast<const VulkanGraphicsPipeline *>(interfacePipeline);
             vkCmdBindPipeline(vk, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->vk);
+#if defined(__ANDROID__)
+            this->graphicsPipeline = graphicsPipeline->vk;
+#endif
             break;
         }
         case VulkanPipeline::Type::Raytracing: {
@@ -3133,6 +3193,22 @@ namespace plume {
 
         const VkPushConstantRange &range = activeGraphicsPipelineLayout->pushConstantRanges[rangeIndex];
         vkCmdPushConstants(vk, activeGraphicsPipelineLayout->vk, range.stageFlags & VK_SHADER_STAGE_ALL_GRAPHICS, range.offset + offset, size == 0 ? range.size : size, data);
+#if defined(__ANDROID__)
+        // Keep the latest write to each exact range in recording order. Replaying
+        // also restores partially overlapping writes and layout compatibility;
+        // the helper changes only fragment push constants, no descriptor sets.
+        GraphicsPushConstantWrite write = { activeGraphicsPipelineLayout->vk,
+            range.stageFlags & VK_SHADER_STAGE_ALL_GRAPHICS, range.offset + offset, {} };
+        const uint32_t writeSize = size == 0 ? range.size : size;
+        const uint8_t *bytes = static_cast<const uint8_t *>(data);
+        write.data.assign(bytes, bytes + writeSize);
+        for (auto it = graphicsPushConstantWrites.begin(); it != graphicsPushConstantWrites.end();) {
+            if (it->layout == write.layout && it->stages == write.stages &&
+                it->offset == write.offset && it->data.size() == write.data.size()) it = graphicsPushConstantWrites.erase(it);
+            else ++it;
+        }
+        graphicsPushConstantWrites.emplace_back(std::move(write));
+#endif
     }
 
     void VulkanCommandList::setGraphicsDescriptorSet(RenderDescriptorSet *descriptorSet, uint32_t setIndex) {
@@ -3195,6 +3271,11 @@ namespace plume {
     }
 
     void VulkanCommandList::setViewports(const RenderViewport *viewports, uint32_t count) {
+#if defined(__ANDROID__)
+        graphicsViewports.clear();
+        for (uint32_t i = 0; i < count; ++i) graphicsViewports.push_back(
+            VkViewport{ viewports[i].x, viewports[i].y, viewports[i].width, viewports[i].height, viewports[i].minDepth, viewports[i].maxDepth });
+#endif
         if (count > 1) {
             thread_local std::vector<VkViewport> viewportVector;
             viewportVector.clear();
@@ -3215,6 +3296,12 @@ namespace plume {
     }
 
     void VulkanCommandList::setScissors(const RenderRect *scissorRects, uint32_t count) {
+#if defined(__ANDROID__)
+        graphicsScissors.clear();
+        for (uint32_t i = 0; i < count; ++i) graphicsScissors.push_back(VkRect2D{
+            { scissorRects[i].left, scissorRects[i].top },
+            { uint32_t(scissorRects[i].right - scissorRects[i].left), uint32_t(scissorRects[i].bottom - scissorRects[i].top) } });
+#endif
         if (count > 1) {
             thread_local std::vector<VkRect2D> scissorVector;
             scissorVector.clear();
@@ -3247,6 +3334,12 @@ namespace plume {
     }
 
     void VulkanCommandList::setDepthBias(float depthBias, float depthBiasClamp, float slopeScaledDepthBias) {
+#if defined(__ANDROID__)
+        graphicsDepthBiasSet = true;
+        graphicsDepthBias[0] = depthBias;
+        graphicsDepthBias[1] = depthBiasClamp;
+        graphicsDepthBias[2] = slopeScaledDepthBias;
+#endif
         vkCmdSetDepthBias(vk, depthBias, depthBiasClamp, slopeScaledDepthBias);
     }
 
@@ -3284,14 +3377,16 @@ namespace plume {
         static thread_local uint32_t records = 0;
         static thread_local bool loggedSwapchain = false;
         static thread_local bool loggedOffscreenMSAA = false;
+        static thread_local bool loggedDraw = false;
         const VulkanTexture *texture = framebuffer->colorAttachments[attachmentIndex];
         const bool offscreenMSAA = texture->ownership && texture->desc.multisampling.sampleCount > 1;
         const bool firstCategory = (texture->isSwapChainImage && !loggedSwapchain) ||
-            (offscreenMSAA && !loggedOffscreenMSAA);
+            (offscreenMSAA && !loggedOffscreenMSAA) || (!loggedDraw && std::strcmp(path, "scissored-draw") == 0);
         if (records >= 16 && !firstCategory && !force) return false;
         if (records < 16) ++records;
         loggedSwapchain |= texture->isSwapChainImage;
         loggedOffscreenMSAA |= offscreenMSAA;
+        loggedDraw |= std::strcmp(path, "scissored-draw") == 0;
         char message[640];
         std::snprintf(message, sizeof(message),
             "Clear record: path=%s cb=%llx fb=%llx loadPass=%llx image=%llx boundView=%llx attachment=%u "
@@ -3334,12 +3429,221 @@ namespace plume {
     }
 #endif
 
+#if defined(__ANDROID__)
+    static void rejectColorClearDraw(const VulkanFramebuffer *framebuffer, uint32_t index,
+        VkCommandBuffer commandBuffer, const char *reason) {
+        logColorClearRecord(framebuffer, index, "draw-rejected", commandBuffer, true);
+        char message[256];
+        std::snprintf(message, sizeof(message), "Partial color clear rejected: reason=%s", reason);
+        tooie_android_debug_log(message);
+        std::fprintf(stderr, "%s\n", message);
+        std::_Exit(EXIT_FAILURE); // Never select vkCmdClearAttachments here.
+    }
+
+    VkPipeline VulkanFramebuffer::getColorClearDrawPipeline(uint32_t attachmentIndex) const {
+        if (colorClearDrawPipelines.empty()) colorClearDrawPipelines.resize(colorAttachments.size(), VK_NULL_HANDLE);
+        if (colorClearDrawPipelines[attachmentIndex] != VK_NULL_HANDLE) return colorClearDrawPipelines[attachmentIndex];
+        auto requireSuccess = [](VkResult result, const char *operation) {
+            if (result == VK_SUCCESS) return;
+            char message[256];
+            std::snprintf(message, sizeof(message), "Partial color clear setup failed: operation=%s result=%d", operation, int(result));
+            tooie_android_debug_log(message);
+            std::fprintf(stderr, "%s\n", message);
+            std::_Exit(EXIT_FAILURE);
+        };
+        if (colorClearDrawLayout == VK_NULL_HANDLE) {
+            VkPushConstantRange range = { VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(RenderColor) + sizeof(RenderRect) };
+            VkPipelineLayoutCreateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+            info.pushConstantRangeCount = 1;
+            info.pPushConstantRanges = &range;
+            requireSuccess(vkCreatePipelineLayout(device->vk, &info, nullptr, &colorClearDrawLayout), "vkCreatePipelineLayout");
+        }
+        VkShaderModule modules[2] = {};
+        VkShaderModuleCreateInfo moduleInfo = {};
+        moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        moduleInfo.codeSize = sizeof(ColorClearVertex);
+        moduleInfo.pCode = ColorClearVertex;
+        requireSuccess(vkCreateShaderModule(device->vk, &moduleInfo, nullptr, &modules[0]), "vertex module");
+        // Patch the generated, validated output Location decoration, not colour
+        // channel order. RGBA floats are converted by the actual attachment view.
+        std::vector<uint32_t> fragment(std::begin(ColorClearFragment), std::end(ColorClearFragment));
+        fragment[ColorClearFragmentLocationWord] = attachmentIndex;
+        moduleInfo.codeSize = fragment.size() * sizeof(uint32_t);
+        moduleInfo.pCode = fragment.data();
+        requireSuccess(vkCreateShaderModule(device->vk, &moduleInfo, nullptr, &modules[1]), "fragment module");
+        VkPipelineShaderStageCreateInfo stages[2] = {};
+        for (uint32_t i = 0; i < 2; ++i) {
+            stages[i].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            stages[i].stage = i == 0 ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT;
+            stages[i].module = modules[i];
+            stages[i].pName = "main";
+        }
+        VkPipelineVertexInputStateCreateInfo vertex = {};
+        vertex.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        VkPipelineInputAssemblyStateCreateInfo assembly = {};
+        assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        VkPipelineViewportStateCreateInfo viewport = {};
+        viewport.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        viewport.viewportCount = viewport.scissorCount = 1;
+        VkPipelineRasterizationStateCreateInfo raster = {};
+        raster.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        raster.polygonMode = VK_POLYGON_MODE_FILL;
+        raster.cullMode = VK_CULL_MODE_NONE;
+        raster.lineWidth = 1.0f;
+        VkPipelineMultisampleStateCreateInfo multisample = {};
+        multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        multisample.rasterizationSamples = VkSampleCountFlagBits(colorAttachments[attachmentIndex]->desc.multisampling.sampleCount);
+        // Null sample mask means every sample; no alpha-to-coverage or shading
+        // masks. Integer scissor edges cover all samples of each selected pixel.
+        VkPipelineDepthStencilStateCreateInfo depth = {};
+        depth.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        std::vector<VkPipelineColorBlendAttachmentState> blendAttachments(colorAttachments.size());
+        blendAttachments[attachmentIndex].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+            VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        VkPipelineColorBlendStateCreateInfo blend = {};
+        blend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        blend.attachmentCount = uint32_t(blendAttachments.size());
+        blend.pAttachments = blendAttachments.data();
+        const VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_DEPTH_BIAS };
+        VkPipelineDynamicStateCreateInfo dynamic = {};
+        dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamic.dynamicStateCount = 3;
+        dynamic.pDynamicStates = dynamicStates;
+        VkGraphicsPipelineCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        info.stageCount = 2;
+        info.pStages = stages;
+        info.pVertexInputState = &vertex;
+        info.pInputAssemblyState = &assembly;
+        info.pViewportState = &viewport;
+        info.pRasterizationState = &raster;
+        info.pMultisampleState = &multisample;
+        info.pDepthStencilState = &depth;
+        info.pColorBlendState = &blend;
+        info.pDynamicState = &dynamic;
+        info.layout = colorClearDrawLayout;
+        info.renderPass = renderPass; // Exact framebuffer pass, including depth/MRT.
+        VkResult result = vkCreateGraphicsPipelines(device->vk, VK_NULL_HANDLE, 1, &info, nullptr, &colorClearDrawPipelines[attachmentIndex]);
+        for (VkShaderModule module : modules) vkDestroyShaderModule(device->vk, module, nullptr);
+        requireSuccess(result, "vkCreateGraphicsPipelines");
+        return colorClearDrawPipelines[attachmentIndex];
+    }
+
+    void VulkanCommandList::clearColorDraw(uint32_t attachmentIndex, RenderColor colorValue,
+        const RenderRect *clearRects, uint32_t clearRectsCount) {
+        const VulkanTexture *texture = targetFramebuffer->colorAttachments[attachmentIndex];
+        const auto reject = [&](const char *reason) { rejectColorClearDraw(targetFramebuffer, attachmentIndex, vk, reason); };
+        // Validate before ending a pass or recording any command for this clear.
+        if (!clearRects || !clearRectsCount) reject("missing-rectangles");
+        if (texture->vk == VK_NULL_HANDLE) reject("null-image");
+        if (targetFramebuffer->colorAttachmentImageViews[attachmentIndex] == VK_NULL_HANDLE) reject("null-attachment-view");
+        if (targetFramebuffer->vk == VK_NULL_HANDLE) reject("null-framebuffer");
+        if (targetFramebuffer->renderPass == VK_NULL_HANDLE) reject("null-render-pass");
+        if (!targetFramebuffer->width || !targetFramebuffer->height) reject("empty-framebuffer");
+        if (texture->desc.dimension != RenderTextureDimension::TEXTURE_2D) reject("not-2d");
+        if (!(texture->imageUsage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) reject("missing-color-attachment-usage");
+        if (attachmentIndex >= ColorClearMaxAttachments) reject("attachment-location-unsupported");
+        if (targetFramebuffer->colorAttachments.size() > 1 && !queue->device->independentBlendSupported) reject("independent-blend-unsupported");
+        const VkFormat format = targetFramebuffer->colorAttachmentFormats[attachmentIndex];
+        switch (format) {
+        case VK_FORMAT_R8G8B8A8_UNORM: case VK_FORMAT_B8G8R8A8_UNORM:
+        case VK_FORMAT_R16G16B16A16_UNORM: case VK_FORMAT_R16G16B16A16_SFLOAT:
+        case VK_FORMAT_R32G32B32A32_SFLOAT: break;
+        default: reject("unsupported-draw-format");
+        }
+        VkFormatProperties properties = {};
+        vkGetPhysicalDeviceFormatProperties(queue->device->physicalDevice, format, &properties);
+        const VkFormatFeatureFlags features = texture->desc.textureArrangement == RenderTextureArrangement::ROW_MAJOR ?
+            properties.linearTilingFeatures : properties.optimalTilingFeatures;
+        if (!(features & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) reject("format-color-attachment-unsupported");
+        for (uint32_t i = 0; i < targetFramebuffer->colorAttachments.size(); ++i) {
+            const VulkanTexture *attachment = targetFramebuffer->colorAttachments[i];
+            if (attachment->vk == VK_NULL_HANDLE) reject("null-image");
+            if (targetFramebuffer->colorAttachmentImageViews[i] == VK_NULL_HANDLE) reject("null-attachment-view");
+            if (attachment->textureLayout != RenderTextureLayout::COLOR_WRITE) reject("layout-not-color-write");
+            if (!(attachment->barrierStages & RenderBarrierStage::GRAPHICS)) reject("missing-graphics-stage");
+            if (attachment->desc.multisampling.sampleCount != texture->desc.multisampling.sampleCount) reject("attachment-sample-count-mismatch");
+        }
+        if (targetFramebuffer->depthAttachment) {
+            const VulkanTexture *depth = targetFramebuffer->depthAttachment;
+            if (depth->vk == VK_NULL_HANDLE) reject("null-depth-image");
+            const RenderTextureLayout expected = targetFramebuffer->depthAttachmentReadOnly ? RenderTextureLayout::DEPTH_READ : RenderTextureLayout::DEPTH_WRITE;
+            if (depth->textureLayout != expected) reject("depth-layout-mismatch");
+            if (!(depth->barrierStages & RenderBarrierStage::GRAPHICS)) reject("depth-missing-graphics-stage");
+            if (depth->desc.multisampling.sampleCount != texture->desc.multisampling.sampleCount) reject("depth-sample-count-mismatch");
+        }
+        // Vulkan clear rectangles must be contained by the render area. Reject
+        // malformed/out-of-bounds input rather than clip, expand or drop it.
+        for (uint32_t i = 0; i < clearRectsCount; ++i) {
+            const RenderRect &rect = clearRects[i];
+            if (rect.left < 0 || rect.top < 0 || rect.right <= rect.left || rect.bottom <= rect.top ||
+                uint32_t(rect.right) > targetFramebuffer->width || uint32_t(rect.bottom) > targetFramebuffer->height) reject("rectangle-out-of-bounds");
+        }
+        const VkPipeline pipeline = targetFramebuffer->getColorClearDrawPipeline(attachmentIndex);
+        const bool record = logColorClearRecord(targetFramebuffer, attachmentIndex, "scissored-draw", vk);
+        // Preserve previous attachment writes across STORE -> LOAD, including
+        // every other colour and depth/stencil target. No image layout change:
+        // the draw uses COLOR_ATTACHMENT_OPTIMAL and the actual bound view.
+        endActiveRenderPass();
+        VkMemoryBarrier preserve = {};
+        preserve.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+        preserve.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        preserve.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        const VkPipelineStageFlags attachmentStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        vkCmdPipelineBarrier(vk, attachmentStages, attachmentStages, 0, 1, &preserve, 0, nullptr, 0, nullptr);
+        checkActiveRenderPass(); // LOAD/STORE, never LOAD_OP_CLEAR.
+        vkCmdBindPipeline(vk, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+        const VkViewport viewport = { 0.0f, 0.0f, float(targetFramebuffer->width), float(targetFramebuffer->height), 0.0f, 1.0f };
+        vkCmdSetViewport(vk, 0, 1, &viewport);
+        vkCmdSetDepthBias(vk, 0.0f, 0.0f, 0.0f);
+        for (uint32_t i = 0; i < clearRectsCount; ++i) {
+            const RenderRect &rect = clearRects[i];
+            const VkRect2D scissor = { { rect.left, rect.top }, { uint32_t(rect.right - rect.left), uint32_t(rect.bottom - rect.top) } };
+            if (record) {
+                const auto &view = targetFramebuffer->colorAttachmentViewDescs[attachmentIndex];
+                char message[320];
+                std::snprintf(message, sizeof(message), "Clear draw: attachment=%u rect=%d,%d..%d,%d viewMip=%u viewLayer=%u rgba=%g,%g,%g,%g LOAD/STORE no layout change",
+                    attachmentIndex, rect.left, rect.top, rect.right, rect.bottom, view.mipSlice, view.arrayIndex,
+                    colorValue.r, colorValue.g, colorValue.b, colorValue.a);
+                tooie_android_debug_log(message);
+            }
+            struct ClearConstants { RenderColor color; RenderRect rectangle; } constants = { colorValue, rect };
+            static_assert(sizeof(ClearConstants) == 32, "Clear shader push constant ABI");
+            vkCmdPushConstants(vk, targetFramebuffer->colorClearDrawLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(constants), &constants);
+            vkCmdSetScissor(vk, 0, 1, &scissor);
+            vkCmdDraw(vk, 3, 1, 0, 0);
+        }
+        // Callers (FramebufferRenderer/UI) cache these bindings. Restore without
+        // altering our caller-state cache. Descriptors and vertex/index buffers
+        // were never rebound, and the caller's pipeline layout pointer is intact.
+        if (graphicsPipeline != VK_NULL_HANDLE) vkCmdBindPipeline(vk, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+        if (!graphicsViewports.empty()) vkCmdSetViewport(vk, 0, uint32_t(graphicsViewports.size()), graphicsViewports.data());
+        if (!graphicsScissors.empty()) vkCmdSetScissor(vk, 0, uint32_t(graphicsScissors.size()), graphicsScissors.data());
+        if (graphicsDepthBiasSet) vkCmdSetDepthBias(vk, graphicsDepthBias[0], graphicsDepthBias[1], graphicsDepthBias[2]);
+        for (const GraphicsPushConstantWrite &write : graphicsPushConstantWrites) {
+            vkCmdPushConstants(vk, write.layout, write.stages, write.offset, uint32_t(write.data.size()), write.data.data());
+        }
+    }
+#endif
+
     void VulkanCommandList::clearColor(uint32_t attachmentIndex, RenderColor colorValue, const RenderRect *clearRects, uint32_t clearRectsCount) {
         assert(targetFramebuffer != nullptr);
         assert(attachmentIndex < targetFramebuffer->colorAttachments.size());
         assert((clearRectsCount == 0) || (clearRects != nullptr));
 
 #if defined(__ANDROID__)
+#if !defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && !(defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK) && TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK)
+        // Explicit rectangles are a separate, view-local operation. Never widen
+        // them into a whole-image transfer clear or select the old clear fallback.
+        if (clearRectsCount > 0) {
+            clearColorDraw(attachmentIndex, colorValue, clearRects, clearRectsCount);
+            return;
+        }
+#endif
 #if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && !TOOIE_VULKAN_TRANSFER_CLEAR_TEST
         // Retain the failed Portal load-op experiment for controlled comparison.
         // Its D submission contains a memory barrier AND a CLEAR render pass.
@@ -4343,6 +4647,9 @@ namespace plume {
             createDeviceChain = &presentWaitFeatures;
         }
 
+#if defined(__ANDROID__)
+        independentBlendSupported = deviceFeatures.features.independentBlend;
+#endif
         nullDescriptorSupported = robustnessFeatures.nullDescriptor;
         if (nullDescriptorSupported) {
             robustnessFeatures.pNext = createDeviceChain;

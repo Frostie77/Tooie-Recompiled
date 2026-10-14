@@ -277,6 +277,10 @@ namespace plume {
         std::vector<VkFormat> colorAttachmentFormats;
         std::vector<VkImageView> colorAttachmentImageViews;
         std::vector<bool> colorAttachmentUsesBaseView;
+        std::vector<RenderTextureViewDesc> colorAttachmentViewDescs;
+        mutable std::vector<VkPipeline> colorClearDrawPipelines;
+        mutable VkPipelineLayout colorClearDrawLayout = VK_NULL_HANDLE;
+        VkPipeline getColorClearDrawPipeline(uint32_t attachmentIndex) const;
 #endif
         std::vector<const VulkanTexture *> colorAttachments;
         const VulkanTexture *depthAttachment = nullptr;
@@ -313,6 +317,22 @@ namespace plume {
         const VulkanPipelineLayout *activeGraphicsPipelineLayout = nullptr;
         const VulkanPipelineLayout *activeRaytracingPipelineLayout = nullptr;
         VkRenderPass activeRenderPass = VK_NULL_HANDLE;
+#if defined(__ANDROID__)
+        struct GraphicsPushConstantWrite {
+            VkPipelineLayout layout;
+            VkShaderStageFlags stages;
+            uint32_t offset;
+            std::vector<uint8_t> data;
+        };
+        VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+        std::vector<VkViewport> graphicsViewports;
+        std::vector<VkRect2D> graphicsScissors;
+        std::vector<GraphicsPushConstantWrite> graphicsPushConstantWrites;
+        bool graphicsDepthBiasSet = false;
+        float graphicsDepthBias[3] = {};
+        void clearColorDraw(uint32_t attachmentIndex, RenderColor colorValue,
+            const RenderRect *clearRects, uint32_t clearRectsCount);
+#endif
 
         VulkanCommandList(VulkanCommandQueue *queue);
         ~VulkanCommandList() override;
@@ -428,6 +448,9 @@ namespace plume {
         std::unique_ptr<RenderBuffer> nullBuffer;
         bool loadStoreOpNoneSupported = false;
         bool nullDescriptorSupported = false;
+#if defined(__ANDROID__)
+        bool independentBlendSupported = false;
+#endif
 
         VulkanDevice(VulkanInterface *renderInterface, const std::string &preferredDeviceName);
         ~VulkanDevice() override;
