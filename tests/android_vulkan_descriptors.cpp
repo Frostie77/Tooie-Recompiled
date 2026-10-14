@@ -4,6 +4,7 @@
 #include "render/rt64_rsp_processor.h"
 #include "render/rt64_vertex_processor.h"
 #include "../src/android_descriptor_context.h"
+#include "plume_vulkan_descriptor_probe.h"
 #include <atomic>
 #include <future>
 #include <cstdio>
@@ -132,6 +133,12 @@ int main(int argc,char **argv) {
  vkCreateDescriptorSetLayout=createLayout;vkDestroyDescriptorSetLayout=destroyLayout;vkCreateDescriptorPool=createPool;vkDestroyDescriptorPool=destroyPool;
  vkAllocateDescriptorSets=allocate;vkUpdateDescriptorSets=update;vkCreateBufferView=createBufferView;vkDestroyBufferView=destroyBufferView;
  vkCreateImageView=createImageView;vkDestroyImageView=destroyImageView;vkCreateSampler=createSampler;vkDestroySampler=destroySampler;
+ if(argc==2 && std::strcmp(argv[1],"probe-exhaustion-control")==0) {
+  shortPool=true;prohibitUpdate=true;
+  REQUIRE(!runVulkanDescriptorAllocationProbe(device.vk,device.descriptorIndexingFeatures));
+  REQUIRE(pools.empty() && layouts.empty());device.vk=VK_NULL_HANDLE;
+  std::puts("PASS: probe preserves exhausted-pool failure and retires all five independent cases");return 0;
+ }
  if(argc>1) {
   prohibitUpdate=true;const std::string reason=argv[1];
   failLayout=reason=="layout-failed";failPool=reason=="pool-failed";failAllocate=reason=="allocation-failed";nullAllocate=reason=="allocation-null";
@@ -200,6 +207,8 @@ int main(int argc,char **argv) {
   REQUIRE(false);
  }
  {
+  REQUIRE(runVulkanDescriptorAllocationProbe(device.vk,device.descriptorIndexingFeatures));
+  REQUIRE(pools.empty() && layouts.empty());
   // A format that supports only uniform texel access must remain usable for
   // read-only formatted views, while writable views are rejected below.
   storageTexelSupported=false;Buffer readOnly(device);readOnly.bufferUsage=VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT|VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;

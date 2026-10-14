@@ -14,7 +14,21 @@
 #include "../../../../../src/android_presentation_lifecycle.h"
 #include "plume_vulkan_clear_shaders.h"
 #include <unistd.h>
+#include <cstddef>
 #include "../../../../../src/android_descriptor_context.h"
+#if defined(__LP64__)
+static_assert(sizeof(VkDescriptorSetAllocateInfo) == 40 && offsetof(VkDescriptorSetAllocateInfo, pNext) == 8 &&
+    offsetof(VkDescriptorSetAllocateInfo, pSetLayouts) == 32 && sizeof(VkDescriptorSetVariableDescriptorCountAllocateInfo) == 32 &&
+    offsetof(VkDescriptorSetVariableDescriptorCountAllocateInfo, pNext) == 8 &&
+    offsetof(VkDescriptorSetVariableDescriptorCountAllocateInfo, pDescriptorCounts) == 24,
+    "Android Vulkan descriptor ABI must use the standard LP64 layout");
+#endif
+#if defined(TOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE) && TOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE
+#include "plume_vulkan_descriptor_probe.h"
+#if (defined(TOOIE_VULKAN_QUEUE_ISOLATION_TEST) && TOOIE_VULKAN_QUEUE_ISOLATION_TEST) || (defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK) && TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK)
+#error "Descriptor allocation probe requires queue isolation and attachment fallback disabled"
+#endif
+#endif
 #endif
 
 #include <algorithm>
@@ -2254,6 +2268,21 @@ namespace plume {
         }
 
 #if defined(__ANDROID__)
+        const auto *actualCount = static_cast<const VkDescriptorSetVariableDescriptorCountAllocateInfo *>(allocateInfo.pNext);
+        if (allocateInfo.descriptorPool != descriptorPool || allocateInfo.descriptorSetCount != 1 || allocateInfo.pSetLayouts != &setLayout->vk ||
+            (desc.lastRangeIsBoundless && (actualCount != &countInfo || actualCount->pNext || actualCount->descriptorSetCount != 1 ||
+                actualCount->sType != VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO || actualCount->pDescriptorCounts != &boundlessRangeSize ||
+                *actualCount->pDescriptorCounts != allocatedCounts.back())) || (!desc.lastRangeIsBoundless && actualCount))
+            rejectDescriptor(UINT32_MAX, "invalid-allocation-arguments");
+        std::snprintf(allocationRecord, sizeof(allocationRecord), "Descriptor allocation ABI: pid=%d tid=%d pointerBytes=%zu infoBytes=%zu nextOffset=%zu layoutsOffset=%zu variableBytes=%zu countsOffset=%zu",
+            int(getpid()), int(gettid()), sizeof(void *), sizeof(allocateInfo), offsetof(VkDescriptorSetAllocateInfo, pNext),
+            offsetof(VkDescriptorSetAllocateInfo, pSetLayouts), sizeof(countInfo), offsetof(VkDescriptorSetVariableDescriptorCountAllocateInfo, pDescriptorCounts));
+        tooie_android_debug_log(allocationRecord);
+        std::snprintf(allocationRecord, sizeof(allocationRecord), "Descriptor allocation arguments: pid=%d tid=%d device=%llx info=%p pool=%llx layouts=%p layout=%llx next=%p countArray=%p actualCount=%u",
+            int(getpid()), int(gettid()), (unsigned long long)device->vk, static_cast<const void *>(&allocateInfo), (unsigned long long)allocateInfo.descriptorPool,
+            static_cast<const void *>(allocateInfo.pSetLayouts), (unsigned long long)*allocateInfo.pSetLayouts, allocateInfo.pNext,
+            actualCount ? static_cast<const void *>(actualCount->pDescriptorCounts) : nullptr, actualCount ? *actualCount->pDescriptorCounts : 0);
+        tooie_android_debug_log(allocationRecord);
         std::snprintf(allocationRecord, sizeof(allocationRecord), "Descriptor allocation begin: pid=%d tid=%d ctx=%s pool=%llx layout=%llx layoutFlags=0x%X maxSets=1 sets=1 variable=%u variableCount=%u countStructType=%u countStructSets=%u",
             int(getpid()), int(gettid()), tooie::android::descriptorContext(), (unsigned long long)descriptorPool, (unsigned long long)setLayout->vk,
             setLayout->creationFlags, unsigned(desc.lastRangeIsBoundless), boundlessRangeSize, unsigned(countInfo.sType), countInfo.descriptorSetCount);
@@ -2639,8 +2668,8 @@ namespace plume {
         VkResult res = vkCreateDescriptorPool(device->vk, &poolInfo, nullptr, &descriptorPool);
         if (creationResult) *creationResult = res;
 #if defined(__ANDROID__)
-        std::snprintf(record, sizeof(record), "Descriptor pool creation returned: pid=%d tid=%d ctx=%s result=%d pool=%llx flags=0x%X maxSets=%u",
-            int(getpid()), int(gettid()), tooie::android::descriptorContext(), int(res), (unsigned long long)descriptorPool, poolInfo.flags, poolInfo.maxSets);
+        std::snprintf(record, sizeof(record), "Descriptor pool creation returned: pid=%d tid=%d ctx=%s result=%d pool=%llx flags=0x%X maxSets=%u device=%llx",
+            int(getpid()), int(gettid()), tooie::android::descriptorContext(), int(res), (unsigned long long)descriptorPool, poolInfo.flags, poolInfo.maxSets, (unsigned long long)device->vk);
         tooie_android_debug_log(record);
 #endif
         if (res == VK_SUCCESS) {
@@ -5657,6 +5686,31 @@ namespace plume {
             int(getpid()), int(gettid()), renderInterface->appInfo.apiVersion, physicalDeviceProperties.apiVersion,
             unsigned(supportedOptionalExtensions.count(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) != 0), unsigned(descriptorIndexingFound), unsigned(descriptorIndexingSupported));
         tooie_android_debug_log(indexingRecord);
+#if defined(TOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE) && TOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE
+        // Opt-in CPU allocation experiment before VMA, RT64 resources, worker
+        // threads or GPU submissions. Normal rendering never uses these pools.
+        std::snprintf(indexingRecord, sizeof(indexingRecord), "Descriptor allocation probe start: pid=%d tid=%d early isolated experiment; no raster/GPU work",
+            int(getpid()), int(gettid()));
+        tooie_android_debug_log(indexingRecord);
+        const bool probeSucceeded = runVulkanDescriptorAllocationProbe(vk, descriptorIndexingFeatures);
+        if (probeSucceeded) {
+            // Compare the same shape through the production constructors after
+            // the independent raw cases. Their normal fatal guards still apply.
+            std::snprintf(indexingRecord, sizeof(indexingRecord), "Descriptor allocation probe: pid=%d tid=%d production-path control begin", int(getpid()), int(gettid()));
+            tooie_android_debug_log(indexingRecord);
+            {
+                RenderDescriptorRange range(RenderDescriptorRangeType::TEXTURE, 0, 8192, nullptr);
+                const auto productionControl = createDescriptorSet(RenderDescriptorSetDesc(&range, 1, true, 1));
+            }
+            std::snprintf(indexingRecord, sizeof(indexingRecord), "Descriptor allocation probe: pid=%d tid=%d production-path control retired", int(getpid()), int(gettid()));
+            tooie_android_debug_log(indexingRecord);
+        }
+        vkDestroyDevice(vk, nullptr); vk = VK_NULL_HANDLE;
+        std::snprintf(indexingRecord, sizeof(indexingRecord), "Descriptor allocation probe complete: pid=%d tid=%d allSucceeded=%u exit=%u; intentional diagnostic stop",
+            int(getpid()), int(gettid()), unsigned(probeSucceeded), probeSucceeded ? 0u : 1u);
+        tooie_android_debug_log(indexingRecord); std::fprintf(stderr, "%s\n", indexingRecord);
+        std::_Exit(probeSucceeded ? EXIT_SUCCESS : EXIT_FAILURE);
+#endif
 #endif
 
         for (uint32_t i = 0; i < queueFamilyCount; i++) {

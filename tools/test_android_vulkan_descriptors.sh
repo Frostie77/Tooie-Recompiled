@@ -81,4 +81,8 @@ stale-sampler|sampler-not-live-or-wrong-device
 sampler-as-image|image-payload-type-mismatch
 wrong-device|sampler-not-live-or-wrong-device
 CASES
+APP_FOLDER_PATH="$test_dir" "$test_dir/record" probe-exhaustion-control >"$test_dir/probe.log" 2>&1
+test "$(grep -c 'phase=allocate-return .*result=-1000069000' "$test_dir/probe.log")" -eq 5
+test "$(grep -c 'phase=retired' "$test_dir/probe.log")" -eq 5
+grep -q 'PASS: probe preserves exhausted-pool failure' "$test_dir/probe.log"
 printf '%s\n' 'PASS: 49 invalid descriptor cases stop before unsafe Vulkan calls, with exact reasons'

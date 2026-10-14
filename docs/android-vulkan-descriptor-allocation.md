@@ -1,5 +1,11 @@
 # Android descriptor allocation follow-up
 
+The subsequent tested `2e0b753` handoff now attributes the original allocation
+rejection to PID 27983 and confirms advertised/enabled features and supported
+layout. The missing-extension scenario is not its demonstrated cause. See
+[Step 50 allocation experiment](android-vulkan-descriptor-probe.md). The evidence
+and limitations below describe the preceding `3268685` report.
+
 Base: `3268685cdf3115e219798cef32becf558bf11eee`, on
 `fix/android-vulkan-transfer-proposal`. ROM selection, presentation lifecycle,
 RGBA/BGRA rendering, full/partial clears, diagnostics and five-second timeouts

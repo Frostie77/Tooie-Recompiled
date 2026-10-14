@@ -2,6 +2,16 @@
 #include "descriptor-pool-test.spirv.h"
 #include "render/rt64_descriptor_sets.h"
 #include <algorithm>
+#include "plume_vulkan_descriptor_probe.h"
+
+static PFN_vkCreateDescriptorPool originalCreatePool;
+static VkResult declaredCapacityPool(VkDevice device,const VkDescriptorPoolCreateInfo *info,const VkAllocationCallbacks *callbacks,VkDescriptorPool *out) {
+    if(!(info->flags & VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT)) return originalCreatePool(device,info,callbacks,out);
+    REQUIRE(info->poolSizeCount==1 && info->pPoolSizes[0].type==VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+    VkDescriptorPoolSize size=info->pPoolSizes[0];size.descriptorCount=RT64::FramebufferRendererDescriptorTextureSet::UpperRange;
+    VkDescriptorPoolCreateInfo copied=*info;copied.pPoolSizes=&size;
+    return originalCreatePool(device,&copied,callbacks,out);
+}
 
 // A Vulkan 1.2+ device may omit the promoted extension name. Keep the real
 // device, features, allocation and command execution; filter only that name.
@@ -26,10 +36,15 @@ static VkResult coreExtensions(VkPhysicalDevice device, const char *layer, uint3
 int main(int argc,char **argv) {
     HostVulkanValidation validation;
     const bool coreOnly=argc==2 && std::strcmp(argv[1],"core-only")==0;
+    const bool capacityControl=argc==2 && std::strcmp(argv[1],"declared-pool")==0;
     originalEnumerate=vkEnumerateDeviceExtensionProperties;
     if(coreOnly) vkEnumerateDeviceExtensionProperties=coreExtensions;
     {
         VulkanDevice device(&validation.interface,"llvmpipe"); REQUIRE(device.vk);
+        static_assert(RT64::FramebufferRendererDescriptorTextureSet::UpperRange==8192);
+        REQUIRE(runVulkanDescriptorAllocationProbe(device.vk,device.descriptorIndexingFeatures));
+        originalCreatePool=vkCreateDescriptorPool;
+        if(capacityControl) vkCreateDescriptorPool=declaredCapacityPool;
         REQUIRE(device.descriptorIndexingFeatures.descriptorBindingVariableDescriptorCount &&
             device.descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind);
         RT64::SamplerLibrary samplers;
@@ -48,8 +63,10 @@ int main(int argc,char **argv) {
         auto pipeline=device.createComputePipeline(pipelineDesc);
         auto queue=device.createCommandQueue(RenderCommandListType::DIRECT);
         auto list=queue->createCommandList(); auto fence=device.createCommandFence();
+        std::unique_ptr<RT64::FramebufferRendererDescriptorTextureSet> previous;
         for(uint32_t requested:{0u,1u,2u,32u,1024u,8192u}) {
-            RT64::FramebufferRendererDescriptorTextureSet textures(&device,requested);
+            auto next=std::make_unique<RT64::FramebufferRendererDescriptorTextureSet>(&device,requested);
+            auto &textures=*next;
             const uint32_t allocated=std::max(requested,1u),selected=allocated-1;
             REQUIRE(static_cast<VulkanDescriptorSet *>(textures.get())->allocatedCounts[0]==allocated);
             auto src=device.createTexture(RenderTextureDesc::ColorTarget(1,1,RenderFormat::R8G8B8A8_UNORM));
@@ -67,8 +84,12 @@ int main(int argc,char **argv) {
             list->setComputePushConstants(0,&selected); list->dispatch(1,1,1);
             auto pixels=readImage(device,list.get(),queue.get(),fence.get(),dst.get(),1,1,4);
             expectPixels(pixels,{expected},RenderFormat::R8G8B8A8_UNORM);
-            std::printf("PASS: %s production framebuffer common/8192-image layouts requested=%u allocated=%u last-element RGB/alpha readback\n",coreOnly?"core-only":"extension",requested,allocated);
+            std::printf("PASS: %s production framebuffer common/8192-image layouts requested=%u allocated=%u last-element RGB/alpha readback\n",coreOnly?"core-only":capacityControl?"declared-pool":"extension",requested,allocated);
+            // Allocate the new set while the preceding set is still alive, as
+            // unique_ptr replacement in RT64 does. Prior GPU work is fenced.
+            previous=std::move(next);
         }
+        vkCreateDescriptorPool=originalCreatePool;
     }
     vkEnumerateDeviceExtensionProperties=originalEnumerate;
     REQUIRE(validationErrors==0);
