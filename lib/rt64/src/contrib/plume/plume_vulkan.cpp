@@ -16,6 +16,12 @@
 #include <climits>
 #include <unordered_map>
 
+#if defined(__ANDROID__) && defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK) && TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK
+#if !defined(NDEBUG) || (defined(TOOIE_VULKAN_QUEUE_ISOLATION_TEST) && TOOIE_VULKAN_QUEUE_ISOLATION_TEST)
+#error "Attachment-clear fallback comparison is forbidden in debug or queue-isolation builds"
+#endif
+#endif
+
 #if DLSS_ENABLED
 #   include "render/plume_dlss.h"
 #endif
@@ -964,6 +970,36 @@ namespace plume {
 
     // VulkanTexture
 
+#if defined(__ANDROID__)
+    bool VulkanTexture::validateImageConfiguration(VulkanDevice *device, const VkImageCreateInfo &info) {
+        VkImageFormatProperties limits = {};
+        const VkResult result = vkGetPhysicalDeviceImageFormatProperties(device->physicalDevice,
+            info.format, info.imageType, info.tiling, info.usage, info.flags, &limits);
+        const char *reason = nullptr;
+        if (result != VK_SUCCESS) { reason = "image-format-query-failed"; limits = {}; }
+        else if (!(limits.sampleCounts & info.samples)) reason = "sample-count-unsupported";
+        else if (!info.extent.width || !info.extent.height || !info.extent.depth ||
+            info.extent.width > limits.maxExtent.width || info.extent.height > limits.maxExtent.height ||
+            info.extent.depth > limits.maxExtent.depth) reason = "image-extent-unsupported";
+        else if (!info.mipLevels || info.mipLevels > limits.maxMipLevels) reason = "mip-level-count-unsupported";
+        else if (!info.arrayLayers || info.arrayLayers > limits.maxArrayLayers) reason = "array-layer-count-unsupported";
+        if (reason != nullptr) {
+            char message[512];
+            std::snprintf(message, sizeof(message),
+                "Image configuration rejected: reason=%s result=%d format=%u type=%u tiling=%u usage=0x%X flags=0x%X "
+                "samples=%u supportedSamples=0x%X extent=%ux%ux%u maxExtent=%ux%ux%u mips=%u maxMips=%u layers=%u maxLayers=%u",
+                reason, int(result), unsigned(info.format), unsigned(info.imageType), unsigned(info.tiling), info.usage,
+                info.flags, unsigned(info.samples), limits.sampleCounts, info.extent.width, info.extent.height,
+                info.extent.depth, limits.maxExtent.width, limits.maxExtent.height, limits.maxExtent.depth,
+                info.mipLevels, limits.maxMipLevels, info.arrayLayers, limits.maxArrayLayers);
+            tooie_android_debug_log(message);
+            std::fprintf(stderr, "%s\n", message);
+            return false;
+        }
+        return true;
+    }
+#endif
+
     VulkanTexture::VulkanTexture(VulkanDevice *device, VulkanPool *pool, const RenderTextureDesc &desc) {
         assert(device != nullptr);
 
@@ -998,6 +1034,14 @@ namespace plume {
             imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
         }
 
+#if defined(__ANDROID__)
+        // Validate the complete color-target configuration, including the UI's
+        // MSAA target, before VMA can allocate an unsupported image.
+        if ((imageInfo.usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) &&
+            !validateImageConfiguration(device, imageInfo)) {
+            std::_Exit(EXIT_FAILURE);
+        }
+#endif
         imageFormat = imageInfo.format;
         imageUsage = imageInfo.usage;
         fillSubresourceRange();
@@ -2166,7 +2210,12 @@ namespace plume {
         }
 
         VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities);
+        res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities);
+        if (res != VK_SUCCESS) {
+            std::fprintf(stderr, "Swapchain capabilities query failed: result=%d\n", int(res));
+            tooie_android_debug_log("Swapchain rejected: surface-capabilities-query-failed");
+            return;
+        }
 
         // Pick an alpha compositing mode
         if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) {
@@ -2323,12 +2372,14 @@ namespace plume {
             return false;
         }
 
-        // Destroy any image view references to the current swap chain.
-        releaseImageViews();
-
         // Query surface capabilities to get the valid extent bounds.
         VkSurfaceCapabilitiesKHR surfaceCapabilities = {};
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(commandQueue->device->physicalDevice, surface, &surfaceCapabilities);
+        const VkResult capabilitiesResult = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(commandQueue->device->physicalDevice, surface, &surfaceCapabilities);
+        if (capabilitiesResult != VK_SUCCESS) {
+            std::fprintf(stderr, "Swapchain capabilities query failed: result=%d\n", int(capabilitiesResult));
+            tooie_android_debug_log("Swapchain rejected: surface-capabilities-query-failed");
+            return false;
+        }
 
         // Clamp the extent to the surface capabilities' min/max bounds.
         // This is required because the window size may differ from the valid surface extent
@@ -2375,7 +2426,20 @@ namespace plume {
             unsigned(createInfo.imageFormat), width, height, createInfo.imageUsage,
             surfaceCapabilities.supportedUsageFlags, createInfo.preTransform, commandQueue->familyIndex);
         tooie_android_debug_log(swapchainRecord);
+        const VkImageUsageFlags missingUsage = createInfo.imageUsage & ~surfaceCapabilities.supportedUsageFlags;
+        if (missingUsage != 0) {
+            char message[256];
+            std::snprintf(message, sizeof(message),
+                "Swapchain rejected: unsupported-image-usage requested=0x%X supported=0x%X missing=0x%X transferDstMissing=%u",
+                createInfo.imageUsage, surfaceCapabilities.supportedUsageFlags, missingUsage,
+                unsigned((missingUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) != 0));
+            tooie_android_debug_log(message);
+            std::fprintf(stderr, "%s\n", message);
+            return false;
+        }
 #endif
+        // Only release the old views after the replacement configuration passes.
+        releaseImageViews();
         VkResult res = vkCreateSwapchainKHR(commandQueue->device->vk, &createInfo, nullptr, &vk);
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateSwapchainKHR failed with error code 0x%X.\n", res);
@@ -2415,6 +2479,7 @@ namespace plume {
 
         for (uint32_t i = 0; i < desc.textureCount; i++) {
             textures[i] = VulkanTexture(commandQueue->device, images[i]);
+            textures[i].isSwapChainImage = true;
             textures[i].imageFormat = pickedSurfaceFormat.format;
             textures[i].imageUsage = createInfo.imageUsage;
             textures[i].desc.dimension = RenderTextureDimension::TEXTURE_2D;
@@ -3215,26 +3280,57 @@ namespace plume {
 #if defined(__ANDROID__)
     // Log recorded CPU state, not an assertion that the GPU executed the commands.
     static bool logColorClearRecord(const VulkanFramebuffer *framebuffer, uint32_t attachmentIndex,
-        const char *path, VkCommandBuffer commandBuffer) {
+        const char *path, VkCommandBuffer commandBuffer, bool force = false) {
         static thread_local uint32_t records = 0;
-        if (records++ >= 16) {
-            return false;
-        }
+        static thread_local bool loggedSwapchain = false;
+        static thread_local bool loggedOffscreenMSAA = false;
         const VulkanTexture *texture = framebuffer->colorAttachments[attachmentIndex];
+        const bool offscreenMSAA = texture->ownership && texture->desc.multisampling.sampleCount > 1;
+        const bool firstCategory = (texture->isSwapChainImage && !loggedSwapchain) ||
+            (offscreenMSAA && !loggedOffscreenMSAA);
+        if (records >= 16 && !firstCategory && !force) return false;
+        if (records < 16) ++records;
+        loggedSwapchain |= texture->isSwapChainImage;
+        loggedOffscreenMSAA |= offscreenMSAA;
         char message[640];
         std::snprintf(message, sizeof(message),
             "Clear record: path=%s cb=%llx fb=%llx loadPass=%llx image=%llx boundView=%llx attachment=%u "
-            "imageFormat=%u viewFormat=%u samples=%u usage=0x%X owned=%u baseViewUsed=%u "
+            "imageFormat=%u viewFormat=%u samples=%u usage=0x%X owned=%u swapchain=%u baseViewUsed=%u "
             "trackedLayout=%u trackedStages=0x%X fbExtent=%ux%u imageExtent=%ux%u mips=%u layers=%u",
             path, (unsigned long long)commandBuffer, (unsigned long long)framebuffer->vk,
             (unsigned long long)framebuffer->renderPass, (unsigned long long)texture->vk,
             (unsigned long long)framebuffer->colorAttachmentImageViews[attachmentIndex], attachmentIndex, unsigned(texture->imageFormat),
             unsigned(framebuffer->colorAttachmentFormats[attachmentIndex]), texture->desc.multisampling.sampleCount,
-            texture->imageUsage, unsigned(texture->ownership), unsigned(framebuffer->colorAttachmentUsesBaseView[attachmentIndex]),
+            texture->imageUsage, unsigned(texture->ownership), unsigned(texture->isSwapChainImage), unsigned(framebuffer->colorAttachmentUsesBaseView[attachmentIndex]),
             unsigned(texture->textureLayout), texture->barrierStages, framebuffer->width, framebuffer->height,
             texture->desc.width, texture->desc.height, texture->desc.mipLevels, texture->desc.arraySize);
         tooie_android_debug_log(message);
         return true;
+    }
+
+    static void rejectTransferClear(const VulkanFramebuffer *framebuffer, uint32_t attachmentIndex,
+        const char *reason, VkCommandBuffer commandBuffer, VkFormatFeatureFlags formatFeatures = 0, bool formatQueried = false) {
+        logColorClearRecord(framebuffer, attachmentIndex, "transfer-rejected", commandBuffer, true);
+        char message[320];
+        std::snprintf(message, sizeof(message),
+            "Transfer clear rejected: reason=%s formatQueried=%u optimalFeatures=0x%X requiredFeature=0x%X",
+            reason, unsigned(formatQueried), formatFeatures, VK_FORMAT_FEATURE_TRANSFER_DST_BIT);
+        tooie_android_debug_log(message);
+        std::fprintf(stderr, "%s\n", message);
+#if defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK) && TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK
+        const VulkanTexture *texture = framebuffer->colorAttachments[attachmentIndex];
+        // A comparison may exercise ineligibility, never invalid Vulkan handles
+        // or layouts. Keep those failures fatal in every build.
+        if (texture->vk == VK_NULL_HANDLE || texture->imageView == VK_NULL_HANDLE ||
+            framebuffer->vk == VK_NULL_HANDLE || framebuffer->renderPass == VK_NULL_HANDLE ||
+            texture->textureLayout != RenderTextureLayout::COLOR_WRITE ||
+            !(texture->barrierStages & RenderBarrierStage::GRAPHICS)) std::_Exit(EXIT_FAILURE);
+        tooie_android_debug_log("Comparison only: explicit attachment-clear fallback enabled");
+#else
+        // Stop before beginning a fallback render pass or recording/submitting
+        // the rejected clear. Default Android and diagnostic builds are strict.
+        std::_Exit(EXIT_FAILURE);
+#endif
     }
 #endif
 
@@ -3299,36 +3395,38 @@ namespace plume {
         // The proposal deliberately covers the launcher's plain RGBA/BGRA UNORM
         // images only. A framebuffer clear is not a whole-image clear for a
         // smaller render area, attachment view, or integer/reinterpreted format.
-        bool transferClear = (clearRectsCount == 0) &&
-            targetFramebuffer->colorAttachmentUsesBaseView[attachmentIndex] &&
-            (colorTexture->desc.dimension == RenderTextureDimension::TEXTURE_2D) &&
-            (colorTexture->desc.textureArrangement != RenderTextureArrangement::ROW_MAJOR) &&
-            (colorTexture->desc.mipLevels == 1) && (colorTexture->desc.arraySize == 1) &&
-            (colorTexture->desc.width == targetFramebuffer->width) &&
-            (colorTexture->desc.height == targetFramebuffer->height) &&
-            (colorTexture->imageUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) &&
-            (colorTexture->imageFormat == targetFramebuffer->colorAttachmentFormats[attachmentIndex]) &&
-            ((colorTexture->imageFormat == VK_FORMAT_R8G8B8A8_UNORM) ||
-             (colorTexture->imageFormat == VK_FORMAT_B8G8R8A8_UNORM));
+        const char *rejection = nullptr;
+        VkFormatProperties properties = {};
+        bool formatQueried = false;
+        if (clearRectsCount != 0) rejection = "partial-rectangles";
+        else if (!targetFramebuffer->colorAttachmentUsesBaseView[attachmentIndex]) rejection = "explicit-attachment-view";
+        else if (colorTexture->desc.dimension != RenderTextureDimension::TEXTURE_2D) rejection = "not-2d";
+        else if (colorTexture->desc.textureArrangement == RenderTextureArrangement::ROW_MAJOR) rejection = "linear-tiling";
+        else if (colorTexture->desc.mipLevels != 1) rejection = "multiple-mip-levels";
+        else if (colorTexture->desc.arraySize != 1) rejection = "multiple-array-layers";
+        else if (colorTexture->desc.width != targetFramebuffer->width ||
+            colorTexture->desc.height != targetFramebuffer->height) rejection = "framebuffer-extent-mismatch";
+        else if (!(colorTexture->imageUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT)) rejection = "missing-transfer-dst-usage";
+        else if (colorTexture->imageFormat != targetFramebuffer->colorAttachmentFormats[attachmentIndex]) rejection = "attachment-format-mismatch";
+        else if (colorTexture->imageFormat != VK_FORMAT_R8G8B8A8_UNORM &&
+            colorTexture->imageFormat != VK_FORMAT_B8G8R8A8_UNORM) rejection = "unsupported-clear-format";
 #if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && TOOIE_VULKAN_TRANSFER_CLEAR_TEST
-        // Preserve the previous successful swapchain-only isolation diagnostic.
-        transferClear = transferClear && !colorTexture->ownership &&
-            (colorTexture->desc.multisampling.sampleCount == 1);
+        else if (colorTexture->ownership) rejection = "legacy-requires-external-image";
+        else if (colorTexture->desc.multisampling.sampleCount != 1) rejection = "legacy-requires-single-sample";
 #endif
-        if (transferClear) {
-            VkFormatProperties properties = {};
+        else if (colorTexture->vk == VK_NULL_HANDLE) rejection = "null-image";
+        else if (colorTexture->imageView == VK_NULL_HANDLE) rejection = "null-image-view";
+        else if (targetFramebuffer->vk == VK_NULL_HANDLE) rejection = "null-framebuffer";
+        else if (targetFramebuffer->renderPass == VK_NULL_HANDLE) rejection = "null-render-pass";
+        else if (colorTexture->textureLayout != RenderTextureLayout::COLOR_WRITE) rejection = "layout-not-color-write";
+        else if (!(colorTexture->barrierStages & RenderBarrierStage::GRAPHICS)) rejection = "missing-graphics-stage";
+        if (rejection == nullptr) {
             vkGetPhysicalDeviceFormatProperties(queue->device->physicalDevice, colorTexture->imageFormat, &properties);
-            transferClear = (properties.optimalTilingFeatures & VK_FORMAT_FEATURE_TRANSFER_DST_BIT) != 0;
+            formatQueried = true;
+            if (!(properties.optimalTilingFeatures & VK_FORMAT_FEATURE_TRANSFER_DST_BIT)) rejection = "format-transfer-dst-unsupported";
         }
-        if (transferClear) {
+        if (rejection == nullptr) {
             const bool recordClear = logColorClearRecord(targetFramebuffer, attachmentIndex, "transfer", vk);
-            if (colorTexture->vk == VK_NULL_HANDLE || colorTexture->imageView == VK_NULL_HANDLE ||
-                targetFramebuffer->vk == VK_NULL_HANDLE || targetFramebuffer->renderPass == VK_NULL_HANDLE ||
-                colorTexture->textureLayout != RenderTextureLayout::COLOR_WRITE ||
-                !(colorTexture->barrierStages & RenderBarrierStage::GRAPHICS)) {
-                tooie_android_debug_log("Clear record: invalid tracked state or resource for attachment clear");
-                std::_Exit(EXIT_FAILURE);
-            }
             endActiveRenderPass(); // Transfer commands must be outside a render pass.
 
             VkImageSubresourceRange range = {};
@@ -3386,7 +3484,13 @@ namespace plume {
 #endif
             return;
         }
-        logColorClearRecord(targetFramebuffer, attachmentIndex, "attachment-fallback", vk);
+        rejectTransferClear(targetFramebuffer, attachmentIndex, rejection, vk, properties.optimalTilingFeatures, formatQueried);
+        logColorClearRecord(targetFramebuffer, attachmentIndex, "attachment-fallback", vk, true);
+#endif
+#if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) && !TOOIE_VULKAN_TRANSFER_CLEAR_TEST
+        // Full clears returned through the explicitly selected load-op control.
+        // A partial clear must not silently reach the old attachment command.
+        rejectTransferClear(targetFramebuffer, attachmentIndex, "partial-rectangles", vk);
 #endif
 #endif
         checkActiveRenderPass();

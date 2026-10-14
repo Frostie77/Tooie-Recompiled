@@ -88,6 +88,7 @@ namespace plume {
         RenderTextureLayout textureLayout = RenderTextureLayout::UNKNOWN;
         RenderBarrierStages barrierStages = RenderBarrierStage::NONE;
         bool ownership = false;
+        bool isSwapChainImage = false;
         RenderTextureDesc desc;
 
         VulkanTexture() = default;
@@ -98,6 +99,9 @@ namespace plume {
         std::unique_ptr<RenderTextureView> createTextureView(const RenderTextureViewDesc &desc) const override;
         void setName(const std::string &name) override;
         void fillSubresourceRange();
+#if defined(__ANDROID__)
+        static bool validateImageConfiguration(VulkanDevice *device, const VkImageCreateInfo &info);
+#endif
     };
 
     struct VulkanTextureView : RenderTextureView {

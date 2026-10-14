@@ -15,8 +15,8 @@ using namespace plume;
       std::abort();                                                            \
     }                                                                          \
   } while (0)
-extern "C" int32_t ANativeWindow_getWidth(ANativeWindow *) { return 1; }
-extern "C" int32_t ANativeWindow_getHeight(ANativeWindow *) { return 1; }
+extern "C" int32_t ANativeWindow_getWidth(ANativeWindow *) { return 640; }
+extern "C" int32_t ANativeWindow_getHeight(ANativeWindow *) { return 480; }
 template <class T> T handle() {
   static size_t id = 1;
   return reinterpret_cast<T>(id++);
@@ -36,6 +36,16 @@ static VkClearColorValue selectedValue;
 static VkImage selectedImage;
 static bool inPass = false, simulateTimeout = false, invalidState = false;
 static bool transferFeature = true;
+static const char *clearRejectionCase = nullptr;
+static bool rejectBeforeRecording = false;
+static VkImageCreateInfo expectedImageInfo = {};
+static VkImageFormatProperties imageLimits = {};
+static VkResult imageQueryResult = VK_SUCCESS;
+static unsigned imageQueries = 0, swapchainCreates = 0;
+static VkImageUsageFlags surfaceUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                        VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                                        VK_IMAGE_USAGE_SAMPLED_BIT;
+static VkResult surfaceQueryResult = VK_SUCCESS;
 static unsigned createdPasses = 0, destroyedPasses = 0, selectedIndex = 0;
 static VkResult enumerate(VkInstance, uint32_t *count, VkPhysicalDevice *) {
   *count = 0;
@@ -46,6 +56,157 @@ static void formatProperties(VkPhysicalDevice, VkFormat,
   *out = {};
   out->optimalTilingFeatures =
       transferFeature ? VK_FORMAT_FEATURE_TRANSFER_DST_BIT : 0;
+}
+static VkResult imageProperties(VkPhysicalDevice, VkFormat format,
+                                VkImageType type, VkImageTiling tiling,
+                                VkImageUsageFlags usage,
+                                VkImageCreateFlags flags,
+                                VkImageFormatProperties *out) {
+  ++imageQueries;
+  REQUIRE(format == expectedImageInfo.format &&
+          type == expectedImageInfo.imageType);
+  REQUIRE(tiling == expectedImageInfo.tiling &&
+          usage == expectedImageInfo.usage && flags == expectedImageInfo.flags);
+  *out = imageLimits;
+  return imageQueryResult;
+}
+static VkResult createSurface(VkInstance, const VkAndroidSurfaceCreateInfoKHR *,
+                              const VkAllocationCallbacks *,
+                              VkSurfaceKHR *out) {
+  *out = handle<VkSurfaceKHR>();
+  return VK_SUCCESS;
+}
+static void destroySurface(VkInstance, VkSurfaceKHR,
+                           const VkAllocationCallbacks *) {}
+static VkResult presentSupport(VkPhysicalDevice, uint32_t, VkSurfaceKHR,
+                               VkBool32 *out) {
+  *out = VK_TRUE;
+  return VK_SUCCESS;
+}
+static VkResult surfaceCaps(VkPhysicalDevice, VkSurfaceKHR,
+                            VkSurfaceCapabilitiesKHR *out) {
+  *out = {};
+  out->minImageCount = 2;
+  out->maxImageCount = 3;
+  out->currentExtent = {640, 480};
+  out->minImageExtent = {16, 16};
+  out->maxImageExtent = {4096, 4096};
+  out->maxImageArrayLayers = 1;
+  out->supportedCompositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  out->supportedTransforms = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+  out->currentTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+  out->supportedUsageFlags = surfaceUsage;
+  return surfaceQueryResult;
+}
+static VkResult surfaceFormats(VkPhysicalDevice, VkSurfaceKHR, uint32_t *count,
+                               VkSurfaceFormatKHR *out) {
+  *count = 1;
+  if (out)
+    *out = {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+  return VK_SUCCESS;
+}
+static VkResult presentModes(VkPhysicalDevice, VkSurfaceKHR, uint32_t *count,
+                             VkPresentModeKHR *out) {
+  *count = 1;
+  if (out)
+    *out = VK_PRESENT_MODE_FIFO_KHR;
+  return VK_SUCCESS;
+}
+static VkResult createSwapchain(VkDevice, const VkSwapchainCreateInfoKHR *p,
+                                const VkAllocationCallbacks *,
+                                VkSwapchainKHR *out) {
+  ++swapchainCreates;
+  REQUIRE((p->imageUsage & ~surfaceUsage) == 0);
+  REQUIRE(p->imageUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+  *out = handle<VkSwapchainKHR>();
+  return VK_SUCCESS;
+}
+static void destroySwapchain(VkDevice, VkSwapchainKHR,
+                             const VkAllocationCallbacks *) {}
+static VkResult swapchainImages(VkDevice, VkSwapchainKHR, uint32_t *count,
+                                VkImage *out) {
+  *count = 2;
+  if (out) {
+    out[0] = handle<VkImage>();
+    out[1] = handle<VkImage>();
+  }
+  return VK_SUCCESS;
+}
+static void testImageConfigurations(VulkanDevice &device) {
+  expectedImageInfo = {};
+  expectedImageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  expectedImageInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+  expectedImageInfo.imageType = VK_IMAGE_TYPE_2D;
+  expectedImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+  expectedImageInfo.usage =
+      VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+      VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+  expectedImageInfo.samples = VK_SAMPLE_COUNT_8_BIT;
+  expectedImageInfo.extent = {640, 480, 1};
+  expectedImageInfo.mipLevels = 1;
+  expectedImageInfo.arrayLayers = 1;
+  imageLimits.maxExtent = {4096, 4096, 1};
+  imageLimits.maxMipLevels = 12;
+  imageLimits.maxArrayLayers = 256;
+  imageLimits.sampleCounts = VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_8_BIT;
+  const auto saved = expectedImageInfo;
+  REQUIRE(
+      VulkanTexture::validateImageConfiguration(&device, expectedImageInfo));
+  // Query input forwarding includes tiling, STORAGE usage, and creation flags.
+  expectedImageInfo.tiling = VK_IMAGE_TILING_LINEAR;
+  expectedImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+  expectedImageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+  expectedImageInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+  REQUIRE(
+      VulkanTexture::validateImageConfiguration(&device, expectedImageInfo));
+  expectedImageInfo = saved;
+  imageQueryResult = VK_ERROR_FORMAT_NOT_SUPPORTED;
+  REQUIRE(
+      !VulkanTexture::validateImageConfiguration(&device, expectedImageInfo));
+  imageQueryResult = VK_SUCCESS;
+  imageLimits.sampleCounts = VK_SAMPLE_COUNT_1_BIT;
+  REQUIRE(
+      !VulkanTexture::validateImageConfiguration(&device, expectedImageInfo));
+  imageLimits.sampleCounts |= VK_SAMPLE_COUNT_8_BIT;
+  expectedImageInfo.extent.width = 4097;
+  REQUIRE(
+      !VulkanTexture::validateImageConfiguration(&device, expectedImageInfo));
+  expectedImageInfo = saved;
+  expectedImageInfo.mipLevels = 13;
+  REQUIRE(
+      !VulkanTexture::validateImageConfiguration(&device, expectedImageInfo));
+  expectedImageInfo = saved;
+  expectedImageInfo.arrayLayers = 257;
+  REQUIRE(
+      !VulkanTexture::validateImageConfiguration(&device, expectedImageInfo));
+  expectedImageInfo = saved;
+  REQUIRE(imageQueries == 7);
+}
+static void testSwapchainUsage(VulkanCommandQueue &queue) {
+  RenderSwapChainDesc desc;
+  desc.renderWindow = reinterpret_cast<ANativeWindow *>(1);
+  desc.textureCount = 2;
+  desc.format = RenderFormat::B8G8R8A8_UNORM;
+  VulkanSwapChain swapchain(&queue, desc);
+  const VkImageUsageFlags required = surfaceUsage;
+  for (auto missing :
+       {VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_IMAGE_USAGE_SAMPLED_BIT}) {
+    surfaceUsage = required & ~missing;
+    REQUIRE(!swapchain.resize() && swapchainCreates == 0);
+  }
+  surfaceUsage = required;
+  surfaceQueryResult = VK_ERROR_SURFACE_LOST_KHR;
+  REQUIRE(!swapchain.resize() && swapchainCreates == 0);
+  surfaceQueryResult = VK_SUCCESS;
+  REQUIRE(swapchain.resize() && swapchainCreates == 1);
+  REQUIRE(swapchain.textures[0].imageUsage == required &&
+          swapchain.textures[0].isSwapChainImage);
+  const auto oldView = swapchain.textures[0].imageView;
+  surfaceUsage &= ~VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+  REQUIRE(!swapchain.resize() && swapchainCreates == 1 &&
+          swapchain.textures[0].imageView == oldView);
+  surfaceUsage = required;
 }
 static VkResult createPass(VkDevice, const VkRenderPassCreateInfo *p,
                            const VkAllocationCallbacks *, VkRenderPass *out) {
@@ -103,6 +264,7 @@ static void freeBuffers(VkDevice, VkCommandPool, uint32_t,
                         const VkCommandBuffer *) {}
 static void beginPass(VkCommandBuffer, const VkRenderPassBeginInfo *p,
                       VkSubpassContents) {
+  REQUIRE(!rejectBeforeRecording);
   REQUIRE(!inPass);
   inPass = true;
   commands.push_back('B');
@@ -148,6 +310,7 @@ static void barrier(VkCommandBuffer, VkPipelineStageFlags src,
                     uint32_t memories, const VkMemoryBarrier *memory,
                     uint32_t buffers, const VkBufferMemoryBarrier *,
                     uint32_t images, const VkImageMemoryBarrier *image) {
+  REQUIRE(!rejectBeforeRecording);
   REQUIRE(!inPass && flags == 0 && buffers == 0);
   if (memories) {
     REQUIRE(memories == 1);
@@ -193,6 +356,7 @@ static void barrier(VkCommandBuffer, VkPipelineStageFlags src,
 static void clearImage(VkCommandBuffer, VkImage image, VkImageLayout layout,
                        const VkClearColorValue *color, uint32_t count,
                        const VkImageSubresourceRange *range) {
+  REQUIRE(!rejectBeforeRecording);
   REQUIRE(!inPass);
   commands.push_back('K');
   selectedImage = image;
@@ -204,6 +368,7 @@ static void clearImage(VkCommandBuffer, VkImage image, VkImageLayout layout,
 static void clearAttachments(VkCommandBuffer, uint32_t,
                              const VkClearAttachment *, uint32_t,
                              const VkClearRect *) {
+  REQUIRE(!rejectBeforeRecording);
   REQUIRE(inPass);
   commands.push_back('C');
 }
@@ -219,6 +384,7 @@ static VkResult createSem(VkDevice, const VkSemaphoreCreateInfo *,
 static void destroySem(VkDevice, VkSemaphore, const VkAllocationCallbacks *) {}
 static VkResult submit(VkQueue, uint32_t count, const VkSubmitInfo *p,
                        VkFence) {
+  REQUIRE(!rejectBeforeRecording);
   REQUIRE(count == 1 && p->waitSemaphoreCount == 2);
   for (unsigned i = 0; i < 2; ++i)
     REQUIRE(p->pWaitDstStageMask[i] == VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
@@ -262,6 +428,16 @@ int main(int argc, char **argv) {
   vkEnumeratePhysicalDevices = enumerate;
   VulkanDevice device(&interface, "");
   vkGetPhysicalDeviceFormatProperties = formatProperties;
+  vkGetPhysicalDeviceImageFormatProperties = imageProperties;
+  vkCreateAndroidSurfaceKHR = createSurface;
+  vkDestroySurfaceKHR = destroySurface;
+  vkGetPhysicalDeviceSurfaceSupportKHR = presentSupport;
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR = surfaceCaps;
+  vkGetPhysicalDeviceSurfaceFormatsKHR = surfaceFormats;
+  vkGetPhysicalDeviceSurfacePresentModesKHR = presentModes;
+  vkCreateSwapchainKHR = createSwapchain;
+  vkDestroySwapchainKHR = destroySwapchain;
+  vkGetSwapchainImagesKHR = swapchainImages;
   vkCreateRenderPass = createPass;
   vkDestroyRenderPass = destroyPass;
   vkCreateFramebuffer = createFb;
@@ -290,8 +466,61 @@ int main(int argc, char **argv) {
   device.queueFamilies[0].queues[0].mutex = std::make_unique<std::mutex>();
   VulkanCommandQueue queue(&device, RenderCommandListType::DIRECT);
   VulkanCommandList list(&queue);
+  if (argc > 1 && std::strncmp(argv[1], "--image-reject=", 15) == 0) {
+    const char *mode = argv[1] + 15;
+    RenderMultisampling ms;
+    ms.sampleCount = 8;
+    expectedImageInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+    expectedImageInfo.imageType = VK_IMAGE_TYPE_2D;
+    expectedImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    expectedImageInfo.usage =
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    imageLimits.maxExtent = {4096, 4096, 1};
+    imageLimits.maxMipLevels = 12;
+    imageLimits.maxArrayLayers = 256;
+    imageLimits.sampleCounts = VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_8_BIT;
+    if (std::strcmp(mode, "query") == 0)
+      imageQueryResult = VK_ERROR_FORMAT_NOT_SUPPORTED;
+    else if (std::strcmp(mode, "samples") == 0)
+      imageLimits.sampleCounts = VK_SAMPLE_COUNT_1_BIT;
+    else if (std::strcmp(mode, "extent") == 0)
+      imageLimits.maxExtent.width = 32;
+    else if (std::strcmp(mode, "mips") == 0)
+      imageLimits.maxMipLevels = 0;
+    else if (std::strcmp(mode, "layers") == 0)
+      imageLimits.maxArrayLayers = 0;
+    VulkanTexture rejected(&device, nullptr,
+                           RenderTextureDesc::ColorTarget(
+                               640, 480, RenderFormat::B8G8R8A8_UNORM, ms));
+    REQUIRE(false); // Constructor must stop before VMA allocation.
+  }
+  if (argc > 1 && std::strncmp(argv[1], "--reject=", 9) == 0)
+    clearRejectionCase = argv[1] + 9;
+  if (clearRejectionCase == nullptr && !invalidState) {
+    testImageConfigurations(device);
+    testSwapchainUsage(queue);
+  }
+  if (argc > 1 && std::strcmp(argv[1], "--late-categories") == 0) {
+    VulkanTexture warmup;
+    initialize(warmup, device, 1, RenderFormat::B8G8R8A8_UNORM);
+    warmup.ownership = true;
+    const RenderTexture *color = &warmup;
+    VulkanFramebuffer framebuffer(&device, RenderFramebufferDesc(&color, 1));
+    list.setFramebuffer(&framebuffer);
+    for (unsigned i = 0; i < 32; ++i)
+      list.clearColor(0, RenderColor(), nullptr, 0);
+    list.setFramebuffer(nullptr);
+    warmup.ownership = false;
+  }
   for (uint32_t samples : {1u, 8u})
     for (unsigned count : {1u, 2u}) {
+#if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) &&                               \
+    TOOIE_VULKAN_TRANSFER_CLEAR_TEST &&                                        \
+    !defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK)
+      if (samples > 1)
+        continue;
+#endif
       VulkanTexture first, second, depth;
       RenderFormat format = samples == 8 ? RenderFormat::B8G8R8A8_UNORM
                                          : RenderFormat::R8G8B8A8_UNORM;
@@ -305,6 +534,7 @@ int main(int argc, char **argv) {
       auto &selected = count == 1 ? first : second;
       // Synthetic offscreen ownership metadata; never hand mock images to VMA.
       selected.ownership = samples == 8;
+      selected.isSwapChainImage = samples == 1;
       unsigned base = createdPasses;
       {
         VulkanFramebuffer framebuffer(
@@ -330,8 +560,61 @@ int main(int argc, char **argv) {
                 selected.imageView);
         list.setFramebuffer(&framebuffer);
         commands.clear();
-        if (invalidState)
+        if (invalidState) {
           selected.textureLayout = RenderTextureLayout::PRESENT;
+          rejectBeforeRecording = true;
+        }
+        if (clearRejectionCase != nullptr) {
+          const char *r = clearRejectionCase;
+          if (!std::strcmp(r, "explicit-attachment-view"))
+            framebuffer.colorAttachmentUsesBaseView[selectedIndex] = false;
+          if (!std::strcmp(r, "not-2d"))
+            selected.desc.dimension = RenderTextureDimension::TEXTURE_3D;
+          if (!std::strcmp(r, "linear-tiling"))
+            selected.desc.textureArrangement =
+                RenderTextureArrangement::ROW_MAJOR;
+          if (!std::strcmp(r, "multiple-mip-levels"))
+            selected.desc.mipLevels = 2;
+          if (!std::strcmp(r, "multiple-array-layers"))
+            selected.desc.arraySize = 2;
+          if (!std::strcmp(r, "framebuffer-extent-mismatch"))
+            selected.desc.width = 1280;
+          if (!std::strcmp(r, "missing-transfer-dst-usage"))
+            selected.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+          if (!std::strcmp(r, "attachment-format-mismatch"))
+            framebuffer.colorAttachmentFormats[selectedIndex] =
+                VK_FORMAT_R8G8B8A8_SRGB;
+          if (!std::strcmp(r, "unsupported-clear-format")) {
+            selected.imageFormat = VK_FORMAT_R8G8B8A8_UINT;
+            framebuffer.colorAttachmentFormats[selectedIndex] =
+                selected.imageFormat;
+          }
+          if (!std::strcmp(r, "format-transfer-dst-unsupported"))
+            transferFeature = false;
+          if (!std::strcmp(r, "null-image"))
+            selected.vk = VK_NULL_HANDLE;
+          if (!std::strcmp(r, "null-image-view"))
+            selected.imageView = VK_NULL_HANDLE;
+          if (!std::strcmp(r, "null-framebuffer"))
+            framebuffer.vk = VK_NULL_HANDLE;
+          if (!std::strcmp(r, "null-render-pass"))
+            framebuffer.renderPass = VK_NULL_HANDLE;
+          if (!std::strcmp(r, "layout-not-color-write"))
+            selected.textureLayout = RenderTextureLayout::PRESENT;
+          if (!std::strcmp(r, "missing-graphics-stage"))
+            selected.barrierStages = RenderBarrierStage::NONE;
+          if (!std::strcmp(r, "legacy-requires-external-image"))
+            selected.ownership = true;
+          if (!std::strcmp(r, "legacy-requires-single-sample"))
+            selected.desc.multisampling.sampleCount = 8;
+          rejectBeforeRecording = true;
+          RenderRect rect = {0, 0, 32, 32};
+          list.clearColor(selectedIndex, RenderColor(),
+                          !std::strcmp(r, "partial-rectangles") ? &rect
+                                                                : nullptr,
+                          !std::strcmp(r, "partial-rectangles") ? 1 : 0);
+          REQUIRE(false);
+        }
         list.clearColor(selectedIndex, RenderColor(0.2f, 0.3f, 0.4f, 0.0f),
                         nullptr, 0);
 #if defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) &&                               \
@@ -371,6 +654,8 @@ int main(int argc, char **argv) {
 #if !defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST)
         REQUIRE(commands == std::vector<char>({'E', 'I', 'K', 'I'}));
 #endif
+#if defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK) &&                   \
+    TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK
         RenderRect rect = {0, 0, 32, 32};
         const bool wasInPass = inPass;
         commands.clear();
@@ -383,8 +668,11 @@ int main(int argc, char **argv) {
         REQUIRE(commands == (wasInPass ? std::vector<char>{'C'}
                                        : std::vector<char>{'B', 'C'}));
 #endif
+#endif
         list.setFramebuffer(nullptr);
-#if !defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST)
+#if !defined(TOOIE_VULKAN_TRANSFER_CLEAR_TEST) &&                              \
+    defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK) &&                   \
+    TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK
         // Guard whole-image semantics: missing usage/features, views,
         // mismatched extents/format, mips/layers, integers, and linear tiling
         // must not transfer.
