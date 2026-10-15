@@ -7,6 +7,9 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Process;
+import android.os.SystemClock;
+import android.view.ViewTreeObserver;
 import android.util.Log;
 import android.view.View;
 import android.view.SurfaceHolder;
@@ -34,6 +37,25 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     private boolean romImportInProgress;
     private boolean romPickerDestroyed;
     private boolean presentationResumed;
+    private final WindowSnapshotLog windowSnapshotLog = new WindowSnapshotLog();
+    private final ViewTreeObserver.OnGlobalLayoutListener windowLayoutObserver = () -> traceWindow("layout");
+
+    private void traceWindow(String reason) {
+        Window current = getWindow();
+        View decor = current == null ? null : current.getDecorView();
+        if (decor == null || romPickerDestroyed) return;
+        WindowInsets insets = decor.getRootWindowInsets(); // minSdk 24; API 23 getter.
+        String edges = insets == null ? "unavailable" :
+            insets.getSystemWindowInsetLeft() + "," + insets.getSystemWindowInsetTop() + "," +
+            insets.getSystemWindowInsetRight() + "," + insets.getSystemWindowInsetBottom();
+        String snapshot = "decor=" + decor.getWidth() + "x" + decor.getHeight() +
+            " surface=" + (mSurface == null ? "unavailable" : mSurface.getWidth() + "x" + mSurface.getHeight()) +
+            " insets_ltrb=" + edges + " resumed=" + presentationResumed + " focus=" + decor.hasWindowFocus();
+        String record = windowSnapshotLog.observe(snapshot);
+        if (record != null) Log.i(TAG, "Runtime window: mono_uptime_ms=" + SystemClock.uptimeMillis() +
+            " pid=" + Process.myPid() + " tid=" + Process.myTid() + " reason=" + reason + " " + record);
+    }
+
     private final AtomicBoolean romImportCancelled = new AtomicBoolean();
     private final ExecutorService romImportWorker = Executors.newSingleThreadExecutor(task -> {
         Thread worker = new Thread(task, "Tooie-ROM-import");
@@ -51,11 +73,13 @@ public class BanjoTooieSDLActivity extends SDLActivity {
         presentationResumed = false;
         presentationLifecycle(1);
         super.onPause();
+        traceWindow("pause");
     }
     @Override protected void onResume() {
         super.onResume();
         presentationResumed = true;
         presentationLifecycle(2);
+        traceWindow("resume");
     }
     @Override protected void onStop() {
         presentationLifecycle(1); // Includes SDL multi-window pause behavior.
@@ -71,6 +95,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
                 presentationLifecycle(5); // Also serialize size/format changes.
                 super.surfaceChanged(holder, format, width, height);
                 if (mIsSurfaceReady) presentationLifecycle(6);
+                traceWindow("surface-changed");
             }
         };
     }
@@ -88,6 +113,9 @@ public class BanjoTooieSDLActivity extends SDLActivity {
 
         super.onCreate(savedInstanceState);
         presentationLifecycle(0);
+        if (getWindow() != null && getWindow().getDecorView() != null)
+            getWindow().getDecorView().getViewTreeObserver().addOnGlobalLayoutListener(windowLayoutObserver);
+        traceWindow("create");
 
         File programDir = new File(getFilesDir(), "program");
         File dataDir = new File(getFilesDir(), "data");
@@ -186,6 +214,10 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     protected void onDestroy() {
         presentationResumed = false;
         presentationLifecycle(7);
+        if (getWindow() != null && getWindow().getDecorView() != null) {
+            ViewTreeObserver observer = getWindow().getDecorView().getViewTreeObserver();
+            if (observer.isAlive()) observer.removeOnGlobalLayoutListener(windowLayoutObserver);
+        }
         romPickerDestroyed = true;
         romImportCancelled.set(true);
         if (pendingRomRequest != 0) {
@@ -214,6 +246,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
         if (hasFocus) {
             applyImmersiveFullscreen();
         }
+        traceWindow("focus");
     }
 
     private void applyImmersiveFullscreen() {

@@ -1,3 +1,4 @@
+#include "../../../../src/runtime_diagnostics.h"
 #include "../../../../src/android_debug_log.h"
 //
 // RT64
@@ -135,6 +136,11 @@ namespace RT64 {
         }
 
         RenderTarget *colorTarget = nullptr;
+#if defined(__ANDROID__)
+        uint32_t diagnostic_width=0,diagnostic_height=0;
+        hlslpp::float2 diagnostic_scale = resolutionScale;
+        uint32_t diagnostic_downsampling = 1;
+#endif
         int32_t framesToPresent = 1;
         bool lockedWorkloadMutex = false;
         InterpolatedFrameCounters &frameCounters = ext.sharedResources->interpolatedFrames[ext.sharedResources->interpolatedFramesIndex];
@@ -333,7 +339,13 @@ namespace RT64 {
                 commandList->barriers(RenderBarrierStage::GRAPHICS, RenderTextureBarrier(swapChainTexture, RenderTextureLayout::COLOR_WRITE));
                 
                 VIRenderer::RenderParams renderParams;
+#if defined(__ANDROID__)
+                diagnostic_width = diagnostic_height = 0;
+#endif
                 if (colorTarget != nullptr) {
+#if defined(__ANDROID__)
+                    diagnostic_width=colorTarget->width;diagnostic_height=colorTarget->height;
+#endif
                     renderParams.device = ext.device;
                     renderParams.commandList = commandList;
                     renderParams.swapChain = ext.swapChain;
@@ -365,6 +377,12 @@ namespace RT64 {
                 commandList->clearColor();
 
                 if (renderParams.texture != nullptr) {
+#if defined(__ANDROID__)
+                    // Copy values while the render target is still protected;
+                    // diagnostics must not dereference it after workload unlock.
+                    diagnostic_scale = renderParams.resolutionScale;
+                    diagnostic_downsampling = renderParams.downsamplingScale;
+#endif
                     commandList->barriers(RenderBarrierStage::GRAPHICS, RenderTextureBarrier(renderParams.texture, RenderTextureLayout::SHADER_READ));
                     viRenderer->render(renderParams);
                 }
@@ -429,6 +447,29 @@ namespace RT64 {
                 presentTimestamp = Timer::current();
                 if (tooie_log_present) tooie_android_debug_log("Present: Vulkan present begin");
                 swapChainValid = ext.swapChain->present(swapChainIndex, &waitSemaphore, 1);
+#if defined(__ANDROID__)
+                static thread_local tooie::diagnostics::RateWindow diagnostic_window;
+                static thread_local uint64_t diagnostic_calls=0,diagnostic_success=0;
+                diagnostic_success+=swapChainValid?1:0;
+                const auto diagnostic_sample=diagnostic_window.observe(tooie::diagnostics::monotonicUs(),++diagnostic_calls);
+                if(diagnostic_sample.ready) {
+                    RenderViewport viewport{};
+                    RenderRect scissor{};
+                    if (diagnostic_width != 0) {
+                        // Read-only calculation through the same production VI
+                        // mapping used by the draw, once per reporting window.
+                        VIRenderer::getViewportAndScissor(ext.swapChain, present.screenVI, diagnostic_scale,
+                            diagnostic_downsampling, removeBlackBorders, viewport, scissor);
+                    }
+                    char text[896];std::snprintf(text,sizeof(text),"elapsed_us=%llu native_present_calls=%llu successful_total=%llu target_hz=%u vi_original_hz=%u refresh_mode=%u presentation_mode=%u filtering=%u swapchain=%ux%u render_target=%ux%u resolution_scale=%.3fx%.3f downsampling=%u viewport=%.2f,%.2f,%.2f,%.2f scissor=%d,%d..%d,%d interpolation_frames=%d interpolation_index=%d gap_min_us=%llu gap_max_us=%llu",
+                        (unsigned long long)diagnostic_sample.elapsedUs,(unsigned long long)diagnostic_sample.count,(unsigned long long)diagnostic_success,
+                        targetRate,viOriginalRate,unsigned(refreshRate),unsigned(presentationMode),unsigned(filtering),ext.swapChain->getWidth(),ext.swapChain->getHeight(),
+                        diagnostic_width,diagnostic_height,double(diagnostic_scale.x),double(diagnostic_scale.y),diagnostic_downsampling,
+                        double(viewport.x),double(viewport.y),double(viewport.width),double(viewport.height),
+                        scissor.left,scissor.top,scissor.right,scissor.bottom,framesToPresent,i,
+                        (unsigned long long)diagnostic_sample.minGapUs,(unsigned long long)diagnostic_sample.maxGapUs);tooie::diagnostics::log("present",text);
+                }
+#endif
                 if (tooie_log_present) tooie_android_debug_log("Present: Vulkan present returned");
                 presentProfiler.logAndRestart();
             }

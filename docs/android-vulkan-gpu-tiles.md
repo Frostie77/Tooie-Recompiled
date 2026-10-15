@@ -1,10 +1,17 @@
 # Android initial framebuffer GPU-tile lifecycle
 
+Step 65 correction: production defines only queue isolation as 0 and leaves the
+transfer/fallback/barrier selectors undefined. Defining TRANSFER_CLEAR_TEST=0
+selects the failed load-op comparison; earlier OFF/0/0/0 guidance was incorrect.
+See [gameplay audio/timing investigation](android-gameplay-runtime.md).
+
 Base: `3a836de6c1484b866b66408d5d127b4282a84a4c`, branch
 `fix/android-vulkan-transfer-proposal`. This fixes first-use/empty GPU-tile
 preparation, not descriptor-pool sizing or a newly demonstrated driver crash.
-No Odin operation occurs in this task. Launcher rendering and gameplay with
-this revision remain unverified.
+The original Step 59 investigation did not run on the Odin. Step 65 subsequently
+confirms launcher rendering and genuine gameplay on this exact revision, with
+successful empty-tile preparation. Audio, timing and presentation symptoms remain
+under investigation; see the linked Step 65 evidence and its capture limits.
 
 ## New hardware evidence
 
@@ -199,8 +206,8 @@ Normal settings remain:
 | --- | --- |
 | `TOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE` | **OFF** (CMake option) |
 | `TOOIE_VULKAN_QUEUE_ISOLATION_TEST` | **0** (C++ definition) |
-| `TOOIE_VULKAN_TRANSFER_CLEAR_TEST` | **0** (C++ definition) |
-| `TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK` | **0** (C++ definition) |
+| `TOOIE_VULKAN_TRANSFER_CLEAR_TEST` | **Undefined** (normal transfer proposal) |
+| `TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK` | **Undefined** (fallback disabled) |
 
 All five-second timeouts,
 Adreno pool policy and actual allocation/write bounds are unchanged. Package
@@ -216,5 +223,6 @@ the tested APK; that packaging work needs no source fix here. No APK was built,
 installed, launched, modified or rolled back in this task. No device operation,
 driver/data change, merge or PR #1 edit occurred. The dependency changes are
 ordinary root-repository tracked files; no submodules or historical patches are
-recreated. The new production rendering change still needs separately approved
-hardware verification; the older gameplay failure remains unverified.
+recreated. This paragraph records the original Step 59 validation limits;
+the later Step 65 hardware follow-up is documented above and in the linked
+gameplay investigation. It establishes gameplay progress, not release readiness.

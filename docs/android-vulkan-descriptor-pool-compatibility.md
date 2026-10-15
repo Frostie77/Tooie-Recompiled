@@ -1,5 +1,10 @@
 # Android Adreno 740 descriptor-pool reservation
 
+Step 65 correction: production defines only queue isolation as 0 and leaves the
+transfer/fallback/barrier selectors undefined. Defining TRANSFER_CLEAR_TEST=0
+selects the failed load-op comparison; earlier OFF/0/0/0 guidance was incorrect.
+See [gameplay audio/timing investigation](android-gameplay-runtime.md).
+
 Base: `7005b76ad7af60e521727a9396a318549a6e1da0`, on
 `fix/android-vulkan-transfer-proposal`. This implements the Step 54 handoff's
 bounded allocation compatibility policy. The subsequent Step 59 hardware run
@@ -143,8 +148,8 @@ The next coordinator-reviewed APK is **normal gameplay**, not the early probe:
 | --- | --- |
 | `TOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE` | **OFF**, CMake option |
 | `TOOIE_VULKAN_QUEUE_ISOLATION_TEST` | **0**, C++ definition |
-| `TOOIE_VULKAN_TRANSFER_CLEAR_TEST` | **0**, C++ definition |
-| `TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK` | **0**, C++ definition |
+| `TOOIE_VULKAN_TRANSFER_CLEAR_TEST` | **Undefined** (normal transfer proposal) |
+| `TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK` | **Undefined** (fallback disabled) |
 
 The probe remains OFF by default. Its five raw comparisons are unchanged and
 do not use the production reservation planner. If all raw cases pass, its
@@ -177,7 +182,8 @@ fatal guards remain active. No new device-test authorization is requested here.
 - NDK r27d/API 24 ARM64 normal and six-mode Plume, retained probe-ON compilation,
   RT64/application/presentation/front-end/picker translation units; Android
   API 36 Java/JNI compilation; desktop Linux Plume compilation.
-  The normal ARM64 static library was compiled explicitly OFF/0/0/0; its strings
+  The earlier ARM64 static library was compiled OFF/0/0/0 (not the subsequently
+  verified production clear profile); its strings
   retain the policy marker and exclude the probe's intentional-stop marker,
   while the probe-ON control retains that marker.
 

@@ -43,6 +43,8 @@
 #undef Always
 #endif
 
+#include "queued_audio.h"
+
 #include "recompui/recompui.h"
 #include "recompui/program_config.h"
 #include "recompui/renderer.h"
@@ -171,146 +173,12 @@ void update_gfx(void*) {
 
 // --- Audio -----------------------------------------------------------------
 
-static SDL_AudioCVT audio_convert;
-static SDL_AudioDeviceID audio_device = 0;
+static tooie::audio::QueuedAudio queued_audio;
 
-static uint32_t sample_rate = 48000;
-static uint32_t output_sample_rate = 48000;
-
-constexpr uint32_t input_channels = 2;
-static uint32_t output_channels = 2;
-
-constexpr uint32_t duplicated_input_frames = 4;
-static uint32_t discarded_output_frames = 0;
-
-constexpr uint32_t bytes_per_frame = input_channels * sizeof(float);
-
-void queue_samples(int16_t* audio_data, size_t sample_count) {
-    static std::vector<float> swap_buffer;
-    static std::array<float, duplicated_input_frames * input_channels>
-        duplicated_sample_buffer;
-
-    size_t resampled_sample_count =
-        sample_count + duplicated_input_frames * input_channels;
-    size_t max_sample_count =
-        std::max(resampled_sample_count,
-                 resampled_sample_count * audio_convert.len_mult);
-    if (max_sample_count > swap_buffer.size()) {
-        swap_buffer.resize(max_sample_count);
-    }
-
-    for (size_t i = 0; i < duplicated_input_frames * input_channels; i++) {
-        swap_buffer[i] = duplicated_sample_buffer[i];
-    }
-
-    for (size_t i = 0; i < sample_count; i += input_channels) {
-        swap_buffer[i + 0 + duplicated_input_frames * input_channels] =
-            audio_data[i + 1] * (0.5f / 32768.0f);
-        swap_buffer[i + 1 + duplicated_input_frames * input_channels] =
-            audio_data[i + 0] * (0.5f / 32768.0f);
-    }
-
-    if (sample_count <= duplicated_input_frames * input_channels) {
-        return;
-    }
-
-    for (size_t i = 0; i < duplicated_input_frames * input_channels; i++) {
-        duplicated_sample_buffer[i] = swap_buffer[i + sample_count];
-    }
-
-    audio_convert.buf = reinterpret_cast<Uint8*>(swap_buffer.data());
-    audio_convert.len =
-        (sample_count + duplicated_input_frames * input_channels) *
-        sizeof(swap_buffer[0]);
-
-    if (SDL_ConvertAudio(&audio_convert) < 0) {
-        std::fprintf(stderr, "Error using SDL audio converter: %s\n",
-                     SDL_GetError());
-        return;
-    }
-
-    const uint64_t cur_queued_microseconds =
-        static_cast<uint64_t>(SDL_GetQueuedAudioSize(audio_device)) /
-        bytes_per_frame * 1000000 / sample_rate;
-    uint32_t num_bytes_to_queue =
-        audio_convert.len_cvt -
-        output_channels * discarded_output_frames * sizeof(swap_buffer[0]);
-    float* samples_to_queue =
-        swap_buffer.data() + output_channels * discarded_output_frames / 2;
-
-    const uint32_t skip_factor = cur_queued_microseconds / 100000;
-    if (skip_factor != 0) {
-        const uint32_t skip_ratio = 1 << skip_factor;
-        num_bytes_to_queue /= skip_ratio;
-        for (size_t i = 0;
-             i < num_bytes_to_queue / (output_channels * sizeof(swap_buffer[0]));
-             i++) {
-            samples_to_queue[2 * i + 0] = samples_to_queue[2 * skip_ratio * i + 0];
-            samples_to_queue[2 * i + 1] = samples_to_queue[2 * skip_ratio * i + 1];
-        }
-    }
-
-    SDL_QueueAudio(audio_device, samples_to_queue, num_bytes_to_queue);
-}
-
-size_t get_frames_remaining() {
-    constexpr float buffer_offset_frames = 1.0f;
-    uint64_t buffered_byte_count = SDL_GetQueuedAudioSize(audio_device);
-
-    buffered_byte_count =
-        buffered_byte_count * 2 * sample_rate / output_sample_rate /
-        output_channels;
-
-    const uint32_t frames_per_vi = (sample_rate / 60);
-    if (buffered_byte_count >
-        (buffer_offset_frames * bytes_per_frame * frames_per_vi)) {
-        buffered_byte_count -=
-            (buffer_offset_frames * bytes_per_frame * frames_per_vi);
-    } else {
-        buffered_byte_count = 0;
-    }
-    return static_cast<size_t>(buffered_byte_count / bytes_per_frame);
-}
-
-void update_audio_converter() {
-    if (SDL_BuildAudioCVT(&audio_convert, AUDIO_F32, input_channels,
-                          sample_rate, AUDIO_F32, output_channels,
-                          output_sample_rate) < 0) {
-        std::fprintf(stderr, "Error creating SDL audio converter: %s\n",
-                     SDL_GetError());
-        throw std::runtime_error("Error creating SDL audio converter");
-    }
-    discarded_output_frames =
-        duplicated_input_frames * output_sample_rate / sample_rate;
-}
-
-void set_frequency(uint32_t freq) {
-    sample_rate = freq;
-    update_audio_converter();
-}
-
-bool reset_audio(uint32_t output_freq) {
-    SDL_AudioSpec spec_desired{};
-    spec_desired.freq = static_cast<int>(output_freq);
-    spec_desired.format = AUDIO_F32;
-    spec_desired.channels = static_cast<Uint8>(output_channels);
-    spec_desired.samples = 0x100;
-    spec_desired.callback = nullptr;
-    spec_desired.userdata = nullptr;
-
-    audio_device =
-        SDL_OpenAudioDevice(nullptr, false, &spec_desired, nullptr, 0);
-    if (audio_device == 0) {
-        std::fprintf(stderr, "Error opening audio device: %s\n",
-                     SDL_GetError());
-        return false;
-    }
-
-    SDL_PauseAudioDevice(audio_device, 0);
-    output_sample_rate = output_freq;
-    update_audio_converter();
-    return true;
-}
+void queue_samples(int16_t* data, size_t count) { queued_audio.queue(data, count); }
+size_t get_frames_remaining() { return queued_audio.remainingFrames(); }
+void set_frequency(uint32_t rate) { queued_audio.setFrequency(rate); }
+bool reset_audio(uint32_t rate) { return queued_audio.open(rate); }
 
 // --- Input -----------------------------------------------------------------
 
@@ -759,9 +627,7 @@ static int tooie_recomp_main(int argc, char** argv) {
     if (window != nullptr) {
         SDL_DestroyWindow(window);
     }
-    if (audio_device != 0) {
-        SDL_CloseAudioDevice(audio_device);
-    }
+    queued_audio.close();
     SDL_Quit();
 #if !defined(__ANDROID__)
     NFD_Quit();

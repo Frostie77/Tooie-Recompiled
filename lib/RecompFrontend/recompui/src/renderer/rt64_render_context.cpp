@@ -1,3 +1,4 @@
+#include "../../../../../src/runtime_diagnostics.h"
 #include "../../../../../src/android_debug_log.h"
 #include <memory>
 #include <cstring>
@@ -183,6 +184,11 @@ void set_application_user_config(RT64::Application* application, const ultramode
     application->userConfig.refreshRateTarget = config.rr_manual_value;
     application->userConfig.internalColorFormat = to_rt64(config.hpfb_option);
     application->userConfig.displayBuffering = RT64::UserConfiguration::DisplayBuffering::Triple;
+#if defined(__ANDROID__)
+    nlohmann::json effective;RT64::to_json(effective,application->userConfig);
+    const std::string text="event=effective-graphics-config values="+effective.dump();
+    tooie::diagnostics::log("config",text.c_str());
+#endif
 }
 
 ultramodern::renderer::SetupResult map_setup_result(RT64::Application::SetupResult rt64_result) {

@@ -5,6 +5,11 @@ in the isolated probe and supports a bounded, qualified production reservation.
 See [Adreno 740 pool compatibility](android-vulkan-descriptor-pool-compatibility.md)
 for the newer evidence, policy and limits; this document retains the earlier history.
 
+Step 65 corrects the transfer-selector guidance below: production leaves it
+undefined; zero selects the failed load-op comparison. See
+[gameplay runtime investigation](android-gameplay-runtime.md) for the exact
+tested production profile and subsequent gameplay evidence.
+
 Base/parent: `2e0b7536083f5fc1e610506e05e683c8e268052b`, branch
 `fix/android-vulkan-transfer-proposal`. This revision supplies an **opt-in
 experiment**, not a verified allocation workaround. Normal pool capacities,
@@ -164,8 +169,8 @@ For a future separately authorized diagnostic build, use:
 | --- | --- |
 | `TOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE` | **ON**, CMake option |
 | `TOOIE_VULKAN_QUEUE_ISOLATION_TEST` | **0**, C++ definition |
-| `TOOIE_VULKAN_TRANSFER_CLEAR_TEST` | **0**, C++ definition |
-| `TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK` | **0**, C++ definition |
+| `TOOIE_VULKAN_TRANSFER_CLEAR_TEST` | **Undefined** |
+| `TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK` | **Undefined**, fallback disabled |
 
 The probe rejects builds that combine it with queue isolation or unsafe fallback.
 Confirm the new commit/ELF identity and the `probe start` marker. Collect every

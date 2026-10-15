@@ -53,6 +53,18 @@ build_and_record load-op-control -DTOOIE_VULKAN_TRANSFER_CLEAR_TEST=0 -DTOOIE_VU
 build_and_record barrier-control -DTOOIE_VULKAN_TRANSFER_CLEAR_TEST=0 -DTOOIE_VULKAN_CLEAR_BARRIER_TEST=1 -DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=1
 build_and_record fallback-comparison -DTOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK=1
 build_and_record legacy-skip-comparison -DTOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK=1 -DTOOIE_VULKAN_TRANSFER_CLEAR_TEST=1
+# Exact Step 62/65 production profile: only queue isolation is defined as zero.
+# TRANSFER_CLEAR_TEST=0 is a diagnostic selector, NOT the normal transfer path.
+build_and_record production -DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=0
+grep -q 'path=transfer ' "$test_dir/log-production/banjotooi-debug.log"
+grep -q 'path=scissored-draw ' "$test_dir/log-production/banjotooi-debug.log"
+grep -q 'PASS: clipped/empty/mixed rectangles.*samples=2' "$test_dir/production.out"
+if grep -Eq 'path=(load-op-control|barrier-only)' "$test_dir/log-production/banjotooi-debug.log";then echo 'FAIL: production selected diagnostic clear';exit 1;fi
+expect_rejection production --reject=attachment-format-mismatch attachment-format-mismatch
+expect_rejection production --draw-reject=outside-unsafe-layout layout-not-color-write
+expect_rejection production --draw-reject=inverted-x malformed-rectangle
+expect_rejection production --image-reject=samples sample-count-unsupported
+
 
 # Each child prohibits begin/clear/barrier/submit callbacks before its expected
 # rejection, so a return through the former fallback cannot masquerade as a pass.
