@@ -193,3 +193,10 @@ packaging and asset/licensing review, and optional GitHub APK update detection
 through Android confirmation with offline operation and data preservation. These
 are separate work; no update flow, rename, signing, release or package change is
 included here. Main, PR #1 and releases are unchanged.
+
+## Step 75 follow-up
+
+The 2db83af device continuation attributes the dominant matching cost to same-hash
+call-pair expansion. [Matching candidate construction](android-matching-performance.md)
+records the verified evidence, equivalent-output optimization, exact-source
+controls and remaining sluggishness/entry-freeze verification limits.

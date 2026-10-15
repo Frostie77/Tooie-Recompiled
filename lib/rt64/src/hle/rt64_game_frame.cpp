@@ -6,6 +6,7 @@
 #include "common/rt64_math.h"
 
 #include "rt64_game_frame.h"
+#include "rt64_match_candidates.h"
 #include "rt64_workload_queue.h"
 
 #include "xxHash/xxh3.h"
@@ -44,7 +45,7 @@ std::atomic<uint32_t> g_bt_rt64_matched_sky{0};
 namespace RT64 {
     namespace {
 #if defined(__ANDROID__)
-        struct MatchingCounts { uint64_t callPairs=0, transformPairs=0, tilePairs=0, lookAtPairs=0; };
+        struct MatchingCounts { uint64_t callPairs=0, transformPairs=0, tilePairs=0, lookAtPairs=0, expansionVisits=0, tileLookups=0, inputCalls=0; };
         thread_local MatchingCounts matchingCounts;
 #endif
         auto &matchingStages() {
@@ -495,11 +496,12 @@ namespace RT64 {
         stages.elapsed(10,observerStart);
 #if defined(__ANDROID__)
         char stageContext[512];
-        std::snprintf(stageContext,sizeof(stageContext),"workload=%llu batches=%zu perspective=%zu orthographic=%zu velocity_upload=%u tiles=%u look_at=%u call_pairs=%llu transform_pairs=%llu tile_pairs=%llu look_at_pairs=%llu",
+        std::snprintf(stageContext,sizeof(stageContext),"workload=%llu batches=%zu perspective=%zu orthographic=%zu velocity_upload=%u tiles=%u look_at=%u logical_call_pairs=%llu transform_pairs=%llu tile_pairs=%llu look_at_pairs=%llu expansion_visits=%llu tile_lookups=%llu input_calls=%llu",
             (unsigned long long)(workloads.empty()?0:workloadQueue.workloads[workloads.front()].workloadId),workloads.size(),
             perspectiveScenes.size(),orthographicScenes.size(),unsigned(velocityUploaderUsed),unsigned(tileInterpolationUsed),unsigned(lookAtInterpolationUsed),
             (unsigned long long)matchingCounts.callPairs,(unsigned long long)matchingCounts.transformPairs,
-            (unsigned long long)matchingCounts.tilePairs,(unsigned long long)matchingCounts.lookAtPairs);
+            (unsigned long long)matchingCounts.tilePairs,(unsigned long long)matchingCounts.lookAtPairs,
+            (unsigned long long)matchingCounts.expansionVisits,(unsigned long long)matchingCounts.tileLookups,(unsigned long long)matchingCounts.inputCalls);
         stages.report(matchStart,stageContext);
 #endif
     }
@@ -638,65 +640,16 @@ namespace RT64 {
         tileCheckSet.clear();
         lookAtCheckSet.clear();
 
-        // Traverse the map and fill the set with all the combinations of transforms to check.
-        for (std::pair<uint64_t, GameCallMap> curIt : curCallHashMap) {
-            auto prevRange = prevCallHashMap.equal_range(curIt.first);
-            for (auto prevIt = prevRange.first; prevIt != prevRange.second; prevIt++) {
+        const auto expansion = buildMatchCandidates(workloadQueue.workloads, curScene, prevScene,
+            curCallHashMap, prevCallHashMap, transformCheckSet, tileCheckSet, lookAtCheckSet);
 #if defined(__ANDROID__)
-                ++matchingCounts.callPairs;
+        matchingCounts.callPairs += expansion.logicalCallPairs;
+        matchingCounts.expansionVisits += expansion.transformRangePairs + expansion.tileVisits + expansion.lookAtVisits;
+        matchingCounts.tileLookups += expansion.tileLookups;
+        matchingCounts.inputCalls += expansion.inputCalls;
+#else
+        (void)expansion;
 #endif
-                const GameIndices::Projection &curProjIndices = curScene.projections[curIt.second.sceneProjIndex];
-                const Workload &curWorkload = workloadQueue.workloads[curProjIndices.workloadIndex];
-                const FramebufferPair &curFbPair = curWorkload.fbPairs[curProjIndices.fbPairIndex];
-                const Projection &curProj = curFbPair.projections[curProjIndices.projectionIndex];
-                const GameCall &curCall = curProj.gameCalls[curIt.second.callIndex];
-                const GameIndices::Projection &prevProjIndices = prevScene.projections[prevIt->second.sceneProjIndex];
-                const Workload &prevWorkload = workloadQueue.workloads[prevProjIndices.workloadIndex];
-                const FramebufferPair &prevFbPair = prevWorkload.fbPairs[prevProjIndices.fbPairIndex];
-                const Projection &prevProj = prevFbPair.projections[prevProjIndices.projectionIndex];
-                const GameCall &prevCall = prevProj.gameCalls[prevIt->second.callIndex];
-                const uint32_t curWorldMatrixCount = (curCall.callDesc.maxWorldMatrix - curCall.callDesc.minWorldMatrix) + 1;
-                const uint32_t prevWorldMatrixCount = (prevCall.callDesc.maxWorldMatrix - prevCall.callDesc.minWorldMatrix) + 1;
-                if ((curWorldMatrixCount == prevWorldMatrixCount) && curIt.second.doTransformMatching && prevIt->second.doTransformMatching) {
-                    for (uint32_t w = 0; w < curWorldMatrixCount; w++) {
-                        const uint32_t curWorldMatrix = curCall.callDesc.minWorldMatrix + w;
-                        const uint32_t curGroupIndex = curWorkload.drawData.worldTransformGroups[curWorldMatrix];
-                        const TransformGroup &curGroup = curWorkload.drawData.transformGroups[curGroupIndex];
-                        const uint32_t prevWorldMatrix = prevCall.callDesc.minWorldMatrix + w;
-                        const uint32_t prevGroupIndex = prevWorkload.drawData.worldTransformGroups[prevWorldMatrix];
-                        const TransformGroup &prevGroup = prevWorkload.drawData.transformGroups[prevGroupIndex];
-                        if ((curGroup.matrixId == prevGroup.matrixId) && ((curGroup.matrixId == G_EX_ID_AUTO) || ((curGroup.matrixId != G_EX_ID_IGNORE) && (curGroup.ordering == G_EX_ORDER_AUTO)))) {
-                            transformCheckSet.emplace(curWorldMatrix, prevWorldMatrix);
-                        }
-                    }
-                }
-
-                if ((curCall.callDesc.tileCount == prevCall.callDesc.tileCount) && (curIt.second.doTileInterpolation && prevIt->second.doTileInterpolation)) {
-                    for (uint32_t t = 0; t < curCall.callDesc.tileCount; t++) {
-                        const DrawCallTile &curCallTile = curWorkload.drawData.callTiles[curCall.callDesc.tileIndex + t];
-                        const DrawCallTile &prevCallTile = prevWorkload.drawData.callTiles[prevCall.callDesc.tileIndex + t];
-                        bool doTileMatching = curIt.second.doTileMatching && prevIt->second.doTileMatching;
-                        if (doTileMatching && (curCallTile.tmemHashOrID != prevCallTile.tmemHashOrID)) {
-                            continue;
-                        }
-
-                        tileCheckSet.emplace(curCall.callDesc.tileIndex + t, prevCall.callDesc.tileIndex + t);
-                    }
-                }
-
-                const uint32_t textureGenMask = G_LIGHTING | G_TEXTURE_GEN;
-                const bool curUsesTextureGen = (curCall.callDesc.geometryMode & textureGenMask) == textureGenMask;
-                const bool prevUsesTextureGen = (prevCall.callDesc.geometryMode & textureGenMask) == textureGenMask;
-                if (curUsesTextureGen && prevUsesTextureGen && (true && true)) { // TODO: Do look at matching condition.
-                    // FIXME: We assume the same look at is used throughout the entire draw call, so we only check the first vertex.
-                    const uint32_t curVertexIndex = curWorkload.drawData.faceIndices[curCall.meshDesc.faceIndicesStart];
-                    const uint32_t prevVertexIndex = prevWorkload.drawData.faceIndices[prevCall.meshDesc.faceIndicesStart];
-                    const uint32_t curLookAtIndex = curWorkload.drawData.lookAtIndices[curVertexIndex] >> RSP_LOOKAT_INDEX_SHIFT;
-                    const uint32_t prevLookAtIndex = prevWorkload.drawData.lookAtIndices[prevVertexIndex] >> RSP_LOOKAT_INDEX_SHIFT;
-                    lookAtCheckSet.emplace(curLookAtIndex, prevLookAtIndex);
-                }
-            }
-        }
 
 #if defined(__ANDROID__)
         matchingCounts.transformPairs += transformCheckSet.size();
