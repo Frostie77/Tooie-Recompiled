@@ -1,3 +1,4 @@
+#include "../../../../../src/render_diagnostics.h"
 #include "../../../../../src/android_debug_log.h"
 //
 // plume
@@ -56,6 +57,24 @@ static_assert(sizeof(VkDescriptorSetAllocateInfo) == 40 && offsetof(VkDescriptor
 // - Fix resource pools.
 
 namespace plume {
+    namespace {
+        auto &buildStages() {
+            static thread_local tooie::diagnostics::StageWindow<4> stages("vulkan-build",
+                {"image", "graphics", "compute", "framebuffer"});
+            return stages;
+        }
+        void reportBuild(uint64_t start, const char *operation, VkResult result,
+            uint32_t format=0, uint32_t samples=0, uint32_t width=0, uint32_t height=0) {
+#if defined(__ANDROID__)
+            char context[256];
+            std::snprintf(context,sizeof(context),"op=%s result=%d format=%u samples=%u extent=%ux%u",
+                operation,int(result),format,samples,width,height);
+            buildStages().report(start,context);
+#else
+            (void)start; (void)operation; (void)result; (void)format; (void)samples; (void)width; (void)height;
+#endif
+        }
+    }
     // Backend constants.
 
     // Required buffer alignment for acceleration structures.
@@ -1137,7 +1156,9 @@ namespace plume {
             createInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
         }
 
-        VkResult res = vmaCreateImage(device->allocator, &imageInfo, &createInfo, &vk, &allocation, &allocationInfo);
+        const auto buildStart = buildStages().stamp();
+        VkResult res = buildStages().measure(0, [&] { return vmaCreateImage(device->allocator, &imageInfo, &createInfo, &vk, &allocation, &allocationInfo); });
+        reportBuild(buildStart,"image",res, uint32_t(imageInfo.format), uint32_t(imageInfo.samples), imageInfo.extent.width, imageInfo.extent.height);
 #if defined(__ANDROID__)
         if (res != VK_SUCCESS) vk = VK_NULL_HANDLE;
         device->descriptorResources.track(this, VK_OBJECT_TYPE_IMAGE, uint64_t(vk));
@@ -1670,7 +1691,9 @@ namespace plume {
         pipelineInfo.layout = pipelineLayout->vk;
         pipelineInfo.stage = stageInfo;
 
-        VkResult res = vkCreateComputePipelines(device->vk, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &vk);
+        const auto buildStart = buildStages().stamp();
+        VkResult res = buildStages().measure(2, [&] { return vkCreateComputePipelines(device->vk, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &vk); });
+        reportBuild(buildStart,"compute",res);
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateComputePipelines failed with error code 0x%X.\n", res);
             return;
@@ -1949,7 +1972,9 @@ namespace plume {
         pipelineInfo.layout = pipelineLayout->vk;
         pipelineInfo.renderPass = renderPass;
 
-        VkResult res = vkCreateGraphicsPipelines(device->vk, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &vk);
+        const auto buildStart = buildStages().stamp();
+        VkResult res = buildStages().measure(1, [&] { return vkCreateGraphicsPipelines(device->vk, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &vk); });
+        reportBuild(buildStart,"graphics",res, desc.renderTargetCount ? uint32_t(renderTargetFormats[0]) : 0, desc.multisampling.sampleCount);
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateGraphicsPipelines failed with error code 0x%X.\n", res);
             return;
@@ -3698,7 +3723,9 @@ namespace plume {
         fbInfo.height = height;
         fbInfo.layers = 1;
 
-        res = vkCreateFramebuffer(device->vk, &fbInfo, nullptr, &vk);
+        const auto buildStart = buildStages().stamp();
+        res = buildStages().measure(3, [&] { return vkCreateFramebuffer(device->vk, &fbInfo, nullptr, &vk); });
+        reportBuild(buildStart,"framebuffer",res, 0, 0, width, height);
         if (res != VK_SUCCESS) {
             fprintf(stderr, "vkCreateFramebuffer failed with error code 0x%X.\n", res);
             return;
@@ -4440,7 +4467,9 @@ namespace plume {
         info.pDynamicState = &dynamic;
         info.layout = colorClearDrawLayout;
         info.renderPass = renderPass; // Exact framebuffer pass, including depth/MRT.
-        VkResult result = vkCreateGraphicsPipelines(device->vk, VK_NULL_HANDLE, 1, &info, nullptr, &colorClearDrawPipelines[attachmentIndex]);
+        const auto buildStart = buildStages().stamp();
+        VkResult result = buildStages().measure(1, [&] { return vkCreateGraphicsPipelines(device->vk, VK_NULL_HANDLE, 1, &info, nullptr, &colorClearDrawPipelines[attachmentIndex]); });
+        reportBuild(buildStart,"partial-clear-pipeline",result, uint32_t(colorAttachments[attachmentIndex]->imageFormat), uint32_t(multisample.rasterizationSamples));
         for (VkShaderModule module : modules) vkDestroyShaderModule(device->vk, module, nullptr);
         requireSuccess(result, "vkCreateGraphicsPipelines");
         return colorClearDrawPipelines[attachmentIndex];

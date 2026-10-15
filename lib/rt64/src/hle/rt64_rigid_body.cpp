@@ -86,7 +86,16 @@ namespace RT64 {
         lerpDecompose = decompose;
     }
 
-    
+    void RigidBody::updateDecomposition(const hlslpp::float4x4 &prevTransform, const hlslpp::float4x4 &curTransform, bool decompose) {
+        // A new match (or a transition from simple interpolation) has no cached
+        // decomposition for the previous endpoint. Do not raw-blend rotations
+        // just because history is cold: that shrinks a rotating rigid mesh.
+        if (decompose && !transforms[transformIndex].valid) {
+            updateDecomposition(prevTransform, true);
+        }
+        updateDecomposition(curTransform, decompose);
+    }
+
     hlslpp::float4x4 RigidBody::lerp(float weight, const hlslpp::float4x4& fallbackPrev, const hlslpp::float4x4& fallbackCur, bool slerp) const {
         // Return a linear component-wise interpolation of the fallback matrices if decomposition is disabled or if either decomposition is invalid.
         if (!lerpDecompose || !transforms[0].valid || !transforms[1].valid) {

@@ -1,3 +1,4 @@
+#include "../../../../src/render_diagnostics.h"
 #include "../../../../src/runtime_diagnostics.h"
 #include "../../../../src/android_debug_log.h"
 //
@@ -16,6 +17,13 @@
 #endif
 
 namespace RT64 {
+    namespace {
+        auto &presentStages() {
+            static thread_local tooie::diagnostics::StageWindow<11> stages("present-stages",
+                {"producer_wait", "surface_lock", "target_wait", "workload_lock", "acquire", "record", "submit", "gpu_wait", "rate_sleep", "swap_wait", "present"});
+            return stages;
+        }
+    }
     // PresentQueue
 
     PresentQueue::PresentQueue() {
@@ -111,6 +119,8 @@ namespace RT64 {
     }
 
     void PresentQueue::threadPresent(const Present &present, bool &swapChainValid) {
+        auto &stages = presentStages();
+        const auto stageStart = stages.stamp();
         static int tooie_present_count = 0;
         const bool tooie_log_present = tooie_present_count++ < 3;
         if (tooie_log_present) tooie_android_debug_log("Present: threadPresent entered");
@@ -219,7 +229,7 @@ namespace RT64 {
                 }
                 else {
                     lockedWorkloadMutex = true;
-                    ext.sharedResources->workloadMutex.lock();
+                    stages.measure(3, [&] { ext.sharedResources->workloadMutex.lock(); });
                 }
 
                 RenderTargetKey colorTargetKey(presentFb->addressStart, presentFb->width, presentFb->siz, Framebuffer::Type::Color);
@@ -254,7 +264,7 @@ namespace RT64 {
                 scratchFb.siz = present.screenVI.fbSiz();
 
                 lockedWorkloadMutex = true;
-                ext.sharedResources->workloadMutex.lock();
+                stages.measure(3, [&] { ext.sharedResources->workloadMutex.lock(); });
 
                 RenderTargetKey colorTargetKey(fbAddress, scratchFb.width, scratchFb.siz, Framebuffer::Type::Color);
                 colorTarget = &targetManager.get(colorTargetKey, true);
@@ -299,9 +309,9 @@ namespace RT64 {
                 // Stall until the interpolated color target is available.
                 const uint32_t targetIndex = usingMSAA ? i : (i - 1);
                 std::unique_lock<std::mutex> interpolatedLock(ext.sharedResources->interpolatedMutex);
-                ext.sharedResources->interpolatedCondition.wait(interpolatedLock, [&]() {
+                stages.measure(2, [&] { ext.sharedResources->interpolatedCondition.wait(interpolatedLock, [&]() {
                     return (frameCounters.available > targetIndex) || ((frameCounters.available == targetIndex) && frameCounters.skipped);
-                });
+                }); });
 
                 // Do not present any more frames after this one after reaching the last available frame if the workload was skipped.
                 if ((frameCounters.available == targetIndex) && frameCounters.skipped) {
@@ -327,7 +337,7 @@ namespace RT64 {
             uint32_t swapChainIndex = 0;
             const bool presentFrame = (i < framesToPresent) && swapChainValid;
             if (presentFrame) {
-                swapChainValid = ext.swapChain->acquireTexture(acquiredSemaphore.get(), &swapChainIndex);
+                swapChainValid = stages.measure(4, [&] { return ext.swapChain->acquireTexture(acquiredSemaphore.get(), &swapChainIndex); });
             }
 
             if (presentFrame && swapChainValid) {
@@ -335,6 +345,7 @@ namespace RT64 {
                 RenderTexture *swapChainTexture = ext.swapChain->getTexture(swapChainIndex);
                 RenderFramebuffer *swapChainFramebuffer = swapChainFramebuffers[swapChainIndex].get();
                 RenderCommandList *commandList = ext.presentGraphicsWorker->commandList.get();
+                const auto recordStart = stages.stamp();
                 commandList->begin();
                 commandList->barriers(RenderBarrierStage::GRAPHICS, RenderTextureBarrier(swapChainTexture, RenderTextureLayout::COLOR_WRITE));
                 
@@ -401,13 +412,14 @@ namespace RT64 {
                     
                     commandList->barriers(RenderBarrierStage::NONE, RenderTextureBarrier(swapChainTexture, RenderTextureLayout::PRESENT));
                     commandList->end();
+                    stages.elapsed(5, recordStart);
                     const RenderCommandList *commandList = ext.presentGraphicsWorker->commandList.get();
                     RenderCommandSemaphore *waitSemaphore = acquiredSemaphore.get();
                     RenderCommandSemaphore *signalSemaphore = drawSemaphores[swapChainIndex].get();
                     if (tooie_log_present) tooie_android_debug_log("Present: GPU submit begin");
-                    ext.presentGraphicsWorker->commandQueue->executeCommandLists(&commandList, 1, &waitSemaphore, 1, &signalSemaphore, 1, ext.presentGraphicsWorker->commandFence.get());
+                    stages.measure(6, [&] { ext.presentGraphicsWorker->commandQueue->executeCommandLists(&commandList, 1, &waitSemaphore, 1, &signalSemaphore, 1, ext.presentGraphicsWorker->commandFence.get()); });
                     if (tooie_log_present) tooie_android_debug_log("Present: GPU submit returned");
-                    ext.presentGraphicsWorker->wait();
+                    stages.measure(7, [&] { ext.presentGraphicsWorker->wait(); });
                     if (tooie_log_present) tooie_android_debug_log("Present: GPU wait completed");
                 }
             }
@@ -434,19 +446,19 @@ namespace RT64 {
             if (presentFrame && swapChainValid) {
                 // Wait until the approximate time the next present should be at the current intended rate.
                 if ((presentTimestamp != Timestamp()) && (targetRate > 0) && (targetRate > viOriginalRate)) {
-                    Timer::preciseSleepUntil(presentTimestamp + std::chrono::nanoseconds(1'000'000'000 / targetRate));
+                    stages.measure(8, [&] { Timer::preciseSleepUntil(presentTimestamp + std::chrono::nanoseconds(1'000'000'000 / targetRate)); });
                 }
 
                 if (presentWaitEnabled) {
                     if (tooie_log_present) tooie_android_debug_log("Present: swapchain wait begin");
-                    ext.swapChain->wait();
+                    stages.measure(9, [&] { ext.swapChain->wait(); });
                     if (tooie_log_present) tooie_android_debug_log("Present: swapchain wait completed");
                 }
 
                 RenderCommandSemaphore *waitSemaphore = drawSemaphores[swapChainIndex].get();
                 presentTimestamp = Timer::current();
                 if (tooie_log_present) tooie_android_debug_log("Present: Vulkan present begin");
-                swapChainValid = ext.swapChain->present(swapChainIndex, &waitSemaphore, 1);
+                swapChainValid = stages.measure(10, [&] { return ext.swapChain->present(swapChainIndex, &waitSemaphore, 1); });
 #if defined(__ANDROID__)
                 static thread_local tooie::diagnostics::RateWindow diagnostic_window;
                 static thread_local uint64_t diagnostic_calls=0,diagnostic_success=0;
@@ -474,6 +486,17 @@ namespace RT64 {
                 presentProfiler.logAndRestart();
             }
         }
+#if defined(__ANDROID__)
+        char stageContext[512];
+        {
+            std::scoped_lock lock(ext.sharedResources->interpolatedMutex);
+            std::snprintf(stageContext,sizeof(stageContext),"present=%llu workload=%llu counter_slot=%u count=%u available=%u presented=%u skipped=%u source_hz=%u target_hz=%u msaa=%u",
+                (unsigned long long)present.presentId,(unsigned long long)present.workloadId,
+                unsigned(&frameCounters-ext.sharedResources->interpolatedFrames),frameCounters.count,frameCounters.available,frameCounters.presented,
+                unsigned(frameCounters.skipped),viOriginalRate,targetRate,unsigned(usingMSAA));
+        }
+        stages.report(stageStart,stageContext);
+#endif
     }
 
     void PresentQueue::skipInterpolation() {
@@ -554,12 +577,14 @@ namespace RT64 {
                 std::unique_lock<std::mutex> threadLock(threadMutex);
 #if defined(__ANDROID__)
                 // Do not hold the lifecycle lease while waiting for a producer.
-                ext.workloadQueue->waitForWorkloadId(presents[processCursor].workloadId);
+                presentStages().measure(0, [&] { ext.workloadQueue->waitForWorkloadId(presents[processCursor].workloadId); });
                 // May display an SDL/Android error dialog and lose focus. No
                 // WSI lease or recorded swapchain work may exist at this point.
                 if (RenderHookPrepare *prepare = GetRenderHookPrepare()) prepare();
                 auto &lifecycle = tooie::android::presentationLifecycle();
+                const auto surfaceLockStart = presentStages().stamp();
                 auto surfaceLock = lifecycle.lock();
+                presentStages().elapsed(1,surfaceLockStart);
                 const bool surfaceAvailable = lifecycle.available();
                 if (surfaceAvailable && ext.swapChain->isSurfaceSuspended()) {
                     suspendAndroidSurface();

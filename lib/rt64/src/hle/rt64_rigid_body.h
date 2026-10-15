@@ -35,6 +35,9 @@ namespace RT64 {
         // Decomposes the given matrix if specified and updates the tracked decomposed values.
         void updateDecomposition(const hlslpp::float4x4 &curTransform, bool decompose);
 
+        // Seeds missing history from the actual matched previous matrix before updating the current endpoint.
+        void updateDecomposition(const hlslpp::float4x4 &prevTransform, const hlslpp::float4x4 &curTransform, bool decompose);
+
         // Lerps between the previous and current transform with the given weight and recomposes the result into a matrix.
         // Falls back to the provided matrix if decomposition has failed for either transform.
         hlslpp::float4x4 lerp(float weight, const hlslpp::float4x4& fallbackPrev, const hlslpp::float4x4& fallbackCur, bool slerp) const;

@@ -1,5 +1,13 @@
 # Android gameplay audio, timing and presentation — Step 65
 
+Step 69 follow-up: the supplied runtime-continuation archive identifies SDL
+2.32.10/OpenSL ES and records acceptable user-reported sound/speed, long
+presentation gaps and movement-dependent deformation. See
+[rendering investigation](android-rendering-investigation.md) for verified
+capture calculations, two reproduced interpolation fixes and remaining limits.
+The Step 65 evidence and unknown-backend statements below describe that earlier
+capture, not the newly identified runtime.
+
 Base/parent: `a0ac6e2a670de99934c839c26ead58de205d217a`, branch
 `fix/android-vulkan-transfer-proposal`. The user authorized investigation and
 fixes after the Step 65 upload. This revision corrects reproduced audio arithmetic

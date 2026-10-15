@@ -1,3 +1,4 @@
+#include "../../../../src/runtime_diagnostics.h"
 //
 // RT64
 //
@@ -433,6 +434,40 @@ namespace RT64 {
         else {
             velocityUploaderUsed = false;
         }
+#if defined(__ANDROID__)
+        static thread_local tooie::diagnostics::RateWindow diagnosticWindow;
+        static thread_local uint64_t diagnosticMatches = 0;
+        if (diagnosticWindow.observe(tooie::diagnostics::monotonicUs(),++diagnosticMatches).ready) {
+            uint32_t playerMapped=0,playerUnmapped=0,playerDuplicates=0,invalidPairs=0,projectionMapped=0,projectionUnmapped=0;
+            for (uint32_t w : workloads) {
+                const Workload &workload = workloadQueue.workloads[w];
+                const auto &mapping = frameMap.workloads[w];
+                uint32_t lastId=0;
+                for (const auto &entry : workload.transformIdMap) {
+                    if (entry.first<0x10000000U || entry.first>=0x10010000U) continue;
+                    if (entry.first==lastId) ++playerDuplicates;
+                    lastId=entry.first;
+                    if (entry.second>=mapping.transforms.size()) {++playerUnmapped;continue;}
+                    const auto &transform = mapping.transforms[entry.second];
+                    if (transform.mapped) {
+                        ++playerMapped;
+                        if (!transform.rigidBody.transforms[0].valid || !transform.rigidBody.transforms[1].valid) ++invalidPairs;
+                    }
+                    else ++playerUnmapped;
+                }
+                for (const auto &projection : mapping.viewProjections) {
+                    if (projection.mapped) ++projectionMapped; else ++projectionUnmapped;
+                }
+            }
+            char record[512];
+            std::snprintf(record,sizeof(record),"workload=%llu batches=%zu player_mapped=%u player_unmapped=%u duplicate_player_ids=%u invalid_decomposition_pairs=%u projection_mapped=%u projection_unmapped=%u projection_auto_total=%u projection_gameplay_total=%u projection_sky_total=%u projection_mismatch_total=%u",
+                (unsigned long long)(workloads.empty()?0:workloadQueue.workloads[workloads.front()].workloadId),workloads.size(),
+                playerMapped,playerUnmapped,playerDuplicates,invalidPairs,projectionMapped,projectionUnmapped,
+                g_bt_rt64_proj_id_auto.load(std::memory_order_relaxed),g_bt_rt64_proj_id_gameplay.load(std::memory_order_relaxed),
+                g_bt_rt64_proj_id_sky.load(std::memory_order_relaxed),g_bt_rt64_projection_mismatches.load(std::memory_order_relaxed));
+            tooie::diagnostics::log("interpolation",record);
+        }
+#endif
     }
 
     void GameFrame::matchScene(WorkloadQueue &workloadQueue, const GameFrame &prevFrame, const GameScene &curScene, const GameScene &prevScene, std::unordered_map<uint32_t, ModifiedBuffers> &workloadsModified, bool &tileInterpolationUsed, bool &lookAtInterpolationUsed) {
@@ -536,7 +571,7 @@ namespace RT64 {
 
                     viewProjMap.rigidBody.updateLinear(prevView, curView, projectionLinearComponent);
                     viewProjMap.rigidBody.updateAngular(prevView, curView, projectionAngularComponent, projectionScaleComponent, projectionSkewComponent);
-                    viewProjMap.rigidBody.updateDecomposition(curView, projectionDecompose);
+                    viewProjMap.rigidBody.updateDecomposition(prevView, curView, projectionDecompose);
                     viewProjMap.prevTransformIndex = prevProj.transformsIndex;
                 }
                 else {
@@ -770,7 +805,7 @@ namespace RT64 {
         curTransformMap.rigidBody.updateLinear(prevTransform, curTransform, curGroup.positionInterpolation);
         curTransformMap.rigidBody.updateAngular(prevTransform, curTransform, curGroup.rotationInterpolation, curGroup.scaleInterpolation, curGroup.skewInterpolation);
         curTransformMap.rigidBody.updatePerspective(prevTransform, curTransform, curGroup.perspectiveInterpolation);
-        curTransformMap.rigidBody.updateDecomposition(curTransform, curGroup.decompose);
+        curTransformMap.rigidBody.updateDecomposition(prevTransform, curTransform, curGroup.decompose);
         curTransformMap.prevTransformIndex = prevTransformIndex;
         curTransformMap.mapped = true;
         curWorkloadMap.prevTransformsMapped[prevTransformIndex] = true;

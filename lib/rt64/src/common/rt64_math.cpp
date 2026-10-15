@@ -4,6 +4,7 @@
 
 #include "rt64_math.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <memory>
@@ -442,21 +443,26 @@ namespace RT64 {
         }
 
         if (lerpRotation) {
-            if (float(dot(a.rotation, b.rotation)) > 0.0f) {
-                if (useSlerp) {
-                    ret.rotation = slerp(a.rotation, b.rotation, 1.0f - weight);
-                }
-                else {
-                    ret.rotation = lerp(a.rotation, b.rotation, weight);
-                }
+            hlslpp::quaternion endRotation = b.rotation;
+            float cosine = float(dot(a.rotation, endRotation));
+            if (cosine < 0.0f) {
+                endRotation = -endRotation;
+                cosine = -cosine;
+            }
+            cosine = std::clamp(cosine, 0.0f, 1.0f);
+            if (useSlerp && (cosine < 0.9995f)) {
+                // The bundled hlsl++ slerp uses q0 + factor * (q1 - q0),
+                // retaining only one spherical coefficient. Compute both here;
+                // rotation and translation must use the same current-frame weight.
+                const float angle = std::acos(cosine);
+                const float inverseSine = 1.0f / std::sin(angle);
+                ret.rotation = a.rotation * (std::sin((1.0f - weight) * angle) * inverseSine)
+                    + endRotation * (std::sin(weight * angle) * inverseSine);
             }
             else {
-                if (useSlerp) {
-                    ret.rotation = slerp(a.rotation, -b.rotation, 1.0f - weight);
-                }
-                else {
-                    ret.rotation = lerp(a.rotation, -b.rotation, weight);
-                }
+                // Normalized linear interpolation is stable for coincident or
+                // nearly coincident rotations, where the spherical denominator vanishes.
+                ret.rotation = lerp(a.rotation, endRotation, weight);
             }
             ret.rotation = normalize(ret.rotation);
         }
