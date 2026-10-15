@@ -25,3 +25,6 @@ a=w.index('                uint32_t displayFrames = 1;',b);b=w.index('          
 PY
 "${CXX:-g++}" -std=c++17 -pthread -fsanitize=address,undefined -fno-omit-frame-pointer -I"$r/src" -I"$t" "$r/tests/frame_protocol.cpp" -o "$t/protocol"
 ASAN_OPTIONS=detect_leaks=0 "$t/protocol"
+
+# Include outer selection and skip decisions, independently of completed presents.
+"$r/tools/test_present_progress.sh" "${1:-}"

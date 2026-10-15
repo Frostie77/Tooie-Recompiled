@@ -96,6 +96,28 @@ int main(int argc,char **argv) {
             auto m=match(frame,cur,prev,&history);
             checkGeometry(m,prev,cur,a,b,i%2?20:30);history=std::move(m);
         }
+        // Under sustained overload only the first quarter-step image can be
+        // rendered. Matching history still advances on undisplayed batches.
+        // Check consumed geometry/phase across deliberate presentation gaps,
+        // rather than accepting an incremented retirement counter as progress.
+        history=emptyMap();float lastDisplayed=-1;
+        for(unsigned i=0;i<64;++i) {
+            const float a=float(i)*.03f,b=a+.03f;
+            fill(prev,pose(a,float(i)));fill(cur,pose(b,float(i+1)));
+            auto m=match(frame,cur,prev,&history);
+            if(i%7!=2 && i%7!=3) {
+                const auto matrix=m.transforms[0].rigidBody.lerp(.25f,prev.drawData.worldTransforms[0],cur.drawData.worldTransforms[0],true);
+                const auto origin=hlslpp::mul(hlslpp::float4(0,0,0,1),matrix);
+                const auto point=hlslpp::mul(hlslpp::float4(1,0,0,1),matrix);
+                const hlslpp::float3 bone=(point-origin).xyz;
+                REQUIRE(std::fabs(float(origin.x)-(float(i)+.25f))<.001f && float(origin.x)>lastDisplayed);
+                REQUIRE(std::fabs(float(bone.x)-std::cos(a+.0075f))<.003f);
+                REQUIRE(std::fabs(float(bone.y)-std::sin(a+.0075f))<.003f);
+                REQUIRE(std::fabs(float(hlslpp::length(bone))-1)<.003f);
+                lastDisplayed=float(origin.x);
+            }
+            history=std::move(m);
+        }
         // Rotation crosses the +/-pi boundary; it must take the short arc.
         fill(prev,pose(pi-.02f));fill(cur,pose(-pi+.02f));
         checkGeometry(match(frame,cur,prev),prev,cur,pi-.02f,-pi+.02f,30);

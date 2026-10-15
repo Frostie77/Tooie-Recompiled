@@ -552,6 +552,14 @@ namespace RT64 {
 
         int processCursor = -1;
         bool skipPresent = false;
+#if defined(__ANDROID__)
+        // Report every outer decision, including iterations that never enter
+        // threadPresent. Backlog is queued input, not proof of a newer image.
+        tooie::diagnostics::StageWindow<3> queueStages("present-queue", {"cursor_wait", "producer_wait", "dispatch"});
+        uint64_t dispatched = 0, backlog = 0, empty = 0, unavailable = 0, invalid = 0;
+        int selectedWrite = 0, selectedNext = 0;
+        uint64_t selectedAt = 0;
+#endif
         uint32_t displayTimingRate = UINT32_MAX;
         const bool displayTiming = ext.device->getCapabilities().displayTiming;
 #if defined(__ANDROID__)
@@ -560,6 +568,9 @@ namespace RT64 {
         bool swapChainValid = !ext.swapChain->needsResize();
 #endif
         while (presentThreadRunning) {
+#if defined(__ANDROID__)
+            const auto queueStart = queueStages.stamp();
+#endif
             {
                 std::unique_lock<std::mutex> cursorLock(cursorMutex);
                 cursorCondition.wait(cursorLock, [&]() {
@@ -569,15 +580,31 @@ namespace RT64 {
                 if (presentThreadRunning) {
                     processCursor = threadCursor;
                     threadCursor = (threadCursor + 1) % presents.size();
+#if defined(__ANDROID__)
+                    // Waiting for this workload can take longer than a source
+                    // frame. Under sustained load every sampled cursor can be
+                    // backlogged forever. Present its owned completed image;
+                    // newer queued work has not necessarily rendered anything.
+                    skipPresent = false;
+                    selectedWrite = writeCursor;
+                    selectedNext = threadCursor;
+                    selectedAt = queueStages.stamp();
+#else
                     skipPresent = (writeCursor != threadCursor);
+#endif
                 }
             }
 
+#if defined(__ANDROID__)
+            queueStages.elapsed(0,queueStart);
+#endif
             if (processCursor >= 0) {
                 std::unique_lock<std::mutex> threadLock(threadMutex);
 #if defined(__ANDROID__)
                 // Do not hold the lifecycle lease while waiting for a producer.
-                presentStages().measure(0, [&] { ext.workloadQueue->waitForWorkloadId(presents[processCursor].workloadId); });
+                queueStages.measure(1, [&] {
+                    presentStages().measure(0, [&] { ext.workloadQueue->waitForWorkloadId(presents[processCursor].workloadId); });
+                });
                 // May display an SDL/Android error dialog and lose focus. No
                 // WSI lease or recorded swapchain work may exist at this point.
                 if (RenderHookPrepare *prepare = GetRenderHookPrepare()) prepare();
@@ -655,7 +682,21 @@ namespace RT64 {
                     }
                 }
 
-                skipPresent = skipPresent || ext.swapChain->isEmpty();
+#if defined(__ANDROID__)
+                const bool emptySwapchain = ext.swapChain->isEmpty();
+                int readyWrite, readyNext;
+                {
+                    std::scoped_lock lock(cursorMutex);
+                    readyWrite = writeCursor;
+                    readyNext = threadCursor;
+                }
+                const bool validAtDecision = swapChainValid;
+                const auto decisionAgeUs = queueStages.stamp()-selectedAt;
+                const auto dispatchStart = queueStages.stamp();
+#else
+                const bool emptySwapchain = ext.swapChain->isEmpty();
+#endif
+                skipPresent = skipPresent || emptySwapchain;
 #if defined(__ANDROID__)
                 skipPresent = skipPresent || !surfaceAvailable || !swapChainValid;
 #endif
@@ -677,6 +718,24 @@ namespace RT64 {
                     threadPresent(present, swapChainValid);
                 }
 
+#if defined(__ANDROID__)
+                queueStages.elapsed(2,dispatchStart);
+                ++dispatched;
+                backlog += selectedWrite != selectedNext;
+                empty += emptySwapchain;
+                unavailable += !surfaceAvailable;
+                invalid += !validAtDecision;
+                // Capture before releasing the ring slot. The cumulative reason
+                // counts survive successful presents and independent skip loops.
+                char queueContext[512];
+                std::snprintf(queueContext,sizeof(queueContext),"present=%llu workload=%llu slot=%d age_us=%llu select_write=%d select_next=%d ready_write=%d ready_next=%d skip=%u empty=%u surface=%u valid=%u decisions_total=%llu backlog_total=%llu empty_total=%llu unavailable_total=%llu invalid_total=%llu",
+                    (unsigned long long)present.presentId,(unsigned long long)present.workloadId,processCursor,
+                    (unsigned long long)decisionAgeUs,selectedWrite,selectedNext,readyWrite,readyNext,unsigned(skipPresent),unsigned(emptySwapchain),unsigned(surfaceAvailable),unsigned(validAtDecision),
+                    (unsigned long long)dispatched,(unsigned long long)backlog,(unsigned long long)empty,(unsigned long long)unavailable,(unsigned long long)invalid);
+                char decisionTotals[256];
+                std::snprintf(decisionTotals,sizeof(decisionTotals),"decisions=%llu backlog=%llu empty=%llu unavailable=%llu invalid=%llu",
+                    (unsigned long long)dispatched,(unsigned long long)backlog,(unsigned long long)empty,(unsigned long long)unavailable,(unsigned long long)invalid);
+#endif
                 if (!present.paused) {
                     if (!present.fbOperations.empty()) {
                         const std::scoped_lock lock(screenFbChangePoolMutex);
@@ -688,6 +747,9 @@ namespace RT64 {
                 }
 
                 processCursor = -1;
+#if defined(__ANDROID__)
+                queueStages.report(queueStart,queueContext,decisionTotals);
+#endif
             }
         }
 

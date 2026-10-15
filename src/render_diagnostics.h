@@ -75,7 +75,7 @@ public:
         (void)stage; (void)start;
 #endif
     }
-    void report(uint64_t eventStart, const char *context) {
+    void report(uint64_t eventStart, const char *context, const char *currentContext=nullptr) {
 #if defined(__ANDROID__)
         const uint64_t now=monotonicUs();
         if (!stats.complete(now,now-eventStart,context)) return;
@@ -91,12 +91,15 @@ public:
             offset+=std::snprintf(text+offset,sizeof(text)-size_t(offset)," %s=%llu/%llu/%llu/%llu",names[i],
                 (unsigned long long)s.count,(unsigned long long)s.sumUs,(unsigned long long)s.maxUs,(unsigned long long)s.maxEndUs);
         }
+        if (currentContext && offset>=0 && size_t(offset)<sizeof(text)) {
+            std::snprintf(text+offset,sizeof(text)-size_t(offset)," current_%s",currentContext);
+        }
         const uint64_t logStart=monotonicUs();
         log(domain,text);
         previousLogUs=monotonicUs()-logStart;
         stats.reset(monotonicUs());
 #else
-        (void)eventStart; (void)context;
+        (void)eventStart; (void)context; (void)currentContext;
 #endif
     }
 };

@@ -1,4 +1,4 @@
-#include "../../../../src/runtime_diagnostics.h"
+#include "../../../../src/render_diagnostics.h"
 //
 // RT64
 //
@@ -42,6 +42,17 @@ std::atomic<uint32_t> g_bt_rt64_matched_sky{0};
 }
 
 namespace RT64 {
+    namespace {
+#if defined(__ANDROID__)
+        struct MatchingCounts { uint64_t callPairs=0, transformPairs=0, tilePairs=0, lookAtPairs=0; };
+        thread_local MatchingCounts matchingCounts;
+#endif
+        auto &matchingStages() {
+            static thread_local tooie::diagnostics::StageWindow<12> stages("matching-stages",
+                {"map_ids", "scene_candidates", "scene_sort", "call_maps", "call_pairs", "transform_score", "transform_apply", "tiles", "look_at", "velocity_submit", "observer", "velocity_prepare"});
+            return stages;
+        }
+    }
     // GameFrame
     
     bool GameFrame::areFramebufferPairsCompatible(const WorkloadQueue &workloadQueue, const GameIndices::FramebufferPair &first, const GameIndices::FramebufferPair &second) {
@@ -285,6 +296,11 @@ namespace RT64 {
     }
 
     void GameFrame::match(RenderWorker *worker, WorkloadQueue &workloadQueue, const GameFrame &prevFrame, BufferUploader *velocityUploader, bool &velocityUploaderUsed, bool &tileInterpolationUsed, bool &lookAtInterpolationUsed) {
+        auto &stages = matchingStages();
+        const auto matchStart = stages.stamp();
+#if defined(__ANDROID__)
+        matchingCounts = {};
+#endif
         tileInterpolationUsed = false;
         lookAtInterpolationUsed = false;
         matched = true;
@@ -366,10 +382,12 @@ namespace RT64 {
             }
         }
 
+        stages.elapsed(0,matchStart);
         thread_local std::vector<MatchCandidate> matchCandidates;
         thread_local std::vector<bool> curScenesMatched;
         thread_local std::vector<bool> prevScenesMatched;
         auto matchScenes = [&](const std::vector<GameScene> &curScenes, const std::vector<GameScene> &prevScenes) {
+            const auto candidatesStart = stages.stamp();
             // Find the scenes that are the closest match possible.
             matchCandidates.clear();
             for (uint32_t i = 0; i < curScenes.size(); i++) {
@@ -390,11 +408,14 @@ namespace RT64 {
                 }
             }
 
+            stages.elapsed(1,candidatesStart);
+            const auto sortStart = stages.stamp();
             curScenesMatched.clear();
             prevScenesMatched.clear();
             curScenesMatched.resize(curScenes.size());
             prevScenesMatched.resize(prevScenes.size());
             std::stable_sort(matchCandidates.begin(), matchCandidates.end());
+            stages.elapsed(2,sortStart);
             for (const MatchCandidate &candidate : matchCandidates) {
                 if (curScenesMatched[candidate.curIndex]) {
                     continue;
@@ -413,6 +434,7 @@ namespace RT64 {
         matchScenes(perspectiveScenes, prevFrame.perspectiveScenes);
         matchScenes(orthographicScenes, prevFrame.orthographicScenes);
 
+        const auto velocityStart = stages.stamp();
         if (!workloadsModified.empty()) {
             thread_local std::vector<BufferUploader::Upload> uploads;
             uploads.clear();
@@ -434,6 +456,8 @@ namespace RT64 {
         else {
             velocityUploaderUsed = false;
         }
+        stages.elapsed(9,velocityStart);
+        const auto observerStart = stages.stamp();
 #if defined(__ANDROID__)
         static thread_local tooie::diagnostics::RateWindow diagnosticWindow;
         static thread_local uint64_t diagnosticMatches = 0;
@@ -468,6 +492,16 @@ namespace RT64 {
             tooie::diagnostics::log("interpolation",record);
         }
 #endif
+        stages.elapsed(10,observerStart);
+#if defined(__ANDROID__)
+        char stageContext[512];
+        std::snprintf(stageContext,sizeof(stageContext),"workload=%llu batches=%zu perspective=%zu orthographic=%zu velocity_upload=%u tiles=%u look_at=%u call_pairs=%llu transform_pairs=%llu tile_pairs=%llu look_at_pairs=%llu",
+            (unsigned long long)(workloads.empty()?0:workloadQueue.workloads[workloads.front()].workloadId),workloads.size(),
+            perspectiveScenes.size(),orthographicScenes.size(),unsigned(velocityUploaderUsed),unsigned(tileInterpolationUsed),unsigned(lookAtInterpolationUsed),
+            (unsigned long long)matchingCounts.callPairs,(unsigned long long)matchingCounts.transformPairs,
+            (unsigned long long)matchingCounts.tilePairs,(unsigned long long)matchingCounts.lookAtPairs);
+        stages.report(matchStart,stageContext);
+#endif
     }
 
     void GameFrame::matchScene(WorkloadQueue &workloadQueue, const GameFrame &prevFrame, const GameScene &curScene, const GameScene &prevScene, std::unordered_map<uint32_t, ModifiedBuffers> &workloadsModified, bool &tileInterpolationUsed, bool &lookAtInterpolationUsed) {
@@ -475,6 +509,8 @@ namespace RT64 {
             return;
         }
 
+        auto &stages = matchingStages();
+        const auto callsStart = stages.stamp();
         thread_local std::multimap<uint64_t, GameCallMap> curCallHashMap;
         thread_local std::multimap<uint64_t, GameCallMap> prevCallHashMap;
         curCallHashMap.clear();
@@ -592,6 +628,8 @@ namespace RT64 {
             buildCallHashMap(p, prevWorkload, prevProj, prevCallHashMap);
         }
 
+        stages.elapsed(3,callsStart);
+        const auto pairsStart = stages.stamp();
         // FIXME: Transform set needs to be done per unique workload detected.
         thread_local std::set<IndexPair> transformCheckSet;
         thread_local std::set<IndexPair> tileCheckSet;
@@ -604,6 +642,9 @@ namespace RT64 {
         for (std::pair<uint64_t, GameCallMap> curIt : curCallHashMap) {
             auto prevRange = prevCallHashMap.equal_range(curIt.first);
             for (auto prevIt = prevRange.first; prevIt != prevRange.second; prevIt++) {
+#if defined(__ANDROID__)
+                ++matchingCounts.callPairs;
+#endif
                 const GameIndices::Projection &curProjIndices = curScene.projections[curIt.second.sceneProjIndex];
                 const Workload &curWorkload = workloadQueue.workloads[curProjIndices.workloadIndex];
                 const FramebufferPair &curFbPair = curWorkload.fbPairs[curProjIndices.fbPairIndex];
@@ -657,6 +698,13 @@ namespace RT64 {
             }
         }
 
+#if defined(__ANDROID__)
+        matchingCounts.transformPairs += transformCheckSet.size();
+        matchingCounts.tilePairs += tileCheckSet.size();
+        matchingCounts.lookAtPairs += lookAtCheckSet.size();
+#endif
+        stages.elapsed(4,pairsStart);
+        const auto scoreStart = stages.stamp();
         // Compute all the differences between transforms and insert them into a vector that will be sorted according to the differences.
         thread_local std::vector<MatchCandidate> matchCandidates;
         matchCandidates.clear();
@@ -675,6 +723,8 @@ namespace RT64 {
             }
         }
 
+        stages.elapsed(5,scoreStart);
+        const auto applyStart = stages.stamp();
         ModifiedBuffers modifiedBuffers;
         std::stable_sort(matchCandidates.begin(), matchCandidates.end());
         for (const MatchCandidate candidate : matchCandidates) {
@@ -693,6 +743,8 @@ namespace RT64 {
             workloadsModified[firstCurProjIndices.workloadIndex].merge(modifiedBuffers);
         }
 
+        stages.elapsed(6,applyStart);
+        const auto tilesStart = stages.stamp();
         // Check for tile matches.
         for (const IndexPair &indices : tileCheckSet) {
             if (firstCurWorkloadMap.tiles[indices.first].mapped) {
@@ -765,6 +817,8 @@ namespace RT64 {
             tileInterpolationUsed = tileInterpolationUsed || tileScrolled;
         }
 
+        stages.elapsed(7,tilesStart);
+        const auto lookAtStart = stages.stamp();
         // Check for look at matches.
         for (const IndexPair &indices : lookAtCheckSet) {
             if (firstCurWorkloadMap.lookAt[indices.first].mapped) {
@@ -790,6 +844,7 @@ namespace RT64 {
             firstCurWorkloadMap.prevLookAtMapped[indices.second] = true;
             lookAtInterpolationUsed = lookAtInterpolationUsed || lookAtMoved;
         }
+        stages.elapsed(8,lookAtStart);
     }
 
     void GameFrame::matchTransform(Workload &curWorkload, const Workload &prevWorkload, GameFrameMap::WorkloadMap &curWorkloadMap, const GameFrameMap::WorkloadMap *prevWorkloadMap, uint32_t curTransformIndex, uint32_t prevTransformIndex, ModifiedBuffers &modifiedBuffers) {
@@ -810,6 +865,7 @@ namespace RT64 {
         curTransformMap.mapped = true;
         curWorkloadMap.prevTransformsMapped[prevTransformIndex] = true;
 
+        const auto velocityPrepareStart = matchingStages().stamp();
         uint64_t curVertexHash = 0;
         uint64_t prevVertexHash = 0;
         uint32_t curVertexIndex = curWorkload.drawData.worldTransformVertexIndices[curTransformIndex];
@@ -865,6 +921,7 @@ namespace RT64 {
 
             modifiedBuffers.texcoordVelocity = true;
         }
+        matchingStages().elapsed(11,velocityPrepareStart);
     }
     
     void GameFrame::buildCallHashMap(uint32_t sceneProjIndex, const Workload &workload, const Projection &proj, std::multimap<uint64_t, GameCallMap> &hashMap) const {

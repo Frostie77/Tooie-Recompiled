@@ -297,3 +297,12 @@ surface synchronization, qualified Adreno pool policy, allocation/write bounds,
 initialized empty GPU tiles, guarded clears and every five-second timeout remain.
 Branding/title/icon, Android Mods multi-file selection, update checks and ES-DE
 remain separate pending work.
+
+## Step 72 follow-up
+
+The b12ac59 device continuation exposed long presentation gaps despite continuing
+work. [Android presentation progress](android-presentation-progress.md) records
+the verified archive, exact-base starvation reproduction, isolated Android queue
+fix, finer matching diagnostics, validation and remaining device limitations. The
+accepted launcher artwork is on the b12ac59 build child; that artwork and its
+branch remain untouched by this rendering revision.
