@@ -95,6 +95,10 @@ namespace RT64 {
         drawData.worldTransformSegmentedAddresses.clear();
         drawData.worldTransformPhysicalAddresses.clear();
         drawData.worldTransformVertexIndices.clear();
+#if TOOIE_CORRECTION_TRACE_ENABLED
+        drawData.correctionLinks.clear();
+        drawData.correctionReported = false;
+#endif
         drawData.viewportClipRatios.push_back(1);
         drawData.viewportClipRatios.push_back(1);
         drawData.viewportClipRatios.push_back(-1);

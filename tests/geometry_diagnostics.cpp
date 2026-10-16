@@ -16,6 +16,13 @@ static void fill(Workload &w,bool current,bool explicitIds) {
     for (unsigned i=0;i<4;++i) {
         auto m=hlslpp::float4x4::identity();m[3]=hlslpp::float4(current?next[i]:previous[i],0,0,1);
         d.worldTransforms.push_back(m);d.worldTransformGroups.push_back(i);d.worldTransformVertexIndices.push_back(i*3);
+#if TOOIE_CORRECTION_TRACE_ENABLED
+        tooie::correction::Link trace;trace.direct.id=100+i;trace.direct.matches=1;
+        trace.direct.epoch=tooie::diagnostics::monotonicUs();trace.direct.sourceFrame=current?2:1;trace.decodedFrame=trace.direct.sourceFrame;
+        if(current && i==3) {trace.direct.id=0;trace.direct.matches=2;} // Ambiguous corner may share a sampled triangle with a linked corner.
+        trace.address=0x10000+current*0x1000+i*64;trace.command=0x40000+i*8;
+        tooie::correction::storeLink(d,i,trace,false);
+#endif
         d.worldTransformPhysicalAddresses.push_back(0x10000+current*0x1000+i*64);
         TransformGroup g;g.tileInterpolation=G_EX_COMPONENT_SKIP;
         // Isolate identity while translation interpolation is enabled. The
@@ -79,6 +86,9 @@ static void replay(FILE *out,bool ids) {
         }
     }
     params.curFrameWeight=.5f;processor.process(params);
+    const std::unordered_set<uint32_t> onlyTransform{2};
+    const auto limited=geometryDiagnostics::collect(q.workloads[1],&q.workloads[0],&map,.5f,&onlyTransform,1);
+    REQUIRE(limited.truncated && limited.inspected<=2 && limited.triangles<=1);
     auto s=geometryDiagnostics::collect(q.workloads[1],&q.workloads[0],&map,.5f);
     if(!ids) geometryDiagnostics::report(s,999,123,.5f,7);
     auto savedTransforms=map.transforms;

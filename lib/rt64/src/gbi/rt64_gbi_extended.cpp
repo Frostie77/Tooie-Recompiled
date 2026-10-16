@@ -3,6 +3,7 @@
 //
 
 #include "rt64_gbi_extended.h"
+#include "hle/rt64_interpreter.h"
 
 #include <atomic>
 
@@ -25,7 +26,10 @@ namespace RT64 {
         static bool MapInitialized = false;
 
         void noOp(State *state, DisplayList **dl) {
-            // Does nothing.
+#if TOOIE_CORRECTION_TRACE_ENABLED
+            // Diagnostic metadata only; this remains a rendering NOOP.
+            state->ext.interpreter->correctionMarker.word((*dl)->w1);
+#endif
         }
 
         void print(State *state, DisplayList **dl) {

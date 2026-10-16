@@ -13224,6 +13224,9 @@ L_808001C8:
 RECOMP_FUNC void gsattract_entrypoint_0(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+    #if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 15U, 0x00000000U);
+#endif
     // 0x80800000: mtc1        $zero, $f4
     ctx->f4.u32l = 0;
     // 0x80800004: lui         $at, 0x8013
@@ -13289,6 +13292,9 @@ RECOMP_FUNC void gsattract_entrypoint_1(uint8_t* rdram, recomp_context* ctx) {
     // 0x80800050: swc1        $f8, 0x4($a1)
     MEM_W(0X4, ctx->r5) = ctx->f8.u32l;
 L_80800054:
+    #if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 14U, 0x00000000U);
+#endif
     // 0x80800054: lbu         $t6, 0x0($a1)
     ctx->r14 = MEM_BU(ctx->r5, 0X0);
     // 0x80800058: lui         $t8, 0x0

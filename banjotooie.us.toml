@@ -550,3 +550,130 @@ func = "func_800BFD6C"
 before_vram = 0x800BFDF8
 text = "tooie_rt64_sky_layer(rdram, ctx);"
 
+# Default-OFF Step 82 correction-input observers. They write no guest state.
+
+[[patches.hook]]
+func = "func_800AE820"
+before_vram = 0x800AE820
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 1U, 0x00000000U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800AE820"
+before_vram = 0x800AE86C
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 2U, 0x00000000U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800DE2A4"
+before_vram = 0x800DE2E4
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 6U, 0x00000000U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800DE2A4"
+before_vram = 0x800DE2EC
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 7U, 0x00000000U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800123F4"
+before_vram = 0x80012458
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 10U, 0x80012458U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800123F4"
+before_vram = 0x80012460
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 12U, 0x80012458U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800A759C"
+before_vram = 0x800A76D4
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 10U, 0x800A76D4U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800A759C"
+before_vram = 0x800A76DC
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 12U, 0x800A76D4U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800A9924"
+before_vram = 0x800A9980
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 10U, 0x800A9980U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800A9924"
+before_vram = 0x800A9988
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 12U, 0x800A9980U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_8001608C"
+before_vram = 0x800160F8
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 11U, 0x00000000U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_80018444"
+before_vram = 0x80018444
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 13U, 0x00000000U);
+#endif
+"""
+
+[[patches.hook]]
+func = "gsattract_entrypoint_1"
+before_vram = 0x80800054
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 14U, 0x00000000U);
+#endif
+"""
+
+[[patches.hook]]
+func = "gsattract_entrypoint_0"
+before_vram = 0x80800000
+text = """
+#if TOOIE_CORRECTION_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 15U, 0x00000000U);
+#endif
+"""

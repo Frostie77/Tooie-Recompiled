@@ -5022,6 +5022,9 @@ L_8001243C:
 
     after_3:
 L_80012458:
+    #if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 10U, 0x80012458U);
+#endif
     // 0x80012458: jal         0x8001608C
     // 0x8001245C: nop
 
@@ -5030,6 +5033,9 @@ L_80012458:
     // 0x8001245C: nop
 
     after_4:
+    #if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 12U, 0x80012458U);
+#endif
     // 0x80012460: jal         0x80018444
     // 0x80012464: nop
 
@@ -16190,6 +16196,9 @@ RECOMP_FUNC void func_8001608C(uint8_t* rdram, recomp_context* ctx) {
     // 0x800160F4: addiu       $a1, $sp, 0x50
     ctx->r5 = ADD32(ctx->r29, 0X50);
     after_3:
+    #if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 11U, 0x00000000U);
+#endif
     // 0x800160F8: bne         $v0, $zero, L_80016110
     if (ctx->r2 != 0) {
         // 0x800160FC: nop

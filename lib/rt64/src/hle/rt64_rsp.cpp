@@ -44,6 +44,9 @@ namespace RT64 {
         geometryModeStackSize = 1;
         otherModeStackSize = 1;
         modelMatrixStack.fill(hlslpp::float4x4(0.0f));
+#if TOOIE_CORRECTION_TRACE_ENABLED
+        correctionStack = {};
+#endif
         modelMatrixSegmentedAddressStack.fill(0);
         modelMatrixPhysicalAddressStack.fill(0);
         viewMatrixStack[0] = hlslpp::float4x4(0.0f);
@@ -168,6 +171,17 @@ namespace RT64 {
         }
         // Modelview matrix.
         else {
+#if TOOIE_CORRECTION_TRACE_ENABLED
+            tooie::correction::Join ancestor;
+            if (((params & pushMask) && modelMatrixStackSize < RSP_MATRIX_STACK_SIZE) || !(params & loadMask)) {
+                const auto &parent = correctionStack[modelMatrixStackSize - 1];
+                ancestor = parent.direct.id ? parent.direct : parent.ancestor;
+            }
+            else if (modelMatrixStackSize > 1) {
+                const auto &parent = correctionStack[modelMatrixStackSize - 2];
+                ancestor = parent.direct.id ? parent.direct : parent.ancestor;
+            }
+#endif
             if ((params & pushMask) && (modelMatrixStackSize < RSP_MATRIX_STACK_SIZE)) {
                 modelMatrixStackSize++;
                 modelMatrixStack[modelMatrixStackSize - 1] = modelMatrixStack[modelMatrixStackSize - 2];
@@ -182,6 +196,21 @@ namespace RT64 {
 
             modelMatrixSegmentedAddressStack[modelMatrixStackSize - 1] = address;
             modelMatrixPhysicalAddressStack[modelMatrixStackSize - 1] = fromSegmentedMasked(address);
+#if TOOIE_CORRECTION_TRACE_ENABLED
+            auto &trace = correctionStack[modelMatrixStackSize - 1];
+            trace = {};
+            trace.decodedFrame = state->ext.interpreter->correctionMarker.frame;
+            if (ancestor.sourceFrame == trace.decodedFrame) trace.ancestor = ancestor;
+            trace.address = fromSegmentedMasked(address); trace.params = params; trace.depth = modelMatrixStackSize;
+            trace.command = state->ext.interpreter->correctionCommand;
+            for (unsigned i = 0; i < 16; ++i) trace.input[i] = floatMatrix[i / 4][i % 4];
+            const auto &callers = state->returnAddressStack;
+            for (unsigned i = 0; i < 4 && i < callers.size(); ++i) {
+                const uintptr_t base = reinterpret_cast<uintptr_t>(state->RDRAM);
+                const uintptr_t pointer = reinterpret_cast<uintptr_t>(callers[callers.size() - 1 - i]);
+                trace.callers[i] = pointer >= base && pointer - base < 0x800000 ? uint32_t(pointer - base) : 0;
+            }
+#endif
         }
 
         modelViewProjChanged = true;
@@ -192,6 +221,12 @@ namespace RT64 {
         const FixedMatrix *fixedMatrix = reinterpret_cast<FixedMatrix *>(state->fromRDRAM(rdramAddress));
         const hlslpp::float4x4 floatMatrix = fixedMatrix->toMatrix4x4();
         matrixCommon(floatMatrix, address, params);
+#if TOOIE_CORRECTION_TRACE_ENABLED
+        if (!(params & projMask)) {
+            auto &trace = correctionStack[modelMatrixStackSize - 1];
+            trace.direct = tooie::correction::bindings().find(rdramAddress, trace.command, fixedMatrix, tooie::diagnostics::monotonicUs(), trace.decodedFrame);
+        }
+#endif
     }
 
     void RSP::matrixFloat(uint32_t address, uint8_t params) {
@@ -520,6 +555,9 @@ namespace RT64 {
         auto &worldTransformPhysicalAddresses = workload.drawData.worldTransformPhysicalAddresses;
         auto &worldTransformVertexIndices = workload.drawData.worldTransformVertexIndices;
         bool addWorldTransform = (modelViewProjChanged || modelViewProjInserted);
+#if TOOIE_CORRECTION_TRACE_ENABLED
+        const bool correctionInserted = modelViewProjInserted;
+#endif
         if (modelViewProjChanged) {
             computeModelViewProj();
             curTransformIndex = static_cast<uint16_t>(worldTransforms.size());
@@ -548,6 +586,10 @@ namespace RT64 {
             worldTransformSegmentedAddresses.emplace_back(modelMatrixSegmentedAddressStack[modelMatrixStackSize - 1]);
             worldTransformPhysicalAddresses.emplace_back(physicalAddress);
             worldTransformVertexIndices.emplace_back(workload.drawData.vertexCount());
+#if TOOIE_CORRECTION_TRACE_ENABLED
+            const auto &trace = correctionStack[modelMatrixStackSize - 1];
+            tooie::correction::storeLink(workload.drawData, curTransformIndex, trace, correctionInserted);
+#endif
         }
 
         // Push a new projection if it's changed.

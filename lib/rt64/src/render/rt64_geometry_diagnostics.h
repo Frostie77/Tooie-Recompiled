@@ -4,6 +4,7 @@
 #include "hle/rt64_workload.h"
 #include "../../../../src/runtime_diagnostics.h"
 #include <cmath>
+#include <unordered_set>
 
 namespace RT64::geometryDiagnostics {
 struct Window {
@@ -34,7 +35,8 @@ struct Triangle {
     std::array<Vertex,3> vertices;
 };
 struct Snapshot {
-    uint64_t triangles=0, invalid=0, unmappedVertices=0;
+    uint64_t triangles=0, invalid=0, unmappedVertices=0, inspected=0, calls=0;
+    bool truncated=false;
     // AUTO is not synonymous with NPC. Singular is not synonymous with shadow.
     std::array<Triangle,3> worst;
 };
@@ -98,7 +100,8 @@ inline bool vertex(const DrawData &d, const DrawData *p, const GameFrameMap::Wor
     v.singular=std::fabs(float(hlslpp::determinant(v.previous)))<1e-6f || std::fabs(float(hlslpp::determinant(v.current)))<1e-6f;
     return finite(v.worldPrevious) && finite(v.worldCurrent) && finite(v.worldSample);
 }
-inline Snapshot collect(const Workload &w, const Workload *previous, const GameFrameMap::WorkloadMap *map, float weight) {
+inline Snapshot collect(const Workload &w, const Workload *previous, const GameFrameMap::WorkloadMap *map, float weight,
+                        const std::unordered_set<uint32_t> *onlyTransforms=nullptr,uint64_t scanLimit=UINT64_MAX) {
     Snapshot out;
     if (!std::isfinite(weight) || weight<=0 || weight>=1) return out;
     const auto &d=w.drawData;
@@ -109,10 +112,22 @@ inline Snapshot collect(const Workload &w, const Workload *previous, const GameF
             const auto &proj=fb.projections[pr];
             if (proj.type!=Projection::Type::Perspective && proj.type!=Projection::Type::Orthographic) continue;
             for (uint32_t c=0;c<proj.gameCallCount && c<proj.gameCalls.size();++c) {
+                if(out.calls>=scanLimit) {out.truncated=true;return out;}
+                ++out.calls;
                 const auto &call=proj.gameCalls[c];
                 const uint64_t start=call.meshDesc.faceIndicesStart, count=uint64_t(call.callDesc.triangleCount)*3;
                 if (start>d.faceIndices.size() || count>d.faceIndices.size()-start) {++out.invalid;continue;}
                 for (uint64_t i=start;i<start+count;i+=3) {
+                    if(out.inspected>=scanLimit) {out.truncated=true;return out;}
+                    ++out.inspected;
+                    if (onlyTransforms) {
+                        bool selected=false;
+                        for (unsigned k=0;k<3;++k) {
+                            const uint32_t v=d.faceIndices[i+k];
+                            selected |= v<d.worldIndices.size() && onlyTransforms->count(d.worldIndices[v]);
+                        }
+                        if (!selected) continue;
+                    }
                     Triangle sample; sample.framebuffer=f;sample.projection=pr;sample.call=c;sample.uid=call.callDesc.uid;sample.face=uint32_t(i);
                     sample.geometryMode=call.callDesc.geometryMode;sample.otherModeH=call.callDesc.otherMode.H;sample.otherModeL=call.callDesc.otherMode.L;
                     bool valid=true,automatic=false,player=false,singular=false;

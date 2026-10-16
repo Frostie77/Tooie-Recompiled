@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "../../../../src/correction_trace.h"
+
 #include "render/rt64_buffer_uploader.h"
 #if defined(__ANDROID__)
 #include "render/rt64_gpu_tile_buffer.h"
@@ -79,6 +81,10 @@ namespace RT64 {
         std::vector<uint32_t> worldTransformSegmentedAddresses;
         std::vector<uint32_t> worldTransformPhysicalAddresses;
         std::vector<uint32_t> worldTransformVertexIndices;
+#if TOOIE_CORRECTION_TRACE_ENABLED
+        std::unordered_map<uint32_t, tooie::correction::Link> correctionLinks;
+        bool correctionReported = false;
+#endif
 
         uint32_t vertexCount() const {
             return uint32_t(worldIndices.size());

@@ -1,5 +1,7 @@
 # Step 81: device geometry reproduction and demo-clock investigation
 
+Next source revision: [Step 82 bounded correction-input observer](android-correction-inputs-step82.md).
+
 This revision adds an offline reproduction and source findings. **It does not
 fix or claim to fix stretching, shadows, the jigsaw glitch or demo speed.**
 Production rendering, matching, timing, diagnostic defaults and device state

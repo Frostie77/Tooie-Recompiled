@@ -12,9 +12,9 @@ from pathlib import Path
 import subprocess,sys
 r,t=map(Path,sys.argv[1:]);base='98f909cc6837cb9bc66cad1018fefd3b090add8d'
 (t/'matching_queue.h').write_text('#include "hle/rt64_workload.h"\nnamespace RT64 {struct WorkloadQueue {std::array<Workload,4> workloads;};}\n')
-for mode in ('current','base'):
+for mode in ('current','base','correction-base'):
  for name in ('hle/rt64_game_frame.cpp','render/rt64_transform_processor.cpp'):
-  s=(r/'lib/rt64/src'/name).read_text() if mode=='current' else subprocess.check_output(['git','-C',str(r),'show',base+':lib/rt64/src/'+name],text=True)
+  s=(r/'lib/rt64/src'/name).read_text() if mode=='current' else subprocess.check_output(['git','-C',str(r),'show',('3286c6fb1f0c6ed34664fb5fddd75aca24c7450e' if mode=='correction-base' else base)+':lib/rt64/src/'+name],text=True)
   s=s.replace('#include "../../../../src/render_diagnostics.h"','#include "render_diagnostics.h"')
   s=s.replace('#include "rt64_workload_queue.h"','#include "matching_queue.h"').replace('#include "hle/rt64_workload_queue.h"','#include "matching_queue.h"')
   (t/(mode+'-'+Path(name).name)).write_text(s)
@@ -27,11 +27,24 @@ objects=()
 for source in common/rt64_math.cpp hle/rt64_rigid_body.cpp hle/rt64_framebuffer_changes.cpp hle/rt64_framebuffer_storage.cpp hle/rt64_projection.cpp common/rt64_common.cpp preset/rt64_preset_scene.cpp preset/rt64_preset.cpp; do
  object="$t/$(basename "$source").o";"${CXX:-g++}" "${flags[@]}" -c "$rt/$source" -o "$object";objects+=("$object")
 done
-for mode in current base android-off desktop-on; do
+modes=(current base android-off desktop-on)
+correction_objects=()
+if [ "${TOOIE_CORRECTION_TEST:-0}" = 1 ];then
+ modes+=(correction-on correction-base)
+ for source in common/rt64_math.cpp hle/rt64_rigid_body.cpp hle/rt64_framebuffer_changes.cpp hle/rt64_framebuffer_storage.cpp hle/rt64_projection.cpp common/rt64_common.cpp preset/rt64_preset_scene.cpp preset/rt64_preset.cpp;do
+  object="$t/correction-$(basename "$source").o";"${CXX:-g++}" "${flags[@]}" -D__ANDROID__ -DTOOIE_ANDROID_CORRECTION_TRACE=1 -c "$rt/$source" -o "$object";correction_objects+=("$object")
+ done
+fi
+for mode in "${modes[@]}"; do
+ selected_objects=("${objects[@]}")
  source_mode=$mode;definitions=(-D__ANDROID__ -DTOOIE_ANDROID_GEOMETRY_TRACE=1)
  if [ "$mode" = android-off ];then source_mode=current;definitions=(-D__ANDROID__ -DTOOIE_ANDROID_GEOMETRY_TRACE=0);fi
+ if [ "$mode" = correction-on ] || [ "$mode" = correction-base ];then
+  source_mode=$mode;if [ "$mode" = correction-on ];then source_mode=current;fi
+  definitions=(-D__ANDROID__ -DTOOIE_ANDROID_GEOMETRY_TRACE=0 -DTOOIE_ANDROID_CORRECTION_TRACE=1);selected_objects=("${correction_objects[@]}")
+ fi
  if [ "$mode" = desktop-on ];then source_mode=current;definitions=(-DTOOIE_ANDROID_GEOMETRY_TRACE=1);fi
- "${CXX:-g++}" "${flags[@]}" "${definitions[@]}" "$r/tests/geometry_diagnostics.cpp" "$t/$source_mode-rt64_game_frame.cpp" "$t/$source_mode-rt64_transform_processor.cpp" "${objects[@]}" -Wl,--gc-sections -o "$t/$mode"
+ "${CXX:-g++}" "${flags[@]}" "${definitions[@]}" "$r/tests/geometry_diagnostics.cpp" "$t/$source_mode-rt64_game_frame.cpp" "$t/$source_mode-rt64_transform_processor.cpp" "${selected_objects[@]}" -Wl,--gc-sections -o "$t/$mode"
  mkdir -p "$t/$mode-log"
  rm -f "$t/$mode-log/banjotooi-debug.log"
  APP_FOLDER_PATH="$t/$mode-log" ASAN_OPTIONS=detect_leaks=0 "$t/$mode" "$t/$mode.bin"
@@ -39,6 +52,27 @@ done
 cmp "$t/current.bin" "$t/base.bin"
 cmp "$t/current.bin" "$t/android-off.bin"
 cmp "$t/current.bin" "$t/desktop-on.bin"
+if [ "${TOOIE_CORRECTION_TEST:-0}" = 1 ];then
+ cmp "$t/current.bin" "$t/correction-on.bin"
+ cmp "$t/correction-on.bin" "$t/correction-base.bin"
+ python3 - "$t" <<'PYCORRECTION'
+from pathlib import Path
+import sys
+p=Path(sys.argv[1]);current=(p/'correction-on-log/banjotooi-debug.log').read_text();base=(p/'correction-base-log/banjotooi-debug.log').read_text()
+assert 'Runtime correction-sample:' in current and 'selection=source-linked' in current
+assert 'Runtime correction-link:' in current and 'endpoint=current binding=102' in current and 'endpoint=previous binding=101' in current
+link_keys=[]
+for line in current.splitlines():
+ if 'Runtime correction-link:' not in line:continue
+ fields=dict(word.split('=',1) for word in line.split() if '=' in word)
+ link_keys.append(tuple(fields[k] for k in ['sample','workload','transform','endpoint']))
+assert len(link_keys)==len(set(link_keys)), 'duplicate consumer link from unresolved/selected corner overlap'
+assert any('binding=0 matches=2' in line for line in current.splitlines())
+assert 'Runtime correction-sample:' not in base
+assert not any('Runtime geometry:' in line and 'sample=999 ' not in line for line in base.splitlines())
+print('PASS: actual source-linked consumer delivery; exact 3286c6f lacks required observer; consumed geometry/velocities byte-identical to parent and trace OFF')
+PYCORRECTION
+fi
 python3 - "$t" <<'PY'
 from pathlib import Path
 import sys

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "../../../../src/correction_trace.h"
+
 #include "rt64_state.h"
 
 #include "gbi/rt64_f3d.h"
@@ -14,6 +16,10 @@ namespace RT64 {
         State *state;
         GBIManager gbiManager;
         GBI *hleGBI;
+#if TOOIE_CORRECTION_TRACE_ENABLED
+        uint32_t correctionCommand = 0;
+        tooie::correction::Marker correctionMarker;
+#endif
         uint8_t extendedOpCode = 0;
         GBIFunction extendedFunction = nullptr;
 

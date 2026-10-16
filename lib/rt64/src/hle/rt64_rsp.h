@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "../../../../src/correction_trace.h"
+
 #include <array>
 #include <bitset>
 #include <stdint.h>
@@ -131,6 +133,9 @@ namespace RT64 {
 
         State *state;
         std::array<hlslpp::float4x4, RSP_MATRIX_STACK_SIZE> modelMatrixStack;
+#if TOOIE_CORRECTION_TRACE_ENABLED
+        std::array<tooie::correction::Link, RSP_MATRIX_STACK_SIZE> correctionStack{};
+#endif
         std::array<uint32_t, RSP_MATRIX_STACK_SIZE> modelMatrixSegmentedAddressStack;
         std::array<uint32_t, RSP_MATRIX_STACK_SIZE> modelMatrixPhysicalAddressStack;
         int modelMatrixStackSize;

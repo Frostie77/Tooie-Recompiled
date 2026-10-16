@@ -49,6 +49,17 @@ extern "C" {
 #include "ultramodern/config.hpp"
 #include "ultramodern/ultramodern.hpp"
 
+#include "correction_trace_guest.h"
+
+extern "C" void tooie_correction_probe(uint8_t* rdram, recomp_context* ctx,
+                                      uint32_t event, uint32_t site) {
+#if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie::correction::guest::probe(rdram, ctx, event, 0, site);
+#else
+    (void)rdram; (void)ctx; (void)event; (void)site;
+#endif
+}
+
 // --- Host backtraces, for the diagnostics below -----------------------------
 //
 // Several probes print the *host* call stack, because the generated C calls the
@@ -1277,6 +1288,14 @@ extern std::atomic<uint32_t> g_bt_rt64_proj_skipped_other;
 // resets the extended-GBI enable whenever a display list starts, so the enable
 // is re-emitted at the head of every frame's list.
 extern "C" void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx) {
+#if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie::correction::guest::probe(rdram, ctx, 0, 0U);
+    static thread_local bool correctionRomLogged = false;
+    if (!correctionRomLogged) {
+        const auto rom = recomp::get_rom();
+        correctionRomLogged = tooie::correction::guest::romManifest(rom.data(), rom.size());
+    }
+#endif
     (void)ctx;
     if (rt64_disabled()) {
         return;
@@ -1380,6 +1399,11 @@ extern "C" void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx) {
                         refresh_rate)) {
         note_append_failure(1U);
     }
+#if TOOIE_CORRECTION_TRACE_ENABLED
+    if (!tooie::correction::guest::appendMarker(rdram, kRenderBufferState)) {
+        note_append_failure(9U);
+    }
+#endif
 }
 
 // func_80098BA8 is the player draw wrapper, so its entry and its exit bracket
@@ -1421,6 +1445,9 @@ extern "C" void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
 // the player's model, or the sky layer the draw loop is on.
 extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
                                             recomp_context* ctx) {
+#if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie::correction::guest::probe(rdram, ctx, 3, g_player_scope_depth ? g_player_key : 0U);
+#endif
     if (rt64_disabled()) {
         return;
     }
@@ -1485,6 +1512,9 @@ extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
 // model matrix, so the N64 scope and the RT64 group close together.
 extern "C" void tooie_rt64_pop_player_root(uint8_t* rdram,
                                            recomp_context* ctx) {
+#if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie::correction::guest::probe(rdram, ctx, 4, 0U);
+#endif
     if (rt64_disabled()) {
         return;
     }
@@ -1513,6 +1543,9 @@ extern "C" void tooie_rt64_pop_player_root(uint8_t* rdram,
 // unique within a model, so it is a stable sub-id under the root group.
 extern "C" void tooie_rt64_push_player_bone(uint8_t* rdram,
                                             recomp_context* ctx) {
+#if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie::correction::guest::probe(rdram, ctx, 5, 0U);
+#endif
     if (rt64_disabled()) {
         return;
     }

@@ -165,12 +165,25 @@ namespace RT64 {
         // Check RDRAM if required.
         state->checkRDRAM();
 
+#if TOOIE_CORRECTION_TRACE_ENABLED
+        correctionMarker.reset();
+#endif
         // Run the command interpreter.
         DisplayList *dl = dlStart;
         uint8_t opCode;
         GBIFunction func;
         while (dl != nullptr) {
+#if TOOIE_CORRECTION_TRACE_ENABLED
+            const uintptr_t base = reinterpret_cast<uintptr_t>(state->RDRAM);
+            const uintptr_t command = reinterpret_cast<uintptr_t>(dl);
+            correctionCommand = command >= base && command - base < 0x800000 ? uint32_t(command - base) : 0;
+#endif
             opCode = (dl->w0 >> 24);
+#if TOOIE_CORRECTION_TRACE_ENABLED
+            if (!((extendedOpCode != 0) && (opCode == extendedOpCode) && dl->w0 == tooie::correction::MarkerWord0)) {
+                correctionMarker.interrupt();
+            }
+#endif
 
             if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                 extendedFunction(state, &dl);

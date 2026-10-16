@@ -7,6 +7,7 @@
 #include "common/rt64_math.h"
 #include "hle/rt64_game_frame.h"
 #include "hle/rt64_workload_queue.h"
+#include "rt64_correction_diagnostics.h"
 
 #if defined(__ANDROID__) && defined(TOOIE_ANDROID_GEOMETRY_TRACE) && TOOIE_ANDROID_GEOMETRY_TRACE
 #include "rt64_geometry_diagnostics.h"
@@ -86,6 +87,12 @@ namespace RT64 {
                 const auto snapshot = geometryDiagnostics::collect(workload, &previous, &map, p.curFrameWeight);
                 geometryDiagnostics::report(snapshot, geometrySample, workload.workloadId, p.curFrameWeight,
                     tooie::diagnostics::monotonicUs() - start, p.prevFrameWeight);
+            }
+#endif
+#if TOOIE_CORRECTION_TRACE_ENABLED
+            if (prevFrameValid) {
+                const auto &map = p.curFrame->frameMap.workloads[w];
+                correctionDiagnostics::report(workload, p.workloadQueue->workloads[map.prevWorkloadIndex], map, p.curFrameWeight, p.prevFrameWeight);
             }
 #endif
         }
