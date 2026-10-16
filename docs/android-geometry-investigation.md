@@ -1,5 +1,8 @@
 # Step 78: remaining NPC movement and Banjo's shadow
 
+Follow-up: [Step 81 device-input production replay and demo-clock findings](android-geometry-replay-step81.md).
+The Step 78 proposal and its original validation remain recorded below.
+
 This is an investigation and an **opt-in diagnostic proposal**, not a verified
 visual fix. The renderer remains based on `98f909cc6837cb9bc66cad1018fefd3b090add8d`.
 No new Odin operation, APK build or installation is part of this revision.
