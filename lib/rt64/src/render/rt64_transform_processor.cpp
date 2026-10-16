@@ -8,6 +8,10 @@
 #include "hle/rt64_game_frame.h"
 #include "hle/rt64_workload_queue.h"
 
+#if defined(__ANDROID__) && defined(TOOIE_ANDROID_GEOMETRY_TRACE) && TOOIE_ANDROID_GEOMETRY_TRACE
+#include "rt64_geometry_diagnostics.h"
+#endif
+
 namespace RT64 {
     // TransformProcessor
     
@@ -20,6 +24,11 @@ namespace RT64 {
     }
 
     void TransformProcessor::process(const ProcessParams &p) {
+#if defined(__ANDROID__) && defined(TOOIE_ANDROID_GEOMETRY_TRACE) && TOOIE_ANDROID_GEOMETRY_TRACE
+        static thread_local geometryDiagnostics::Window geometryWindow;
+        const uint64_t geometrySample = tooie::diagnostics::monotonicUs();
+        const bool captureGeometry = geometryWindow.due(geometrySample, p.curFrameWeight);
+#endif
         for (uint32_t w : p.curFrame->workloads) {
             Workload &workload = p.workloadQueue->workloads[w];
             DrawData &drawData = workload.drawData;
@@ -67,6 +76,18 @@ namespace RT64 {
                     invTWorldTransforms.push_back(invTMatrix);
                 }
             }
+#if defined(__ANDROID__) && defined(TOOIE_ANDROID_GEOMETRY_TRACE) && TOOIE_ANDROID_GEOMETRY_TRACE
+            // Copy the actual consumer inputs while this workload and its
+            // previous workload are owned here. No pointers escape the call.
+            if (captureGeometry && prevFrameValid) {
+                const auto start = tooie::diagnostics::monotonicUs();
+                const auto &map = p.curFrame->frameMap.workloads[w];
+                const auto &previous = p.workloadQueue->workloads[map.prevWorkloadIndex];
+                const auto snapshot = geometryDiagnostics::collect(workload, &previous, &map, p.curFrameWeight);
+                geometryDiagnostics::report(snapshot, geometrySample, workload.workloadId, p.curFrameWeight,
+                    tooie::diagnostics::monotonicUs() - start, p.prevFrameWeight);
+            }
+#endif
         }
     }
     
