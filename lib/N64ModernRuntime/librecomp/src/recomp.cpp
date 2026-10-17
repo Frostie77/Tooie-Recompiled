@@ -1,3 +1,4 @@
+#include "../../../../src/guest_failure.h"
 #include "../../../../src/android_debug_log.h"
 #include <cstdio>
 #include <cstdlib>
@@ -463,14 +464,28 @@ extern "C" gpr cop0_status_read(recomp_context* ctx) {
 
 extern "C" void switch_error(const char* func, uint32_t vram, uint32_t jtbl) {
     printf("Switch-case out of bounds in %s at 0x%08X for jump table at 0x%08X\n", func, vram, jtbl);
+#if defined(__ANDROID__)
+    tooie::reportGuestFailure("switch-case-out-of-bounds", vram, jtbl, 0, func);
+#endif
     assert(false);
+#if defined(__ANDROID__)
+    ULTRAMODERN_QUICK_EXIT();
+#else
     exit(EXIT_FAILURE);
+#endif
 }
 
 extern "C" void do_break(uint32_t vram) {
     printf("Encountered break at original vram 0x%08X\n", vram);
+#if defined(__ANDROID__)
+    tooie::reportGuestFailure("guest-break", vram);
+#endif
     assert(false);
+#if defined(__ANDROID__)
+    ULTRAMODERN_QUICK_EXIT();
+#else
     exit(EXIT_FAILURE);
+#endif
 }
 
 std::string current_game_mode_id;

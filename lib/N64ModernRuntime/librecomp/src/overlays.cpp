@@ -1,3 +1,4 @@
+#include "../../../../src/guest_failure.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
@@ -251,8 +252,15 @@ extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
                     "  rom: 0x%08X size: 0x%08X loaded_addr: 0x%08X\n"
                     "  unloaded_ram: 0x%08X unloaded_size : 0x%08X\n",
                         section.rom_addr, section.size, it->loaded_ram_addr, ram_addr, size);
+#if defined(__ANDROID__)
+                tooie::reportGuestFailure("partial-overlay-unload", uint32_t(ram_addr), size, section.rom_addr);
+#endif
                 assert(false);
+#if defined(__ANDROID__)
+                ULTRAMODERN_QUICK_EXIT();
+#else
                 std::exit(EXIT_FAILURE);
+#endif
             }
             // Determine where each function was loaded to and remove that entry from the function map
             for (size_t func_index = 0; func_index < section.num_funcs; func_index++) {
@@ -365,8 +373,15 @@ extern "C" recomp_func_t * get_function(int32_t addr) {
     auto func_find = func_map.find(addr);
     if (func_find == func_map.end()) {
         fprintf(stderr, "Failed to find function at 0x%08X\n", addr);
+#if defined(__ANDROID__)
+        tooie::reportGuestFailure("missing-function", uint32_t(addr));
+#endif
         assert(false);
+#if defined(__ANDROID__)
+        ULTRAMODERN_QUICK_EXIT();
+#else
         std::exit(EXIT_FAILURE);
+#endif
     }
     return func_find->second;
 }

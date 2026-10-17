@@ -104,6 +104,34 @@ matching Build ID binary. No new hardware test is requested here.
 The nesting limit is a diagnostic policy, not proof that an owner was destroyed;
 the preserved caller/state must establish that. Production introduces no query limit.
 
+## Preserve guest failures before global UI teardown
+
+A separate source audit found four existing guest-fatal paths that call ordinary
+`exit()` after printing to stdout/stderr: missing function dispatch, partial
+overlay unload, out-of-bounds switch dispatch and guest BREAK. In builds with
+assertions disabled, calling these from a guest thread runs process-wide static
+destructors without quiescing the UI/render threads. This can obscure an earlier
+failure with a UI teardown fault. It is a concrete source path to investigate,
+**not proof that it was taken in this capture**.
+
+Android now writes a `Runtime guest-fatal` private record before the assertion,
+including monotonic time, PID/TID, reason, guest address and auxiliary values:
+
+| Reason | Address | Additional context |
+| --- | --- | --- |
+| `missing-function` | Requested function address | The failed dispatch remains rejected. |
+| `partial-overlay-unload` | Requested unload start | `detail0` is requested size; `detail1` is section ROM address. |
+| `switch-case-out-of-bounds` | Switch instruction VRAM | `detail0` is jump-table address; context is generated function name. |
+| `guest-break` | BREAK instruction VRAM | The guest exception remains fatal. |
+
+Debug assertions remain in place. If assertions are disabled, Android uses the
+runtime's existing `ULTRAMODERN_QUICK_EXIT()` path, avoiding ordinary static
+destruction while peer threads are active. Desktop retains its existing path.
+Successful lookup and complete overlay unload are unchanged. This adds no guest
+function, missing switch case or fallback rendering; a real guest error still
+terminates. A future error record may identify the original guest defect before
+teardown, which the retained recursive stack alone cannot establish.
+
 ## Local validation (17 October 2026)
 
 Run:
@@ -114,6 +142,7 @@ tools/test_android_vulkan_clear.sh
 tools/test_android_surface_lifecycle.sh
 tools/test_android_rom_picker.sh
 CXX=g++ tools/test_correction_diagnostics.sh
+CXX=g++ tools/test_android_guest_failure.sh
 ```
 
 The RmlUi test builds the actual pinned core with ASan/UBSan and headless
@@ -143,9 +172,19 @@ Additional results:
   cancellation, callback delivery after readiness, fatal timeout controls and
   unchanged Linux NFD behavior.
 - Source/RSP/workload observer/provenance and protocol regressions pass.
+- The four actual extracted guest-fatal handlers and the real runtime
+  `quick_exit` implementation pass ASan/UBSan controls. Android records the exact
+  reasons/addresses and terminates without ordinary exit callbacks; assertions
+  enabled still abort after recording. Successful lookup/unload and desktop exit
+  callbacks are preserved. The exact parent executes ordinary exit callbacks
+  and lacks the new private primary-failure record. These are source-path tests,
+  not evidence of which condition occurred on the Odin.
 - Actual `Element.cpp` and `ElementDocument.cpp` compile with NDK r27d ARM64/API24,
   trace 0 and 1. Trace 1 uses the real NDK Bionic abort-message declaration.
   The captured APK used r28c; these component checks are separate evidence.
+- The actual complete guest-runtime `overlays.cpp` and `recomp.cpp` compile for
+  ARM64/API24 and Linux. Manual compilation supplies the existing Rabbitizer/fmt
+  transitive include directories used by the runtime target.
 
 No APK is linked. Existing full-build limitations include missing Android
 SDL2/FreeType prefixes and the required zstd `build/cmake` source directory,
