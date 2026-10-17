@@ -1,9 +1,11 @@
 # Next Codex handoff: Tooie-Recompiled
 
-Prepared 17 October 2026. Start here, then read the linked investigations before
-changing implementation. This branch combines the selected Android branding,
-the Banjo-Recomp mod audit and update-readiness planning. It adds no new
-gameplay, rendering, pacing, mod-loading or update-client implementation.
+Updated 17 October 2026. Start here, then read the linked investigations before
+changing implementation. This branch combines selected Android branding,
+the Banjo-Recomp comparison, Android mod import/texture registration and
+update-readiness planning. The mod paths are host-tested; executable mods and
+rendered replacements still need Odin verification. Production interpolation,
+pacing and the update client are unchanged.
 
 ## Goal and completion requirements
 
@@ -53,15 +55,31 @@ The icon master SHA-256 is
 | Selected BT icon and exact display name | `5747f515c66a0b28cd524322497405c168fd028b`, parent `05aca40` |
 | Mod audit and host reproducer | `79f97b7383749a9862dc14052ea37220fd198f10`, parent `5db2d7f` |
 
-This handoff branch joins the complete branding chain and the audit in one
-merge commit, adding this document and the update-readiness plan. Existing
-engineering, main, PR #1 and release refs were not moved to create it. Inspect
+Parent `4a0a30912b4e54a31d00f64ed91f5bc8b2adcc37` joins the complete branding
+chain and audit in one merge commit. This feature branch adds Android mod
+support. Existing engineering, main, PR #1 and release refs were not moved. Inspect
 the current engineering head before integrating so newer fixes are retained.
 If integrating individual commits onto `5db2d7f`, include **both** `05aca40`
 and `5747f5`: the latter alone omits the earlier unchanged icon wiring and menu
 assets. The audit is documentation plus an investigation reproducer only.
 
-## Mod support: concrete findings to carry forward
+## Mod support: implementation and device follow-up
+
+Read [android-mod-support.md](android-mod-support.md) first. It implements a
+mod-specific document picker, private staging, package/game/config validation,
+confirmation and replacement rollback, plus texture startup registrations.
+Normal `.nrm` mods, `.rtz` packs and ZIP bundles are accepted by that source
+path; unverified native-library extensions are rejected. Actual normal code-mod
+execution and texture output remain untested on Odin.
+
+Run `python3 tools/test_android_mod_support.py` for the current host suite; pass
+an Android SDK jar for actual Activity/SDL compilation and a pinned tested-base
+checkout for previous-source controls. Reconfigure CMake to include the added
+Android installer unit. Verify `ModImporter` and `nativeModFileDialogResult`
+are present in the next APK.
+
+The following items describe the **historical baseline**, explaining this
+change; they are not claims that these exact source gaps still exist here.
 
 Read [android-mod-support-audit.md](android-mod-support-audit.md), which pins
 the inspected Banjo-Recomp and shared-framework revisions.
@@ -81,7 +99,7 @@ the inspected Banjo-Recomp and shared-framework revisions.
    and prove output on ARM64. Shared package format does not make `bk` mods
    compatible with Tooie's `bt` target.
 
-Run `python3 tools/audit_android_mod_support.py` from a full source snapshot
+Run `python3 tools/audit_android_mod_support.py` from the pinned audit snapshot
 with a C++20 compiler and Java 17 source-file support. Its successful exit means
 the existing gaps and controls were reproduced, not that mods work. Update or
 retire the investigation reproducer once its cancellation stub is corrected.
@@ -153,9 +171,10 @@ new conclusions from those records.
    hierarchy/pivot/clock behavior before choosing further corrections.
 2. Integrate approved branding into the next intended APK source and verify the
    packaged labels, icon resources, menu hash, native Build ID and APK hash.
-3. Implement and verify the bounded mod-import/texture wiring described in the
-   audit, with a known Tooie code mod and texture pack. Keep claims specific to
-   the tested fixtures and device.
+3. Verify the implemented mod-import/texture wiring with a known Tooie code mod
+   and texture pack on Odin, including config/order/restart, replacement
+   cancellation, failed providers, ROM selection and saves. Keep claims
+   specific to the tested fixtures and device.
 4. Build the update-release foundation before adding startup checks. Keep
    diagnostic APKs out of the stable update feed.
 

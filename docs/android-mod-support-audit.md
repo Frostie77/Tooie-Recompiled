@@ -1,5 +1,10 @@
 # Tooie-Recompiled: Android mod-support audit
 
+Historical baseline: these are the gaps at `5db2d7f`.
+[Android mod support](android-mod-support.md) records the subsequent source
+implementation and its host/device validation boundaries. The original audit
+reproducer intentionally targets the previous cancellation stub.
+
 Date: 2026-10-17. Mod support is a required completion criterion. This is a
 source audit and implementation handoff, not a completed mod feature or an Odin
 test. Production code is unchanged.

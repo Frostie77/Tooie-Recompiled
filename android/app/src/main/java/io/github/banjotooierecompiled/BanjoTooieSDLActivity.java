@@ -4,11 +4,13 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Process;
 import android.os.SystemClock;
+import android.provider.OpenableColumns;
 import android.view.ViewTreeObserver;
 import android.util.Log;
 import android.view.View;
@@ -33,8 +35,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class BanjoTooieSDLActivity extends SDLActivity {
     private static final String TAG = "BanjoTooieSDL";
     private static final int ROM_PICKER_REQUEST = 0x544F;
+    private static final int MOD_PICKER_REQUEST = 0x544D;
     private long pendingRomRequest;
+    private long pendingModRequest;
     private boolean romImportInProgress;
+    private boolean modImportInProgress;
     private boolean romPickerDestroyed;
     private boolean presentationResumed;
     private final WindowSnapshotLog windowSnapshotLog = new WindowSnapshotLog();
@@ -57,8 +62,9 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     }
 
     private final AtomicBoolean romImportCancelled = new AtomicBoolean();
+    private final AtomicBoolean modImportCancelled = new AtomicBoolean();
     private final ExecutorService romImportWorker = Executors.newSingleThreadExecutor(task -> {
-        Thread worker = new Thread(task, "Tooie-ROM-import");
+        Thread worker = new Thread(task, "Tooie-document-import");
         worker.setDaemon(true);
         return worker;
     });
@@ -102,6 +108,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
 
     // Status values match the native DialogRequests protocol: selected/cancelled/error.
     private static native void nativeFileDialogResult(long request, int status, String path, String error);
+    private static native void nativeModFileDialogResult(long request, int status, String path, String error);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -132,6 +139,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
         SDLActivity.nativeSetenv("APP_PROGRAM_PATH", programDir.getAbsolutePath());
         SDLActivity.nativeSetenv("APP_FOLDER_PATH", dataDir.getAbsolutePath());
         RomImporter.cleanAbandonedImports(new File(dataDir, "rom-import"));
+        ModImporter.cleanAbandonedImports(new File(dataDir, "mod-import"));
 
         Log.i(TAG, "Program path: " + programDir.getAbsolutePath());
         Log.i(TAG, "Data path: " + dataDir.getAbsolutePath());
@@ -146,7 +154,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
                 nativeFileDialogResult(request, 2, null, "ROM selection is unavailable while the application is closing.");
                 return;
             }
-            if (pendingRomRequest != 0) {
+            if (pendingRomRequest != 0 || pendingModRequest != 0) {
                 nativeFileDialogResult(request, 1, null, null);
                 return;
             }
@@ -169,9 +177,88 @@ public class BanjoTooieSDLActivity extends SDLActivity {
         });
     }
 
+    /** Mod archives have their own validation and staging; ROM selection stays ROM-specific. */
+    public void openModPicker(long request) {
+        runOnUiThread(() -> {
+            if (romPickerDestroyed || isFinishing() || isDestroyed()) {
+                nativeModFileDialogResult(request, 2, null, "Mod selection is unavailable while the application is closing.");
+                return;
+            }
+            if (pendingRomRequest != 0 || pendingModRequest != 0) {
+                nativeModFileDialogResult(request, 1, null, null);
+                return;
+            }
+            pendingModRequest = request;
+            modImportCancelled.set(false);
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("*/*"); // Archive MIME types vary by provider; validate the copy instead.
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            presentationLifecycle(1);
+            try {
+                startActivityForResult(intent, MOD_PICKER_REQUEST);
+            } catch (ActivityNotFoundException | SecurityException failure) {
+                if (presentationResumed) presentationLifecycle(2);
+                finishModRequest(request, 2, null, "Android could not open the document picker. Enable a document provider and retry.");
+            }
+        });
+    }
+
+    private File modImportDirectory() { return new File(new File(getFilesDir(), "data"), "mod-import"); }
+
+    private void receiveModResult(int resultCode, Intent data) {
+        if (pendingModRequest == 0 || modImportInProgress || romPickerDestroyed) return;
+        if (presentationResumed) presentationLifecycle(2);
+        final long request = pendingModRequest;
+        if (resultCode == Activity.RESULT_CANCELED) {
+            finishModRequest(request, 1, null, null);
+            return;
+        }
+        final Uri uri = data == null ? null : data.getData();
+        if (resultCode != Activity.RESULT_OK || uri == null || !"content".equals(uri.getScheme())) {
+            finishModRequest(request, 2, null, "The document picker returned no readable mod. Select the archive again.");
+            return;
+        }
+        modImportInProgress = true;
+        try {
+            romImportWorker.execute(() -> {
+                ModImporter.Result result;
+                try {
+                    String name = null;
+                    try (Cursor cursor = getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+                        if (cursor != null && cursor.moveToFirst()) name = cursor.getString(0);
+                    }
+                    result = ModImporter.select(() -> getContentResolver().openInputStream(uri), name,
+                        modImportDirectory(), modImportCancelled::get);
+                } catch (RuntimeException failure) {
+                    result = new ModImporter.Result(2, null, "The document provider could not supply the mod. Select it again or use another provider.");
+                }
+                final ModImporter.Result completed = result;
+                runOnUiThread(() -> finishModRequest(request, completed.status, completed.file, completed.error));
+            });
+        } catch (RejectedExecutionException failure) {
+            finishModRequest(request, 2, null, "Mod import is unavailable while the application is closing.");
+        }
+    }
+
+    private void finishModRequest(long request, int status, File imported, String error) {
+        if (romPickerDestroyed || request != pendingModRequest) {
+            ModImporter.discard(imported, modImportDirectory());
+            return;
+        }
+        pendingModRequest = 0;
+        modImportInProgress = false;
+        nativeModFileDialogResult(request, status, imported == null ? null : imported.getAbsolutePath(), error);
+        applyImmersiveFullscreen();
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == MOD_PICKER_REQUEST) {
+            receiveModResult(resultCode, data);
+            return;
+        }
         if (requestCode != ROM_PICKER_REQUEST || pendingRomRequest == 0 || romImportInProgress || romPickerDestroyed) return;
         // Also recover when a provider returns without pausing this Activity.
         if (presentationResumed) presentationLifecycle(2);
@@ -220,9 +307,14 @@ public class BanjoTooieSDLActivity extends SDLActivity {
         }
         romPickerDestroyed = true;
         romImportCancelled.set(true);
+        modImportCancelled.set(true);
         if (pendingRomRequest != 0) {
             nativeFileDialogResult(pendingRomRequest, 1, null, null);
             pendingRomRequest = 0;
+        }
+        if (pendingModRequest != 0) {
+            nativeModFileDialogResult(pendingModRequest, 1, null, null);
+            pendingModRequest = 0;
         }
         romImportWorker.shutdownNow(); // Do not block SDL teardown waiting for a provider.
         super.onDestroy();
