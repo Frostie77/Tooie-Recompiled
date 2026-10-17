@@ -1,50 +1,55 @@
-# Android launcher icon
+# Tooie-Recompiled Android icon
 
-The Android manifest did not declare an application icon, and Android resources
-contained no launcher artwork. Android therefore had no project icon to use for
-the home screen. This change wires the existing desktop Banjo/Kazooie artwork
-into the Android application.
+The selected icon is the custom blue **B** and red **T**, slightly staggered
+over a golden Jiggy. The user's final shape choice is **round**, and the visible
+app name is exactly **Tooie-Recompiled**.
 
-![Example launcher masks](android-launcher-icon-preview.png)
-
-These are illustrative square, circular and rounded masks, not an Odin
-screenshot. The launcher chooses its own mask and may add effects.
+![Selected circular icon and small-size previews](android-launcher-icon-preview.png)
 
 ## Source and scope
 
-- Base: `5db2d7f3719df6d196bf46a7a52a5e749d152956` on
-  `fix/android-vulkan-transfer-proposal`.
-- Existing source: `assets/icon.png`, 128 by 128 RGBA, unchanged.
-  SHA-256: `23a51b3d02387dc7157eed4e820a428b51fb2d6e7c01b5d94e75b421ce6c5228`.
-- The accepted TOOIE menu image is carried forward unchanged in both
-  `assets/menu.png` and `android/app/src/main/assets/program/assets/menu.png`,
-  together with its existing artwork note. Its SHA-256 remains
+- This update follows branding commit
+  `05aca40d5f98891b442f20c6418fe6196e0c8f4e`, whose rendering base is
+  `5db2d7f3719df6d196bf46a7a52a5e749d152956`.
+- `assets/android/launcher-master.png` is the exact selected generated artwork,
+  1254 by 1254 pixels. SHA-256:
+  `80e98fb563e23d1663dc185ee9e733f5b656f8157dcb85676a9d1d5b044a67ef`.
+  It was selected as “Classic Jiggy” from the three BT previews. No characters
+  or extra words are added to the icon.
+- The source master retains its original navy background. Resource generation
+  resizes and pads it without redrawing the letters or Jiggy.
+- The application and launcher activity both use `@string/app_name`, defined
+  once as `Tooie-Recompiled`.
+- Package identity remains `io.github.banjotooierecompiled`, preserving update
+  identity and app data. Native code, activity class, build settings, saves,
+  rendering diagnostics and the original desktop `assets/icon.png` are unchanged.
+- The accepted TOOIE menu image remains unchanged in both existing menu paths.
+  Its SHA-256 is
   `e7dc6ec776a14b09ca5108a9f279e7d0ac5e464d908e57a817a3534e7716bde6`.
-- Only branding resources, the two manifest icon attributes, the generator and
-  documentation change. Application ID, label, launcher activity, native code,
-  build settings, saves and rendering diagnostics are unchanged.
 
 ## Android resources
 
 - The application declares `@mipmap/ic_launcher` and
-  `@mipmap/ic_launcher_round`.
-- API 24/25 can use the committed 48/72/96/144/192 pixel legacy icons.
-- API 26+ receives adaptive foreground/background layers. The foreground is a
-  60 dp source square centered in a transparent 108 dp canvas; the background
-  is deep purple `#211D4F`. Important visible pixels fit inside the central
-  66 dp safe circle at all five densities. Android applies the outer mask.
-- API 33+ also receives a monochrome layer using the foreground alpha, for
-  launchers with themed icons enabled.
-- The original 128 pixel artwork is resized, not redrawn. Upscaling does not
-  add detail to that source.
+  `@mipmap/ic_launcher_round`. Both legacy resources have a circular alpha mask,
+  matching the selected round design, at 48/72/96/144/192 pixels.
+- API 26+ uses adaptive resources with a solid navy `#000536` background. The
+  master occupies 63.36 dp of a 108 dp foreground canvas: 88% of the usual 72 dp
+  mask viewport, matching the approved preview's padding.
+- The colored Jiggy and letters fit within the central 66 dp safe circle.
+  Dark navy corners of the square master may be clipped without losing artwork.
+- The API 33 resources retain the colored icon. The opaque navy source is not
+  reused as a monochrome alpha layer, which would produce a filled square.
+- Adaptive outer shape is selected by Android's launcher. The round resources
+  and circular preview express the preferred presentation; application resources
+  cannot override a launcher's global icon mask.
 
-The layout follows the official
+See the official
 [Android adaptive icon requirements](https://developer.android.com/develop/ui/compose/system/icon_design_adaptive).
 
-## Regeneration
+## Regeneration and validation
 
-Normal APK builds consume the committed resources and need no new dependency.
-To regenerate them, use Python with Pillow:
+Normal APK builds consume committed resources and need no new dependency.
+Regeneration requires Python and Pillow:
 
 ```sh
 python3 tools/generate_android_launcher_icons.py
@@ -52,36 +57,31 @@ python3 tools/generate_android_launcher_icons.py --check
 python3 tools/generate_android_launcher_icons.py --preview docs/android-launcher-icon-preview.png
 ```
 
-`--check` compares decoded PNG pixels and XML, so PNG compression differences
-alone do not cause a mismatch. Validation here used Pillow 12.3.0.
+`--check` compares decoded PNG pixels and XML. PNG compression differences alone
+do not cause a mismatch. Validation uses Pillow 12.3.0 and Google AAPT2
+`2.19-12782657` against Android SDK Platform 36 revision 2:
 
-## Verification on 2026-10-17
+- All 20 generated icon resources match the generator.
+- Circular legacy PNGs have transparent corners and preserve the complete
+  colored emblem. The selected master hash is unchanged.
+- AAPT2 compiles the actual resource directory and links the actual manifest,
+  with the application's package supplied as Gradle does, minimum API 24 and
+  target API 35. Both application and launcher activity resolve to the exact
+  label `Tooie-Recompiled`.
+- The linked manifest resolves both icon IDs, and adaptive foreground/background
+  references resolve. Packaged PNGs preserve dimensions, alpha and visible pixels.
+- A deliberately missing icon fails the actual linker; a separate wrong-name
+  fixture is rejected by the resolved-label check.
+- Both menu copies retain the accepted artwork hash above.
 
-- All 20 generated resources match the generator.
-- Each foreground has the required density dimensions. Visible alpha of at
-  least 16/255 has a maximum radius of 31.67 dp, within the 33 dp safe radius.
-  Square, circle and rounded previews were inspected.
-- Google AAPT2 `2.19-12782657` (AGP 8.9.2) compiled the actual resource directory
-  and linked it against Android SDK Platform 36 revision 2. The fixture uses
-  the application's existing package, minimum API 24 and target API 35. As
-  Gradle does, the fixture supplies the package to the source manifest.
-- The linked manifest resolves both icon resource IDs. The API 26 adaptive
-  XML and API 33 monochrome XML resolve their foreground/background references.
-- All 15 packaged PNGs preserve dimensions, alpha and every visible RGBA
-  pixel. AAPT2 clears irrelevant RGB data under some fully transparent pixels.
-- A manifest referring to a deliberately missing launcher icon fails the real
-  AAPT2 linker, confirming the check detects missing resources.
-- The menu copies retain the accepted artwork hash above. The manifest differs
-  from the base only by the two icon attributes.
+Compile with `aapt2 compile --dir android/app/src/main/res -o resources.zip`.
+Link that archive as a positional input with `aapt2 link -I /path/to/android.jar
+--manifest /path/to/merged-manifest.xml --min-sdk-version 24
+--target-sdk-version 35 -o icon-resources.ap_ resources.zip`.
+Inspect the result with `aapt2 dump badging` and `aapt2 dump xmltree --file
+AndroidManifest.xml`.
 
-The AAPT2 input is produced with `aapt2 compile --dir
-android/app/src/main/res -o resources.zip`. Link that archive as a positional
-input with `aapt2 link -I /path/to/android.jar --manifest /path/to/merged-manifest.xml
---min-sdk-version 24 --target-sdk-version 35 -o icon-resources.ap_ resources.zip`.
-`aapt2 dump badging` and `aapt2 dump xmltree --file AndroidManifest.xml` inspect
-the resulting resource-only fixture.
-
-This verifies Android resource packaging, not a complete gameplay APK or an
-installed launcher. No device commands or installation were performed. The
-home-screen icon will change when an APK containing these resources is built
-and installed; this source change does not update an existing installation.
+These checks cover Android resources, not a complete gameplay APK or an
+installed launcher. No device operation or installation was performed. The
+icon and visible name change when an APK containing this branch is built and
+installed.

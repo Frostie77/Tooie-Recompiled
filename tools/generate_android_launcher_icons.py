@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate committed Android launcher resources from assets/icon.png.
+"""Regenerate committed Android launcher resources from the selected BT master.
 
 Requires Pillow for regeneration only; normal Android builds use the committed
 PNGs/XML and do not run this script. --check compares decoded PNG pixels so a
@@ -15,7 +15,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "android/app/src/main/res"
-BACKGROUND = "#211D4F"
+BACKGROUND = "#000536"
+SOURCE = ROOT / "assets/android/launcher-master.png"
+# Match the accepted preview: the master occupies 88% of the 72 dp viewport.
+ART_DP = 72 * 0.88
 DENSITIES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
 
 
@@ -52,23 +55,24 @@ def resources(source):
     output = {}
     for density, scale in DENSITIES.items():
         size = round(48 * scale)
-        legacy = centered(source, size, round(size * 0.92), BACKGROUND)
-        output[f"mipmap-{density}/ic_launcher.png"] = png(legacy)
+        legacy = centered(source, size, round(size * 0.88), BACKGROUND)
         legacy.putalpha(mask(size, "circle"))
+        output[f"mipmap-{density}/ic_launcher.png"] = png(legacy)
         output[f"mipmap-{density}/ic_launcher_round.png"] = png(legacy)
-        # The mark fits inside Android's central 66 dp safe circle. Leave the
-        # full 108 dp layer transparent outside it; the launcher applies masks.
-        foreground = centered(source, round(108 * scale), round(60 * scale))
+        # Preserve the selected full-color master, including its navy field.
+        # The colored Jiggy/letters fit the safe circle; Android may clip navy
+        # corners of the square foreground without clipping the emblem.
+        foreground = centered(source, round(108 * scale), round(ART_DP * scale))
         output[f"mipmap-{density}/ic_launcher_foreground.png"] = png(foreground)
 
     for api in (26, 33):
-        monochrome = ('    <monochrome android:drawable="@mipmap/ic_launcher_foreground" />\n'
-                      if api == 33 else "")
+        # The master has an opaque navy field, so its alpha would produce a
+        # solid square if reused for monochrome. Keep the colored icon instead.
         xml = ('<?xml version="1.0" encoding="utf-8"?>\n'
                '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
                '    <background android:drawable="@color/ic_launcher_background" />\n'
                '    <foreground android:drawable="@mipmap/ic_launcher_foreground" />\n'
-               + monochrome + '</adaptive-icon>\n')
+               '</adaptive-icon>\n')
         for name in ("ic_launcher", "ic_launcher_round"):
             output[f"mipmap-anydpi-v{api}/{name}.xml"] = xml.encode()
     output["values/launcher_icon.xml"] = (
@@ -82,15 +86,17 @@ def preview(source, path):
     sheet = Image.new("RGB", (540, 220), "#F2F2F6")
     font = ImageFont.load_default(size=15)
     draw = ImageDraw.Draw(sheet)
-    full = centered(source, 432, 240, BACKGROUND)
+    full = centered(source, 432, round(ART_DP * 4), BACKGROUND)
     # Adaptive layers are 108 dp; the default mask viewport is the inner 72 dp.
     viewport = full.crop((72, 72, 360, 360)).resize((140, 140), Image.Resampling.LANCZOS)
-    for x, shape, label in ((20, "square", "Square"), (200, "circle", "Circle"),
-                            (380, "rounded", "Rounded")):
+    for x, size, label in ((20, 140, "Round"), (200, 48, "48 px"),
+                           (380, 64, "64 px")):
         icon = viewport.copy()
-        icon.putalpha(mask(140, shape))
-        sheet.paste(icon, (x, 22), icon)
+        icon = icon.resize((size, size), Image.Resampling.LANCZOS)
+        icon.putalpha(mask(size, "circle"))
+        sheet.paste(icon, (x + (140 - size) // 2, 22 + (140 - size) // 2), icon)
         draw.text((x + 70, 182), label, fill=BACKGROUND, font=font, anchor="mm")
+    draw.text((270, 206), "Tooie-Recompiled", fill=BACKGROUND, font=font, anchor="mm")
     path.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(path)
 
@@ -100,10 +106,10 @@ def main():
     parser.add_argument("--check", action="store_true", help="verify without writing")
     parser.add_argument("--preview", type=Path, help="also render example launcher masks")
     args = parser.parse_args()
-    with Image.open(ROOT / "assets/icon.png") as image:
+    with Image.open(SOURCE) as image:
         source = image.convert("RGBA")
-    if source.size != (128, 128):
-        raise SystemExit("Expected the existing 128x128 project icon; review sizing before replacing it.")
+    if source.width != source.height or source.width < 512:
+        raise SystemExit("Expected the selected square BT master at least 512 pixels wide.")
     for relative, expected in resources(source).items():
         path = RES / relative
         if args.check:
@@ -121,7 +127,7 @@ def main():
             path.write_bytes(expected)
     if args.preview:
         preview(source, args.preview)
-    print(f"PASS: 20 launcher resources {'verified' if args.check else 'generated'} from assets/icon.png.")
+    print(f"PASS: 20 launcher resources {'verified' if args.check else 'generated'} from {SOURCE.relative_to(ROOT)}.")
 
 
 if __name__ == "__main__":
