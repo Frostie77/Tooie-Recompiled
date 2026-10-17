@@ -7,7 +7,7 @@ from pathlib import Path
 import re,sys
 r,t=map(Path,sys.argv[1:]);names=[
  'glrecord_entrypoint_0','func_800A7D30','func_80014F4C',
- 'func_800D8FA0','func_800D8F50','func_800D8F78','func_800D9004',
+ 'func_800D8FA0','func_800D8F50','func_800D8F78','func_800D9004','func_800D8FF8','func_80018444',
  'func_800F0D90','func_800F0DB8','static_3_800F0DA8']
 # Locate by exact function start, including generated tail fragments. No hand
 # translation or stubbed timing/replay callee is used in this test.
@@ -25,7 +25,8 @@ declarations=''.join('void '+name+'(uint8_t*,recomp_context*);\n' for name in na
 source=(t/'generated.c').read_text()
 for name,old,new in (
  ('bad-span','ctx->r12 = MEM_BU(ctx->r3, 0X4);','ctx->r12 = MEM_BU(ctx->r3, 0X5);'),
- ('bad-index','ctx->r24 = ADD32(ctx->r2, 0X1);','ctx->r24 = ADD32(ctx->r2, 0X2);')):
+ ('bad-index','ctx->r24 = ADD32(ctx->r2, 0X1);','ctx->r24 = ADD32(ctx->r2, 0X2);'),
+ ('bad-timer','ctx->f12.fl = ctx->f4.fl + ctx->f0.fl;','ctx->f12.fl = ctx->f4.fl + 2*ctx->f0.fl;')):
  assert source.count(old)==1,(name,source.count(old))
  (t/(name+'.c')).write_text(source.replace(old,new))
 PY
@@ -35,7 +36,7 @@ PY
 "${CC:-gcc}" -std=c11 -O1 -fwrapv -fsanitize=address,undefined -fno-omit-frame-pointer \
  -I"$r/lib/N64Recomp/include" "$t/generated.c" "$r/tests/demo_replay_clock.c" -lm -o "$t/clock"
 ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1 "$t/clock"
-for mode in bad-span bad-index;do
+for mode in bad-span bad-index bad-timer;do
  "${CC:-gcc}" -std=c11 -O1 -fwrapv -fsanitize=address,undefined -fno-omit-frame-pointer \
   -I"$r/lib/N64Recomp/include" "$t/$mode.c" "$r/tests/demo_replay_clock.c" -lm -o "$t/$mode"
  if ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1 "$t/$mode" > "$t/control.log" 2>&1;then
@@ -43,4 +44,4 @@ for mode in bad-span bad-index;do
  else test "$?" -eq 1;fi
  rg -q '^FAIL line' "$t/control.log"
 done
-echo 'PASS: changed recorded-span byte and double-consumption controls fail the actual generated consumer'
+echo 'PASS: changed recorded-span byte, double-consumption and doubled game-timer controls fail the actual generated consumers'

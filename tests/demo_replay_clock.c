@@ -6,6 +6,7 @@ void glrecord_entrypoint_0(uint8_t*,recomp_context*);
 void func_800A7D30(uint8_t*,recomp_context*);
 void func_800D8FA0(uint8_t*,recomp_context*);
 void func_800D9004(uint8_t*,recomp_context*);
+void func_80018444(uint8_t*,recomp_context*);
 #define RAM_W(o,a) MEM_W(o,(int32_t)(a))
 #define RAM_H(o,a) MEM_H(o,(int32_t)(a))
 #define RAM_B(o,a) MEM_B(o,(int32_t)(a))
@@ -45,5 +46,37 @@ int main(void) {
     store_float(rdram,0x80125D10,.05f);ctx.r4=6;func_800D8FA0(rdram,&ctx);
     uint32_t bits=RAM_W(0,0x8012C760);float capped;memcpy(&capped,&bits,4);REQUIRE(fabsf(capped-.05f)<1e-6f);
     func_800D9004(rdram,&ctx);REQUIRE(fabsf(ctx.f0.fl-.1f)<1e-6f); // Separate span-based clock.
+    // Step 86 handoff: constants and one recorded_span=3/elapsed_span=1
+    // event transcribed from PID 19849, mono_us=315980395287, frame=127,
+    // map=335, mode=2, tested Build ID 818ea5de1d1c84734dfdb5b599de5aa2baf574a4.
+    // Remaining inputs are constructed. This is not the inaccessible raw
+    // capture replay or evidence of an intended wall cadence/reference pose.
+    RAM_W(0,0x80125D10)=0x3D4CCCCE;RAM_W(0,0x80125D14)=0x3C23D70A;
+    RAM_W(0,0x80125D18)=0x3C888889;RAM_W(0,0x80125D1C)=0x3C888889;
+    RAM_W(8,state)=0;RAM_W(12,state)=4;RAM_B(4,records)=3;RAM_B(10,records)=2;RAM_B(16,records)=6;
+    const unsigned recorded[]={3,2,6},elapsed[]={1,3,2};
+    const uint32_t timer=0x8007B2D0;
+    RAM_W(0,timer)=1;store_float(rdram,timer+12,100);store_float(rdram,timer+16,0);
+    float timer_sum=0;
+    for(unsigned i=0;i<3;++i) {
+        RAM_H(0,0x80078F64)=elapsed[i];func_800A7D30(rdram,&ctx);
+        REQUIRE(RAM_W(0,0x8012C764)==elapsed[i]);
+        ctx.r4=(int32_t)pad;ctx.r5=(int32_t)span;glrecord_entrypoint_0(rdram,&ctx);
+        REQUIRE(ctx.r2==1 && RAM_W(8,state)==i+1 && RAM_W(0,span)==recorded[i]);
+        ctx.r4=RAM_W(0,span);func_800D8FA0(rdram,&ctx);
+        REQUIRE(RAM_W(0,0x8012C764)==recorded[i] && RAM_H(0,0x80078F64)==elapsed[i]);
+        const uint32_t actual_bits=RAM_W(0,0x8012C760);float game_dt;memcpy(&game_dt,&actual_bits,4);
+        if(i==0) REQUIRE(actual_bits==0x3D4CCCCE); // Exact captured delta bits.
+        timer_sum+=game_dt;func_80018444(rdram,&ctx);
+        uint32_t timer_bits=RAM_W(16,timer);float timer_dt;memcpy(&timer_dt,&timer_bits,4);
+        REQUIRE(fabsf(timer_dt-timer_sum)<1e-6f);
+        func_800D9004(rdram,&ctx);REQUIRE(fabsf(ctx.f0.fl-recorded[i]/60.f)<1e-6f);
+        if(i==2) REQUIRE(ctx.f0.fl>game_dt*1.9f); // Attract span getter differs from capped game timer.
+    }
+    RAM_H(0,0x80078F64)=2;func_800A7D30(rdram,&ctx); // Ordinary caller retains elapsed pacing.
+    REQUIRE(RAM_W(0,0x8012C764)==2);
+    uint32_t ordinary_bits=RAM_W(0,0x8012C760);float ordinary_dt;memcpy(&ordinary_dt,&ordinary_bits,4);
+    REQUIRE(fabsf(ordinary_dt-2.f/60)<1e-6f);
+    puts("PASS: transcribed Step 86 span/delta bits through actual replay, game-delta, game-timer and span-clock consumers; ordinary elapsed path unchanged (constructed remaining inputs; no wall-cadence fix claim)");
     free(rdram);puts("PASS: actual generated replay stride/input/index/end; recorded VI span overrides elapsed span; dt cap and span clock differ; no pacing-state writes (synthetic constants, no device-speed claim)");
 }

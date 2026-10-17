@@ -159,12 +159,28 @@ and root words from the named samples, through the actual consumer. Those words
 are in the inaccessible ZIP, not in the handoff's summary table. No pivot,
 expected intermediate pose, model identity or interpolation correction is guessed.
 The NPC root-only records do not establish an NPC bone hierarchy.
+The source observer consumes the first nonplayer root quota before checking its
+builder and permits only one newly logged nonplayer builder per burst. Those are
+concrete coverage limits, including a limit on paired fresh endpoints; they are
+not proof of which NPC producer was missed. The existing matrix/node records
+must be reviewed before selecting a further producer/selection observation.
 
 The reported replay-only timer drift is now stronger evidence than display-rate
 counters, but it does not establish a universal speed multiplier or authorize
 slowing ordinary gameplay. Record order/cadence, elapsed/recorded/applied spans,
 the cap, resets/end and the independent attract clock must remain distinct.
 There is no production pacing change in the lifetime correction.
+
+`tools/test_demo_replay_clock.sh` now also exercises the reported span-3 versus
+elapsed-1 event with the four handoff constants copied as exact bits, including
+the reported `3D4CCCCE` delta. The remaining record/input state is constructed.
+Twelve actual generated functions execute, including the game-timer accumulator
+and separate span-clock getter. A span-6 control shows the cap/getter difference;
+an ordinary elapsed-2 control retains its timing. Altered record span, doubled
+index advance and doubled timer accumulation all fail the generated consumers.
+These ASan/UBSan checks pass. They do not execute the whole main input/attract
+handler, replay the inaccessible ten measured windows, identify a reference
+cadence or establish a corrected demo speed. No production timing code changes.
 
 To continue the retained-data investigation, the 30,830,040-byte `-NewLog.txt`
 alone is below the tool's 32 MiB limit and contains the native source/geometry/
