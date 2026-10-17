@@ -204,9 +204,21 @@ def main():
         target = build / f"consumer-{number}.o"
         run([args.cxx, "-std=c++20", "-D__ANDROID__", *machine_flags, *common, *sanitizer, *include_flags, "-c", source, "-o", target], f"consumer-{number}")
         objects.append(target)
+    # Strict C99 hides POSIX stdio unless the feature-test macros are set before
+    # system headers. Keep implicit function declarations fatal on every GCC.
+    # These flags belong to the four host miniz C objects, not the Android app.
+    posix_c_flags = ["-std=c99", "-D_POSIX_C_SOURCE=200809L", "-D_FILE_OFFSET_BITS=64",
+                     "-Werror=implicit-function-declaration"]
+    contract = build / "miniz-posix-contract.c"
+    contract.write_text("#include <stdio.h>\n#include <sys/types.h>\n"
+                        "typedef char require_large_off_t[(sizeof(off_t) >= 8) ? 1 : -1];\n"
+                        "off_t (*checked_tell)(FILE*) = &ftello;\n"
+                        "int (*checked_seek)(FILE*, off_t, int) = &fseeko;\n")
+    run([args.cc, *posix_c_flags, "-c", contract, "-o", build / "miniz-posix-contract.o"], "miniz-posix-declarations")
+    print("PASS: strict C99 POSIX ftello/fseeko prototypes and 64-bit file offsets; implicit function declarations remain fatal", flush=True)
     for name in ("miniz.c", "miniz_zip.c", "miniz_tinfl.c", "miniz_tdef.c"):
         target = build / (name + ".o")
-        run([args.cc, "-std=c99", *common, *sanitizer, *include_flags, "-c", runtime / "thirdparty/miniz" / name, "-o", target], name)
+        run([args.cc, *posix_c_flags, *common, *sanitizer, *include_flags, "-c", runtime / "thirdparty/miniz" / name, "-o", target], name)
         objects.append(target)
     run([args.cxx, *sanitizer, "-Wl,--gc-sections", "-pthread", *objects, "-o", build / "installer"], "installer-link")
     archive_fixtures = build / "archives"
