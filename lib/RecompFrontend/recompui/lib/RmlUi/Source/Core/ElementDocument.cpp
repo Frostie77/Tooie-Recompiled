@@ -186,7 +186,13 @@ ElementDocument::ElementDocument(const String& tag) : Element(tag)
 	SetProperty(PropertyId::Position, Property(Style::Position::Absolute));
 }
 
-ElementDocument::~ElementDocument() {}
+ElementDocument::~ElementDocument()
+{
+	// Child detachment can notify the context, data model and event listeners.
+	// They must see a live document and its derived virtual dispatch, not the
+	// Element base object left after our members and vtable are torn down.
+	DestroyChildren();
+}
 
 void ElementDocument::ProcessHeader(const DocumentHeader* document_header)
 {

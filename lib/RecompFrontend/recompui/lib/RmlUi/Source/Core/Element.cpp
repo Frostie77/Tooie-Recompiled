@@ -61,6 +61,7 @@
 #include "TransformState.h"
 #include "TransformUtilities.h"
 #include "XMLParseTools.h"
+#include "TooieLayoutGuard.h"
 #include <algorithm>
 #include <cmath>
 
@@ -133,8 +134,18 @@ Element::~Element()
 {
 	RMLUI_ASSERT(parent == nullptr);
 
-	PluginRegistry::NotifyElementDestroy(this);
+	// The document-derived lifetime has ended before this base destructor.
+	// Do not expose a self-owner through a no-longer-live ElementDocument.
+	if (owner_document == this)
+		owner_document = nullptr;
 
+	PluginRegistry::NotifyElementDestroy(this);
+	DestroyChildren();
+	element_meta_chunk_pool.DestroyAndDeallocate(meta);
+}
+
+void Element::DestroyChildren()
+{
 	// A simplified version of RemoveChild() for destruction.
 	for (ElementPtr& child : children)
 	{
@@ -147,8 +158,6 @@ Element::~Element()
 
 	children.clear();
 	num_non_dom_children = 0;
-
-	element_meta_chunk_pool.DestroyAndDeallocate(meta);
 }
 
 void Element::Update(float dp_ratio, Vector2f vp_dimensions)
@@ -1893,6 +1902,9 @@ void Element::DirtyLayout()
 
 bool Element::IsLayoutDirty()
 {
+#if defined(__ANDROID__) && defined(TOOIE_ANDROID_CORRECTION_TRACE) && TOOIE_ANDROID_CORRECTION_TRACE
+	TooieLayoutDiagnostics::Scope query_scope(this, GetOwnerDocument(), __builtin_return_address(0));
+#endif
 	if (Element* document = GetOwnerDocument())
 		return document->IsLayoutDirty();
 	return false;
