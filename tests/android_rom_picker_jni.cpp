@@ -20,6 +20,8 @@ static std::filesystem::path folder;
 static std::thread::id uiThread;
 static int callbackCalls = 0, errorCalls = 0;
 static bool selected = false, missingActivity = false;
+static int modCallbackCalls = 0;
+static bool modSelected = false;
 extern "C" void *SDL_AndroidGetJNIEnv() {
   JNIEnv *env = nullptr;
   REQUIRE(vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) ==
@@ -75,6 +77,23 @@ Java_io_github_banjotooierecompiled_RomPickerJniTest_begin(JNIEnv *, jclass) {
           REQUIRE(path.empty());
       });
 }
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_banjotooierecompiled_RomPickerJniTest_beginMod(JNIEnv *, jclass) {
+  recompui::file::open_file_dialog_multiple([](bool success, const auto& paths) {
+    REQUIRE(std::this_thread::get_id() == uiThread);
+    ++modCallbackCalls;
+    modSelected = success;
+    if (success) {
+      REQUIRE(paths.size() == 1);
+      std::ifstream file(paths.front(), std::ios::binary | std::ios::ate);
+      REQUIRE(file && file.tellg() > 4); // Must remain readable throughout the synchronous installer callback.
+    } else REQUIRE(paths.empty());
+  });
+}
+extern "C" JNIEXPORT jint JNICALL
+Java_io_github_banjotooierecompiled_RomPickerJniTest_modCalls(JNIEnv *, jclass) { return modCallbackCalls; }
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_banjotooierecompiled_RomPickerJniTest_modSuccess(JNIEnv *, jclass) { return modSelected; }
 extern "C" JNIEXPORT jint JNICALL
 Java_io_github_banjotooierecompiled_RomPickerJniTest_poll(JNIEnv *, jclass) {
   // Same foreground check as the production preparation hook, releasing the

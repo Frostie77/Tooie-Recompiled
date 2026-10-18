@@ -7,8 +7,10 @@
 #include <vector>
 #include <string>
 #include <list>
+#include <memory>
 
 namespace recompui {
+    class AndroidModTransaction;
     struct ModInstaller {
         struct Installation {
             std::string mod_id;
@@ -31,9 +33,12 @@ namespace recompui {
         struct Result {
             std::list<std::string> error_messages;
             std::list<Installation> pending_installations;
+#if defined(__ANDROID__)
+            std::shared_ptr<AndroidModTransaction> transaction;
+#endif
         };
 
-        static void start_mod_installation(const std::list<std::filesystem::path> &file_paths, std::function<void(std::filesystem::path, size_t, size_t)> progress_callback, Result &result);
+        static void start_mod_installation(const std::list<std::filesystem::path> &file_paths, std::function<void(std::filesystem::path, size_t, size_t)> progress_callback, Result &result, const std::string& game_mod_id = {});
         static void cancel_mod_installation(const Result& result, std::vector<std::string>& errors);
         static void finish_mod_installation(const Result &result, std::vector<std::string>& errors);
     };
