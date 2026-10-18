@@ -16,6 +16,7 @@ template<size_t N> bool copy(uint8_t *rdram,uint32_t p,std::array<uint32_t,N> &o
 }
 struct Builder {
     uint64_t id=0,epoch=0;uint32_t output=0,skeleton=0,animation=0,modifier=0,count=0;
+    std::array<uint32_t,2> header{};
     std::array<std::array<uint32_t,4>,MaxBones> bind{};
     std::array<std::array<uint32_t,10>,MaxBones> local{};
     std::array<std::array<uint32_t,16>,MaxBones> result{};
@@ -27,6 +28,14 @@ struct Source {
     std::array<Builder,MaxBuilders> builders{};unsigned cursor=0;
     Builder pending{};bool pendingValid=false;
     std::array<Model,16> models{};unsigned depth=0;
+    // Select an eligible animated nonplayer, rather than spending the only
+    // root slot on a static model. Keep the same copied schema for both frames
+    // of this burst; this is not a persistent actor-identity assertion.
+    struct Other {
+        uint32_t model=0,list=0,skeleton=0,count=0;
+        std::array<std::array<uint32_t,4>,MaxBones> bind{};
+    } other;
+    unsigned otherNoList=0,otherNoBuilder=0,otherChanged=0;
     struct Node {uint64_t id=0;uint32_t gfx=0,start=0,node=0,handler=0;};
     std::array<Node,32> nodeStack{};unsigned nodeDepth=0;
     bool live(uint64_t now) const {return active && now>=burst.epoch && now-burst.epoch<1'000'000;}
@@ -60,6 +69,7 @@ inline void builderBegin(uint8_t *ram,recomp_context *ctx,uint64_t now) {
     // +0xC is the animation channel; +0xE is the parent index, as consumed by
     // AE8A8/AEBA8. Snapshot all four bind words, including the authored xyz.
     if(!b.count || b.count>MaxBones || !valid(b.animation,4) || !valid(b.skeleton,8+b.count*16) || !valid(b.output,b.count*64)) {++s.dropped;return;}
+    if(!copy(ram,b.skeleton,b.header)) {++s.dropped;return;}
     for(unsigned i=0;i<b.count;++i) {
         if(!copy(ram,b.skeleton+8+i*16,b.bind[i])) {++s.dropped;return;}
         unsigned channel=half(ram,b.skeleton+8+i*16+12);
@@ -75,17 +85,27 @@ inline void builderEnd(uint8_t *ram) {
     if(slot==s.builders.end()) slot=s.builders.begin()+(s.cursor++%MaxBuilders);
     *slot=std::move(b);
 }
-inline uint64_t builderFor(uint8_t *ram,uint32_t list,uint64_t epoch,unsigned player) {
+inline Builder *findBuilder(uint8_t *ram,uint32_t list,uint64_t epoch) {
     auto &s=source();unsigned count=word(ram,list);
     for(auto &b:s.builders) {
         if(!b.complete || b.epoch!=epoch || b.output!=list+0x50 || b.count!=count) continue;
         if(!valid(b.output,b.count*64) || std::memcmp(ram+(b.output&0x7FFFFF),b.result.data(),b.count*64)) continue;
+        return &b;
+    }
+    return nullptr;
+}
+inline uint64_t builderFor(uint8_t *ram,uint32_t list,uint64_t epoch,unsigned player) {
+    auto &s=source();if(auto *found=findBuilder(ram,list,epoch)) {
+        auto &b=*found;
         if(!b.logged) {
-            if(s.loggedBuilders[player?1:0]>=(player?2U:1U)) {++s.dropped;return 0;}
+            if(s.loggedBuilders[player?1:0]>=2U) {++s.dropped;return 0;}
             ++s.loggedBuilders[player?1:0];
             b.logged=true;char text[350];std::snprintf(text,sizeof(text),"kind=builder id=%llu epoch=%llu output=0x%X skeleton=0x%X animation=0x%X modifier=0x%X count=%u complete=1 layout=bind4/local10/result16",
                 (unsigned long long)b.id,(unsigned long long)b.epoch,b.output,b.skeleton,b.animation,b.modifier,b.count);
             diagnostics::log("correction-source",text);
+            // AEBA8 consumes the scale at skeleton+0. It was missing from the
+            // earlier bind/local/result capture; never infer it from outputs.
+            words("skeleton-header",b.id,b.skeleton,b.header.data(),2);
             for(unsigned i=0;i<b.count;++i) {
                 // Per-bone ID joins raw bind/local/result words without copying
                 // or exposing a pointer. Parent/channel halfwords stay exact.
@@ -133,8 +153,21 @@ inline void bind(uint8_t *ram,uint32_t gfx,const Model &m,int bone,uint32_t node
 }
 inline void root(uint8_t *ram,recomp_context *ctx,unsigned player,uint64_t now) {
     auto &s=source();const unsigned depth=s.depth++;if(depth>=s.models.size()) {++s.dropped;return;}s.models[depth]={};s.models[depth].sp=uint32_t(ctx->r29);
-    if(!s.live(now) || s.roots[player?1:0]++>=(player?4U:1U)) return;
+    if(!s.live(now) || s.roots[player?1:0]>=(player?4U:1U)) return;
     Model m;m.id=token();m.player=player;m.sp=uint32_t(ctx->r29);m.model=word(ram,m.sp+0x10C);m.list=word(ram,0x8012C968);
+    if(!player) {
+        if(!valid(m.model,64)) {++s.dropped;return;}
+        if(!m.list) {++s.otherNoList;return;}
+        const auto *b=findBuilder(ram,m.list,s.burst.epoch);
+        if(!b) {++s.otherNoBuilder;return;}
+        auto &selected=s.other;
+        if(selected.model && (selected.model!=m.model || selected.list!=m.list ||
+            selected.skeleton!=b->skeleton || selected.count!=b->count || selected.bind!=b->bind)) {
+            ++s.otherChanged;return;
+        }
+        if(!selected.model) {selected.model=m.model;selected.list=m.list;selected.skeleton=b->skeleton;selected.count=b->count;selected.bind=b->bind;}
+    }
+    ++s.roots[player?1:0];
     m.builder=builderFor(ram,m.list,s.burst.epoch,player);s.models[depth]=m;
     char text[450];std::snprintf(text,sizeof(text),"kind=model id=%llu epoch=%llu source_frame=%llu guest_frame=%u model=0x%X player_key=%u key_kind=slot1to8-else-pointer-hash list=0x%X builder=%llu builder_match=%u instance_identity=unproven",
         (unsigned long long)m.id,(unsigned long long)s.burst.epoch,(unsigned long long)s.frame,word(ram,0x800459C8),m.model,player,m.list,(unsigned long long)m.builder,unsigned(m.builder!=0));
@@ -218,11 +251,12 @@ inline void probe(uint8_t *ram,recomp_context *ctx,unsigned event,unsigned playe
     if(event>=10) {clockEvent(ram,ctx,event,site,now);return;}
     if(event==0) {
         const bool was=s.active;const bool active=s.burst.begin(now);
-        if(was && !active) {char text[300];std::snprintf(text,sizeof(text),"epoch=%llu bindings=%u builder_calls=%u nodes=%u dropped=%u observer_us=%llu observer_max_us=%llu includes_log_io=1",(unsigned long long)s.burst.epoch,s.bindings,s.calls,s.nodes,s.dropped,(unsigned long long)s.costUs,(unsigned long long)s.maxUs);diagnostics::log("correction-budget",text);}
+        if(was && !active) {char text[500];std::snprintf(text,sizeof(text),"epoch=%llu bindings=%u builder_calls=%u nodes=%u dropped=%u other_no_list=%u other_no_builder=%u other_selection_changed=%u other_selected_model=0x%X observer_us=%llu observer_max_us=%llu includes_log_io=1",(unsigned long long)s.burst.epoch,s.bindings,s.calls,s.nodes,s.dropped,s.otherNoList,s.otherNoBuilder,s.otherChanged,s.other.model,(unsigned long long)s.costUs,(unsigned long long)s.maxUs);diagnostics::log("correction-budget",text);}
         if(active && s.frame && s.depth) ++s.dropped;
         s.active=active;s.frame=token();s.depth=s.nodeDepth=0;s.roots[0]=s.roots[1]=0;
         if(active && s.burst.frames==2) {
             s.calls=s.bindings=s.nodes=s.dropped=0;
+            s.other={};s.otherNoList=s.otherNoBuilder=s.otherChanged=0;
             // Invalidate in place; avoid constructing a ~250 KiB temporary
             // array on the guest thread's native stack at every burst.
             for(auto &builder:s.builders) {builder.complete=builder.logged=false;builder.id=0;}

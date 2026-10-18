@@ -85,3 +85,18 @@ assert any('header_magic=80000000 crc1=12000000' in s and 'country=45 revision=0
 print('PASS: real diagnostic writer, bounded records, complete authored words and observed clock values/ROM header (synthetic RAM)')
 PY
 python3 "$r/tests/correction_replay.py"
+
+# The actual parent must demonstrate both observed diagnostic coverage defects.
+mkdir -p "$t/parent" "$t/selection-log"
+git -C "$r" show '5db2d7f3719df6d196bf46a7a52a5e749d152956:src/correction_trace_guest.h' > "$t/parent/correction_trace_guest.h"
+"${CXX:-g++}" "${flags[@]}" "${definitions[@]}" -DTOOIE_SELECTION_CURRENT=1 "$r/tests/correction_selection.cpp" -o "$t/selection"
+APP_FOLDER_PATH="$t/selection-log" "$t/selection"
+"${CXX:-g++}" -I"$t/parent" "${flags[@]}" "${definitions[@]}" "$r/tests/correction_selection.cpp" -o "$t/selection-parent"
+for mode in static-root pair-only;do
+ args=();if [ "$mode" = pair-only ];then args=(--pair-only);fi
+ if APP_FOLDER_PATH="$t/selection-log" "$t/selection-parent" "${args[@]}" > "$t/$mode.log" 2>&1;then
+  echo "FAIL: exact parent accepted $mode";exit 1
+ else test "$?" -eq 1;fi
+ rg -q '^selection failure:' "$t/$mode.log"
+done
+echo 'PASS: exact 5db2d7f parent fails static-root admission and second fresh nonplayer endpoint controls'
