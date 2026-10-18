@@ -96,7 +96,7 @@ def preview(source, path):
         icon.putalpha(mask(size, "circle"))
         sheet.paste(icon, (x + (140 - size) // 2, 22 + (140 - size) // 2), icon)
         draw.text((x + 70, 182), label, fill=BACKGROUND, font=font, anchor="mm")
-    draw.text((270, 206), "Tooie-Recompiled", fill=BACKGROUND, font=font, anchor="mm")
+    draw.text((270, 206), "Tooie Recompiled", fill=BACKGROUND, font=font, anchor="mm")
     path.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(path)
 

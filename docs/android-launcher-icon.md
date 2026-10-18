@@ -1,25 +1,27 @@
-# Tooie-Recompiled Android icon
+# Tooie Recompiled Android icon
 
 The selected icon is the custom blue **B** and red **T**, slightly staggered
 over a golden Jiggy. The user's final shape choice is **round**, and the visible
-app name is exactly **Tooie-Recompiled**.
+app name is exactly **Tooie Recompiled**.
 
 ![Selected circular icon and small-size previews](android-launcher-icon-preview.png)
 
 ## Source and scope
 
-- This update follows branding commit
-  `05aca40d5f98891b442f20c6418fe6196e0c8f4e`, whose rendering base is
-  `5db2d7f3719df6d196bf46a7a52a5e749d152956`.
+- This icon-only correction is based on integration commit
+  `6a5a1e3250ca57f8797fc68e5567f9a5530e8351`, which includes the tested
+  mod support and the player hierarchy implementation. Only the Android
+  master, derived PNG resources, preview and this document change.
 - `assets/android/launcher-master.png` is the exact selected generated artwork,
   1254 by 1254 pixels. SHA-256:
-  `80e98fb563e23d1663dc185ee9e733f5b656f8157dcb85676a9d1d5b044a67ef`.
-  It was selected as “Classic Jiggy” from the three BT previews. No characters
-  or extra words are added to the icon.
+  `4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784`.
+  This is the exact reference supplied by the user on 18 October 2026,
+  replacing the earlier, similar BT design. No characters or extra words
+  are added to the icon.
 - The source master retains its original navy background. Resource generation
   resizes and pads it without redrawing the letters or Jiggy.
 - The application and launcher activity both use `@string/app_name`, defined
-  once as `Tooie-Recompiled`.
+  once as `Tooie Recompiled`.
 - Package identity remains `io.github.banjotooierecompiled`, preserving update
   identity and app data. Native code, activity class, build settings, saves,
   rendering diagnostics and the original desktop `assets/icon.png` are unchanged.
@@ -67,7 +69,7 @@ do not cause a mismatch. Validation uses Pillow 12.3.0 and Google AAPT2
 - AAPT2 compiles the actual resource directory and links the actual manifest,
   with the application's package supplied as Gradle does, minimum API 24 and
   target API 35. Both application and launcher activity resolve to the exact
-  label `Tooie-Recompiled`.
+  label `Tooie Recompiled`.
 - The linked manifest resolves both icon IDs, and adaptive foreground/background
   references resolve. Packaged PNGs preserve dimensions, alpha and visible pixels.
 - A deliberately missing icon fails the actual linker; a separate wrong-name
