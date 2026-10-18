@@ -323,6 +323,9 @@ namespace RT64 {
             const Workload &prevWorkload = workloadQueue.workloads[workloadMap.prevWorkloadIndex];
             workloadMap.viewProjections.clear();
             workloadMap.viewProjections.resize(curWorkload.drawData.viewProjTransforms.size());
+#if TOOIE_SKELETAL_POSE_ENABLED
+            workloadMap.skeletalPairs.clear();
+#endif
             workloadMap.transforms.clear();
             workloadMap.transforms.resize(curWorkload.drawData.worldTransforms.size());
             workloadMap.tiles.clear();
@@ -817,6 +820,36 @@ namespace RT64 {
         curTransformMap.prevTransformIndex = prevTransformIndex;
         curTransformMap.mapped = true;
         curWorkloadMap.prevTransformsMapped[prevTransformIndex] = true;
+#if TOOIE_SKELETAL_POSE_ENABLED
+        curTransformMap.skeletalPair.reset();
+        const auto currentPose = curWorkload.drawData.skeletalTransforms.find(curTransformIndex);
+        const auto previousPose = prevWorkload.drawData.skeletalTransforms.find(prevTransformIndex);
+        if (currentPose != curWorkload.drawData.skeletalTransforms.end() && previousPose != prevWorkload.drawData.skeletalTransforms.end() &&
+            currentPose->second->bone == previousPose->second->bone && curGroup.decompose &&
+            curGroup.positionInterpolation == G_EX_COMPONENT_INTERPOLATE && curGroup.rotationInterpolation == G_EX_COMPONENT_INTERPOLATE &&
+            curGroup.scaleInterpolation == G_EX_COMPONENT_INTERPOLATE && curGroup.skewInterpolation == G_EX_COMPONENT_INTERPOLATE &&
+            curGroup.perspectiveInterpolation == G_EX_COMPONENT_INTERPOLATE) {
+            const auto &a = previousPose->second->pose, &b = currentPose->second->pose;
+            bool attempted = false;
+            for (const auto &attempt : curWorkloadMap.skeletalPairs)
+                if (attempt.previous == a && attempt.current == b) { curTransformMap.skeletalPair = attempt.pair; attempted = true; break; }
+            if (!attempted) {
+                const char *reason = "unknown";
+                curTransformMap.skeletalPair = skeletal::Pair::create(a, b, &reason);
+                curWorkloadMap.skeletalPairs.push_back({a, b, curTransformMap.skeletalPair});
+                if (!curTransformMap.skeletalPair) {
+                    static thread_local uint64_t nextReport = 0;
+                    const auto now = tooie::diagnostics::monotonicUs();
+                    if (now >= nextReport) {
+                        char text[400]; std::snprintf(text, sizeof(text), "reason=%s player=%u model=0x%X previous_frame=%llu current_frame=%llu bones=%zu action=current-submitted-pose",
+                            reason, b->player, b->model, (unsigned long long)a->frame, (unsigned long long)b->frame, b->bones.size());
+                        tooie::diagnostics::log("skeletal-rejected", text); nextReport = now + 5'000'000;
+                    }
+                }
+            }
+        }
+#endif
+
 
         const auto velocityPrepareStart = matchingStages().stamp();
         uint64_t curVertexHash = 0;

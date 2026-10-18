@@ -50,6 +50,16 @@ extern "C" {
 #include "ultramodern/ultramodern.hpp"
 
 #include "correction_trace_guest.h"
+#include "skeletal_pose_guest.h"
+
+extern "C" void tooie_rt64_skeleton_builder(uint8_t* rdram, recomp_context* ctx, uint32_t stage) {
+#if TOOIE_SKELETAL_POSE_ENABLED
+    if (stage == 1) tooie::skeletal::guest::begin(rdram, uint32_t(ctx->r5), uint32_t(ctx->r6));
+    else tooie::skeletal::guest::end(rdram);
+#else
+    (void)rdram; (void)ctx; (void)stage;
+#endif
+}
 
 extern "C" void tooie_correction_probe(uint8_t* rdram, recomp_context* ctx,
                                       uint32_t event, uint32_t site) {
@@ -1089,6 +1099,10 @@ bool append_matrix_group(uint8_t* rdram, uint32_t cursor, uint32_t transform_id,
 struct RootScope {
     uint32_t transform_id;
     bool pushed;
+#if TOOIE_SKELETAL_POSE_ENABLED
+    uint32_t model = 0;
+    std::shared_ptr<const tooie::skeletal::Pose> pose;
+#endif
 };
 
 struct PlayerModelKey {
@@ -1100,6 +1114,9 @@ struct PlayerModelKey {
 // between adjacent frames, so this state is thread-local and never shared.
 thread_local uint32_t g_player_scope_depth = 0;
 thread_local uint32_t g_player_key = 0;
+#if TOOIE_SKELETAL_POSE_ENABLED
+thread_local uint32_t g_player_actor = 0;
+#endif
 thread_local PlayerModelKey g_player_models[kPlayerModelCount] = {};
 thread_local uint32_t g_player_model_count = 0;
 thread_local RootScope g_root_scopes[kRootScopeCount] = {};
@@ -1302,6 +1319,9 @@ extern "C" void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx) {
     }
 
     const uint32_t frame = read_word(rdram, kGameFrameCount);
+#if TOOIE_SKELETAL_POSE_ENABLED
+    tooie::skeletal::guest::frameBegin();
+#endif
     if (rt64_trace_enabled()) {
         std::fprintf(stderr,
                      "[rt64] frame=%u enables=%u roots=%u bones=%u "
@@ -1381,6 +1401,9 @@ extern "C" void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx) {
     }
     g_player_scope_depth = 0;
     g_player_key = 0;
+#if TOOIE_SKELETAL_POSE_ENABLED
+    g_player_actor = 0;
+#endif
 
     if (!append_command(rdram, kRenderBufferState, kEnableWord0,
                         kEnableWord1)) {
@@ -1417,6 +1440,9 @@ extern "C" void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
         if (g_player_scope_depth++ == 0U) {
             g_player_key =
                 stable_player_key(rdram, static_cast<uint32_t>(ctx->r4));
+#if TOOIE_SKELETAL_POSE_ENABLED
+            g_player_actor = static_cast<uint32_t>(ctx->r4);
+#endif
             g_root_scope_depth = 0;
             g_bone_scope_depth = 0;
         }
@@ -1429,6 +1455,9 @@ extern "C" void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
 
     if (--g_player_scope_depth == 0U) {
         g_player_key = 0;
+#if TOOIE_SKELETAL_POSE_ENABLED
+        g_player_actor = 0;
+#endif
         g_root_scope_depth = 0;
         g_bone_scope_depth = 0;
     }
@@ -1494,6 +1523,9 @@ extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
     }
 
     scope.transform_id = player_model_transform_id(g_player_key, model);
+#if TOOIE_SKELETAL_POSE_ENABLED
+    scope.model = model;
+#endif
     if (scope.transform_id == 0U) {
         return;
     }
@@ -1582,9 +1614,21 @@ extern "C" void tooie_rt64_push_player_bone(uint8_t* rdram,
     // func_800DCF48 keeps the graphics buffers in s0, and its bone pop runs
     // before s0 is restored, so the same register is valid at both sites.
     const uint32_t cursor = static_cast<uint32_t>(ctx->r16);
+#if TOOIE_SKELETAL_POSE_ENABLED
+    const uint32_t group_command = in_rdram(cursor, sizeof(uint32_t)) ? read_word(rdram, cursor) : 0;
+#endif
     g_bone_scopes[depth] = append_matrix_group(
         rdram, cursor, root_scope.transform_id + 1U + static_cast<uint32_t>(bone),
         kBoneGroupFlags);
+#if TOOIE_SKELETAL_POSE_ENABLED
+    if (g_bone_scopes[depth]) {
+        root_scope.pose = tooie::skeletal::guest::pose(rdram, read_word(rdram, kAnimationMatrixList),
+            g_player_key, root_scope.model, root_scope.pose, g_player_actor);
+        const uint32_t token = tooie::skeletal::guest::publish(rdram, group_command,
+            root_scope.transform_id + 1U + uint32_t(bone), unsigned(bone), root_scope.pose);
+        write_word(rdram, group_command + 12, token);
+    }
+#endif
     if (g_bone_scopes[depth]) {
         ++g_frame_bone_groups;
     }

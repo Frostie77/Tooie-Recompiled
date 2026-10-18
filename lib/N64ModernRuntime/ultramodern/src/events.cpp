@@ -1,5 +1,6 @@
 #include "../../../../src/android_debug_log.h"
 #include "../../../../src/runtime_diagnostics.h"
+#include "../../../../src/skeletal_pose.h"
 #include <thread>
 #include <atomic>
 #include <chrono>
@@ -31,6 +32,9 @@ void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& 
 
 struct SpTaskAction {
     OSTask task;
+#if TOOIE_SKELETAL_POSE_ENABLED
+    std::shared_ptr<const tooie::skeletal::TaskBindings> skeletal;
+#endif
 };
 
 struct ScreenUpdateAction {
@@ -412,6 +416,9 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                 ultramodern::extensions::on_displaylist_submitted(displaylist);
 
                 [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
+#if TOOIE_SKELETAL_POSE_ENABLED
+                tooie::skeletal::TaskScope skeletal_scope(task_action->skeletal);
+#endif
                 renderer_context->send_dl(&task_action->task);
                 [[maybe_unused]] auto renderer_end = std::chrono::high_resolution_clock::now();
 
@@ -604,7 +611,11 @@ void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
 
     // Send gfx tasks to the graphics action queue
     if (task->t.type == M_GFXTASK) {
-        events_context.action_queue.enqueue(SpTaskAction{ *task });
+        SpTaskAction action{ *task };
+#if TOOIE_SKELETAL_POSE_ENABLED
+        action.skeletal = tooie::skeletal::mailbox().snapshot();
+#endif
+        events_context.action_queue.enqueue(std::move(action));
     }
     // Set all other tasks as the RSP task
     else {

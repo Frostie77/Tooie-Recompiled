@@ -37,7 +37,9 @@ for h in config['patches']['hook']:
  assert len(found)==1,name
  call=re.search(r'tooie_correction_probe\([^;]+;',h['text']).group()
  assert call in found[0] and '#if TOOIE_CORRECTION_TRACE_ENABLED' in h['text'],name
- after=found[0].split(call,1)[1];assert after.lstrip().startswith('#endif\n    // 0x%08X:'%address),name
+ after=found[0].split(call,1)[1]
+ after=re.sub(r'#if TOOIE_SKELETAL_POSE_ENABLED\n\s*tooie_rt64_skeleton_builder\([^;]+;\n#endif\n','',after)
+ assert after.lstrip().startswith('#endif\n    // 0x%08X:'%address),name
 assert count==14,count
 api=(r/'src/recomp_api.cpp').read_text()
 for event in [0,3,4,5]:assert re.search(r'guest::probe\(rdram, ctx, '+str(event)+r',',api)
@@ -51,6 +53,8 @@ for filename in ['funcs_0.c','funcs_1.c','funcs_24.c','funcs_25.c','funcs_30.c',
   args=[os.environ.get('CC','gcc'),'-E','-P','-DNDEBUG','-D__ANDROID__',*selector,
         '-I'+str(r/'include'),'-I'+str(r/'RecompiledFuncs'),'-I'+str(r/'lib/N64Recomp/include')]
   a=subprocess.check_output([*args,str(parent)],text=True);b=subprocess.check_output([*args,str(r/'RecompiledFuncs'/filename)],text=True)
+  # The only new production hook calls are checked separately; guest instruction bodies stay exact.
+  b=re.sub(r'\btooie_rt64_skeleton_builder\(rdram, ctx, [12]U\);','',b)
   assert re.sub(r'\s+',' ',a)==re.sub(r'\s+',' ',b),filename
 print('PASS: all six generated C files retain exact parent instruction bodies with trace undefined/0 (preprocessed with current bridge declarations)')
 PY

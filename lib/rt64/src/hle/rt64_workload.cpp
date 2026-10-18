@@ -90,6 +90,9 @@ namespace RT64 {
         drawData.triTcFloats.clear();
         drawData.triColorFloats.clear();
         drawData.transformGroups.clear();
+#if TOOIE_SKELETAL_POSE_ENABLED
+        drawData.skeletalTransforms.clear();
+#endif
         drawData.worldTransformGroups.clear();
         drawData.viewProjTransformGroups.clear();
         drawData.worldTransformSegmentedAddresses.clear();

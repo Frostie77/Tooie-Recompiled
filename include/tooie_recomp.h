@@ -9,6 +9,7 @@
 
 #include "recomp.h"
 #include "correction_trace_config.h"
+#include "skeletal_pose_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -77,6 +78,7 @@ void tooie_expand_visibility(uint8_t* rdram, recomp_context* ctx);
 // without touching a single game matrix; see src/recomp_api.cpp.
 void tooie_correction_probe(uint8_t* rdram, recomp_context* ctx, uint32_t event, uint32_t site);
 void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx);
+void tooie_rt64_skeleton_builder(uint8_t* rdram, recomp_context* ctx, uint32_t stage);
 void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
                              uint32_t stage);
 void tooie_rt64_push_player_root(uint8_t* rdram, recomp_context* ctx);

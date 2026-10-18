@@ -81,6 +81,9 @@ namespace RT64 {
         std::vector<uint32_t> worldTransformSegmentedAddresses;
         std::vector<uint32_t> worldTransformPhysicalAddresses;
         std::vector<uint32_t> worldTransformVertexIndices;
+#if TOOIE_SKELETAL_POSE_ENABLED
+        std::unordered_map<uint32_t, tooie::skeletal::BindingPtr> skeletalTransforms;
+#endif
 #if TOOIE_CORRECTION_TRACE_ENABLED
         std::unordered_map<uint32_t, tooie::correction::Link> correctionLinks;
         bool correctionReported = false;

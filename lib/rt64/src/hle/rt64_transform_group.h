@@ -5,12 +5,16 @@
 #pragma once
 
 #include "common/rt64_common.h"
+#include "../../../../src/skeletal_pose.h"
 
 #include "../include/rt64_extended_gbi.h"
 
 namespace RT64 {
     struct TransformGroup {
         uint32_t matrixId = G_EX_ID_AUTO;
+#if TOOIE_SKELETAL_POSE_ENABLED
+        tooie::skeletal::BindingPtr skeletal;
+#endif
         bool decompose = true;
         uint8_t positionInterpolation = G_EX_COMPONENT_AUTO;
         uint8_t rotationInterpolation = G_EX_COMPONENT_AUTO;

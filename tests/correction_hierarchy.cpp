@@ -68,7 +68,8 @@ static M blend(const M &a,const M &b,float w,bool warm) {
 }
 struct Pair {
     std::vector<int> parent;std::vector<V> bind;
-    std::vector<M> previous,current;M roots[2];
+    std::vector<M> previous,current;alignas(16) M roots[2];
+    std::vector<std::array<uint32_t,4>> authored;
 };
 static Pair pair(const J &input,const J &g) {
     const auto &o=g.at("ownership")[0];Pair p;
@@ -86,6 +87,7 @@ static Pair pair(const J &input,const J &g) {
     for(unsigned i=0;i<a.at("bones").size();++i) {
         const auto &x=a.at("bones").at(std::to_string(i)),&y=b.at("bones").at(std::to_string(i));
         if(x.at("bind_words")!=y.at("bind_words"))throw std::runtime_error("changed bind schema");
+        p.authored.push_back(x.at("bind_words").get<std::array<uint32_t,4>>());
         p.parent.push_back(x.at("parent"));p.bind.emplace_back(real(x.at("bind_words")[0]),real(x.at("bind_words")[1]),real(x.at("bind_words")[2]));
         p.previous.push_back(words(x.at("result_words")));p.current.push_back(words(y.at("result_words")));
     }
@@ -177,6 +179,7 @@ static std::vector<M> consumed(const J &g,bool warm) {
     for(const auto &m:queue.workloads[1].drawData.lerpWorldTransforms)result.emplace_back(m);
     return result;
 }
+#ifndef TOOIE_HIERARCHY_HELPERS_ONLY
 int main(int argc,char **argv) {
     CHECK(argc>=2);J input;std::ifstream(argv[1])>>input;unsigned count=0;float worst=0;
     const bool requireCurrent=argc>2 && std::string(argv[2])=="--require-current";
@@ -230,3 +233,4 @@ int main(int argc,char **argv) {
     }
     CHECK(count);std::printf("PASS: %u fully copied triangles; generated translation stage, source joint constraints/endpoints/stable histories; cold/warm relative-pose proposal; max_residual=%.9g (offline, no production correction)\n",count,worst);
 }
+#endif

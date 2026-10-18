@@ -13,6 +13,7 @@
 #include "shared/rt64_rsp_fog.h"
 
 #include "rt64_interpreter.h"
+#include "rt64_skeletal_pose.h"
 #include "rt64_state.h"
 
 //#define LOG_SPECIAL_MATRIX_OPERATIONS
@@ -518,6 +519,28 @@ namespace RT64 {
         projectionIndex = fbPair.changeProjection(curViewProjIndex, type);
     }
 
+#if TOOIE_SKELETAL_POSE_ENABLED
+    tooie::skeletal::BindingPtr RSP::skeletalBinding() const {
+        const auto &g = extended.modelMatrixIdStack[extended.modelMatrixIdStackSize - 1];
+        const auto &b = g.skeletal;
+        alignas(16) const hlslpp::float4x4 viewProjection = extended.viewProjMatrix;
+        if (!b || !b->pose || b->bone >= b->pose->bones.size() || modelViewProjInserted ||
+            modelMatrixPhysicalAddressStack[modelMatrixStackSize - 1] != b->address ||
+            !isMatrixIdentity(viewProjection)) return {};
+        FixedMatrix fixed; std::memcpy(&fixed, b->fixed.data(), sizeof(fixed));
+        alignas(16) const hlslpp::float4x4 expected = fixed.toMatrix4x4();
+        alignas(16) const hlslpp::float4x4 actual = modelMatrixStack[modelMatrixStackSize - 1];
+        for (unsigned i = 0; i < 4; ++i) for (unsigned j = 0; j < 4; ++j)
+            if (expected[i][j] != actual[i][j]) return {};
+        alignas(16) const hlslpp::float4x4 source = hlslpp::mul(skeletal::matrix(b->pose->bones[b->bone].matrix), skeletal::matrix(b->pose->root));
+        for (unsigned i = 0; i < 4; ++i) for (unsigned j = 0; j < 4; ++j) {
+            const float x = source[i][j], y = expected[i][j];
+            if (!std::isfinite(x) || std::fabs(x - y) > .001f + std::fabs(y) * 1e-6f) return {};
+        }
+        return b;
+    }
+#endif
+
     template<uint32_t floatCount, uint32_t vertexSize>
     void RSP::readExtendedVertexSegment(uint32_t rdramAddress, uint32_t dstIndex, uint32_t dstMax, uint32_t globalIndex, uint32_t vertexElement, std::vector<float> &floatsVector) {
         if (!extended.vertexSegmentEnabled[vertexElement]) {
@@ -555,6 +578,9 @@ namespace RT64 {
         auto &worldTransformPhysicalAddresses = workload.drawData.worldTransformPhysicalAddresses;
         auto &worldTransformVertexIndices = workload.drawData.worldTransformVertexIndices;
         bool addWorldTransform = (modelViewProjChanged || modelViewProjInserted);
+#if TOOIE_SKELETAL_POSE_ENABLED
+        const auto skeletal = skeletalBinding();
+#endif
 #if TOOIE_CORRECTION_TRACE_ENABLED
         const bool correctionInserted = modelViewProjInserted;
 #endif
@@ -586,6 +612,9 @@ namespace RT64 {
             worldTransformSegmentedAddresses.emplace_back(modelMatrixSegmentedAddressStack[modelMatrixStackSize - 1]);
             worldTransformPhysicalAddresses.emplace_back(physicalAddress);
             worldTransformVertexIndices.emplace_back(workload.drawData.vertexCount());
+#if TOOIE_SKELETAL_POSE_ENABLED
+            if (skeletal) workload.drawData.skeletalTransforms.emplace(curTransformIndex, skeletal);
+#endif
 #if TOOIE_CORRECTION_TRACE_ENABLED
             const auto &trace = correctionStack[modelMatrixStackSize - 1];
             tooie::correction::storeLink(workload.drawData, curTransformIndex, trace, correctionInserted);
@@ -1289,6 +1318,9 @@ namespace RT64 {
             const int stackIndex = stackSize - 1;
             TransformGroup* dstGroup = &stack[stackIndex];
             dstGroup->matrixId = id;
+#if TOOIE_SKELETAL_POSE_ENABLED
+            dstGroup->skeletal.reset();
+#endif
             setGroupProperties(dstGroup, true);
             stackChanged = true;
         }

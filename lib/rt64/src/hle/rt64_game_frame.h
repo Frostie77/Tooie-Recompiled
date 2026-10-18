@@ -9,6 +9,7 @@
 
 #include "rt64_projection.h"
 #include "rt64_rigid_body.h"
+#include "rt64_skeletal_pose.h"
 
 namespace RT64 {
     struct Workload;
@@ -51,6 +52,9 @@ namespace RT64 {
 
         struct TransformMap {
             RigidBody rigidBody;
+#if TOOIE_SKELETAL_POSE_ENABLED
+            std::shared_ptr<const skeletal::Pair> skeletalPair;
+#endif
             uint32_t prevTransformIndex = 0;
             bool mapped = false;
         };
@@ -76,6 +80,13 @@ namespace RT64 {
         struct WorkloadMap {
             std::vector<ViewProjectionMap> viewProjections;
             std::vector<TransformMap> transforms;
+#if TOOIE_SKELETAL_POSE_ENABLED
+            struct SkeletalAttempt {
+                std::shared_ptr<const tooie::skeletal::Pose> previous, current;
+                std::shared_ptr<const skeletal::Pair> pair;
+            };
+            std::vector<SkeletalAttempt> skeletalPairs;
+#endif
             std::vector<TileMap> tiles;
             std::vector<LookAtMap> lookAt;
             std::vector<bool> prevTransformsMapped;

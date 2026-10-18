@@ -8681,6 +8681,9 @@ RECOMP_FUNC void func_800AE820(uint8_t* rdram, recomp_context* ctx) {
     #if TOOIE_CORRECTION_TRACE_ENABLED
     tooie_correction_probe(rdram, ctx, 1U, 0x00000000U);
 #endif
+#if TOOIE_SKELETAL_POSE_ENABLED
+    tooie_rt64_skeleton_builder(rdram, ctx, 1U);
+#endif
     // 0x800AE820: addiu       $sp, $sp, -0x30
     ctx->r29 = ADD32(ctx->r29, -0X30);
     // 0x800AE824: sw          $s0, 0x0($sp)
@@ -8736,6 +8739,9 @@ RECOMP_FUNC void func_800AE820(uint8_t* rdram, recomp_context* ctx) {
     after_2:
     #if TOOIE_CORRECTION_TRACE_ENABLED
     tooie_correction_probe(rdram, ctx, 2U, 0x00000000U);
+#endif
+#if TOOIE_SKELETAL_POSE_ENABLED
+    tooie_rt64_skeleton_builder(rdram, ctx, 2U);
 #endif
     // 0x800AE86C: mfc0        $t0, Status
     ctx->r8 = cop0_status_read(ctx);

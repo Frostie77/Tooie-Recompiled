@@ -559,6 +559,9 @@ text = """
 #if TOOIE_CORRECTION_TRACE_ENABLED
 tooie_correction_probe(rdram, ctx, 1U, 0x00000000U);
 #endif
+#if TOOIE_SKELETAL_POSE_ENABLED
+tooie_rt64_skeleton_builder(rdram, ctx, 1U);
+#endif
 """
 
 [[patches.hook]]
@@ -567,6 +570,9 @@ before_vram = 0x800AE86C
 text = """
 #if TOOIE_CORRECTION_TRACE_ENABLED
 tooie_correction_probe(rdram, ctx, 2U, 0x00000000U);
+#endif
+#if TOOIE_SKELETAL_POSE_ENABLED
+tooie_rt64_skeleton_builder(rdram, ctx, 2U);
 #endif
 """
 
