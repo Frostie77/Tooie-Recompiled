@@ -1,5 +1,10 @@
 # Step 86: RmlUi document lifetime and remaining geometry/clock work
 
+Follow-up: [independent replay of the subsequently uploaded raw inputs,
+authored-joint reproduction and corrected NPC observation](android-step86-copied-inputs.md).
+The evidence-access limitations below describe the initial investigation;
+the extracted NewLog became available on 18 October 2026.
+
 Source base: `01495d04a248bb263a0f0d18695c9cfc983cf2d5`, on
 `fix/android-vulkan-transfer-proposal`. The tested artwork integration
 `f017d00f943716ed38a8aa1197a54ba72d4293ae` has that exact parent and changes
@@ -18,10 +23,10 @@ angular head/arm strips on the orange NPC. Neither clip supplies a synchronized
 build/PID clock, a speed measurement or ownership of the selected player triangles.
 
 The 41,380,225-byte evidence ZIP cannot be downloaded by the available file tool,
-whose limit is 32 MiB per file. The full new geometry, source inputs and clock
-windows have **not** been independently replayed here. The reported 96 fully
+whose limit is 32 MiB per file. At this initial stage the full geometry, source
+inputs and clock windows had **not** been independently replayed here. The reported 96 fully
 copied player triangles, root-only AUTO coverage and aggregate clock ratios
-remain coordinator observations until the original records are accessible.
+remained coordinator observations until the original records became accessible.
 The locally retained replay tools exactly match the two pinned handoff hashes.
 
 Independent parsing of the smaller Logcat excerpt confirms:

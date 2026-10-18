@@ -49,8 +49,8 @@ int main(void) {
     // Step 86 handoff: constants and one recorded_span=3/elapsed_span=1
     // event transcribed from PID 19849, mono_us=315980395287, frame=127,
     // map=335, mode=2, tested Build ID 818ea5de1d1c84734dfdb5b599de5aa2baf574a4.
-    // Remaining inputs are constructed. This is not the inaccessible raw
-    // capture replay or evidence of an intended wall cadence/reference pose.
+    // Remaining inputs are constructed. The separate captured-input fixture
+    // covers retained detail events; intended wall cadence remains unverified.
     RAM_W(0,0x80125D10)=0x3D4CCCCE;RAM_W(0,0x80125D14)=0x3C23D70A;
     RAM_W(0,0x80125D18)=0x3C888889;RAM_W(0,0x80125D1C)=0x3C888889;
     RAM_W(8,state)=0;RAM_W(12,state)=4;RAM_B(4,records)=3;RAM_B(10,records)=2;RAM_B(16,records)=6;
