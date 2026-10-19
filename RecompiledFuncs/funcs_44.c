@@ -26211,14 +26211,63 @@ L_808059E0:
     // 0x808059EC: lui         $at, 0x1
     ctx->r1 = S32(RELOC_HI16(108, 0XA494) << 16);
     // 0x808059F0: addu        $at, $at, $t7
+    gpr jr_addend_808059F8 = ctx->r15;
     ctx->r1 = ADD32(ctx->r1, ctx->r15);
     // 0x808059F4: lw          $t7, -0x5B6C($at)
-    ctx->r15 = MEM_W(ctx->r1, (int16_t)RELOC_LO16(108, 0XA494));
+    ctx->r15 = ADD32(ctx->r1, (int16_t)RELOC_LO16(108, 0XA494));
     // 0x808059F8: jr          $t7
     // 0x808059FC: nop
 
-    LOOKUP_FUNC(ctx->r15)(rdram, ctx);
-    return;
+    switch (jr_addend_808059F8 >> 2) {
+        case 0: goto L_80805E80; break;
+        case 1: goto L_80805A20; break;
+        case 2: goto L_80805B98; break;
+        case 3: goto L_80805A20; break;
+        case 4: goto L_80805A20; break;
+        case 5: goto L_80805A20; break;
+        case 6: goto L_80805A20; break;
+        case 7: goto L_80805A40; break;
+        case 8: goto L_80805A20; break;
+        case 9: goto L_80805D34; break;
+        case 10: goto L_80805A6C; break;
+        case 11: goto L_80805A20; break;
+        case 12: goto L_80805E18; break;
+        case 13: goto L_80805A20; break;
+        case 14: goto L_80805A20; break;
+        case 15: goto L_80805A20; break;
+        case 16: goto L_80805A20; break;
+        case 17: goto L_80805A20; break;
+        case 18: goto L_80805A20; break;
+        case 19: goto L_80805A20; break;
+        case 20: goto L_80805A20; break;
+        case 21: goto L_80805A20; break;
+        case 22: goto L_80805A20; break;
+        case 23: goto L_80805A20; break;
+        case 24: goto L_80805A20; break;
+        case 25: goto L_80805A20; break;
+        case 26: goto L_80805B78; break;
+        case 27: goto L_80805A20; break;
+        case 28: goto L_80805A78; break;
+        case 29: goto L_80805AFC; break;
+        case 30: goto L_80805B20; break;
+        case 31: goto L_80805A20; break;
+        case 32: goto L_80805A20; break;
+        case 33: goto L_80805A20; break;
+        case 34: goto L_80805A20; break;
+        case 35: goto L_80805A20; break;
+        case 36: goto L_80805A20; break;
+        case 37: goto L_80805A20; break;
+        case 38: goto L_80805A20; break;
+        case 39: goto L_80805A20; break;
+        case 40: goto L_80805CC0; break;
+        case 41: goto L_80805A20; break;
+        case 42: goto L_80805A20; break;
+        case 43: goto L_80805A20; break;
+        case 44: goto L_80805A20; break;
+        case 45: goto L_80805B44; break;
+        case 46: goto L_80805AE0; break;
+        default: switch_error(__func__, 0x808059F8, 0x8080A494);
+    }
     // 0x808059FC: nop
 
 L_80805A00:
@@ -26280,6 +26329,7 @@ L_80805A30:
         goto L_80805F20;
     // 0x80805A3C: or          $a0, $s0, $zero
     ctx->r4 = ctx->r16 | 0;
+L_80805A40:
     // 0x80805A40: or          $a0, $s0, $zero
     ctx->r4 = ctx->r16 | 0;
     // 0x80805A44: jal         0x80099A7C
@@ -26312,6 +26362,7 @@ L_80805A30:
         goto L_80805F1C;
     // 0x80805A68: sw          $t9, 0xEC($sp)
     MEM_W(0XEC, ctx->r29) = ctx->r25;
+L_80805A6C:
     // 0x80805A6C: addiu       $t1, $zero, 0x2
     ctx->r9 = ADD32(0, 0X2);
     // 0x80805A70: b           L_80805F1C
@@ -26320,6 +26371,7 @@ L_80805A30:
         goto L_80805F1C;
     // 0x80805A74: sw          $t1, 0xEC($sp)
     MEM_W(0XEC, ctx->r29) = ctx->r9;
+L_80805A78:
     // 0x80805A78: jal         0x80099A58
     // 0x80805A7C: or          $a0, $s0, $zero
     ctx->r4 = ctx->r16 | 0;
@@ -26409,6 +26461,7 @@ L_80805ACC:
         goto L_80805F1C;
     // 0x80805ADC: sw          $t5, 0xEC($sp)
     MEM_W(0XEC, ctx->r29) = ctx->r13;
+L_80805AE0:
     // 0x80805AE0: jal         0x80007EEC
     // 0x80805AE4: or          $a0, $s0, $zero
     ctx->r4 = ctx->r16 | 0;
@@ -26433,6 +26486,7 @@ L_80805ACC:
         goto L_80805F1C;
     // 0x80805AF8: sw          $t6, 0xEC($sp)
     MEM_W(0XEC, ctx->r29) = ctx->r14;
+L_80805AFC:
     // 0x80805AFC: jal         0x800A3404
     // 0x80805B00: or          $a0, $s0, $zero
     ctx->r4 = ctx->r16 | 0;
@@ -26467,6 +26521,7 @@ L_80805ACC:
         goto L_80805F1C;
     // 0x80805B1C: sw          $t7, 0xEC($sp)
     MEM_W(0XEC, ctx->r29) = ctx->r15;
+L_80805B20:
     // 0x80805B20: jal         0x800A3404
     // 0x80805B24: or          $a0, $s0, $zero
     ctx->r4 = ctx->r16 | 0;
@@ -26501,6 +26556,7 @@ L_80805ACC:
         goto L_80805F1C;
     // 0x80805B40: sw          $t8, 0xEC($sp)
     MEM_W(0XEC, ctx->r29) = ctx->r24;
+L_80805B44:
     // 0x80805B44: jal         0x8009E6F8
     // 0x80805B48: or          $a0, $s0, $zero
     ctx->r4 = ctx->r16 | 0;
@@ -26547,6 +26603,7 @@ L_80805ACC:
         goto L_80805F1C;
     // 0x80805B74: sw          $t9, 0xEC($sp)
     MEM_W(0XEC, ctx->r29) = ctx->r25;
+L_80805B78:
     // 0x80805B78: jal         0x80099A34
     // 0x80805B7C: or          $a0, $s0, $zero
     ctx->r4 = ctx->r16 | 0;
@@ -26573,6 +26630,7 @@ L_80805ACC:
         goto L_80805F1C;
     // 0x80805B94: sw          $t1, 0xEC($sp)
     MEM_W(0XEC, ctx->r29) = ctx->r9;
+L_80805B98:
     // 0x80805B98: jal         0x80099A4C
     // 0x80805B9C: or          $a0, $s0, $zero
     ctx->r4 = ctx->r16 | 0;
@@ -26806,6 +26864,7 @@ L_80805CB4:
         goto L_80805F1C;
     // 0x80805CBC: sw          $t4, 0xEC($sp)
     MEM_W(0XEC, ctx->r29) = ctx->r12;
+L_80805CC0:
     // 0x80805CC0: jal         0x80099A58
     // 0x80805CC4: or          $a0, $s0, $zero
     ctx->r4 = ctx->r16 | 0;
@@ -26892,6 +26951,7 @@ L_80805D24:
         goto L_80805F1C;
     // 0x80805D30: sw          $t9, 0xEC($sp)
     MEM_W(0XEC, ctx->r29) = ctx->r25;
+L_80805D34:
     // 0x80805D34: jal         0x80099A70
     // 0x80805D38: or          $a0, $s0, $zero
     ctx->r4 = ctx->r16 | 0;
@@ -27063,6 +27123,7 @@ L_80805E08:
         goto L_80805F1C;
     // 0x80805E14: sw          $t1, 0xEC($sp)
     MEM_W(0XEC, ctx->r29) = ctx->r9;
+L_80805E18:
     // 0x80805E18: or          $a0, $s0, $zero
     ctx->r4 = ctx->r16 | 0;
     // 0x80805E1C: jal         0x8009C15C
@@ -27139,6 +27200,7 @@ L_80805E70:
         goto L_80805F1C;
     // 0x80805E7C: sw          $t6, 0xEC($sp)
     MEM_W(0XEC, ctx->r29) = ctx->r14;
+L_80805E80:
     // 0x80805E80: jal         0x800EFD24
     // 0x80805E84: addiu       $a0, $sp, 0x50
     ctx->r4 = ADD32(ctx->r29, 0X50);

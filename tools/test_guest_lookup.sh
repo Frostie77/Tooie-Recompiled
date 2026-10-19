@@ -40,6 +40,7 @@ for mode in ['current','parent']:
  (t/mode).mkdir(exist_ok=True)
  (t/mode/'guest-thread.inc').write_text('#line %d "lib/N64ModernRuntime/librecomp/src/recomp.cpp"\n'%(source.count('\n',0,start)+1)+source[start:end])
 PY
+
 rt="$r/lib/rt64/src"
 flags=(-O1 -g -fwrapv -DNDEBUG -DHLSL_CPU -D__PRFCHWINTRIN_H -pthread -ffunction-sections -fdata-sections
  -I"$r/src" -I"$r/include" -I"$r/RecompiledFuncs" -I"$r/tests/android_headers" -I"$r/lib/N64ModernRuntime/N64Recomp/include" -I"$r/lib/N64Recomp/include"
@@ -121,3 +122,18 @@ for case in ['generated','dispatch','thread']:
 print('PASS: actual generated caller and decoded syscall provenance, active/deleted/shifted/overlapping mappings, bounded raw words and journal rollover; successful one-evaluation dispatch has no diagnostic I/O')
 print('PASS: exact cb896c3 fails all three provenance assertions; full runtime missing lookup remains fatal without ordinary teardown on Android; desktop behavior preserved')
 PY
+
+# Opt-in controlled timing uses optimized, unsanitized full production objects.
+# Sanitized correctness controls above remain mandatory; timings have no pass bar.
+if [ "${TOOIE_LOOKUP_BENCHMARK:-0}" = 1 ];then
+ for pair in "$r/src/recomp_api.cpp:api" "$r/lib/N64ModernRuntime/librecomp/src/overlays.cpp:runtime" "$t/register.cpp:register";do
+  "${CXX:-g++}" -std=c++20 -I"$t/current" "${flags[@]}" -O2 -D__ANDROID__ -c "${pair%:*}" -o "$t/bench-${pair##*:}.o"
+ done
+ "${CC:-gcc}" -std=gnu11 -I"$t/current" "${flags[@]}" -O2 -D__ANDROID__ -c "$t/generated.c" -o "$t/bench-generated.o"
+ "${CXX:-g++}" -std=c++20 -I"$t/current" "${flags[@]}" -O2 -D__ANDROID__ "$r/tests/guest_lookup_benchmark.cpp" \
+  "$r/lib/N64ModernRuntime/ultramodern/src/error_handling.cpp" "$t/bench-api.o" "$t/bench-runtime.o" "$t/bench-register.o" "$t/bench-generated.o" -Wl,--gc-sections -o "$t/benchmark"
+ mkdir "$t/benchmark-log"
+ APP_FOLDER_PATH="$t/benchmark-log" TOOIE_TRACE_LOOKUP=0 "$t/benchmark"
+ test ! -e "$t/benchmark-log/banjotooi-debug.log"
+ test ! -e "$t/benchmark-log/banjotooierecompiled.log"
+fi
