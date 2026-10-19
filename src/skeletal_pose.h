@@ -18,6 +18,7 @@ struct Bone {
 };
 struct Pose {
     uint32_t player = 0, actor = 0, model = 0;
+    uint64_t actorGeneration = 0; // nonzero only for a registered actor marker
     uint64_t frame = 0;
     Words modelHeader{}, root{};
     std::vector<Bone> bones;

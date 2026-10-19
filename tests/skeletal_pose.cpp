@@ -3,8 +3,11 @@
 #define TOOIE_HIERARCHY_HELPERS_ONLY
 #include "correction_hierarchy.cpp"
 #include "skeletal_pose_guest.h"
+#include "actor_pose_guest.h"
 #include "tooie_recomp.h"
 #include <thread>
+void actorOwnershipControls();
+void rigidActorControls();
 void decodeSkeletal(WorkloadQueue&,unsigned,uint8_t*,unsigned,unsigned);
 
 static tooie::skeletal::Words raw(const M &m) {
@@ -13,7 +16,7 @@ static tooie::skeletal::Words raw(const M &m) {
 }
 static void put(uint8_t *ram,uint32_t p,uint32_t v) {CHECK(tooie::skeletal::guest::valid(p,4));std::memcpy(ram+(p&0x7FFFFF),&v,4);}
 static void store(uint8_t *ram,uint32_t p,const tooie::skeletal::Words &w) {std::memcpy(ram+(p&0x7FFFFF),w.data(),64);}
-static std::shared_ptr<const tooie::skeletal::Pose> publish(uint8_t *ram,const Pair &p,unsigned e,uint64_t frame) {
+static std::shared_ptr<const tooie::skeletal::Pose> publish(uint8_t *ram,const Pair &p,unsigned e,uint64_t frame,bool actorMode=false) {
     using namespace tooie::skeletal;
     const uint32_t model=0x80300000,skeleton=model+0x1000,list=0x80400000;
     const unsigned count=p.parent.size();
@@ -32,13 +35,28 @@ static std::shared_ptr<const tooie::skeletal::Pose> publish(uint8_t *ram,const P
     CHECK(!std::memcmp(before.data(),ram,0x800000));
     store(ram,0x8012CE58,raw(p.roots[e]));
     put(ram,0x80135490,0x80600000);
-    auto pose=guest::pose(ram,list,1,model);CHECK(pose && pose->bones.size()==count);
-    CHECK(guest::pose(ram,list,1,model,pose)==pose); // immutable per-root reuse
+    std::shared_ptr<const Pose> pose;
+    if (!actorMode) {
+        pose=guest::pose(ram,list,1,model);CHECK(pose && pose->bones.size()==count);
+        CHECK(guest::pose(ram,list,1,model,pose)==pose);
+    }
     const uint32_t cursor=0x80610000,node=0x80620000;
     put(ram,0x80135490,0x80600000);put(ram,0x8012C968,list);
     ctx.r4=int32_t(0x80600000);ctx.r29=int32_t(0x80700000);
     put(ram,0x807000F8,cursor);put(ram,0x8070010C,model);put(ram,cursor,0x805F0000);
-    tooie_rt64_player_scope(ram,&ctx,1);tooie_rt64_push_player_root(ram,&ctx);
+    if (actorMode) {
+        constexpr uint32_t pool=0x80640000,actor=0x80650000,marker=0x80670000;
+        put(ram,0x80136EE0,pool);put(ram,pool,0x9C);put(ram,pool+4,actor);put(ram,pool+8,actor+0x9C);
+        put(ram,actor,marker);put(ram,marker+0x18,0); // actor index 0 in high halfword at +1A
+        if (!actors::registry().find(marker)) {ctx.r16=int32_t(actor);tooie_rt64_actor_lifetime(ram,&ctx,1);}
+        ctx.r4=int32_t(actor);ctx.r5=int32_t(0x801015D0);tooie_rt64_actor_scope(ram,&ctx,1);
+        pose=actors::pose(ram,list,model,actors::current(ram));CHECK(pose && pose->actorGeneration);
+    }
+    else tooie_rt64_player_scope(ram,&ctx,1);
+    tooie_rt64_push_player_root(ram,&ctx);
+    CHECK(guest::word(ram,0x805F0000)==0x6400000C);
+    const auto base=guest::word(ram,0x805F0004);
+    CHECK(actorMode ? base>=0x20000000 && base<0xF0000000 : base==0x10000000);
     for(unsigned i=0;i<count;++i) {
         // These are constructed commands/fixed conversion of retained matrix
         // inputs, not an assertion that these were the captured guest addresses.
@@ -48,7 +66,7 @@ static std::shared_ptr<const tooie::skeletal::Pose> publish(uint8_t *ram,const P
             const int32_t v=int32_t(double(world[row][col])*65536.0);
             fixed.integer[row][col^1]=int16_t(uint32_t(v)>>16);fixed.frac[row][col^1]=uint16_t(v);
         }
-        const uint32_t address=0x200000+i*64,command=0x80500000+i*40,id=0x10000001+i;
+        const uint32_t address=0x200000+i*64,command=0x80500000+i*40,id=base+1+i;
         std::memcpy(ram+address,&fixed,64);
         put(ram,command,0xDA380002);put(ram,command+4,address);
         put(ram,cursor,command+8);put(ram,cursor+4,0x80000000+address+64);
@@ -62,7 +80,8 @@ static std::shared_ptr<const tooie::skeletal::Pose> publish(uint8_t *ram,const P
         CHECK(guest::word(ram,command+32)==0x6400000D && guest::word(ram,command+36)==1);
         CHECK(guest::word(ram,cursor)==command+40);
     }
-    tooie_rt64_pop_player_root(ram,&ctx);tooie_rt64_player_scope(ram,&ctx,2);
+    tooie_rt64_pop_player_root(ram,&ctx);
+    if (actorMode) tooie_rt64_actor_scope(ram,&ctx,2);else tooie_rt64_player_scope(ram,&ctx,2);
     return pose;
 }
 static void matchAll(WorkloadQueue &queue,GameFrame &current,GameFrameMap::WorkloadMap &map,const GameFrameMap::WorkloadMap *history=nullptr) {
@@ -118,7 +137,7 @@ static void transportControls(std::shared_ptr<const tooie::skeletal::Pose> pose)
 }
 int main(int argc,char **argv) {
     CHECK(argc==2);J input;std::ifstream(argv[1])>>input;unsigned cases=0;uint64_t frame=10;
-    for(const auto &g:input.at("triangles")) {
+    for(bool actorMode:{false,true}) for(const auto &g:input.at("triangles")) {
         bool complete=true;for(const auto &o:g.at("ownership"))for(const auto *e:{"previous","current"})complete&=o.at(e).at("status")=="copied-bone-inputs";
         if(!complete)continue;const auto p=pair(input,g);
         std::vector<uint8_t> ram(0x800000);WorkloadQueue queue;GameFrame current,previous;
@@ -126,7 +145,7 @@ int main(int argc,char **argv) {
         auto &map=current.frameMap.workloads[1];map.mapped=true;map.prevWorkloadIndex=0;
         std::shared_ptr<const tooie::skeletal::Pose> endpoints[2];
         for(unsigned e=0;e<2;++e) {
-            endpoints[e]=publish(ram.data(),p,e,frame++);
+            endpoints[e]=publish(ram.data(),p,e,frame++,actorMode);
             auto task=tooie::skeletal::mailbox().snapshot();
             std::memset(ram.data()+0x301000,0xA5,8+p.parent.size()*16);
             std::memset(ram.data()+0x400050,0xA5,p.parent.size()*64);
@@ -144,6 +163,12 @@ int main(int argc,char **argv) {
         CHECK(!map.transforms[0].skeletalPair);
         for(unsigned i=1;i<map.transforms.size();++i)CHECK(map.transforms[i].skeletalPair==map.skeletalPairs[0].pair);
         auto warm=map;map.transforms.clear();map.skeletalPairs.clear();matchAll(queue,current,map,&warm);checkPose(p,queue,current,previous,.25f);
+        if(actorMode) {
+            auto changed=std::make_shared<tooie::skeletal::Pose>(*endpoints[1]);
+            ++changed->actorGeneration;CHECK(!skeletal::Pair::create(endpoints[0],changed));
+            changed=std::make_shared<tooie::skeletal::Pose>(*endpoints[1]);
+            changed->player=1;CHECK(!skeletal::Pair::create(endpoints[0],changed));
+        }
         if(cases==0) {
             transportControls(endpoints[0]);
             for(unsigned mode=0;mode<8;++mode) {
@@ -208,5 +233,6 @@ int main(int argc,char **argv) {
         }
         ++cases;
     }
-    CHECK(cases);std::printf("PASS: %u complete retained triangle cases through continuous producer/task/RSP/vertex/matcher/live consumer; authored joints, exact fixed endpoints, previous-frame weights, inverse normals, cold/warm/missing history and unsafe-input controls\n",cases);
+    actorOwnershipControls();rigidActorControls();
+    CHECK(cases);std::printf("PASS: %u player/constructed-actor triangle cases through continuous producer/task/RSP/vertex/matcher/live consumer; authored joints, exact fixed endpoints, previous-frame weights, inverse normals, cold/warm/missing history and unsafe-input controls\n",cases);
 }

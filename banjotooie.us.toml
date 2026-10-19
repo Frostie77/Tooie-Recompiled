@@ -683,3 +683,59 @@ text = """
 tooie_correction_probe(rdram, ctx, 15U, 0x00000000U);
 #endif
 """
+
+# Android actor ownership: actual movable-array constructor, marker free,
+# pool reset and standard actor model draw. No game state is modified.
+[[patches.hook]]
+func = "func_80101808"
+before_vram = 0x80101808
+text = """
+#if TOOIE_ACTOR_POSE_ENABLED
+tooie_rt64_actor_scope(rdram, ctx, 1U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_80101808"
+before_vram = 0x8010185C
+text = """
+#if TOOIE_ACTOR_POSE_ENABLED
+tooie_rt64_actor_scope(rdram, ctx, 2U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_80107C2C"
+before_vram = 0x80107E90
+text = """
+#if TOOIE_ACTOR_POSE_ENABLED
+tooie_rt64_actor_lifetime(rdram, ctx, 1U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800EBFF4"
+before_vram = 0x800EBFF4
+text = """
+#if TOOIE_ACTOR_POSE_ENABLED
+tooie_rt64_actor_lifetime(rdram, ctx, 2U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_801065E0"
+before_vram = 0x801065E0
+text = """
+#if TOOIE_ACTOR_POSE_ENABLED
+tooie_rt64_actor_lifetime(rdram, ctx, 3U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_80106608"
+before_vram = 0x80106608
+text = """
+#if TOOIE_ACTOR_POSE_ENABLED
+tooie_rt64_actor_lifetime(rdram, ctx, 3U);
+#endif
+"""

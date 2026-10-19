@@ -51,7 +51,8 @@ struct Pair {
     static std::shared_ptr<const Pair> create(std::shared_ptr<const tooie::skeletal::Pose> a,
                                              std::shared_ptr<const tooie::skeletal::Pose> b, const char **reason = nullptr) {
         auto reject = [reason](const char *message) -> std::shared_ptr<const Pair> { if (reason) *reason = message; return {}; };
-        if (!a || !b || !a->player || !a->actor || a->player != b->player || a->actor != b->actor || a->model != b->model ||
+        if (!a || !b || a->player > 8 || (a->player && a->actorGeneration) || (!a->player && (!TOOIE_ACTOR_POSE_ENABLED || !a->actorGeneration)) || !a->actor || a->player != b->player || a->actor != b->actor ||
+            a->actorGeneration != b->actorGeneration || a->model != b->model ||
             a->modelHeader != b->modelHeader || a->frame == UINT64_MAX || b->frame != a->frame + 1 ||
             a->bones.empty() || a->bones.size() != b->bones.size() || a->bones.size() > 128) return reject("ownership-or-history");
         auto p = std::make_shared<Pair>(); p->previous = std::move(a); p->current = std::move(b);

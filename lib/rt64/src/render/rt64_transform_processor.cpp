@@ -50,7 +50,7 @@ namespace RT64 {
 #if TOOIE_SKELETAL_POSE_ENABLED
                 struct PoseResult { std::shared_ptr<const skeletal::Pair> pair; std::vector<skeletal::M> previous, current; bool valid; };
                 std::vector<PoseResult> poses;
-                unsigned skeletalApplied = 0, skeletalFrozen = 0;
+                unsigned skeletalApplied = 0, skeletalFrozen = 0, actorApplied = 0;
 #endif
                 for (size_t t = 0; t < drawData.worldTransforms.size(); t++) {
                     const GameFrameMap::TransformMap &transformMap = workloadMap.transforms[t];
@@ -77,7 +77,7 @@ namespace RT64 {
                                 // The submitted fixed-converted endpoints remain exact.
                                 prevMatrix = p.prevFrameWeight == 0 ? prevTransform : p.prevFrameWeight == 1 ? curTransform : result->previous[bone];
                                 curMatrix = p.curFrameWeight == 0 ? prevTransform : p.curFrameWeight == 1 ? curTransform : result->current[bone];
-                                ++skeletalApplied;
+                                ++skeletalApplied; actorApplied += owned->second->pose->actorGeneration != 0;
                             }
                             else {
                                 // Changed schema, missing history or invalid relative
@@ -102,13 +102,13 @@ namespace RT64 {
                     }
                 }
 #if TOOIE_SKELETAL_POSE_ENABLED
-                struct Counts { uint64_t next = 0, applied = 0, frozen = 0, pairs = 0; };
+                struct Counts { uint64_t next = 0, applied = 0, frozen = 0, pairs = 0, actors = 0; };
                 static thread_local Counts counts;
-                counts.applied += skeletalApplied; counts.frozen += skeletalFrozen; counts.pairs += poses.size();
+                counts.applied += skeletalApplied; counts.actors += actorApplied; counts.frozen += skeletalFrozen; counts.pairs += poses.size();
                 const auto now = tooie::diagnostics::monotonicUs();
                 if (now >= counts.next && (counts.applied || counts.frozen)) {
-                    char text[300]; std::snprintf(text, sizeof(text), "applied=%llu current_pose_fallback=%llu evaluated_pairs=%llu policy=authored-player-hierarchy npc_policy=unchanged",
-                        (unsigned long long)counts.applied, (unsigned long long)counts.frozen, (unsigned long long)counts.pairs);
+                    char text[300]; std::snprintf(text, sizeof(text), "applied=%llu current_pose_fallback=%llu evaluated_pairs=%llu actor_applied=%llu player_applied=%llu policy=authored-hierarchy npc_policy=" TOOIE_ACTOR_POLICY,
+                        (unsigned long long)counts.applied, (unsigned long long)counts.frozen, (unsigned long long)counts.pairs, (unsigned long long)counts.actors, (unsigned long long)(counts.applied - counts.actors));
                     tooie::diagnostics::log("skeletal", text);
                     counts = {}; counts.next = now + 5'000'000;
                 }

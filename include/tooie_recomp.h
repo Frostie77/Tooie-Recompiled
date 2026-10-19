@@ -79,6 +79,8 @@ void tooie_expand_visibility(uint8_t* rdram, recomp_context* ctx);
 void tooie_correction_probe(uint8_t* rdram, recomp_context* ctx, uint32_t event, uint32_t site);
 void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx);
 void tooie_rt64_skeleton_builder(uint8_t* rdram, recomp_context* ctx, uint32_t stage);
+void tooie_rt64_actor_scope(uint8_t* rdram, recomp_context* ctx, uint32_t stage);
+void tooie_rt64_actor_lifetime(uint8_t* rdram, recomp_context* ctx, uint32_t event);
 void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
                              uint32_t stage);
 void tooie_rt64_push_player_root(uint8_t* rdram, recomp_context* ctx);

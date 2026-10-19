@@ -5,6 +5,13 @@ Engineering base: `60c0c89369347f6c7a9a722471be00b149447f92`, on
 previously confined to the [retained-input experiment](android-step86-copied-inputs.md).
 It is a locally tested correction candidate, not Odin visual verification.
 
+The player-only scope below describes the `b679975` stage. The
+[Step 98 extension](android-step98-investigation.md) also admits standard actor
+model draws with validated marker/generation ownership, reusing the same authored
+hierarchy checks and immutable transport. Custom actor paths remain outside that
+extension. The earlier Odin evidence supports player improvement; NPC and feather
+appearance with the extension remains unverified.
+
 ## Defect and scope
 
 Matching bone IDs and slerping each final-world matrix independently separates

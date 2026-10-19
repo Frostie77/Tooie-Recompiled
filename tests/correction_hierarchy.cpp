@@ -25,9 +25,11 @@ using J=nlohmann::json;
 using M=hlslpp::float4x4;
 using V=hlslpp::float3;
 #define CHECK(x) do{if(!(x)){std::fprintf(stderr,"hierarchy failure: line=%d %s\n",__LINE__,#x);std::exit(1);}}while(0)
+#ifndef TOOIE_HIERARCHY_HELPERS_ONLY
 BufferUploader::BufferUploader(RenderDevice *d):thread(nullptr),running(false),workAvailable(false),device(d){}
 BufferUploader::~BufferUploader(){}
 void BufferUploader::submit(RenderWorker*,const std::vector<Upload>&){CHECK(false);}
+#endif
 static unsigned number(const J &j,const char *k) {return std::stoul(j.at(k).get<std::string>(),nullptr,0);}
 static float real(uint32_t bits) {float f;std::memcpy(&f,&bits,4);return f;}
 static M words(const J &j) {

@@ -4,6 +4,7 @@
 #include "hle/rt64_rsp.h"
 #include "hle/rt64_skeletal_pose.h"
 #include "gbi/rt64_f3d.h"
+#include "render/rt64_buffer_uploader.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -30,6 +31,21 @@ std::atomic<uint32_t> g_bt_rt64_decoded_pops{0};
 #include "skeletal-gbi.inc"
 }
 }
+void decodeActorRoots(RT64::WorkloadQueue &queue, unsigned slot, uint8_t *ram, unsigned count) {
+    using namespace RT64;
+    queue.writeCursor=slot;queue.workloads[slot].resetDrawData();
+    GBI gbi{};TestInterpreter interpreter{&gbi};State state{ram,{}, {&queue,&interpreter},nullptr};
+    RSP rsp(&state);state.rsp=&rsp;rsp.projMask=4;rsp.loadMask=2;rsp.pushMask=1;
+    rsp.projectionIndex=0;rsp.viewProjMatrixStack[0]=hlslpp::float4x4::identity();
+    for(unsigned i=0;i<count;++i) {
+        auto *dl=reinterpret_cast<DisplayList*>(ram+0x500000+i*40);
+        rsp.matrix(dl->w1&0x7FFFFF,3);++dl;GBI_EXTENDED::matrixGroupV1(&state,&dl);
+        rsp.vertices[0]={};rsp.vertices[0].x=1;rsp.setVertexCommon<true,16>(0x600000,0,1);rsp.popMatrix(1);
+        dl=reinterpret_cast<DisplayList*>(ram+0x500000+i*40+32);GBI_EXTENDED::popMatrixGroupV1(&state,&dl);
+    }
+    REQUIRE(queue.workloads[slot].drawData.worldTransforms.size()==count+1);
+    REQUIRE(queue.workloads[slot].drawData.skeletalTransforms.empty());
+}
 void decodeSkeletal(RT64::WorkloadQueue &queue, unsigned slot, uint8_t *ram, unsigned count, unsigned fault) {
     using namespace RT64;
     queue.writeCursor=slot;
@@ -54,7 +70,7 @@ void decodeSkeletal(RT64::WorkloadQueue &queue, unsigned slot, uint8_t *ram, uns
         if(fault==5) rsp.extended.viewProjMatrix=skeletal::translation(hlslpp::float3(10,0,0));
         // Exercise full production setVertexCommon, including attaching the
         // copied ownership at the newly created world-transform index.
-        rsp.vertices[0].x=1;
+        rsp.vertices[0]={};rsp.vertices[0].x=1;
         rsp.setVertexCommon<true, 16>(0x600000,0,1);
         rsp.popMatrix(1);
         dl=reinterpret_cast<DisplayList*>(ram+command+32);

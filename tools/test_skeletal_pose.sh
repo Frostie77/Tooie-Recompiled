@@ -48,13 +48,15 @@ PY
 flags=(-std=c++20 -O1 -pthread -DNDEBUG -D__ANDROID__ -DHLSL_CPU -D__PRFCHWINTRIN_H -ffunction-sections -fdata-sections
  -I"$t" -I"$r/src" -I"$r/tests/android_headers" -I"$r/lib/N64Recomp/include" -I"$rt" -I"$rt/render" -I"$rt/hle" -I"$rt/common" -I"$rt/contrib" -I"$rt/contrib/hlslpp/include"
  -I"$rt/contrib/json/single_include" -I"$rt/contrib/dxc/inc" -I"$rt/contrib/plume")
-support=("$r/tests/skeletal_pose.cpp" "$r/tests/skeletal_rsp.cpp" "$rt/hle/rt64_rigid_body.cpp")
+support=("$r/tests/actor_rigid.cpp" "$r/tests/actor_ownership.cpp" "$r/tests/skeletal_pose.cpp" "$r/tests/skeletal_rsp.cpp" "$rt/hle/rt64_rigid_body.cpp")
 for n in common/rt64_math.cpp hle/rt64_framebuffer_changes.cpp hle/rt64_framebuffer_storage.cpp hle/rt64_projection.cpp common/rt64_common.cpp preset/rt64_preset_scene.cpp preset/rt64_preset.cpp;do support+=("$rt/$n");done
 san=(-fsanitize=address,undefined -fno-omit-frame-pointer)
 api_flags=(-I"$r/include" -I"$r/RecompiledFuncs" -I"$r/lib/N64ModernRuntime/librecomp/include"
  -I"$r/lib/N64ModernRuntime/ultramodern/include" -I"$r/lib/N64ModernRuntime/librecomp/src" -I"$r/lib/rt64/include"
  -I"$rt/contrib/mupen64plus-core/src/api" -I"$r/lib/N64ModernRuntime/thirdparty/concurrentqueue"
  -I"$r/lib/N64ModernRuntime/thirdparty" -I"$r/lib/N64Recomp/lib/fmt/include" -I"$r/lib/N64Recomp/lib/tomlplusplus")
+python3 "$r/tools/prepare_actor_ownership.py" "$r" "$t/actor-generated.c"
+"${CC:-gcc}" "${flags[@]:1}" "${api_flags[@]}" "${san[@]}" -std=gnu11 -fwrapv -c "$t/actor-generated.c" -o "$t/actor-generated.o"
 "${CXX:-g++}" "${flags[@]}" "${api_flags[@]}" "${san[@]}" -c "$r/src/recomp_api.cpp" -o "$t/api.o"
 flags+=("${api_flags[@]}")
 objects=()
@@ -63,11 +65,11 @@ for source in "${support[@]}";do
  "${CXX:-g++}" "${flags[@]}" "${san[@]}" -c "$source" -o "$object"
  objects+=("$object")
 done
-"${CXX:-g++}" "${flags[@]}" "${san[@]}" "$t/api.o" "${objects[@]}" "$t/rt64_game_frame.cpp" "$t/rt64_transform_processor.cpp" -Wl,--gc-sections -o "$t/test"
+"${CXX:-g++}" "${flags[@]}" "${san[@]}" "$t/api.o" "$t/actor-generated.o" "${objects[@]}" "$t/rt64_game_frame.cpp" "$t/rt64_transform_processor.cpp" -Wl,--gc-sections -o "$t/test"
 python3 "$r/tools/replay_correction_trace.py" "$r/tests/fixtures/odin-step86-hierarchy.txt" > "$t/fixture.json"
 export ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
 "$t/test" "$t/fixture.json"
-"${CXX:-g++}" "${flags[@]}" "${san[@]}" "$t/api.o" "${objects[@]}" "$t/parent-rt64_game_frame.cpp" "$t/parent-rt64_transform_processor.cpp" -Wl,--gc-sections -o "$t/parent"
+"${CXX:-g++}" "${flags[@]}" "${san[@]}" "$t/api.o" "$t/actor-generated.o" "${objects[@]}" "$t/parent-rt64_game_frame.cpp" "$t/parent-rt64_transform_processor.cpp" -Wl,--gc-sections -o "$t/parent"
 if "$t/parent" "$t/fixture.json" > "$t/control.log" 2>&1;then echo 'FAIL: exact parent accepted production hierarchy';exit 1;else test "$?" -eq 1;fi
 rg -q '^hierarchy failure:.*constraint\(p,output,weight,false\)' "$t/control.log"
 echo 'PASS: exact 60c0c89 parent rejects live hierarchy regression'
@@ -76,7 +78,8 @@ for input in "$@";do
  "$t/test" "$t/external.json"
 done
 if [ -n "${SIMD_CXX:-}" ];then
- "$SIMD_CXX" "${flags[@]}" "${support[@]}" "$r/src/recomp_api.cpp" "$t/rt64_game_frame.cpp" "$t/rt64_transform_processor.cpp" -Wl,--gc-sections -o "$t/simd"
+ "${CC:-gcc}" "${flags[@]:1}" -std=gnu11 -fwrapv -c "$t/actor-generated.c" -o "$t/actor-simd.o"
+ "$SIMD_CXX" "${flags[@]}" "${support[@]}" "$t/actor-simd.o" "$r/src/recomp_api.cpp" "$t/rt64_game_frame.cpp" "$t/rt64_transform_processor.cpp" -Wl,--gc-sections -o "$t/simd"
  "$t/simd" "$t/fixture.json"
  for input in "$@";do
   python3 "$r/tools/replay_correction_trace.py" "$input" > "$t/external.json"; "$t/simd" "$t/external.json"

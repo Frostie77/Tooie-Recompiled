@@ -51,6 +51,26 @@ extern "C" {
 
 #include "correction_trace_guest.h"
 #include "skeletal_pose_guest.h"
+#include "actor_pose_guest.h"
+
+extern "C" void tooie_rt64_actor_scope(uint8_t* rdram, recomp_context* ctx, uint32_t stage) {
+#if TOOIE_ACTOR_POSE_ENABLED
+    if (stage == 1) tooie::skeletal::actors::begin(rdram, uint32_t(ctx->r4), uint32_t(ctx->r5));
+    else tooie::skeletal::actors::end();
+#else
+    (void)rdram; (void)ctx; (void)stage;
+#endif
+}
+
+extern "C" void tooie_rt64_actor_lifetime(uint8_t* rdram, recomp_context* ctx, uint32_t event) {
+#if TOOIE_ACTOR_POSE_ENABLED
+    if (event == 1) tooie::skeletal::actors::created(rdram, uint32_t(ctx->r16));
+    else if (event == 2) tooie::skeletal::actors::registry().retire(uint32_t(ctx->r4));
+    else tooie::skeletal::actors::registry().clear();
+#else
+    (void)rdram; (void)ctx; (void)event;
+#endif
+}
 
 extern "C" void tooie_rt64_skeleton_builder(uint8_t* rdram, recomp_context* ctx, uint32_t stage) {
 #if TOOIE_SKELETAL_POSE_ENABLED
@@ -937,6 +957,16 @@ constexpr uint32_t kBoneGroupFlags = matrix_group_flags(
     G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_SKIP,
     G_EX_COMPONENT_INTERPOLATE, G_EX_ORDER_LINEAR,
     G_EX_ASPECT_AUTO, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO);
+// A registered actor with unsupported pose data still renders its submitted
+// bone matrix. Derive this through the same GBI layout as ordinary groups.
+constexpr uint32_t kCurrentBoneGroupFlags = matrix_group_flags(
+    1U, 0U, G_EX_INTERPOLATE_SIMPLE,
+    G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP,
+    G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP,
+    G_EX_COMPONENT_INTERPOLATE, G_EX_ORDER_LINEAR,
+    G_EX_ASPECT_AUTO, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO);
+static_assert(kCurrentBoneGroupFlags == (kBoneGroupFlags & ~0x1FFCU));
+
 // Projections are tagged with push = 0: a projection id stack entry *is* the
 // current projection, so each load overwrites rather than nests and no matching
 // pop is needed. Simple (whole-matrix) interpolation, because RT64 itself notes
@@ -1102,6 +1132,9 @@ struct RootScope {
 #if TOOIE_SKELETAL_POSE_ENABLED
     uint32_t model = 0;
     std::shared_ptr<const tooie::skeletal::Pose> pose;
+#endif
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie::skeletal::actors::Owner actor;
 #endif
 };
 
@@ -1322,6 +1355,9 @@ extern "C" void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx) {
 #if TOOIE_SKELETAL_POSE_ENABLED
     tooie::skeletal::guest::frameBegin();
 #endif
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie::skeletal::actors::frameBegin();
+#endif
     if (rt64_trace_enabled()) {
         std::fprintf(stderr,
                      "[rt64] frame=%u enables=%u roots=%u bones=%u "
@@ -1483,7 +1519,11 @@ extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
 
     const bool in_player = g_player_scope_depth != 0U;
     const bool in_sky = g_sky_draw_depth != 0U;
-    if (!in_player && !in_sky) {
+    bool in_actor = false;
+#if TOOIE_ACTOR_POSE_ENABLED
+    in_actor = bool(tooie::skeletal::actors::current(rdram));
+#endif
+    if (!in_player && !in_sky && !in_actor) {
         return;
     }
 
@@ -1522,7 +1562,13 @@ extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
         return;
     }
 
-    scope.transform_id = player_model_transform_id(g_player_key, model);
+    scope.transform_id = in_player ? player_model_transform_id(g_player_key, model) : 0;
+#if TOOIE_ACTOR_POSE_ENABLED
+    if (!in_player && in_actor) {
+        scope.actor = tooie::skeletal::actors::current(rdram);
+        scope.transform_id = tooie::skeletal::actors::registry().model(scope.actor, model);
+    }
+#endif
 #if TOOIE_SKELETAL_POSE_ENABLED
     scope.model = model;
 #endif
@@ -1532,6 +1578,13 @@ extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
 
     scope.pushed =
         append_matrix_group(rdram, cursor, scope.transform_id, kRootGroupFlags);
+#if TOOIE_ACTOR_POSE_ENABLED
+    if (scope.pushed && scope.actor) {
+        ++tooie::skeletal::actors::stats().roots;
+        if (!read_word(rdram, kAnimationMatrixList))
+            tooie::skeletal::actors::note(rdram, scope.actor, model, 0, "root-metadata-no-pose");
+    }
+#endif
     if (scope.pushed) {
         ++g_frame_root_groups;
     }
@@ -1581,7 +1634,11 @@ extern "C" void tooie_rt64_push_player_bone(uint8_t* rdram,
     if (rt64_disabled()) {
         return;
     }
-    if (g_player_scope_depth == 0U || g_root_scope_depth == 0U) {
+    bool in_actor = false;
+#if TOOIE_ACTOR_POSE_ENABLED
+    in_actor = bool(tooie::skeletal::actors::current(rdram));
+#endif
+    if ((!g_player_scope_depth && !in_actor) || g_root_scope_depth == 0U) {
         return;
     }
 
@@ -1617,13 +1674,29 @@ extern "C" void tooie_rt64_push_player_bone(uint8_t* rdram,
 #if TOOIE_SKELETAL_POSE_ENABLED
     const uint32_t group_command = in_rdram(cursor, sizeof(uint32_t)) ? read_word(rdram, cursor) : 0;
 #endif
-    g_bone_scopes[depth] = append_matrix_group(
-        rdram, cursor, root_scope.transform_id + 1U + static_cast<uint32_t>(bone),
-        kBoneGroupFlags);
+    uint32_t bone_flags = kBoneGroupFlags;
 #if TOOIE_SKELETAL_POSE_ENABLED
-    if (g_bone_scopes[depth]) {
+    if (g_player_scope_depth) {
         root_scope.pose = tooie::skeletal::guest::pose(rdram, read_word(rdram, kAnimationMatrixList),
             g_player_key, root_scope.model, root_scope.pose, g_player_actor);
+    }
+#if TOOIE_ACTOR_POSE_ENABLED
+    else if (root_scope.actor) {
+        root_scope.pose = tooie::skeletal::actors::pose(rdram, read_word(rdram, kAnimationMatrixList),
+            root_scope.model, root_scope.actor, root_scope.pose);
+        if (!root_scope.pose) {
+            // This actor/bone is identified, but its hierarchy is unsupported.
+            // Hold its submitted pose rather than blend independent world bones.
+            bone_flags = kCurrentBoneGroupFlags;
+        }
+    }
+#endif
+#endif
+    g_bone_scopes[depth] = append_matrix_group(
+        rdram, cursor, root_scope.transform_id + 1U + static_cast<uint32_t>(bone),
+        bone_flags);
+#if TOOIE_SKELETAL_POSE_ENABLED
+    if (g_bone_scopes[depth]) {
         const uint32_t token = tooie::skeletal::guest::publish(rdram, group_command,
             root_scope.transform_id + 1U + uint32_t(bone), unsigned(bone), root_scope.pose);
         write_word(rdram, group_command + 12, token);

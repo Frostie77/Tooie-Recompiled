@@ -31,7 +31,7 @@ inline void frameBegin() {
     uint64_t rejections = 0; for (auto n : s.rejected) rejections += n;
     if (s.buildersSeen || s.published || rejections) {
         char text[400]; std::snprintf(text, sizeof(text),
-            "frame=%llu builders=%llu published=%llu rejected_owner=%llu missing_builder=%llu schema_mismatch=%llu changed_builder_output=%llu invalid_copy=%llu npc_policy=unchanged",
+            "frame=%llu builders=%llu published=%llu rejected_owner=%llu missing_builder=%llu schema_mismatch=%llu changed_builder_output=%llu invalid_copy=%llu npc_policy=" TOOIE_ACTOR_POLICY,
             (unsigned long long)s.frame, (unsigned long long)s.buildersSeen, (unsigned long long)s.published,
             (unsigned long long)s.rejected[0], (unsigned long long)s.rejected[1], (unsigned long long)s.rejected[2],
             (unsigned long long)s.rejected[3], (unsigned long long)s.rejected[4]);
@@ -63,11 +63,19 @@ inline void end(const uint8_t *ram) {
     s.builders[output] = std::shared_ptr<const Builder>(std::move(b));
 }
 inline std::shared_ptr<const Pose> pose(const uint8_t *ram, uint32_t list, uint32_t player, uint32_t model,
-                                      std::shared_ptr<const Pose> cached = {}, uint32_t actor = 0) {
-    if (!player || player > 8 || !valid(model, 64) || !valid(list, 0x50)) return reject(0);
-    const uint32_t occupant = word(ram, 0x80135490U + (player - 1) * 4);
-    if (!valid(occupant, 4) || (actor && actor != occupant)) return reject(0);
-    actor = occupant;
+                                      std::shared_ptr<const Pose> cached = {}, uint32_t actor = 0, uint64_t actorGeneration = 0) {
+    if (!valid(model, 64) || !valid(list, 0x50)) return reject(0);
+    if (actorGeneration) {
+        // The actor bridge has already checked the constructor generation,
+        // active draw scope and exact marker -> movable-array relationship.
+        if (!TOOIE_ACTOR_POSE_ENABLED || player || !valid(actor, 0x2C)) return reject(0);
+    }
+    else {
+        if (!player || player > 8) return reject(0);
+        const uint32_t occupant = word(ram, 0x80135490U + (player - 1) * 4);
+        if (!valid(occupant, 4) || (actor && actor != occupant)) return reject(0);
+        actor = occupant;
+    }
     auto &s = source(); auto it = s.builders.find(list + 0x50); if (it == s.builders.end()) return reject(1);
     const auto &b = *it->second; const unsigned count = unsigned(b.bones.size());
     // B27E0 supplies model + model[0x18] as AE820's skeleton. Require the
@@ -82,13 +90,13 @@ inline std::shared_ptr<const Pose> pose(const uint8_t *ram, uint32_t list, uint3
     }
     Words header, root;
     if (!copy(ram, model, header) || !copy(ram, 0x8012CE58, root)) return reject(4);
-    if (cached && cached->frame == s.frame && cached->player == player && cached->actor == actor && cached->model == model &&
+    if (cached && cached->frame == s.frame && cached->player == player && cached->actor == actor && cached->actorGeneration == actorGeneration && cached->model == model &&
         cached->modelHeader == header && cached->root == root && cached->bones.size() == count) {
         bool equal = true;
         for (unsigned i = 0; i < count; ++i) equal &= cached->bones[i].bind == b.bones[i].bind && cached->bones[i].matrix == b.bones[i].matrix;
         if (equal) return cached;
     }
-    auto value = std::make_shared<Pose>(); value->player = player; value->actor = actor; value->model = model; value->frame = s.frame;
+    auto value = std::make_shared<Pose>(); value->player = player; value->actor = actor; value->actorGeneration = actorGeneration; value->model = model; value->frame = s.frame;
     value->modelHeader = header; value->root = root; value->bones = b.bones; return value;
 }
 // Called after the game's fixed matrix and complete group have been emitted.

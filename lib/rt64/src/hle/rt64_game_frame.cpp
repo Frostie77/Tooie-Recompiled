@@ -362,7 +362,11 @@ namespace RT64 {
                 }
                 else {
                     matchTransform(curWorkload, prevWorkload, curWorkloadMap, prevWorkloadMap, curIt->second, prevIt->second, modifiedBuffers);
-                    if (curIt->first >= 0x10000000U) {
+                    if (curIt->first >= 0x10000000U
+#if TOOIE_ACTOR_POSE_ENABLED
+                        && curIt->first < 0x10010000U
+#endif
+                    ) {
                         g_bt_rt64_matched_transforms.fetch_add(1, std::memory_order_relaxed);
                     }
                     else if ((curIt->first >= 0x00F20000U) && (curIt->first < 0x00F30000U)) {
