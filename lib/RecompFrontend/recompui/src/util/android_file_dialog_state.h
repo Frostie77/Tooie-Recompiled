@@ -80,4 +80,5 @@ class DialogRequests {
     }
 };
 void open(Callback callback);
+void open_mod(Callback callback);
 } // namespace recompui::file::android
