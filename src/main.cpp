@@ -44,6 +44,7 @@
 #endif
 
 #include "queued_audio.h"
+#include "mod_support.h"
 
 #include "recompui/recompui.h"
 #include "recompui/program_config.h"
@@ -618,6 +619,7 @@ static int tooie_recomp_main(int argc, char** argv) {
     configuration.error_handling_callbacks = error_handling_callbacks;
     configuration.threads_callbacks = threads_callbacks;
 
+    tooie::register_texture_pack_support();
     std::fprintf(stderr, "[tooie] step before start\n");
     tooie_android_debug_log("[tooie] step before start"); std::fflush(stderr);
     recomp::start(configuration);
