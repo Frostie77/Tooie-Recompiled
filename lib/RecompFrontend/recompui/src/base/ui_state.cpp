@@ -6,6 +6,7 @@
 #include <SDL2/SDL_video.h>
 #endif
 #include <chrono>
+#include <numeric>
 
 #include "rt64_render_hooks.h"
 #if defined(__ANDROID__)
@@ -1060,6 +1061,14 @@ void recompui::release_image(const std::string &src) {
     Rml::ReleaseTexture(src);
 }
 
+static void show_mod_installation_errors(const std::vector<std::string>& errors, const char* title) {
+    if (errors.empty()) return;
+    std::string message = std::accumulate(errors.begin(), errors.end(), std::string{}, [](const std::string& text, const std::string& error) {
+        return text.empty() ? error : text + '\n' + error;
+    });
+    recompui::open_info_prompt(title, message, "OK", {}, recompui::ButtonStyle::Tertiary);
+}
+
 void recompui::drop_files(const std::list<std::filesystem::path> &file_list) {
     // Prevent mod installation after the game has started.
     if (ultramodern::is_game_started()) {
@@ -1074,7 +1083,7 @@ void recompui::drop_files(const std::list<std::filesystem::path> &file_list) {
     // TODO: Needs a progress callback and a prompt for every mod that needs to be confirmed to be overwritten.
     // TODO: Run this on a background thread and use the callbacks to advance the state instead of blocking.
     ModInstaller::Result result;
-    ModInstaller::start_mod_installation(file_list, nullptr, result);
+    ModInstaller::start_mod_installation(file_list, nullptr, result, recompui::get_game_mod_id());
 
     recompui::close_prompt();
 
@@ -1134,7 +1143,7 @@ void recompui::drop_files(const std::list<std::filesystem::path> &file_list) {
         if (old_context != ContextId::null()) {
             old_context.open();
         }
-        // TODO show errors
+        show_mod_installation_errors(error_messages, "Error Installing Mods");
     }
     else {
         std::string prompt_text = std::accumulate(confirmations.begin(), confirmations.end(), std::string{},
@@ -1166,12 +1175,12 @@ void recompui::drop_files(const std::list<std::filesystem::path> &file_list) {
                 if (old_context != ContextId::null()) {
                     old_context.open();
                 }
-                // TODO show errors
+                show_mod_installation_errors(error_messages, "Error Installing Mods");
             },
             [result]() {
                 std::vector<std::string> error_messages{};
                 ModInstaller::cancel_mod_installation(result, error_messages);
-                // TODO show errors
+                show_mod_installation_errors(error_messages, "Error Cancelling Installation");
             },
             recompui::ButtonStyle::Success,
             recompui::ButtonStyle::Danger,
