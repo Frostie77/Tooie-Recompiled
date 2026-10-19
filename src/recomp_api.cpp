@@ -52,6 +52,7 @@ extern "C" {
 #include "correction_trace_guest.h"
 #include "skeletal_pose_guest.h"
 #include "actor_pose_guest.h"
+#include "guest_lookup.h"
 
 extern "C" void tooie_rt64_actor_scope(uint8_t* rdram, recomp_context* ctx, uint32_t stage) {
 #if TOOIE_ACTOR_POSE_ENABLED
@@ -717,17 +718,30 @@ bool lookup_trace_enabled() {
 }
 }
 
-extern "C" recomp_func_t* tooie_lookup_func(int32_t vram) {
+namespace {
+void trace_lookup(int32_t vram, uintptr_t caller) {
     if (lookup_trace_enabled()) {
         static const uintptr_t image_base = host_image_base();
-        const uintptr_t caller =
-            reinterpret_cast<uintptr_t>(__builtin_return_address(0));
         std::fprintf(stderr, "[lookup] 0x%08X from rva 0x%zX\n",
             static_cast<uint32_t>(vram), caller - image_base);
         std::fflush(stderr);
     }
+}
+}
+
+extern "C" recomp_func_t* tooie_lookup_func(int32_t vram) {
+    trace_lookup(vram, reinterpret_cast<uintptr_t>(__builtin_return_address(0)));
     return get_function(vram);
 }
+
+#if defined(__ANDROID__)
+extern "C" recomp_func_t* tooie_lookup_func_at(int32_t vram, uint8_t* rdram, recomp_context* ctx,
+                                              const char* caller, uint32_t source_line) {
+    trace_lookup(vram, reinterpret_cast<uintptr_t>(__builtin_return_address(0)));
+    const tooie::lookup::Context context{rdram, ctx, caller, source_line};
+    return get_function_with_context(vram, &context);
+}
+#endif
 
 // TEMPORARY diagnostic: periodic frame-pipeline heartbeat.
 //
@@ -2304,7 +2318,16 @@ extern "C" void recomp_syscall_handler(uint8_t* rdram, recomp_context* ctx,
         MEM_H(kOverlayRuntimeStateOffset, overlay_address) = 0;
     }
 
+#if defined(__ANDROID__)
+    // Preserve the decoded syscall provenance at the lookup itself. It is not
+    // retained across a successful call and needs no per-dispatch TLS or log.
+    const tooie::lookup::Context lookup{rdram, ctx, __func__, __LINE__,
+        uint32_t(instruction_vram), uint32_t(overlay_address), syscall_entry_offset, auto_unload};
+    trace_lookup(int32_t(target_address), reinterpret_cast<uintptr_t>(__builtin_return_address(0)));
+    get_function_with_context(int32_t(target_address), &lookup)(rdram, ctx);
+#else
     LOOKUP_FUNC(target_address)(rdram, ctx);
+#endif
 
     if (auto_unload) {
         const gpr return_v0 = ctx->r2;

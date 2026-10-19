@@ -1,4 +1,5 @@
 #include "../../../../src/guest_failure.h"
+#include "../../../../src/guest_lookup.h"
 #include "../../../../src/android_debug_log.h"
 #include <cstdio>
 #include <cstdlib>
@@ -506,7 +507,12 @@ void run_thread_function(uint8_t* rdram, uint64_t addr, uint64_t sp, uint64_t ar
         game_entry.thread_create_callback(rdram, &ctx);
     }
 
+#if defined(__ANDROID__)
+    const tooie::lookup::Context lookup{rdram, &ctx, __func__, __LINE__};
+    recomp_func_t* func = get_function_with_context(int32_t(addr), &lookup);
+#else
     recomp_func_t* func = get_function(addr);
+#endif
     func(rdram, &ctx);
 }
 

@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import tomllib
+from lookup_source import without_lookup_lines
 
 root, destination = map(Path, sys.argv[1:])
 functions = {}
@@ -55,5 +56,7 @@ for source in ["funcs_32.c", "funcs_35.c", "funcs_36.c"]:
                 "-I"+str(root/"include"), "-I"+str(root/"RecompiledFuncs"), "-I"+str(root/"lib/N64Recomp/include")]
         old = subprocess.check_output([*args, str(parent)], text=True)
         now = subprocess.check_output([*args, str(root/"RecompiledFuncs"/source)], text=True)
-        assert re.sub(r"\s+", " ", old) == re.sub(r"\s+", " ", now), source
+        # New diagnostic __LINE__ arguments reflect physical source positions,
+        # including disabled hook lines. Preserve every guest operation/target.
+        assert re.sub(r"\s+", " ", without_lookup_lines(old)) == re.sub(r"\s+", " ", without_lookup_lines(now)), source
 print("PASS: all three generated instruction bodies unchanged with actors OFF on Android and ON-but-compiled-out on desktop")

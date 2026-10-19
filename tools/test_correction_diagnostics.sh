@@ -7,6 +7,8 @@ python3 - "$r" "$t" <<'PY'
 from pathlib import Path
 import os,subprocess,sys,tomllib,re
 r,t=map(Path,sys.argv[1:]);source=(r/'lib/rt64/src/hle/rt64_rsp.cpp').read_text();methods=[]
+sys.path.insert(0,str(r/'tools'))
+from lookup_source import without_lookup_lines
 for name in ['RSP','reset','clearExtended','maskPhysicalAddress','fromSegmented','fromSegmentedMasked','matrixCommon','matrix','popMatrix']:
  needle='RSP::'+name+'(';start=source.rfind('\n',0,source.index(needle))+1;brace=source.index('{',start);depth=1;end=brace+1
  while depth:
@@ -55,7 +57,7 @@ for filename in ['funcs_0.c','funcs_1.c','funcs_24.c','funcs_25.c','funcs_30.c',
   a=subprocess.check_output([*args,str(parent)],text=True);b=subprocess.check_output([*args,str(r/'RecompiledFuncs'/filename)],text=True)
   # The only new production hook calls are checked separately; guest instruction bodies stay exact.
   b=re.sub(r'\btooie_rt64_skeleton_builder\(rdram, ctx, [12]U\);','',b)
-  assert re.sub(r'\s+',' ',a)==re.sub(r'\s+',' ',b),filename
+  assert re.sub(r'\s+',' ',without_lookup_lines(a))==re.sub(r'\s+',' ',without_lookup_lines(b)),filename
 print('PASS: all six generated C files retain exact parent instruction bodies with trace undefined/0 (preprocessed with current bridge declarations)')
 PY
 flags=(-std=c++20 -O1 -fwrapv -pthread -DHLSL_CPU -D__PRFCHWINTRIN_H -DNDEBUG -ffunction-sections -fdata-sections

@@ -97,12 +97,21 @@ void tooie_dump(uint8_t* rdram, uint32_t addr);
 // `Failed to find function at <vram>` can be attributed to the generated
 // function that made the call. Callers are symbolized against the linker map.
 recomp_func_t* tooie_lookup_func(int32_t vram);
+#if defined(__ANDROID__)
+// Static generated caller provenance is reliable even when guest $ra is stale.
+recomp_func_t* tooie_lookup_func_at(int32_t vram, uint8_t* rdram, recomp_context* ctx,
+                                    const char* caller, uint32_t source_line);
+#endif
 
 #ifdef __cplusplus
 }
 #endif
 
 #undef LOOKUP_FUNC
+#if defined(__ANDROID__)
+#define LOOKUP_FUNC(val) tooie_lookup_func_at((int32_t)(val), rdram, ctx, __func__, __LINE__)
+#else
 #define LOOKUP_FUNC(val) tooie_lookup_func((int32_t)(val))
+#endif
 
 #endif

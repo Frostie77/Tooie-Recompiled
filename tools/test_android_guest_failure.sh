@@ -8,7 +8,7 @@ import subprocess,sys
 r,t=map(Path,sys.argv[1:])
 for mode in ['current','parent']:
  methods=[]
- for file,names in [('overlays.cpp',['get_function','unload_overlays']),('recomp.cpp',['switch_error','do_break'])]:
+ for file,names in [('overlays.cpp',(['lookup_function'] if mode=='current' else [])+['get_function','unload_overlays']),('recomp.cpp',['switch_error','do_break'])]:
   path='lib/N64ModernRuntime/librecomp/src/'+file
   text=(r/path).read_text() if mode=='current' else subprocess.check_output(['git','-C',str(r),'show','01495d04a248bb263a0f0d18695c9cfc983cf2d5:'+path],text=True)
   for name in names:

@@ -1,6 +1,7 @@
 #include "recomp.h"
 #include "librecomp/sections.h"
 #include "guest_failure.h"
+#include "guest_lookup.h"
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -12,7 +13,8 @@
 // functions themselves are extracted without edits from production sources.
 struct LoadedSection {int32_t loaded_ram_addr;size_t section_table_index;};
 static std::vector<LoadedSection> loaded_sections;
-static struct {SectionTableEntry* code_sections;} sections_info;
+static struct {SectionTableEntry* code_sections;size_t num_code_sections;} sections_info;
+static struct {int* table=nullptr;size_t len=0;} overlays_info;
 static std::unordered_map<int32_t,recomp_func_t*> func_map;
 static int32_t addresses[1];
 int32_t* section_addresses=addresses;
@@ -28,7 +30,7 @@ int main(int argc,char** argv) {
     std::atexit(exitMarker);
     FuncEntry entry{mapped,0x20,4};SectionTableEntry section{};
     section.rom_addr=0x123400;section.ram_addr=0x80800000;section.size=0x1000;section.funcs=&entry;section.num_funcs=1;section.index=0;
-    sections_info.code_sections=&section;addresses[0]=int32_t(0x80801000);
+    sections_info.code_sections=&section;sections_info.num_code_sections=1;addresses[0]=int32_t(0x80801000);
     loaded_sections.push_back({int32_t(0x80801000),0});func_map[int32_t(0x80801020)]=mapped;
     if(!std::strcmp(argv[1],"good")) {
         if(get_function(int32_t(0x80801020))!=mapped)return 3;
