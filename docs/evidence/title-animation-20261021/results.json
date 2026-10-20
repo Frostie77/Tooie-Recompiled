@@ -1,0 +1,293 @@
+{
+  "scope": "Klungo repeated title movement in these two clips only",
+  "clips": {
+    "odin": {
+      "period_seconds": 1.5,
+      "autocorrelation": 0.9259145012390277,
+      "lag_frames": 45,
+      "resolution_seconds": 0.03333333333333333,
+      "parameter_checks": [
+        {
+          "red_ratio": 1.4,
+          "blue_ratio": 1.8,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9349487780841581,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.4,
+          "blue_ratio": 2.0,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9208700032134725,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.4,
+          "blue_ratio": 2.2,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.8954657219799063,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.55,
+          "blue_ratio": 1.8,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9415206440022226,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.55,
+          "blue_ratio": 2.0,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9259145012390277,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.55,
+          "blue_ratio": 2.2,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.8993393568616886,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.7,
+          "blue_ratio": 1.8,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.942408948008224,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.7,
+          "blue_ratio": 2.0,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9272267444215297,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.7,
+          "blue_ratio": 2.2,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9010605863444106,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.85,
+          "blue_ratio": 1.8,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9392479566356688,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.85,
+          "blue_ratio": 2.0,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9239353359387774,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.85,
+          "blue_ratio": 2.2,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.8970446476594613,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        }
+      ],
+      "resampled_signal_controls": [
+        {
+          "speed": 1.25,
+          "period_seconds": 1.2,
+          "autocorrelation": 0.9283781300087087,
+          "lag_frames": 36,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "speed": 1.5,
+          "period_seconds": 1.0,
+          "autocorrelation": 0.9257327241019819,
+          "lag_frames": 30,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "speed": 0.75,
+          "period_seconds": 2.0,
+          "autocorrelation": 0.9439487187185492,
+          "lag_frames": 60,
+          "resolution_seconds": 0.03333333333333333
+        }
+      ],
+      "rejected_controls": [
+        "constant",
+        "shuffled"
+      ],
+      "mouth_landmarks_seconds": [
+        1.5666666666666667,
+        3.1,
+        4.566666666666666,
+        6.066666666666666,
+        7.6,
+        9.066666666666666,
+        10.566666666666666,
+        12.066666666666666
+      ],
+      "input_sha256": "7ce6ac98407277b8f67797b9521341c3273f13b1df009daf9f25d1ba014461a6",
+      "frames": 406,
+      "fps": 30
+    },
+    "reference": {
+      "period_seconds": 1.5,
+      "autocorrelation": 0.9714166218810815,
+      "lag_frames": 45,
+      "resolution_seconds": 0.03333333333333333,
+      "parameter_checks": [
+        {
+          "red_ratio": 1.4,
+          "blue_ratio": 1.8,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9654459972645066,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.4,
+          "blue_ratio": 2.0,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9655766375318647,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.4,
+          "blue_ratio": 2.2,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9656925555493926,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.55,
+          "blue_ratio": 1.8,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9714214844273398,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.55,
+          "blue_ratio": 2.0,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9714166218810815,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.55,
+          "blue_ratio": 2.2,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9713989422488418,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.7,
+          "blue_ratio": 1.8,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9736023843940582,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.7,
+          "blue_ratio": 2.0,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9736112522191395,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.7,
+          "blue_ratio": 2.2,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9736103226375246,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.85,
+          "blue_ratio": 1.8,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9732540532466563,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.85,
+          "blue_ratio": 2.0,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9732829813571494,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "red_ratio": 1.85,
+          "blue_ratio": 2.2,
+          "period_seconds": 1.5,
+          "autocorrelation": 0.9733022602170345,
+          "lag_frames": 45,
+          "resolution_seconds": 0.03333333333333333
+        }
+      ],
+      "resampled_signal_controls": [
+        {
+          "speed": 1.25,
+          "period_seconds": 1.2,
+          "autocorrelation": 0.9756995724542927,
+          "lag_frames": 36,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "speed": 1.5,
+          "period_seconds": 1.0,
+          "autocorrelation": 0.9738337815867556,
+          "lag_frames": 30,
+          "resolution_seconds": 0.03333333333333333
+        },
+        {
+          "speed": 0.75,
+          "period_seconds": 2.0,
+          "autocorrelation": 0.9765157034963222,
+          "lag_frames": 60,
+          "resolution_seconds": 0.03333333333333333
+        }
+      ],
+      "rejected_controls": [
+        "constant",
+        "shuffled"
+      ],
+      "mouth_landmarks_seconds": [
+        1.6,
+        3.1,
+        4.566666666666666,
+        6.066666666666666,
+        7.566666666666666,
+        9.1,
+        10.6,
+        12.1
+      ],
+      "input_sha256": "d8a67dd910da881dd60db7a0cec2de1587eeea026da626c8b714f89e6ed687c9",
+      "frames": 423,
+      "fps": 30
+    }
+  }
+}
