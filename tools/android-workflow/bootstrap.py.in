@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Install the pinned Tooie workflow in Ubuntu, then optionally build or test."""
+import argparse
+import os
+from pathlib import Path
+import shlex
+import subprocess
+import sys
+
+REVISION = '@@RUNNER_COMMIT@@'
+REPOSITORY = 'https://github.com/Frostie77/Tooie-Recompiled.git'
+BRANCH = 'tools/android-workflow-20261020'
+
+
+def run(*args, capture=False):
+    return subprocess.run([str(x) for x in args], check=True, stdin=subprocess.DEVNULL,
+                          capture_output=capture, text=True, timeout=300,
+                          env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'}).stdout
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('action', nargs='?', choices=('setup', 'test', 'build'), default='setup')
+    args = parser.parse_args()
+    if sys.platform != 'linux' or sys.version_info < (3, 11):
+        raise RuntimeError('Run with Python 3.11+ inside Ubuntu/WSL.')
+    root = Path.home() / 'projects/tooie-tools'
+    checkout = root / 'workflow-runner/repository'
+    wrapper = root / 'tooie'
+    root.mkdir(parents=True, exist_ok=True)
+    if not checkout.exists():
+        checkout.parent.mkdir(parents=True, exist_ok=True)
+        run('git', 'clone', '--no-checkout', '--filter=blob:none', '--single-branch',
+            '--no-tags', '--branch', BRANCH, REPOSITORY, checkout)
+        run('git', '-C', checkout, 'sparse-checkout', 'set', 'tools/android-workflow')
+        run('git', '-C', checkout, 'checkout', '--detach', REVISION)
+    if checkout.is_symlink():
+        raise RuntimeError('Unexpected workflow checkout path; existing files retained.')
+    origin = run('git', '-C', checkout, 'remote', 'get-url', 'origin', capture=True).strip()
+    if origin != REPOSITORY:
+        raise RuntimeError('Workflow checkout remote differs; existing files retained.')
+    if run('git', '-C', checkout, 'status', '--porcelain', capture=True).strip():
+        raise RuntimeError('Workflow checkout has local changes; existing files retained.')
+    # A later explicit workflow update may have fast-forwarded beyond this installer.
+    run('git', '-C', checkout, 'merge-base', '--is-ancestor', REVISION, 'HEAD')
+    runner = checkout / 'tools/android-workflow/tooie.py'
+    if not runner.is_file():
+        raise RuntimeError('Pinned workflow runner is missing.')
+    content = '#!/usr/bin/env bash\nexec python3 ' + shlex.quote(str(runner)) + ' "$@"\n'
+    if os.path.lexists(wrapper):
+        if wrapper.is_symlink() or not wrapper.is_file() or wrapper.read_text() != content:
+            raise RuntimeError('The stable tooie command already contains other content; preserved.')
+    else:
+        with wrapper.open('x') as stream:
+            stream.write(content)
+    wrapper.chmod(0o755)
+    print('Tooie workflow ready. Stable commands:\n'
+          '~/projects/tooie-tools/tooie build\n'
+          '~/projects/tooie-tools/tooie test\n'
+          '~/projects/tooie-tools/tooie package EVIDENCE.zip', flush=True)
+    if args.action != 'setup':
+        os.execv(sys.executable, [sys.executable, '-u', str(runner), args.action])
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+        print('STOP: ' + str(error) + '\nExisting builds, evidence and app data are retained.',
+              file=sys.stderr, flush=True)
+        raise SystemExit(1)
