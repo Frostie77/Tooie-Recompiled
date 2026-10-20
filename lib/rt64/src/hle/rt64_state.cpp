@@ -1,4 +1,5 @@
 #include "../../../../src/presentation_input_trace.h"
+#include "../../../../src/full_sync_trace.h"
 //
 // RT64
 //
@@ -791,6 +792,9 @@ namespace RT64 {
     }
 
     void State::fullSync() {
+#if TOOIE_TIMING_TRACE_ENABLED
+        tooie::diagnostics::FullSyncTrace fullSyncTrace;
+#endif
         flush();
         submitFramebufferPair(FramebufferPair::FlushReason::ProcessDisplayListsEnd);
 
@@ -1786,8 +1790,14 @@ namespace RT64 {
         }
         
         // Advance the workload queue at the end of a full synchronization.
+#if TOOIE_TIMING_TRACE_ENABLED
+        fullSyncTrace.prepared();
+#endif
         advanceWorkload(workload, false);
         ext.workloadQueue->advanceToNextWorkload();
+#if TOOIE_TIMING_TRACE_ENABLED
+        fullSyncTrace.advanced(workloadId, presentId);
+#endif
 
         // Make sure the profiler starts after the workload is advanced to ignore any waiting time.
         dlCpuProfiler.reset();
@@ -1795,6 +1805,9 @@ namespace RT64 {
         
         // Submit a presentation event instantly if applicable.
         const bool presentEarly = !ext.presentQueue->viewRDRAM && (ext.enhancementConfig->presentation.mode == EnhancementConfiguration::Presentation::Mode::PresentEarly);
+#if TOOIE_TIMING_TRACE_ENABLED
+        fullSyncTrace.selection(presentEarly, workload.fbPairCount, uint32_t(viHistory.history.size()));
+#endif
         if (presentEarly && (workload.fbPairCount > 0)) {
             thread_local std::unordered_set<uint32_t> colorImageAddressSet;
             colorImageAddressSet.clear();
@@ -1814,6 +1827,9 @@ namespace RT64 {
                     continue;
                 }
 
+#if TOOIE_TIMING_TRACE_ENABLED
+                fullSyncTrace.candidate();
+#endif
                 for (size_t h = 0; (h < viHistory.history.size()) && !viPresented; h++) {
                     const VIHistory::Present &entry = viHistory.history[h];
                     const uint32_t fbAddress = entry.vi.fbAddress();
@@ -1825,6 +1841,9 @@ namespace RT64 {
                     {
                         updateScreen(entry.vi, true);
                         viPresented = true;
+#if TOOIE_TIMING_TRACE_ENABLED
+                        fullSyncTrace.published();
+#endif
                     }
                 }
             }

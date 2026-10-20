@@ -12,6 +12,7 @@ void gsattract_entrypoint_1(uint8_t*,recomp_context*);
 #define B(a) MEM_B(0,(int32_t)(a))
 #define BU(a) MEM_BU(0,(int32_t)(a))
 #define CHECK(x) do{if(!(x)){fprintf(stderr,"captured clock failure: line=%d %s\n",__LINE__,#x);exit(1);}}while(0)
+unsigned captured_clock_site;
 static float value(uint32_t bits) {float f;memcpy(&f,&bits,4);return f;}
 static uint32_t bits(float f) {uint32_t u;memcpy(&u,&f,4);return u;}
 static void setup(uint8_t *rdram,recomp_context *ctx) {
@@ -36,7 +37,8 @@ int main(void) {
         B(record)=12;B(record+1)=-17;H(record+2)=0;B(record+4)=c->span;B(record+5)=0x7F;
         W(0x8007B2D0)=1;W(0x8007B2DC)=bits(100);W(0x8007B2E0)=0;
         func_800A7D30(rdram,&ctx); // Actual ordinary elapsed-delta predecessor.
-        func_8001608C(rdram,&ctx); // Whole real main input handler, not a manual span override.
+        captured_clock_site=c->site;
+        func_8001608C(rdram,&ctx); // Whole real input handler at the captured caller, not a manual override.
         CHECK(W(0x8012C764)==c->applied && (uint32_t)W(0x8012C760)==c->bits);
         CHECK(H(0x80078F64)==c->elapsed && W(0x8007913C)==2);
         if(c->mode) {
@@ -50,7 +52,7 @@ int main(void) {
         const float expected=(float)c->applied*value(0x3C888889);
         CHECK((uint32_t)W(0x80135474)==bits(expected) && !transition_events);
     }
-    CHECK(ordinary==977 && records==104 && ends==24);
+    CHECK(ordinary==CAPTURED_ORDINARY && records==CAPTURED_RECORDS && ends==CAPTURED_ENDS);
     // Real transition lookup/gate and actual attract handler: a blocked gate
     // freezes its timer, then unblocking permits the existing span increment.
     setup(rdram,&ctx);W(0x8012C764)=3;BU(0x8012AB54)=1;W(0x8012AB40)=0x80610000;W(0x80610000)=4;
@@ -61,5 +63,5 @@ int main(void) {
     CHECK(transition_events==1 && last_transition==2);
     gsattract_entrypoint_0(rdram,&ctx);CHECK(W(0x80135474)==0);
     free(rdram);
-    puts("PASS: 977 ordinary, 104 successful replay and 24 terminal sampled records through generated input/game-timer/whole attract handler; gate/threshold/reset; constructed payloads/peripherals, no wall-cadence correction");
+    printf("PASS: %u ordinary, %u successful replay and %u terminal sampled records through generated input/game-timer/whole attract handler; gate/threshold/reset; constructed payloads/peripherals, no wall-cadence correction\n",ordinary,records,ends);
 }

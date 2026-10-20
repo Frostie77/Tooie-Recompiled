@@ -32,6 +32,8 @@ for profile in ('current','parent','bad-frame','bad-timer'):
  block=main[a:b]
  assert 'after_4:' in block
  (t/(profile+'-input.inc')).write_text(block)
+ prime=sources[2];a=prime.index('    after_2:',prime.index('RECOMP_FUNC void func_800A9924('));a=prime.index('\n',a)+1;b=prime.index('    // 0x800A9988:',a)
+ (t/(profile+'-prime.inc')).write_text(prime[a:b])
 # Compare complete modified TUs, with current bridge declarations in both
 # sources. Even the timing-only profile may add only observer calls.
 import os
@@ -47,7 +49,7 @@ print('PASS: complete generated instruction bodies equal exact parent across def
 s=(r/'src/recomp_api.cpp').read_text();a=s.index('extern "C" void tooie_correction_probe(');b=s.index('\n}\n',a)+3
 (t/'bridge.cpp').write_text('#include "tooie_recomp.h"\n#include "correction_trace_guest.h"\n'+s[a:b])
 PY
-python3 "$r/tests/correction_clock_records.py" "$r/tests/fixtures/odin-step86-clocks.txt" "$t/captured_clocks.h"
+python3 "$r/tests/correction_clock_records.py" "${TOOIE_CAPTURED_CLOCK_FIXTURE:-$r/tests/fixtures/odin-step86-clocks.txt}" "$t/captured_clocks.h"
 flags=(-O1 -g -fwrapv -fsanitize=address,undefined -fno-omit-frame-pointer -I"$r/include" -I"$r/src" -I"$r/tests" -I"$t" -I"$r/RecompiledFuncs" -I"$r/lib/N64Recomp/include")
 export ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1
 for profile in android-default android-zero android-timing android-legacy desktop-timing parent bad-frame bad-timer;do
@@ -60,6 +62,7 @@ for profile in android-default android-zero android-timing android-legacy deskto
  esac
  case "$profile" in parent|bad-frame|bad-timer) source=$profile;;esac
  cp "$t/$source-input.inc" "$t/input-call.inc"
+ cp "$t/$source-prime.inc" "$t/prime-call.inc"
  "${CC:-gcc}" -std=c11 "${flags[@]}" "${defs[@]}" -c "$t/$source.c" -o "$t/generated.o"
  "${CC:-gcc}" -std=c11 "${flags[@]}" "${defs[@]}" -Dmain=retained_clock_main -Dfunc_8001608C=timed_input -c "$r/tests/demo_replay_captured.c" -o "$t/captured.o"
  "${CC:-gcc}" -std=c11 "${flags[@]}" "${defs[@]}" -c "$r/tests/demo_replay_adapters.c" -o "$t/adapters.o"

@@ -63,7 +63,7 @@ This is the required protocol for subsequent collectors. The already-consumed St
 
 ## Current project state
 
-The latest supplied hardware evidence is Step 111's integration
+The latest supplied manual gameplay evidence is Step 111's integration
 `b3401ddb72942f99958828ffc27723fb049d50bd`, engineering parent
 `d40c4e150d2372fbdfe82681078575b4dd47fd2c`. Three completed windows total 20
 minutes with original PID 29701 retained. The visited first-person entrance
@@ -74,11 +74,18 @@ the full game. The approved Mods/artwork integration, round BT/Jiggy icon and
 TOOIE/RECOMPILED launcher title remain present in that APK; actual mod effects
 and persistence were not exercised by this capture.
 
-Intro/automatic-demo speed remains reported too fast, and an 803 ms presentation
-gap has an overlapping 795 ms outer queue-input wait of unresolved origin.
-Two nonfatal OpenSL ES mutex warnings remain. The
-[Step 111 investigation](android-step111-investigation.md) records verified
-provenance, clock-consumer tests, new opt-in attribution and remaining limits.
+Step 115 subsequently captured the timing-only integration
+`7a4a8432bb7fd108c01bdd9d20da44ee1ca81e16` (engineering parent `389c495`):
+a completed five-minute intro/demo observation retained PID 15060, with no fresh
+fatal failure and no manual gameplay window. The user still reports fast demos.
+Ordinary clock input/wall is approximately 1.000; replay varies, reaching 1.384
+for the selected map windows. Intended cadence remains unverified. An 855.894 ms
+publication gap overlaps an 824.899 ms queue-condition wait that ends 16 us
+after publication; it is localized to input availability, with the upstream
+producer/loading cause still unresolved. A nonfatal OpenSL mutex warning remains
+separate from unverified audio quality. The
+[Step 115 investigation](android-step115-investigation.md) records evidence,
+actual-consumer regression inputs, producer attribution and remaining limits.
 No cadence or rendering-policy correction is claimed. Saving/loading, broader
 world/progression, mod execution, lifecycle combinations, audio/visual quality,
 signing/licensing, updates and release acceptance still need their own evidence.
