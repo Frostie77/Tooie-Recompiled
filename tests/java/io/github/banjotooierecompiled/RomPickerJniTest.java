@@ -7,6 +7,9 @@ public final class RomPickerJniTest {
     static { System.loadLibrary("tooie_picker_test"); }
     static native void init(Object activity, String directory);
     static native void begin();
+    static native void beginMod();
+    static native int modCalls();
+    static native boolean modSuccess();
     static native int poll();
     static native int calls();
     static native boolean success();
@@ -101,8 +104,58 @@ public final class RomPickerJniTest {
         BanjoTooieSDLActivity.nativePresentationLifecycle(2);
         RomImporterTest.require(poll() == 1 && !success() && calls() == priorCalls + 2);
         System.out.println("PASS: picker selection/cancellation survive Activity pause and surface recreation; callback waits for resumed, focused SDL surface");
+        int romOpens = activity.opens;
+        beginMod();
+        RomImporterTest.require(activity.modOpens == 1 && activity.modRequest > 0 && activity.opens == romOpens);
+        byte[] zip = ModImporterTest.archive();
+        File modsDirectory = new File(data, "mod-import");
+        ModImporter.Result mod = ModImporter.select(() -> new ByteArrayInputStream(zip), "test.nrm", modsDirectory, () -> false);
+        RomImporterTest.require(mod.status == 0);
+        long modToken = activity.modRequest;
+        Thread modWorker = new Thread(() -> {
+            BanjoTooieSDLActivity.nativeModFileDialogResult(modToken, 0, mod.file.getAbsolutePath(), null);
+            BanjoTooieSDLActivity.nativeModFileDialogResult(modToken, 0, mod.file.getAbsolutePath(), null);
+        });
+        modWorker.start(); modWorker.join();
+        RomImporterTest.require(modCalls() == 0 && mod.file.exists());
+        RomImporterTest.require(poll() == 1 && modCalls() == 1 && modSuccess() && !mod.file.exists() && !mod.file.getParentFile().exists());
+        beginMod();
+        int errorCount = errors();
+        BanjoTooieSDLActivity.nativeModFileDialogResult(activity.modRequest, 1, null, null);
+        RomImporterTest.require(poll() == 1 && modCalls() == 2 && !modSuccess() && errors() == errorCount);
+        beginMod();
+        BanjoTooieSDLActivity.nativeModFileDialogResult(activity.modRequest, 0, protectedFile.getAbsolutePath(), null);
+        RomImporterTest.require(poll() == 1 && !modSuccess() && protectedFile.exists() && errors() == errorCount + 1);
+        beginMod();
+        ModImporter.Result pausedMod = ModImporter.select(() -> new ByteArrayInputStream(zip), "paused.rtz", modsDirectory, () -> false);
+        BanjoTooieSDLActivity.nativePresentationLifecycle(1);
+        BanjoTooieSDLActivity.nativeModFileDialogResult(activity.modRequest, 0, pausedMod.file.getAbsolutePath(), null);
+        int beforeMods = modCalls();
+        RomImporterTest.require(poll() == 0 && pausedMod.file.exists());
+        BanjoTooieSDLActivity.nativePresentationLifecycle(2);
+        RomImporterTest.require(poll() == 1 && modCalls() == beforeMods + 1 && modSuccess() && !pausedMod.file.exists());
+        beginMod();
+        long lateToken = activity.modRequest;
+        ModImporter.Result lateMod = ModImporter.select(() -> new ByteArrayInputStream(zip), "late.nrm", modsDirectory, () -> false);
+        beforeMods = modCalls();
         stop();
-        protectedFile.delete(); new File(data, "rom-import").delete(); data.delete();
+        BanjoTooieSDLActivity.nativeModFileDialogResult(lateToken, 0, lateMod.file.getAbsolutePath(), null);
+        RomImporterTest.require(poll() == 0 && modCalls() == beforeMods && !lateMod.file.exists());
+        resume();
+        beginMod();
+        RomImporterTest.require(activity.modRequest > lateToken);
+        int modOpens = activity.modOpens;
+        beginMod(); // A second request cannot reopen the Activity picker.
+        RomImporterTest.require(activity.modOpens == modOpens);
+        BanjoTooieSDLActivity.nativeModFileDialogResult(activity.modRequest, 1, null, null);
+        RomImporterTest.require(poll() == 1 && modCalls() == beforeMods + 2);
+        activity.fail = true;
+        beginMod();
+        RomImporterTest.require(poll() == 1 && !modSuccess());
+        activity.fail = false;
+        System.out.println("PASS: actual mod multi-file API/JNI route, one selected archive, import lifetime/cleanup, duplicates/stale/busy results, pause/resume, protected paths and Java exceptions");
+        stop();
+        protectedFile.delete(); new File(data, "rom-import").delete(); modsDirectory.delete(); data.delete();
         System.out.println("PASS: real JVM/production JNI bridge, queued UI-thread callback, readable import lifetime, cancellation/errors, duplicate/stale results, teardown, retries/ref cleanup");
     }
 }

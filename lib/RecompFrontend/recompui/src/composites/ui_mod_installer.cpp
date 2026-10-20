@@ -2,6 +2,7 @@
 
 #include "librecomp/mods.hpp"
 
+#if !defined(__ANDROID__)
 namespace recompui {
     static const std::string ManifestFilename = "mod.json";
     static const char *TextureDatabaseFilename = "rt64.json";
@@ -302,7 +303,7 @@ namespace recompui {
         std::filesystem::remove(old_path, ec);
     };
 
-    void ModInstaller::start_mod_installation(const std::list<std::filesystem::path> &file_paths, std::function<void(std::filesystem::path, size_t, size_t)> progress_callback, Result &result) {
+    void ModInstaller::start_mod_installation(const std::list<std::filesystem::path> &file_paths, std::function<void(std::filesystem::path, size_t, size_t)> progress_callback, Result &result, const std::string&) {
         result = Result();
 
         for (const std::filesystem::path &path : file_paths) {
@@ -360,3 +361,4 @@ namespace recompui {
         }
     }
 };
+#endif
