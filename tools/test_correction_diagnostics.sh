@@ -38,14 +38,14 @@ for h in config['patches']['hook']:
   if match:found.append(match.group())
  assert len(found)==1,name
  call=re.search(r'tooie_correction_probe\([^;]+;',h['text']).group()
- assert call in found[0] and '#if TOOIE_CORRECTION_TRACE_ENABLED' in h['text'],name
+ assert call in found[0] and any('#if '+guard in h['text'] for guard in ('TOOIE_CORRECTION_TRACE_ENABLED','TOOIE_GUEST_CLOCK_TRACE_ENABLED','TOOIE_TIMING_TRACE_ENABLED')),name
  after=found[0].split(call,1)[1]
  after=re.sub(r'#if TOOIE_SKELETAL_POSE_ENABLED\n\s*tooie_rt64_skeleton_builder\([^;]+;\n#endif\n','',after)
  assert after.lstrip().startswith('#endif\n    // 0x%08X:'%address),name
-assert count==14,count
+assert count==16,count
 api=(r/'src/recomp_api.cpp').read_text()
 for event in [0,3,4,5]:assert re.search(r'guest::probe\(rdram, ctx, '+str(event)+r',',api)
-print('PASS: config/generated hook parity in exact core/overlay function scopes; 14 new hooks plus existing frame/root/bone boundaries')
+print('PASS: config/generated hook parity in exact core/overlay function scopes; 16 observer hooks plus existing frame/root/bone boundaries')
 # Guard against silently changing ordinary generated game work. Includes use
 # the current bridge declarations; compare actual preprocessed instruction
 # bodies after removing whitespace, with the observer undefined and zero.

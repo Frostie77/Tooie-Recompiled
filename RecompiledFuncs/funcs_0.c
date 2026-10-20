@@ -5022,7 +5022,7 @@ L_8001243C:
 
     after_3:
 L_80012458:
-    #if TOOIE_CORRECTION_TRACE_ENABLED
+    #if TOOIE_GUEST_CLOCK_TRACE_ENABLED
     tooie_correction_probe(rdram, ctx, 10U, 0x80012458U);
 #endif
     // 0x80012458: jal         0x8001608C
@@ -5033,7 +5033,7 @@ L_80012458:
     // 0x8001245C: nop
 
     after_4:
-    #if TOOIE_CORRECTION_TRACE_ENABLED
+    #if TOOIE_GUEST_CLOCK_TRACE_ENABLED
     tooie_correction_probe(rdram, ctx, 12U, 0x80012458U);
 #endif
     // 0x80012460: jal         0x80018444
@@ -13405,6 +13405,9 @@ RECOMP_FUNC void func_80015190(uint8_t* rdram, recomp_context* ctx) {
 RECOMP_FUNC void func_800151BC(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+#if TOOIE_TIMING_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 16U, 0x800151BCU);
+#endif
     // 0x800151BC: addiu       $sp, $sp, -0x20
     ctx->r29 = ADD32(ctx->r29, -0X20);
     // 0x800151C0: sw          $s0, 0x14($sp)
@@ -13881,6 +13884,9 @@ L_800153F4:
     // 0x800153F8: addiu       $a0, $zero, 0xA
     ctx->r4 = ADD32(0, 0XA);
     after_25:
+#if TOOIE_TIMING_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 17U, 0x800153FCU);
+#endif
     // 0x800153FC: lw          $ra, 0x1C($sp)
     ctx->r31 = MEM_W(ctx->r29, 0X1C);
     // 0x80015400: lw          $s0, 0x14($sp)
@@ -16196,7 +16202,7 @@ RECOMP_FUNC void func_8001608C(uint8_t* rdram, recomp_context* ctx) {
     // 0x800160F4: addiu       $a1, $sp, 0x50
     ctx->r5 = ADD32(ctx->r29, 0X50);
     after_3:
-    #if TOOIE_CORRECTION_TRACE_ENABLED
+    #if TOOIE_GUEST_CLOCK_TRACE_ENABLED
     tooie_correction_probe(rdram, ctx, 11U, 0x00000000U);
 #endif
     // 0x800160F8: bne         $v0, $zero, L_80016110

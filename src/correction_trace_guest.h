@@ -1,15 +1,10 @@
 #pragma once
 #include "correction_trace.h"
+#include "guest_clock_trace.h"
 #if TOOIE_CORRECTION_TRACE_ENABLED
 #include <algorithm>
 #include <cmath>
 namespace tooie::correction::guest {
-// The caller owns guest RAM at every read. All retained values are copies.
-inline bool valid(uint32_t p,size_t n) {return p>=0x80000000U && p<=0x80800000U && n<=0x80800000U-p;}
-inline uint32_t word(uint8_t *rdram,uint32_t p) {uint32_t v=0;if(valid(p,4) && !(p&3)) std::memcpy(&v,rdram+(p&0x7FFFFF),4);return v;}
-inline uint16_t half(uint8_t *rdram,uint32_t p) {uint16_t v=0;if(valid(p,2) && !(p&1)) std::memcpy(&v,rdram+((p&0x7FFFFF)^2),2);return v;}
-inline uint8_t byte(uint8_t *rdram,uint32_t p) {return valid(p,1)?rdram[(p&0x7FFFFF)^3]:0;}
-inline float real(uint32_t v) {float f;std::memcpy(&f,&v,4);return f;}
 template<size_t N> bool copy(uint8_t *rdram,uint32_t p,std::array<uint32_t,N> &out) {
     if(!valid(p,N*4) || (p&3)) return false;
     std::memcpy(out.data(),rdram+(p&0x7FFFFF),N*4);return true;
@@ -175,75 +170,6 @@ inline void root(uint8_t *ram,recomp_context *ctx,unsigned player,uint64_t now) 
     std::array<uint32_t,16> data;if(copy(ram,m.model,data)) words("model-header",m.id,m.model,data.data(),16);
     if(copy(ram,0x8012CE58,data)) words("root-float",m.id,0x8012CE58,data.data(),16);
     bind(ram,word(ram,uint32_t(ctx->r29)+0xF8),m,-2,0,now);
-}
-struct ClockRead {
-    uint32_t data=0,index=0,count=0,mode=0,map=0,frame=0;
-    int32_t elapsed=0,applied=0;
-    uint32_t dt=0,divisor=0;
-};
-inline ClockRead clockRead(uint8_t *ram) {
-    return {word(ram,0x8012D5B0),word(ram,0x8012D5B8),word(ram,0x8012D5BC),byte(ram,0x80127760),half(ram,0x80127766),word(ram,0x800459C8),
-        int16_t(half(ram,0x80078F64)),int32_t(word(ram,0x8012C764)),word(ram,0x8012C760),word(ram,0x8007913C)};
-}
-struct Clocks {
-    struct Input {ClockRead before;uint32_t site=0,recorded=0;int result=-1;};
-    struct Bucket {uint64_t events=0,records=0,recorded=0,ends=0,resets=0,advances=0,transitions=0;int64_t elapsed=0,applied=0;double dt=0;};
-    std::array<Input,8> stack{};unsigned depth=0;std::array<Bucket,12> buckets{};
-    uint64_t start=0,last=0,timers=0,attractCalls=0,attractResets=0,previousLogUs=0;double timerDt=0,attractDt=0;unsigned details=0,exceptionDetails=0,invalid=0;
-};
-inline Clocks &clocks() {static thread_local Clocks value;return value;}
-inline bool romManifest(const uint8_t *rom,size_t size) {
-    if(!rom || size<64) return false;
-    char text[300];std::snprintf(text,sizeof(text),
-        "rom_bytes=%llu header_magic=%02X%02X%02X%02X crc1=%02X%02X%02X%02X crc2=%02X%02X%02X%02X country=%02X revision=%02X configured_usa_hash=00F70DE5F2D70EA2",
-        (unsigned long long)size,rom[0],rom[1],rom[2],rom[3],rom[16],rom[17],rom[18],rom[19],rom[20],rom[21],rom[22],rom[23],rom[62],rom[63]);
-    diagnostics::log("correction-rom",text);return true;
-}
-inline void clockEvent(uint8_t *ram,recomp_context *ctx,unsigned event,uint32_t site,uint64_t now) {
-    auto &c=clocks();if(!c.start) c.start=now;
-    const auto r=clockRead(ram);
-    if(event==10) {const unsigned i=c.depth++;if(i<c.stack.size()) c.stack[i]={r,site,0,-1};else ++c.invalid;return;}
-    if(event==11) {
-        if(c.depth && c.depth<=c.stack.size()) {auto &p=c.stack[c.depth-1];p.result=uint32_t(ctx->r2)!=0;p.recorded=word(ram,uint32_t(ctx->r29)+0x50);}
-        else ++c.invalid;
-        return;
-    }
-    if(event==12) {
-        if(!c.depth) {++c.invalid;return;}
-        unsigned i=--c.depth;if(i>=c.stack.size()) return;const auto p=c.stack[i];
-        const unsigned caller=p.site==0x80012458?0:p.site==0x800A76D4?1:2;
-        auto &b=c.buckets[caller*4+std::min(p.before.mode,3U)];++b.events;
-        b.records+=p.result==1;b.ends+=p.result==0;b.recorded+=p.result==1?p.recorded:0;b.elapsed+=p.before.elapsed;b.applied+=r.applied;
-        const float dt=real(r.dt);if(std::isfinite(dt)) b.dt+=dt;else ++c.invalid;
-        const bool reset=r.index<p.before.index || r.data!=p.before.data || r.count!=p.before.count;b.resets+=reset;
-        b.advances+=!reset?r.index-p.before.index:0;
-        const bool transition=p.before.mode!=r.mode || p.before.map!=r.map;b.transitions+=transition;
-        const bool unusual=reset || transition || p.result==0;
-        if(unusual ? c.exceptionDetails++<8 : c.details++<8) {
-            char text[1050];std::snprintf(text,sizeof(text),"site=0x%X frame=%u mode=%u/%u map=%u/%u data=0x%X/0x%X index=%u/%u count=%u/%u replay_result=%d recorded_span=%u elapsed_span=%d applied_span=%d delta_bits=%08X delta=%.9g divisor=%u reset=%u",
-                p.site,r.frame,p.before.mode,r.mode,p.before.map,r.map,p.before.data,r.data,p.before.index,r.index,p.before.count,r.count,p.result,p.recorded,p.before.elapsed,r.applied,r.dt,double(dt),r.divisor,unsigned(reset));
-            diagnostics::log("correction-clock-event",text);
-        }
-    }
-    if(event==13) {++c.timers;const float dt=real(r.dt);if(std::isfinite(dt)) c.timerDt+=dt;else ++c.invalid;}
-    if(event==14) {
-        ++c.attractCalls;const float previous=real(word(ram,uint32_t(ctx->r29)+0x1C)),current=real(word(ram,0x80135474));
-        if(std::isfinite(previous) && std::isfinite(current)) c.attractDt+=double(current)-previous;else ++c.invalid;
-    }
-    if(event==15) ++c.attractResets;
-    if(c.last && now>=c.last && now-c.last<PeriodUs) return;
-    const auto logStart=diagnostics::monotonicUs();
-    char text[1100];std::snprintf(text,sizeof(text),"window_start_us=%llu window_end_us=%llu elapsed_us=%llu timers=%llu timer_delta_sum=%.12g attract_calls=%llu attract_delta_sum=%.12g attract_reset_calls=%llu previous_log_us=%llu invalid=%u frame=%u mode=%u map=%u constants_bits=%08X/%08X/%08X/%08X tv_type=%u units=counts/VI/guest_seconds",
-        (unsigned long long)c.start,(unsigned long long)now,(unsigned long long)(now-c.start),(unsigned long long)c.timers,c.timerDt,(unsigned long long)c.attractCalls,c.attractDt,(unsigned long long)c.attractResets,(unsigned long long)c.previousLogUs,c.invalid,r.frame,r.mode,r.map,
-        word(ram,0x80125D10),word(ram,0x80125D14),word(ram,0x80125D18),word(ram,0x80125D1C),word(ram,0x80000300));
-    diagnostics::log("correction-clock",text);
-    for(unsigned i=0;i<c.buckets.size();++i) {const auto &b=c.buckets[i];if(!b.events) continue;
-        std::snprintf(text,sizeof(text),"window_end_us=%llu caller=%u mode_bucket=%u events=%llu records=%llu index_advances=%llu recorded_span_sum=%llu elapsed_span_sum=%lld applied_span_sum=%lld delta_sum=%.12g ends=%llu resets=%llu transitions=%llu",
-            (unsigned long long)now,i/4,i%4,(unsigned long long)b.events,(unsigned long long)b.records,(unsigned long long)b.advances,(unsigned long long)b.recorded,(long long)b.elapsed,(long long)b.applied,b.dt,(unsigned long long)b.ends,(unsigned long long)b.resets,(unsigned long long)b.transitions);
-        diagnostics::log("correction-clock-bucket",text);
-    }
-    c.buckets={};c.start=c.last=now;c.timers=c.attractCalls=c.attractResets=0;c.timerDt=c.attractDt=0;c.details=c.exceptionDetails=c.invalid=0;
-    c.previousLogUs=diagnostics::monotonicUs()-logStart;
 }
 inline void probe(uint8_t *ram,recomp_context *ctx,unsigned event,unsigned player=0,uint32_t site=0) {
     const auto now=diagnostics::monotonicUs();auto &s=source();

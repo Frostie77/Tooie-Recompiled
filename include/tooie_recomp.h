@@ -9,6 +9,7 @@
 
 #include "recomp.h"
 #include "correction_trace_config.h"
+#include "timing_trace_config.h"
 #include "skeletal_pose_config.h"
 
 #ifdef __cplusplus

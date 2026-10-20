@@ -42,6 +42,8 @@ PY
 flags=(-std=c++17 -pthread -fsanitize=address,undefined -fno-omit-frame-pointer)
 "${CXX:-g++}" "${flags[@]}" -D__ANDROID__ -I"$t/current" "$r/tests/present_progress.cpp" -o "$t/current-test"
 ASAN_OPTIONS=detect_leaks=0 "$t/current-test"
+"${CXX:-g++}" "${flags[@]}" -D__ANDROID__ -DTOOIE_ANDROID_TIMING_TRACE=1 -I"$t/current" "$r/tests/present_progress.cpp" -o "$t/timing-test"
+ASAN_OPTIONS=detect_leaks=0 "$t/timing-test"
 "${CXX:-g++}" "${flags[@]}" -D__ANDROID__ -I"$r/src" "$r/tests/render_queue_diagnostics.cpp" -o "$t/diagnostics"
 APP_FOLDER_PATH="$t" ASAN_OPTIONS=detect_leaks=0 "$t/diagnostics" "$t/banjotooi-debug.log"
 # Desktop keeps its existing backlog policy; use the same actual selection block.

@@ -1,6 +1,6 @@
 # Tooie-Recompiled completion requirements
 
-Updated: 16 October 2026 (Australia/Hobart).
+Updated: 20 October 2026 (Australia/Hobart).
 
 The goal is a release-ready native Android Tooie-Recompiled APK, optimized and tested on the AYN Odin 2 Portal. These requirements record the agreed scope; they do not assert that the features are finished.
 
@@ -63,13 +63,33 @@ This is the required protocol for subsequent collectors. The already-consumed St
 
 ## Current project state
 
-The latest verified PC-built gameplay APK is artwork integration `a1338bfae10c937a66a8c2c2581195a93b009372`, rendering parent `98f909cc6837cb9bc66cad1018fefd3b090add8d`. Step 77 installed and launched it on Odin, and the supplied evidence archive retains original PID 16378 through the capture. The accepted TOOIE launcher artwork is present.
+The latest supplied hardware evidence is Step 111's integration
+`b3401ddb72942f99958828ffc27723fb049d50bd`, engineering parent
+`d40c4e150d2372fbdfe82681078575b4dd47fd2c`. Three completed windows total 20
+minutes with original PID 29701 retained. The visited first-person entrance
+loaded and was controllable; the user reported a successful boss fight and good
+gameplay on that route. No fresh lookup failure or crash was captured. This
+resolves the previous entrance failure on this tested path, not every state or
+the full game. The approved Mods/artwork integration, round BT/Jiggy icon and
+TOOIE/RECOMPILED launcher title remain present in that APK; actual mod effects
+and persistence were not exercised by this capture.
+
+Intro/automatic-demo speed remains reported too fast, and an 803 ms presentation
+gap has an overlapping 795 ms outer queue-input wait of unresolved origin.
+Two nonfatal OpenSL ES mutex warnings remain. The
+[Step 111 investigation](android-step111-investigation.md) records verified
+provenance, clock-consumer tests, new opt-in attribution and remaining limits.
+No cadence or rendering-policy correction is claimed. Saving/loading, broader
+world/progression, mod execution, lifecycle combinations, audio/visual quality,
+signing/licensing, updates and release acceptance still need their own evidence.
+
+Earlier Step 77 evidence tested artwork integration `a1338bfae10c937a66a8c2c2581195a93b009372`, rendering parent `98f909cc6837cb9bc66cad1018fefd3b090add8d`. It installed and launched on Odin, and the supplied evidence archive retains original PID 16378 through the capture. The accepted TOOIE launcher artwork is present.
 
 Trent reported good input, no noticeable sluggishness, improved/less noticeable entry freezes, and no shunts in the area played. He still observed stretching, especially in enemy/NPC movement, and an awkward geometric shadow from Banjo. The timed capture ran approximately 11:18:50–11:21:51 on 16 October, with raw retention continuing until about 11:24:56. The longer launcher wait is not counted as gameplay.
 
 The evidence confirms substantially lower matching cost in this session, while scene differences prevent a controlled device speedup claim. Remaining records include four OpenSL ES mutex timeouts and intermittent presentation/rendering hitches. No app fatal, Vulkan device loss or descriptor rejection was found in the captured original-process logs. Sparse diagnostics and still images do not establish the cause of stretching or shadow appearance, nor complete visual, sound or full-game correctness.
 
-Working Android mod support, longer stability/progression testing, launcher icon, update delivery and the other checklist items still require acceptance evidence. No new device operation is authorized or performed by updating this requirements document.
+Working game-side Android mod support, longer stability/progression testing, final branding consistency, update delivery and the other checklist items still require acceptance evidence. No new device operation is authorized or performed by updating this requirements document.
 
 Gameplay reference work includes sampled early N64 footage and mechanics/progression guides, with viewing and audio limits recorded in `Tooie-Gameplay-Reference-2026-10-15.md`.
 

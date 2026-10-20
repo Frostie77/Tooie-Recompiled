@@ -10,12 +10,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <mutex>
+#include "../include/timing_trace_config.h"
 #define REQUIRE(x) do {if(!(x)){std::fprintf(stderr,"FAIL %d: %s\n",__LINE__,#x);std::exit(1);}}while(0)
 struct Observation {
     unsigned reports=0;
+    std::array<unsigned,5> durations{};
     void report(uint64_t,const char *,const char *){++reports;}
     uint64_t stamp(){return 0;}
-    void elapsed(unsigned,uint64_t){}
+    void elapsed(unsigned stage,uint64_t){++durations.at(stage);}
     template<class F> decltype(auto) measure(unsigned,F f){return f();}
 };
 static Observation &presentStages(){static Observation s;return s;}
@@ -108,6 +110,9 @@ struct Replay {
             #include "outer-report.inc"
         }
         REQUIRE(waits==96 && presentId==96);
+#if TOOIE_TIMING_TRACE_ENABLED
+        REQUIRE(queueStages.durations[3]==96 && queueStages.durations[4]==96);
+#endif
 #if defined(__ANDROID__)
         if(allBlocked){REQUIRE(queueStages.reports==96 && dispatched==96 && reads==0 && skips==96 && unavailable==96);return;}
         // Three intentionally unavailable iterations may be retired, never

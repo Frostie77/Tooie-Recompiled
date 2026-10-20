@@ -598,7 +598,7 @@ tooie_correction_probe(rdram, ctx, 7U, 0x00000000U);
 func = "func_800123F4"
 before_vram = 0x80012458
 text = """
-#if TOOIE_CORRECTION_TRACE_ENABLED
+#if TOOIE_GUEST_CLOCK_TRACE_ENABLED
 tooie_correction_probe(rdram, ctx, 10U, 0x80012458U);
 #endif
 """
@@ -607,7 +607,7 @@ tooie_correction_probe(rdram, ctx, 10U, 0x80012458U);
 func = "func_800123F4"
 before_vram = 0x80012460
 text = """
-#if TOOIE_CORRECTION_TRACE_ENABLED
+#if TOOIE_GUEST_CLOCK_TRACE_ENABLED
 tooie_correction_probe(rdram, ctx, 12U, 0x80012458U);
 #endif
 """
@@ -616,7 +616,7 @@ tooie_correction_probe(rdram, ctx, 12U, 0x80012458U);
 func = "func_800A759C"
 before_vram = 0x800A76D4
 text = """
-#if TOOIE_CORRECTION_TRACE_ENABLED
+#if TOOIE_GUEST_CLOCK_TRACE_ENABLED
 tooie_correction_probe(rdram, ctx, 10U, 0x800A76D4U);
 #endif
 """
@@ -625,7 +625,7 @@ tooie_correction_probe(rdram, ctx, 10U, 0x800A76D4U);
 func = "func_800A759C"
 before_vram = 0x800A76DC
 text = """
-#if TOOIE_CORRECTION_TRACE_ENABLED
+#if TOOIE_GUEST_CLOCK_TRACE_ENABLED
 tooie_correction_probe(rdram, ctx, 12U, 0x800A76D4U);
 #endif
 """
@@ -634,7 +634,7 @@ tooie_correction_probe(rdram, ctx, 12U, 0x800A76D4U);
 func = "func_800A9924"
 before_vram = 0x800A9980
 text = """
-#if TOOIE_CORRECTION_TRACE_ENABLED
+#if TOOIE_GUEST_CLOCK_TRACE_ENABLED
 tooie_correction_probe(rdram, ctx, 10U, 0x800A9980U);
 #endif
 """
@@ -643,7 +643,7 @@ tooie_correction_probe(rdram, ctx, 10U, 0x800A9980U);
 func = "func_800A9924"
 before_vram = 0x800A9988
 text = """
-#if TOOIE_CORRECTION_TRACE_ENABLED
+#if TOOIE_GUEST_CLOCK_TRACE_ENABLED
 tooie_correction_probe(rdram, ctx, 12U, 0x800A9980U);
 #endif
 """
@@ -652,7 +652,7 @@ tooie_correction_probe(rdram, ctx, 12U, 0x800A9980U);
 func = "func_8001608C"
 before_vram = 0x800160F8
 text = """
-#if TOOIE_CORRECTION_TRACE_ENABLED
+#if TOOIE_GUEST_CLOCK_TRACE_ENABLED
 tooie_correction_probe(rdram, ctx, 11U, 0x00000000U);
 #endif
 """
@@ -661,7 +661,7 @@ tooie_correction_probe(rdram, ctx, 11U, 0x00000000U);
 func = "func_80018444"
 before_vram = 0x80018444
 text = """
-#if TOOIE_CORRECTION_TRACE_ENABLED
+#if TOOIE_GUEST_CLOCK_TRACE_ENABLED
 tooie_correction_probe(rdram, ctx, 13U, 0x00000000U);
 #endif
 """
@@ -670,7 +670,7 @@ tooie_correction_probe(rdram, ctx, 13U, 0x00000000U);
 func = "gsattract_entrypoint_1"
 before_vram = 0x80800054
 text = """
-#if TOOIE_CORRECTION_TRACE_ENABLED
+#if TOOIE_GUEST_CLOCK_TRACE_ENABLED
 tooie_correction_probe(rdram, ctx, 14U, 0x00000000U);
 #endif
 """
@@ -679,7 +679,7 @@ tooie_correction_probe(rdram, ctx, 14U, 0x00000000U);
 func = "gsattract_entrypoint_0"
 before_vram = 0x80800000
 text = """
-#if TOOIE_CORRECTION_TRACE_ENABLED
+#if TOOIE_GUEST_CLOCK_TRACE_ENABLED
 tooie_correction_probe(rdram, ctx, 15U, 0x00000000U);
 #endif
 """
@@ -737,5 +737,25 @@ before_vram = 0x80106608
 text = """
 #if TOOIE_ACTOR_POSE_ENABLED
 tooie_rt64_actor_lifetime(rdram, ctx, 3U);
+#endif
+"""
+
+# Timing-only observer: the complete original frame synchronization boundary.
+# No wait, guest register, RAM value or pacing decision is changed.
+[[patches.hook]]
+func = "func_800151BC"
+before_vram = 0x800151BC
+text = """
+#if TOOIE_TIMING_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 16U, 0x800151BCU);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800151BC"
+before_vram = 0x800153FC
+text = """
+#if TOOIE_TIMING_TRACE_ENABLED
+tooie_correction_probe(rdram, ctx, 17U, 0x800153FCU);
 #endif
 """

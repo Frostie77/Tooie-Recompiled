@@ -1,3 +1,4 @@
+#include "../../../../src/presentation_input_trace.h"
 //
 // RT64
 //
@@ -1846,6 +1847,7 @@ namespace RT64 {
     }
     
     void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
+        tooie::diagnostics::PresentationInputTrace inputTrace(fromEarlyPresent);
         // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
         if (debuggerInspector.paused && !fromEarlyPresent) {
             if (ext.userConfig->developerMode) {
@@ -1867,6 +1869,9 @@ namespace RT64 {
             ext.presentQueue->repeatLastPresent();
 
             if (debuggerInspector.paused) {
+#if TOOIE_TIMING_TRACE_ENABLED
+                inputTrace.decision(tooie::diagnostics::PresentationInputTrace::Repeated, newVI.visible(), false, false, false, workloadId, presentId);
+#endif
                 return;
             }
         }
@@ -1900,6 +1905,7 @@ namespace RT64 {
 
             // We ignore processing the updateScreen altogether in early present mode.
             if (presentEarly) {
+                inputTrace.decision(tooie::diagnostics::PresentationInputTrace::EarlyIgnored, viVisible, viDifferent, false, false, workloadId, presentId);
                 return;
             }
         }
@@ -1972,6 +1978,9 @@ namespace RT64 {
             }
         }
 
+        inputTrace.decision((fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade)
+            ? tooie::diagnostics::PresentationInputTrace::Published : tooie::diagnostics::PresentationInputTrace::Unchanged,
+            viVisible, viDifferent, fbChangesMade, screenChangesMade, workloadId, presentId);
         screenCpuProfiler.end();
     }
 

@@ -86,6 +86,10 @@ extern "C" void tooie_correction_probe(uint8_t* rdram, recomp_context* ctx,
                                       uint32_t event, uint32_t site) {
 #if TOOIE_CORRECTION_TRACE_ENABLED
     tooie::correction::guest::probe(rdram, ctx, event, 0, site);
+#elif TOOIE_GUEST_CLOCK_TRACE_ENABLED
+    if (event >= 10) {
+        tooie::correction::guest::clockEvent(rdram, ctx, event, site, tooie::diagnostics::monotonicUs());
+    }
 #else
     (void)rdram; (void)ctx; (void)event; (void)site;
 #endif
@@ -1354,6 +1358,8 @@ extern std::atomic<uint32_t> g_bt_rt64_proj_skipped_other;
 extern "C" void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx) {
 #if TOOIE_CORRECTION_TRACE_ENABLED
     tooie::correction::guest::probe(rdram, ctx, 0, 0U);
+#endif
+#if TOOIE_GUEST_CLOCK_TRACE_ENABLED
     static thread_local bool correctionRomLogged = false;
     if (!correctionRomLogged) {
         const auto rom = recomp::get_rom();

@@ -1,5 +1,6 @@
 #include "../../../../src/render_diagnostics.h"
 #include "../../../../src/runtime_diagnostics.h"
+#include "../../../../include/timing_trace_config.h"
 #include "../../../../src/android_debug_log.h"
 //
 // RT64
@@ -555,7 +556,17 @@ namespace RT64 {
 #if defined(__ANDROID__)
         // Report every outer decision, including iterations that never enter
         // threadPresent. Backlog is queued input, not proof of a newer image.
-        tooie::diagnostics::StageWindow<3> queueStages("present-queue", {"cursor_wait", "producer_wait", "dispatch"});
+        tooie::diagnostics::StageWindow<
+#if TOOIE_TIMING_TRACE_ENABLED
+            5
+#else
+            3
+#endif
+        > queueStages("present-queue", {"cursor_wait", "producer_wait", "dispatch"
+#if TOOIE_TIMING_TRACE_ENABLED
+            , "cursor_lock", "cursor_condition"
+#endif
+        });
         uint64_t dispatched = 0, backlog = 0, empty = 0, unavailable = 0, invalid = 0;
         int selectedWrite = 0, selectedNext = 0;
         uint64_t selectedAt = 0;
@@ -573,9 +584,16 @@ namespace RT64 {
 #endif
             {
                 std::unique_lock<std::mutex> cursorLock(cursorMutex);
+#if TOOIE_TIMING_TRACE_ENABLED
+                queueStages.elapsed(3,queueStart);
+                const auto conditionStart=queueStages.stamp();
+#endif
                 cursorCondition.wait(cursorLock, [&]() {
                     return (writeCursor != threadCursor) || !presentThreadRunning;
                 });
+#if TOOIE_TIMING_TRACE_ENABLED
+                queueStages.elapsed(4,conditionStart);
+#endif
 
                 if (presentThreadRunning) {
                     processCursor = threadCursor;
