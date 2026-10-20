@@ -29,7 +29,7 @@ int main(void) {
     unsigned ordinary=0,records=0,ends=0;
     for(unsigned i=0;i<sizeof(captured_clocks)/sizeof(*captured_clocks);++i) {
         const struct captured_clock *c=&captured_clocks[i];setup(rdram,&ctx);
-        H(0x80078F64)=c->elapsed;B(0x80127760)=c->mode;
+        H(0x80078F64)=c->elapsed;B(0x80127760)=c->mode;W(0x8007913C)=c->divisor;
         W(0x8012D5B0)=0x80300000;W(0x8012D5B8)=c->index;W(0x8012D5BC)=c->count;
         CHECK(c->index<10000);const uint32_t record=0x80300000+6*c->index;
         // Only span/index/count/delta are retained. Stick/buttons are explicit
@@ -40,7 +40,7 @@ int main(void) {
         captured_clock_site=c->site;
         func_8001608C(rdram,&ctx); // Whole real input handler at the captured caller, not a manual override.
         CHECK(W(0x8012C764)==c->applied && (uint32_t)W(0x8012C760)==c->bits);
-        CHECK(H(0x80078F64)==c->elapsed && W(0x8007913C)==2);
+        CHECK(H(0x80078F64)==c->elapsed && W(0x8007913C)==c->divisor);
         if(c->mode) {
             CHECK(replay_calls==1 && (unsigned)W(0x8012D5B8)==c->next);
             if(c->result==1) {++records;CHECK(B(0x80079B42)==12 && B(0x80079B43)==-17);}

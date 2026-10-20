@@ -74,18 +74,20 @@ the full game. The approved Mods/artwork integration, round BT/Jiggy icon and
 TOOIE/RECOMPILED launcher title remain present in that APK; actual mod effects
 and persistence were not exercised by this capture.
 
-Step 115 subsequently captured the timing-only integration
-`7a4a8432bb7fd108c01bdd9d20da44ee1ca81e16` (engineering parent `389c495`):
-a completed five-minute intro/demo observation retained PID 15060, with no fresh
-fatal failure and no manual gameplay window. The user still reports fast demos.
-Ordinary clock input/wall is approximately 1.000; replay varies, reaching 1.384
-for the selected map windows. Intended cadence remains unverified. An 855.894 ms
-publication gap overlaps an 824.899 ms queue-condition wait that ends 16 us
-after publication; it is localized to input availability, with the upstream
-producer/loading cause still unresolved. A nonfatal OpenSL mutex warning remains
-separate from unverified audio quality. The
-[Step 115 investigation](android-step115-investigation.md) records evidence,
-actual-consumer regression inputs, producer attribution and remaining limits.
+Step 118 supplies a subsequent timing-only capture of integration
+`49b98b49c6f2753a232debdab8aef249483ca152` (engineering parent `1217870`):
+a completed five-minute untouched intro/demo observation retained PID 26855,
+with no fresh fatal record and no manual gameplay window. Fast demos remain
+reported. Ordinary clock input/wall is about 1.000; selected replay windows
+again reach about 1.383. Intended cadence remains unverified. An 841.862 ms
+publication gap overlaps an 811.412 ms condition wait ending 17 us afterward;
+all 126 completed full-sync calls in the enclosing window published and none
+took more than 48.425 ms. The cause remains before/between measured full-sync
+calls or in upstream delivery/processing; no particular operation is proven.
+The latest revision corrects startup masking of window gap diagnostics and adds
+bounded task/renderer attribution. Two nonfatal OpenSL warnings remain separate
+from unverified audio quality. The [Step 118 investigation](android-step118-investigation.md)
+records evidence, actual-consumer tests, scope and limitations.
 No cadence or rendering-policy correction is claimed. Saving/loading, broader
 world/progression, mod execution, lifecycle combinations, audio/visual quality,
 signing/licensing, updates and release acceptance still need their own evidence.

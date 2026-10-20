@@ -7,7 +7,11 @@ static uint64_t testNow=1'000'000;
 inline uint64_t testMonotonicUs() {return testNow;}
 }
 #define monotonicUs testMonotonicUs
-#include "full_sync_trace.h"
+#ifndef TEST_FULL_SYNC_TRACE_HEADER
+#define TEST_FULL_SYNC_TRACE_HEADER "full_sync_trace.h"
+#endif
+#include TEST_FULL_SYNC_TRACE_HEADER
+#include "gfx_task_trace.h"
 #undef monotonicUs
 #include <vector>
 #include <array>
@@ -61,6 +65,9 @@ struct State {
 }
 int main(int argc,char **argv) {
     CHECK(argc==2);const int mode=std::atoi(argv[1]);RT64::State s;
+#if TOOIE_TIMING_TRACE_ENABLED
+    tooie::diagnostics::activeGfxTaskStamp()={tooie::diagnostics::testNow,1234};
+#endif
     auto &w=s.queue.workloads[0];auto &pair=w.fbPairs[0];
     switch(mode) {
     case 0: break; // normal match
@@ -79,11 +86,17 @@ int main(int argc,char **argv) {
     CHECK(s.publications==unsigned(publishes));
     CHECK(operations==(publishes?"WQrsPBFTDC":"WQrsBFTDC"));
     CHECK(s.workloadId==8 && s.presentId==9 && s.workloadCounter==13);
-    // Second call after a synthetic 855894us entry gap proves the diagnostic
-    // separates upstream availability from 12us prep/24us advance/36us publish.
-    // Then a late report, well beyond sixteen calls, preserves reason counts.
-    tick(855894-12-24-(publishes?36:0));operations.clear();s.tail();
+    // Seed the captured larger startup gap, report it, then observe a smaller
+    // late gap. Lifetime provenance must survive without hiding the late window.
+    const unsigned body=12+24+(publishes?36:0);
+    tick(1287318-body);operations.clear();s.tail();
+    for(unsigned i=0;i<20;++i){tick(300000);operations.clear();s.tail();}
+    tick(841862-body);operations.clear();s.tail();
     for(unsigned i=0;i<40;++i){tick(300000);operations.clear();s.tail();}
-    CHECK(s.publications==42*unsigned(publishes));
+    CHECK(s.publications==63*unsigned(publishes));
+#if TOOIE_TIMING_TRACE_ENABLED
+    CHECK(tooie::diagnostics::activeGfxTaskStamp().id==1234);
+    tooie::diagnostics::activeGfxTaskStamp()={};
+#endif
     std::printf("STATE mode=%d publications=%u ops=%s workload=%llu present=%llu\n",mode,s.publications,operations.c_str(),(unsigned long long)s.workloadId,(unsigned long long)s.presentId);
 }

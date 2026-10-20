@@ -75,10 +75,10 @@ public:
         (void)stage; (void)start;
 #endif
     }
-    void report(uint64_t eventStart, const char *context, const char *currentContext=nullptr) {
+    bool report(uint64_t eventStart, const char *context, const char *currentContext=nullptr) {
 #if defined(__ANDROID__)
         const uint64_t now=monotonicUs();
-        if (!stats.complete(now,now-eventStart,context)) return;
+        if (!stats.complete(now,now-eventStart,context)) return false;
         char text[1900];
         int offset=std::snprintf(text,sizeof(text),
             "elapsed_us=%llu events=%llu event_max_us=%llu event_start_us=%llu event_end_us=%llu previous_log_us=%llu peak_%s stage_units=n/sum_us/max_us/end_mono_us",
@@ -98,8 +98,10 @@ public:
         log(domain,text);
         previousLogUs=monotonicUs()-logStart;
         stats.reset(monotonicUs());
+        return true;
 #else
         (void)eventStart; (void)context; (void)currentContext;
+        return false;
 #endif
     }
 };

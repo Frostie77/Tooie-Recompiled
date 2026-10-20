@@ -1,5 +1,6 @@
 #include "../../../../src/android_debug_log.h"
 #include "../../../../src/runtime_diagnostics.h"
+#include "../../../../src/gfx_task_trace.h"
 #include "../../../../src/skeletal_pose.h"
 #include <thread>
 #include <atomic>
@@ -32,6 +33,9 @@ void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& 
 
 struct SpTaskAction {
     OSTask task;
+#if TOOIE_TIMING_TRACE_ENABLED
+    tooie::diagnostics::GfxTaskStamp timing;
+#endif
 #if TOOIE_SKELETAL_POSE_ENABLED
     std::shared_ptr<const tooie::skeletal::TaskBindings> skeletal;
 #endif
@@ -405,6 +409,9 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
 #if defined(__ANDROID__)
                 diagnostic_gfx_tasks.fetch_add(1,std::memory_order_relaxed);
 #endif
+#if TOOIE_TIMING_TRACE_ENABLED
+                tooie::diagnostics::GfxDispatchTrace taskTrace(task_action->timing, uint32_t(task_action->task.t.data_ptr), task_action->task.t.data_size);
+#endif
                 // Tell the game that the RSP completed instantly. This will allow it to queue other task types, but it won't
                 // start another graphics task until the RDP is also complete. Games usually preserve the RSP inputs until the RDP
                 // is finished as well, so sending this early shouldn't be an issue in most cases.
@@ -415,6 +422,9 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                 PTR(u64) displaylist = task_action->task.t.data_ptr;
                 ultramodern::extensions::on_displaylist_submitted(displaylist);
 
+#if TOOIE_TIMING_TRACE_ENABLED
+                taskTrace.rendererBegin();
+#endif
                 [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
 #if TOOIE_SKELETAL_POSE_ENABLED
                 tooie::skeletal::TaskScope skeletal_scope(task_action->skeletal);
@@ -422,6 +432,9 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                 renderer_context->send_dl(&task_action->task);
                 [[maybe_unused]] auto renderer_end = std::chrono::high_resolution_clock::now();
 
+#if TOOIE_TIMING_TRACE_ENABLED
+                taskTrace.rendererEnd();
+#endif
                 dp_complete();
                 // TODO hook the parsed event up to the actual parsing point when a callback is added to RT64.
                 ultramodern::extensions::on_displaylist_parsed(displaylist);
@@ -611,9 +624,15 @@ void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
 
     // Send gfx tasks to the graphics action queue
     if (task->t.type == M_GFXTASK) {
+#if TOOIE_TIMING_TRACE_ENABLED
+        tooie::diagnostics::GfxSubmitTrace submitTrace(uint32_t(task->t.data_ptr), task->t.data_size);
+#endif
         SpTaskAction action{ *task };
 #if TOOIE_SKELETAL_POSE_ENABLED
         action.skeletal = tooie::skeletal::mailbox().snapshot();
+#endif
+#if TOOIE_TIMING_TRACE_ENABLED
+        action.timing = submitTrace.packet();
 #endif
         events_context.action_queue.enqueue(std::move(action));
     }

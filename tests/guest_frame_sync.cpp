@@ -119,12 +119,14 @@ int main(int argc,char**) {
     // A captured transition carries 50 accumulated VIs into a short frame-sync
     // call. Loading work is constructed; no 833ms sleep is attributed to the
     // sync consumer. Execute all 50 actual worker iterations, then its consumer.
-    setup(ctx,2);swapDelay=0;
-    for(unsigned n=0;n<50;++n) tick();
-    func_80015410(rdram,&ctx);
-    CHECK(vis==50 && H(0x80078F64)==50 && W(0x80079138)==0);
-    func_800A7D30(rdram,&ctx);CHECK(W(0x8012C764)==15);
-    hash(rdram,memory.size());hash(&ctx,sizeof(ctx));++cases;
+    for(unsigned pending:{49u,50u}) {
+        setup(ctx,2);swapDelay=0;
+        for(unsigned n=0;n<pending;++n) tick();
+        func_80015410(rdram,&ctx);
+        CHECK(vis==pending && H(0x80078F64)==int(pending) && W(0x80079138)==0);
+        func_800A7D30(rdram,&ctx);CHECK(W(0x8012C764)==15);
+        hash(rdram,memory.size());hash(&ctx,sizeof(ctx));++cases;
+    }
     // Hold the same elapsed VI inputs while executing the real input, replay,
     // capped game delta and game-timer consumers. The recorded span overrides
     // ordinary elapsed; this intentionally does not invent a playback cadence.

@@ -2,6 +2,7 @@
 #include "../include/timing_trace_config.h"
 #if TOOIE_TIMING_TRACE_ENABLED
 #include "render_diagnostics.h"
+#include "gfx_task_trace.h"
 
 namespace tooie::diagnostics {
 // Owned by the existing display-list thread. Observe the producer preceding
@@ -11,9 +12,11 @@ class FullSyncTrace {
     struct Window {
         StageWindow<3> stages{"full-sync", {"prepare", "advance", "publish_reset"}};
         uint64_t counts[5]{},previousEntry=0,entryGap=0,entryGapEnd=0;
+        uint64_t windowEntryGap=0,windowEntryGapEnd=0;
     };
     static Window &window() {static thread_local Window value;return value;}
     const uint64_t start=monotonicUs();
+    const uint64_t taskId=activeGfxTaskStamp().id;
     uint64_t phaseStart=start,workload=0,present=0;
     uint32_t pairs=0,history=0,candidates=0;
     Result result=Disabled;
@@ -22,6 +25,9 @@ public:
         auto &w=window();
         if(w.previousEntry && start>=w.previousEntry && start-w.previousEntry>w.entryGap) {
             w.entryGap=start-w.previousEntry;w.entryGapEnd=start;
+        }
+        if(w.previousEntry && start>=w.previousEntry && start-w.previousEntry>w.windowEntryGap) {
+            w.windowEntryGap=start-w.previousEntry;w.windowEntryGapEnd=start;
         }
         w.previousEntry=start;
     }
@@ -38,14 +44,16 @@ public:
     ~FullSyncTrace() {
         auto &w=window();w.stages.elapsed(2,phaseStart);++w.counts[result];
         char context[250];std::snprintf(context,sizeof(context),
-            "result=%u pairs=%u candidates=%u history=%u workload=%llu present=%llu",
-            unsigned(result),pairs,candidates,history,(unsigned long long)workload,(unsigned long long)present);
-        char totals[400];std::snprintf(totals,sizeof(totals),
-            "disabled=%llu empty=%llu no_candidate=%llu no_history_match=%llu published=%llu entry_gap_max_us=%llu entry_gap_end_us=%llu gaps=lifetime_max result_codes=disabled/empty/no_candidate/no_history/published",
+            "result=%u pairs=%u candidates=%u history=%u workload=%llu present=%llu task=%llu correlation_valid=%u",
+            unsigned(result),pairs,candidates,history,(unsigned long long)workload,(unsigned long long)present,
+            (unsigned long long)taskId,unsigned(taskId!=0));
+        char totals[650];std::snprintf(totals,sizeof(totals),
+            "disabled=%llu empty=%llu no_candidate=%llu no_history_match=%llu published=%llu entry_gap_max_us=%llu entry_gap_end_us=%llu entry_gap_window_max_us=%llu entry_gap_window_end_us=%llu gaps=lifetime_and_report_window result_codes=disabled/empty/no_candidate/no_history/published",
             (unsigned long long)w.counts[Disabled],(unsigned long long)w.counts[Empty],
             (unsigned long long)w.counts[NoCandidate],(unsigned long long)w.counts[NoHistoryMatch],
-            (unsigned long long)w.counts[Published],(unsigned long long)w.entryGap,(unsigned long long)w.entryGapEnd);
-        w.stages.report(start,context,totals);
+            (unsigned long long)w.counts[Published],(unsigned long long)w.entryGap,(unsigned long long)w.entryGapEnd,
+            (unsigned long long)w.windowEntryGap,(unsigned long long)w.windowEntryGapEnd);
+        if(w.stages.report(start,context,totals)) {w.windowEntryGap=w.windowEntryGapEnd=0;}
     }
 };
 }

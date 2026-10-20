@@ -24,6 +24,7 @@ for profile in ('current','parent','bad-observer','bad-publication'):
   s=(r/'lib/rt64/src/hle/rt64_state.cpp').read_text() if profile=='current' else subprocess.check_output(['git','-C',str(r),'show',base+':lib/rt64/src/hle/rt64_state.cpp'],text=True)
   a=s.index('    void State::fullSync()');b=s.index('    void State::updateScreen(',a)
   (t/(profile+'.cpp')).write_text(s[a:b])
+(t/'old-trace.h').write_text(subprocess.check_output(['git','-C',str(r),'show','121787042b50b3250036bc6013b501c737e4d4ac:src/full_sync_trace.h'],text=True).replace('../include/timing_trace_config.h',str(r/'include/timing_trace_config.h')))
 import os
 for defs in ([],['-D__ANDROID__'],['-D__ANDROID__','-DTOOIE_ANDROID_TIMING_TRACE=0'],['-DTOOIE_ANDROID_TIMING_TRACE=1']):
  flags=[os.environ.get('CXX','g++'),'-E','-P','-x','c++',*defs,'-include',str(r/'include/timing_trace_config.h')]
@@ -33,9 +34,9 @@ print('PASS: complete fullSync default/zero/desktop instruction bodies equal exa
 PY
 flags=(-std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -I"$r/src")
 export ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1
-for profile in timing default zero desktop parent bad-observer bad-publication;do
+for profile in timing default zero desktop parent parent-window bad-observer bad-publication;do
  defs=(-D__ANDROID__);source=current
- case "$profile" in timing) defs+=(-DTOOIE_ANDROID_TIMING_TRACE=1);;zero) defs+=(-DTOOIE_ANDROID_TIMING_TRACE=0);;desktop) defs=(-DTOOIE_ANDROID_TIMING_TRACE=1);;parent|bad-observer|bad-publication) defs+=(-DTOOIE_ANDROID_TIMING_TRACE=1);source=$profile;;esac
+ case "$profile" in timing) defs+=(-DTOOIE_ANDROID_TIMING_TRACE=1);;parent-window) defs+=(-DTOOIE_ANDROID_TIMING_TRACE=1 "-DTEST_FULL_SYNC_TRACE_HEADER=\"$t/old-trace.h\"");;zero) defs+=(-DTOOIE_ANDROID_TIMING_TRACE=0);;desktop) defs=(-DTOOIE_ANDROID_TIMING_TRACE=1);;parent|bad-observer|bad-publication) defs+=(-DTOOIE_ANDROID_TIMING_TRACE=1);source=$profile;;esac
  if [ "$profile" = parent ];then defs+=(-DTEST_PARENT=1);fi
  "${CXX:-g++}" "${flags[@]}" "${defs[@]}" -I"$t/$source" "$r/tests/full_sync_trace.cpp" -o "$t/test"
  for mode in {0..9};do
@@ -59,14 +60,19 @@ for mode in range(10):
  text=(t/f'timing-{mode}/banjotooi-debug.log').read_text();lines=text.splitlines();assert len(lines)>=2
  result=4 if mode in (0,8) else 0 if mode in (1,9) else 1 if mode==2 else 2 if mode in (3,7) else 3
  assert all(f'peak_result={result} ' in line and len(line)<2048 and ' pid=' in line and ' tid=' in line for line in lines)
+ assert all('task=1234 correlation_valid=1' in line for line in lines)
  def first_sum(profile,stage):
   line=(t/f'{profile}-{mode}/banjotooi-debug.log').read_text().splitlines()[0]
   return int(re.search(r'\b'+stage+r'=\d+/(\d+)/',line)[1])
  assert first_sum('timing','prepare')==12 and first_sum('timing','advance')==24
  assert first_sum('bad-observer','prepare')!=12 # altered boundary is detected
- assert 'entry_gap_max_us=855894 ' in lines[-1]
+ assert 'entry_gap_max_us=1287318 ' in lines[-1]
+ assert any('entry_gap_window_max_us=841862 ' in line for line in lines)
+ assert int(re.search(r'entry_gap_window_max_us=(\d+)',lines[-1])[1])<841862
+ old=(t/f'parent-window-{mode}/banjotooi-debug.log').read_text()
+ assert 'entry_gap_max_us=1287318 ' in old and 'entry_gap_window_max_us=' not in old
  key=['disabled','empty','no_candidate','no_history_match','published'][result]
  # No lifetime sample cap; the late report contains more than sixteen calls.
  assert int(re.search(r'(?:current_)?'+key+r'=(\d+)',lines[-1])[1])>16
-print('PASS: 50 publication-tail cases match exact parent; all eligibility reasons, format/width/address mismatch, coverage-only/duplicate rejection, late report and upstream gap attribution; missing boundary and unsafe-candidate controls detected')
+print('PASS: 50 publication-tail cases match exact parent; all eligibility reasons, format/width/address mismatch, coverage-only/duplicate rejection, late report and upstream gap attribution; startup-masked exact-parent window control, missing boundary and unsafe-candidate controls detected')
 PY
