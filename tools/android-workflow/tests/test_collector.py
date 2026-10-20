@@ -20,7 +20,7 @@ import tooie
 fixture_area = tempfile.TemporaryDirectory(prefix='tooie-rendered-tests-')
 fixture_root = Path(fixture_area.name)
 profile = tooie.load_profile(root / 'profiles/current.json')
-artifact = {**profile['artifact'], 'apk':str(fixture_root / profile['artifact']['apk']),
+artifact = {**profile['artifact'], 'sha256':'a'*64, 'build_id':'b'*40, 'apk':str(fixture_root / profile['artifact']['apk']),
             'report':str(fixture_root / profile['artifact']['report'])}
 source = fixture_root / 'collector.py'
 source.write_text(tooie.render_collector(profile, artifact, fixture_root, fixture_root / 'session'))
@@ -65,8 +65,8 @@ class Terminal(io.StringIO):
 def report_fixture(m,sdl):
     header='Tooie Recompiled Android verified task-delivery-timing build report'
     report=builder.read_text().split(header+'\n',1)[1].split('\nEOF\n',1)[0]
-    replacements={'$FULL_SHA':m.SHA,'$BRANCH':'build/android-task-delivery-mods-20261020-9ec05e8',
-      '$ACTUAL_PARENT':'9ec05e8667b9529d7b1096608a74c846c1bda4eb c9f5efc17df77be6a53e4f475a227092bb7e9c9f',
+    replacements={'$FULL_SHA':m.SHA,'$BRANCH':profile['identity']['branch'],
+      '$ACTUAL_PARENT':' '.join(profile['identity']['parents']),
       '$TIMING_CXX_FLAGS':'-DTOOIE_ANDROID_TIMING_TRACE=1 -DTOOIE_ANDROID_CORRECTION_TRACE=0 -DTOOIE_ANDROID_GEOMETRY_TRACE=0 -DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=0',
       '$PACKAGED_BUILD_ID':m.BUILD_ID,'$APK_SHA':m.HASH,'$OUTPUT':str(m.APK),
       '$PACKAGED_SDL_SHA':hashlib.sha256(sdl).hexdigest()}
@@ -81,6 +81,7 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
         work = area / name
         work.mkdir()
         m = module()
+        m.DEMO_ONLY = name in ('demo-only-profile', 'demo-only-rejects-gameplay')
         m.DOWNLOADS = work
         m.APK = work / 'fixture.apk'
         m.REPORT = work / 'report.txt'
@@ -119,7 +120,7 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
         if name == 'consumed-symlink': m.MARKER.symlink_to(work / 'missing-target')
         now = [0.0]
         m.time = types.SimpleNamespace(monotonic=lambda: now[0], sleep=lambda n: now.__setitem__(0, now[0] + n))
-        full = name in ('live-notes','gameplay','extension','reprompt','game-crash','game-restart','interrupt-game','dead-reader','demo-only','demo-extension','timed-pid-timeout','save-during-demo','save-during-game','device-marker-filter')
+        full = name in ('live-notes','gameplay','extension','reprompt','game-crash','game-restart','interrupt-game','dead-reader','demo-only','demo-extension','timed-pid-timeout','save-during-demo','save-during-game','device-marker-filter','demo-only-profile','demo-only-rejects-gameplay')
         answers=('raedy\nReAdY' if name=='reprompt' else 'ready')+'\n'
         if full:
             answers+='watching\n'
@@ -135,6 +136,8 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
         elif name in ('before-game-died','before-game-timeout'):answers='ready\n'
         else:answers='stop\n'
         if name=='live-notes':answers=answers.replace('watching\n','1 demo looks fast\nwatching\n')
+        if m.DEMO_ONLY:
+            answers='ready\nwatching\n'+('gameplay\n' if name=='demo-only-rejects-gameplay' else '')+'save\ndemo observation\n'
         stdin = Terminal(answers)
         if name == 'noninteractive': stdin = io.StringIO(answers)
         m.sys = types.SimpleNamespace(argv=[str(source)], stdin=stdin)
@@ -309,8 +312,12 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
             assert file(m,'Live-Input-Journal').exists()
             assert 'pid=31000' in file(m,'Actor-Diagnostics').read_text()
             assert 'pid=32000' not in file(m,'Actor-Diagnostics').read_text()
-        if name in ('demo-only','demo-extension','gameplay','save-during-demo'):
-            demos=sorted(work.glob('*-Demo-*-Window.txt'))
+        if m.DEMO_ONLY:
+            assert 'Gameplay readiness' not in out.getvalue() and not file(m,'User-Gameplay-Readiness').exists()
+            assert 'Choose gameplay' not in out.getvalue()
+            assert 'no save loading or gameplay' in file(m,'Gameplay-Capture-Plan').read_text()
+        if name in ('demo-only','demo-extension','gameplay','save-during-demo','demo-only-profile','demo-only-rejects-gameplay'):
+            demos=sorted(work.glob(m.prefix.name+'-Demo-*-Window.txt'))
             assert len(demos)==(2 if name=='demo-extension' else 1),(name,demos,out.getvalue())
             for path in demos:
                 row=json.loads(path.read_text());assert row['stage']=='intro-automatic-demo' and row['requested_seconds']==300
@@ -339,7 +346,7 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
     for case in ('gameplay', 'live-notes', 'reprompt', 'game-crash', 'game-restart'): scenario(case, 1, 1, 0, 1)
     scenario('interrupt-game', 1, 1, 1, 1)
     scenario('extension',1,1,0,2)
-    for case in ('demo-only','demo-extension','save-during-demo'):scenario(case,1,1,0)
+    for case in ('demo-only','demo-extension','save-during-demo','demo-only-profile','demo-only-rejects-gameplay'):scenario(case,1,1,0)
     for case in ('timed-pid-timeout','save-during-game','device-marker-filter'):scenario(case,1,1,0,1)
     scenario('dead-reader', 1, 1, 1, 1)
 

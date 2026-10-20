@@ -26,8 +26,9 @@ not yet been measured.
 
 A rebuilt APK can have a different hash and ELF Build ID because its build path
 differs. After all builder checks pass, the runner creates an artifact receipt
-and prints the exact `test --artifact .../artifact.json` command. The default
-test continues to select the independently pinned existing APK.
+and atomically records the latest verified artifact for that exact source/profile.
+The default `test` selects that receipt and rechecks the report and APK bytes.
+Before the first successful build, testing this revision is refused.
 
 ## Recording a test
 
@@ -36,16 +37,16 @@ retaining its data, and launches once in that session. It does not uninstall,
 clear app data or logs, force-stop, alter settings, or synthesize game input.
 Replacing a running app ends that previous session.
 
-Follow the `ready`, `watching` and optional `playing` prompts in the same
+The current profile is intro/demo only. Follow `ready` and `watching` in the same
 terminal. During capture, enter a number from 1 to 10 plus a note and press
 Enter, for example `1 NPC arms stretch`. Numbers can be reused. `note 1 ...`
 adds detail to the latest matching marker. Type `save` during a timed window to
 finish. There is no second terminal and no `done` command.
 
 The initial launcher observation is 20 seconds. Automatic-demo windows are five
-minutes, with same-process extensions. Optional gameplay starts with ten minutes
-after the user confirms Banjo can move; extensions are five minutes. Loading and
-prompt waits are also logged, with explicit timed-window boundaries.
+minutes, with same-process extensions. This profile accepts only `continue` or
+`save` after each demo window and never requests loading a save or gameplay.
+Loading and prompt waits are also logged, with explicit window boundaries.
 
 Repeat tests are allowed. Each command creates a new session, exclusive attempt
 marker, capture prefix, baseline and evidence archive. For several requested
@@ -71,9 +72,12 @@ ZIP without any ADB command.
 
 ## Current version and maintenance
 
-`profiles/current.json` pins integration `3a8ef82eafc02a5318f4a16c6981f75628af1f7e`,
-engineering `9ec05e8667b9529d7b1096608a74c846c1bda4eb`, both parents, the disjoint
-source manifests, approved artwork, exact existing APK and template digests.
+`profiles/current.json` pins integration `8bcaad010df3ff89f1833c7958a8a52cad77259b`,
+engineering `c444d590a162fe77502bd8d3d3cab4e7bf1ea1b2`, both parents, the disjoint
+source manifests, approved artwork, build artifact names and template digests.
+This revision enforces recorded demo VI spans in existing guest waits. Ordinary
+title/gameplay waits and the global VI rate are unchanged; Odin behavior remains
+unverified until tested.
 The supported configuration is NDK r28c/API 24/ARM64, task-delivery timing ON,
 geometry/correction/allocation probes OFF, queue isolation 0 and undefined
 transfer/fallback/barrier selectors. Current templates deliberately reject other

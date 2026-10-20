@@ -33,6 +33,7 @@ baseline = None
 capture_start = None
 OBSERVE_SECONDS = 20
 DEMO_SECONDS = 300
+DEMO_ONLY = False
 GAMEPLAY_SECONDS = 600
 EXTENSION_SECONDS = 300
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
@@ -594,7 +595,7 @@ def main():
                        b'player_mapped=', b'duplicate_player_ids=', b'invalid_decomposition_pairs=',
                        b'projection_mismatch_total=', b'gpu_ns='):
             require(marker in native, f'Missing rendering diagnostic: {marker!r}')
-        for marker in (b'present-queue', b'cursor_wait', b'select_write=', b'ready_write=',
+        for marker in (b'tooie_demo_pacing', b'present-queue', b'cursor_wait', b'select_write=', b'ready_write=',
                        b'decisions_total=', b'current_%s', b'decisions=%llu backlog=%llu',
                        b'matching-stages', b'logical_call_pairs=', b'transform_pairs=',
                        b'expansion_visits=', b'tile_lookups=', b'input_calls=',
@@ -703,14 +704,14 @@ def main():
     initial_pids = pids()
     print('PASS: Odin2 Portal / 7907333f. Existing app PIDs: ' + (', '.join(map(str, initial_pids)) or 'none'), flush=True)
     print('This test performs one replacement install and one launch of this exact APK. Updating ends any running app session. App data is retained. No force-stop, uninstall, data reset or settings change is performed.', flush=True)
-    print('Task-delivery/display-list, report-window producer gaps and independent timing diagnostics are ON. Pacing is unchanged; measurements include observer/logging cost. This run observes intro/automatic demos, then optional normal gameplay. If the app closes, leave it closed.', flush=True)
-    print('ONE UBUNTU WINDOW. Follow the ready, watching and playing prompts. During demo/gameplay capture, type 1–10 and a short note, then Enter. Type save at any time during those timed windows to finish. All notes go in the SAME evidence ZIP. Do not type done.', flush=True)
+    print('Replay wait correction is enabled. Timing diagnostics include observer/logging cost. This profile observes only the intro and automatic demos.' if DEMO_ONLY else 'Replay wait correction and timing diagnostics are enabled; measurements include observer/logging cost. Optional gameplay is available after demo capture.', flush=True)
+    print(('INTRO/DEMO ONLY. Follow ready and watching in this ONE Ubuntu window; leave Odin untouched after Start Game. Type 1–10 plus a note during capture, or save to finish. Notes go in the SAME evidence ZIP. Do not type done.' if DEMO_ONLY else 'ONE UBUNTU WINDOW. Follow ready, watching and playing. Type 1–10 plus a note during capture, or save to finish. Notes go in the SAME evidence ZIP. Do not type done.'), flush=True)
     # Running this supplied collector requests the described one-install/one-launch test.
     stamp = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
     prefix = DOWNLOADS / f'Tooie-3a8ef82eafc0-Task-Delivery-Timing-Odin-{stamp}-{uuid.uuid4().hex[:8]}'
     save('Identity', f'commit={SHA}\nengineering_ancestor={ENGINEERING}\nnative_source_commit={NATIVE_SOURCE}\napp_name=Tooie Recompiled\nicon_master_sha256=4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784\nartwork_sha256={ARTWORK_HASH}\nhash={HASH}\nbuild_id={BUILD_ID}\nserial={SERIAL}\nhost_time={dt.datetime.now().astimezone().isoformat()}\n')
     save('Build-Report', report)
-    save('Authorization', 'User invoked the supplied one-window collector: one exact-APK replacement install and one launch, responsive-launcher check, optional one manual Start Game, 300-second untouched intro/automatic-demo observation with optional same-process extensions, then optional 600-second gameplay and 300-second extensions. Task-delivery/display-list, report-window producer gaps and independent timing diagnostics are enabled; rendering/pacing policies are unchanged. Existing app session ends during update; app data retained. No mod/ROM selection, automatic game input, forced stop, uninstall, reset, setting change or retry.\n')
+    save('Authorization', ('User invoked the demo-only collector: one replacement install and one launch, responsive launcher check, one manual Start Game, then untouched 300-second intro/demo windows with optional extensions. No save loading or gameplay is requested. App data/settings retained; no reset, force-stop or automatic input.\n' if DEMO_ONLY else 'User invoked the supplied one-window collector: one exact-APK replacement install and one launch, responsive-launcher check, optional one manual Start Game, 300-second untouched intro/automatic-demo observation with optional same-process extensions, then optional 600-second gameplay and 300-second extensions. Task-delivery/display-list, report-window producer gaps and independent timing diagnostics are enabled; rendering/pacing policies are unchanged. Existing app session ends during update; app data retained. No mod/ROM selection, automatic game input, forced stop, uninstall, reset, setting change or retry.\n'))
     save('Preflight-PIDs', ' '.join(map(str, initial_pids)) + '\n')
     capture_start = clock('Capture-Start-Device-Time')
     start_capture(capture_start)
@@ -782,7 +783,7 @@ def maybe_start_game(offset):
     health()
     clock('Start-Game-Instructions-Device-Time')
     save('Start-Game-Instructions', 'One manual Start Game attempt from the original responsive launcher. No new launch, ROM import or retry.\n')
-    save('Gameplay-Capture-Plan', '300-second untouched intro/demo windows after watching confirmation; extend until automatic demos are seen. Optional gameplay starts 600 seconds after playing confirmation, then optional 300-second extensions in the SAME process. Prompt/loading waits excluded from timed windows; raw logging remains continuous. Foreground-only host screenshots at approximately 60/180 seconds in five-minute windows and 60/180/300/420/540 seconds in the initial gameplay window. No automatic game input or audio/video recording.\n')
+    save('Gameplay-Capture-Plan', ('Intro/demo-only profile: five-minute untouched windows and optional extensions; no save loading or gameplay.\n' if DEMO_ONLY else '300-second untouched intro/demo windows after watching confirmation; extend until automatic demos are seen. Optional gameplay starts 600 seconds after playing confirmation, then optional 300-second extensions in the SAME process. Prompt/loading waits excluded from timed windows; raw logging remains continuous. Foreground-only host screenshots at approximately 60/180 seconds in five-minute windows and 60/180/300/420/540 seconds in the initial gameplay window. No automatic game input or audio/video recording.\n'))
     print('STEP 1: Press Start Game ONCE on Odin now. Leave the intro and automatic demos running untouched; do not press through them or load your save.', flush=True)
     print('STEP 2: Immediately after pressing Start Game, type watching HERE in Ubuntu and press Enter. Logging is already running. Type stop if the game is unavailable.', flush=True)
     answers = []
@@ -809,21 +810,21 @@ def maybe_start_game(offset):
             if finish_requested:
                 save('User-Demo-Observation', prompt('Briefly describe the intro/demo speed, scenes or closure (or press Enter): ') + '\n')
             return
-        print('Demo window finished. Keep Odin untouched while deciding. If you have not seen two automatic-demo clips yet, choose continue for FIVE MORE MINUTES. Choose gameplay to load your save next, or save to finish.', flush=True)
+        print(('Demo window finished. Keep Odin untouched. Type continue for FIVE MORE MINUTES or save to finish.' if DEMO_ONLY else 'Demo window finished. Type continue for five more minutes, gameplay to load your save, or save to finish.'), flush=True)
         answers = []
         while True:
-            answer = prompt('Demo decision (continue / gameplay / save): ')
+            answer = prompt('Demo decision (continue / save): ' if DEMO_ONLY else 'Demo decision (continue / gameplay / save): ')
             answers.append(answer)
             decision = answer.casefold()
-            if decision in ('continue', 'gameplay', 'save'):
+            if decision in (('continue', 'save') if DEMO_ONLY else ('continue', 'gameplay', 'save')):
                 break
-            print('Type continue, gameplay or save here in Ubuntu.', flush=True)
+            print('Type continue or save here in Ubuntu.' if DEMO_ONLY else 'Type continue, gameplay or save here in Ubuntu.', flush=True)
         save(label + '-Capture-Decision', '\n'.join(answers) + '\n')
         if decision != 'continue':
             break
         segment += 1
     save('User-Demo-Observation', prompt('Briefly describe which intro/demo scenes ran, visible speed and any Odin buttons pressed (or press Enter): ') + '\n')
-    if decision == 'save':
+    if DEMO_ONLY or decision == 'save':
         return
     print('NOW use the running game to load your existing save. Once you can move Banjo, type playing HERE in Ubuntu. Type stop if unavailable. The TEN-MINUTE gameplay timer starts only after playing; logging is already running. Do not reopen or relaunch the app.', flush=True)
     answers = []
@@ -981,8 +982,10 @@ def collect():
              'present-queue current totals describe all outer decisions at report time; peak contexts and stage maxima may be different decisions. Matching velocity preparation is nested in other phases. '
              'logical_call_pairs counts the old implied call product; expansion_visits, tile_lookups and input_calls count separate work dimensions. call_pairs remains the candidate-construction duration stage. '
              'Peak matching context ends before stage_units=; phase maxima can belong to different events. '
-             'Initial untouched intro/automatic-demo windows are 300 seconds after watching confirmation, optionally extended in the same process. Optional gameplay is 600 seconds after user declares Banjo movable, followed by optional 300-second windows. A user save/stop during timed capture ends observation and is explicitly recorded. Exact per-window metadata records completion or interruption. Loading/prompt waits and final evidence reads are additional raw-log coverage. Task-delivery/display-list, separate lifetime/report-window full-sync gaps and independent guest-clock/frame-sync/input/split-wait timing is ON, including bounded observer/logging overhead; geometry/correction-source observers are OFF. Clock records keep their historical correction-clock names despite geometry capture being disabled. Timing-Capture-Scope defines attribution/units and limits. Authored player and validated standard-actor hierarchy are ON. Counters describe application/fallback, not appearance. Global pacing is unchanged. Failure-only lookup diagnostics are included. All five corrected USA first-person switches are present (47 retained plus 23 further slots). Entrance/boss success was reported for prior b3401dd hardware; this timing build requires its own observations. Demo cadence and slowdown remain unresolved. Actual mod execution/texture replacement are not tested here. '
+             'Initial untouched intro/automatic-demo windows are 300 seconds after watching confirmation, optionally extended in the same process. Optional gameplay is 600 seconds after user declares Banjo movable, followed by optional 300-second windows. A user save/stop during timed capture ends observation and is explicitly recorded. Exact per-window metadata records completion or interruption. Loading/prompt waits and final evidence reads are additional raw-log coverage. Task-delivery/display-list, separate lifetime/report-window full-sync gaps and independent guest-clock/frame-sync/input/split-wait timing is ON, including bounded observer/logging overhead; geometry/correction-source observers are OFF. Clock records keep their historical correction-clock names despite geometry capture being disabled. Timing-Capture-Scope defines attribution/units and limits. Authored player and validated standard-actor hierarchy are ON. Counters describe application/fallback, not appearance. Accepted prerecorded spans extend the existing guest VI wait; global VI rate and ordinary title/gameplay waits are unchanged. Failure-only lookup diagnostics are included. All five corrected USA first-person switches are present (47 retained plus 23 further slots). Entrance/boss success was reported for prior b3401dd hardware; this timing build requires its own observations. This replay-wait correction requires Odin verification; ordinary-title motion and presentation stalls remain separate unresolved issues. Actual mod execution/texture replacement are not tested here. '
              'No audio/video content was recorded. Screenshots alone cannot establish motion, sound quality or simulation speed.\n')
+    if DEMO_ONLY:
+        scope = 'INTRO/DEMO ONLY: no save loading or playable-area test is requested. ' + scope
     save('Capture-Scope', scope)
     summary += '\nRuntime records correlated with original PID ' + str(original_pid) + ': ' + str(counts) + '; window=' + str(len(window)) + '\n' + scope
     if correlated:
@@ -990,7 +993,7 @@ def collect():
     save('Evidence', summary)
     print('Evidence saved for original PID ' + str(original_pid) + '; runtime counts: ' + str(counts), flush=True)
     bundles, index = archive_evidence()
-    print('CAPTURE COMPLETE. Task-delivery timing diagnostic APK; no intentional probe exit or pacing fix. Observer cost is included. Process presence, frame counts and screenshots alone do not establish correct speed or gameplay.', flush=True)
+    print('CAPTURE COMPLETE. Demo-cadence APK; replay-wait correction requires hardware verification; no intentional probe exit. Observer cost is included. Process presence, frame counts and screenshots alone do not establish correct speed or gameplay.', flush=True)
     print('Saved ' + ('raw evidence ZIP:' if len(bundles) == 1 else 'independent evidence ZIP parts AND the upload index:') + '\n' + '\n'.join(str(p) for p in bundles), flush=True)
     if index is not None:
         print(index, flush=True)

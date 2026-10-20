@@ -68,7 +68,7 @@ class Workflow(unittest.TestCase):
         script = self.root / 'build.sh'
         script.write_text(tooie.render_builder(self.profile))
         subprocess.run(['bash', '-n', script], check=True)
-        artifact = {**self.profile['artifact'], 'apk': str(self.root / 'game.apk'),
+        artifact = {**self.profile['artifact'], 'sha256':'a'*64, 'build_id':'b'*40, 'apk': str(self.root / 'game.apk'),
                     'report': str(self.root / 'report.txt')}
         one = tooie.render_collector(self.profile, artifact, self.args.downloads, self.root / 'first')
         two = tooie.render_collector(self.profile, artifact, self.args.downloads, self.root / 'second')
@@ -120,6 +120,37 @@ class Workflow(unittest.TestCase):
         with patch.object(tooie, 'select_artifact', return_value={'ready': True}), \
              patch.object(tooie, 'cache_configuration', side_effect=AssertionError('unnecessary rebuild')):
             self.assertEqual(tooie.build(args, self.profile), {'ready': True})
+
+    def test_unbuilt_revision_cannot_fall_back_to_an_old_apk(self):
+        self.assertIsNone(self.profile['artifact']['sha256'])
+        with self.assertRaisesRegex(RuntimeError, 'verified PC build first'):
+            tooie.select_artifact(self.args, self.profile)
+        apk = self.root / 'built.apk'; apk.write_bytes(b'host-only-artifact-fixture')
+        report = self.root / 'built-report.txt'
+        fields = dict(self.profile['report_fields'])
+        fields.update({'APK': str(apk), 'APK SHA-256': tooie.sha256(apk), 'ELF Build ID': 'b' * 40})
+        report.write_text(self.profile['report_header'] + '\n' + '\n'.join(k + ': ' + v for k, v in fields.items()))
+        receipt = tooie.artifact_from_files(apk, report, self.profile)
+        tooie.json_new(tooie.default_receipt(self.args, self.profile), receipt)
+        self.assertEqual(tooie.select_artifact(self.args, self.profile), receipt)
+        apk.write_bytes(b'changed-after-build')
+        with self.assertRaisesRegex(RuntimeError, 'bytes differ'):
+            tooie.select_artifact(self.args, self.profile)
+
+    def test_demo_profile_retains_mods_and_production_wait_gate(self):
+        self.assertTrue(self.profile['demo_only'])
+        engineering = self.profile['source_manifest']['engineering_entries']
+        mods = self.profile['source_manifest']['mod_entries']
+        self.assertEqual(len(engineering), 103)
+        self.assertEqual(len(mods), 61)
+        self.assertFalse({x['path'] for x in engineering} & {x['path'] for x in mods})
+        builder = tooie.render_builder(self.profile)
+        self.assertIn('bash tools/test_demo_pacing.sh', builder)
+        self.assertIn("'tooie_demo_pacing'", builder)
+        report = builder.split(self.profile['report_header']+'\n', 1)[1].split('\nEOF\n', 1)[0]
+        for key, value in self.profile['report_fields'].items():
+            if key not in ('Source commit', 'Source branch', 'Source parent'):
+                self.assertIn(key + ': ' + value + '\n', report+'\n')
 
     def test_cache_fingerprint_stable_then_invalidated_by_dependency(self):
         dependency = self.root / 'deps'; dependency.mkdir()

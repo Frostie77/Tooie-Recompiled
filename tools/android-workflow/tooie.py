@@ -132,9 +132,17 @@ def artifact_from_files(apk, report, profile, expected_hash=None, expected_id=No
             'apk': str(apk), 'report': str(report), 'sha256': digest, 'build_id': build_id}
 
 
+def default_receipt(args, profile):
+    return args.state / 'artifacts' / (profile['identity']['commit'] + '-' + profile['name'] + '.json')
+
+
 def select_artifact(args, profile):
-    if getattr(args, 'artifact', None):
-        receipt = json.loads(Path(args.artifact).read_text())
+    receipt_path = getattr(args, 'artifact', None)
+    if receipt_path is None and profile['artifact']['sha256'] is None:
+        receipt_path = default_receipt(args, profile)
+        require(receipt_path.is_file(), 'This revision needs a verified PC build first. Run ~/projects/tooie-tools/tooie build')
+    if receipt_path is not None:
+        receipt = json.loads(Path(receipt_path).read_text())
         require(receipt.get('schema') == 1 and receipt.get('profile') == profile['name'] and
                 receipt.get('source') == profile['identity']['commit'], 'Artifact receipt has a different source/profile.')
         return artifact_from_files(receipt['apk'], receipt['report'], profile,
@@ -172,6 +180,7 @@ def render_collector(profile, artifact, downloads, session):
         'READELF': "Path.home() / " + repr('Android/Sdk/ndk/' + profile['configuration']['ndk'] +
                                              '/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'),
         'MARKER': 'Path(' + repr(str(session / 'attempt.started')) + ')',
+        'DEMO_ONLY': repr(profile.get('demo_only', False)),
     }
     source = replace_assignments(source, replacements)
     node = next(n for n in ast.parse(source).body if isinstance(n, ast.FunctionDef) and n.name == 'expected_report')
@@ -263,7 +272,7 @@ def prepare_source(workspace, profile):
 
 def build(args, profile):
     known = profile['artifact']
-    if not args.rebuild and not args.fresh and (args.downloads / known['apk']).exists():
+    if not args.rebuild and not args.fresh and ((args.downloads / known['apk']).exists() or default_receipt(args, profile).is_file()):
         artifact = select_artifact(args, profile)
         print('Existing APK/report hash and source identity verified. Ready for: ~/projects/tooie-tools/tooie test')
         return artifact
@@ -298,8 +307,11 @@ def build(args, profile):
         artifact = artifact_from_files(export / known['apk'], export / known['report'], profile)
         receipt = record / 'artifact.json'
         json_new(receipt, artifact)
-        print('Build complete. To test this newly built artifact:\n' +
-              '~/projects/tooie-tools/tooie test --artifact ' + shlex.quote(str(receipt)))
+        latest = default_receipt(args, profile)
+        pending = latest.with_name(latest.name + '.' + unique_id() + '.tmp')
+        json_new(pending, artifact)
+        os.replace(pending, latest)
+        print('Build complete. Verified artifact saved for: ~/projects/tooie-tools/tooie test')
         return artifact
 
 

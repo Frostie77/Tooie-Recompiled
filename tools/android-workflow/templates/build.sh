@@ -33,8 +33,8 @@ for command in git cmake ninja gradle rsync unzip sha256sum cmp awk grep rg floc
   command -v "$command" >/dev/null 2>&1 || { echo "STOP: missing command: $command" >&2; exit 1; }
 done
 command -v "${CXX:-clang++}" >/dev/null 2>&1 || { echo 'STOP: host C++ compiler missing' >&2; exit 1; }
-OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Task-Delivery-Timing-Debug.apk"
-REPORT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Task-Delivery-Timing-Debug-build-report.txt"
+OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Cadence-Timing-Debug.apk"
+REPORT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Cadence-Timing-Debug-build-report.txt"
 if [[ -e "$OUTPUT" || -e "$REPORT" ]]; then
   echo 'STOP: this gameplay APK or report already exists; existing results are preserved.' >&2
   exit 1
@@ -269,7 +269,7 @@ for path in ('assets/menu.png','android/app/src/main/assets/program/assets/menu.
         raise SystemExit('STOP: approved TOOIE artwork differs.')
 if hashlib.sha256(source.joinpath('assets/android/launcher-master.png').read_bytes()).hexdigest()!='4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784':
     raise SystemExit('STOP: approved round BT/Jiggy master differs.')
-print('PASS: exact integration tree and both parents; 98 engineering files and 61 tested mod/branding/host files retained byte-for-byte, with no overlap.')
+print('PASS: exact integration tree and both parents; 103 engineering files and 61 tested mod/branding/host files retained byte-for-byte, with no overlap.')
 VERIFY_INTEGRATED_SOURCE
 python3 - "$SRC" <<'VERIFY_FIRST_PERSON_SOURCE'
 from pathlib import Path
@@ -419,8 +419,8 @@ for marker in \
  'PASS: identical full RAM/register digest for Android default/zero/timing/legacy and desktop; real clock-only writer, late frame-sync report; exact parent lacks clock-only hooks; altered frame count/replay override rejected'; do
   grep -Fq "$marker" "$LOGS/guest-timing-trace.log" || { echo "STOP: missing guest timing result: $marker" >&2; exit 1; }
 done
-[[ "$(grep -Fxc 'STATE cases=113 hash=ca5c17997dcf1b04' "$LOGS/guest-timing-trace.log")" -eq 5 ]] || {
-  echo 'STOP: all five 113-case generated-consumer profiles with the reviewed identical digest are required.' >&2; exit 1;
+[[ "$(grep -Ec '^STATE cases=113 ordinary_hash=[0-9a-f]{16} hash=[0-9a-f]{16}$' "$LOGS/guest-timing-trace.log")" -eq 5 ]] || {
+  echo 'STOP: all five 113-case generated-consumer profiles with ordinary-state equivalence checked by the source suite are required.' >&2; exit 1;
 }
 [[ "$(grep -Fc 'PASS: actual generated VI-worker/frame-sync/ordinary/replay/timer consumers;' "$LOGS/guest-timing-trace.log")" -eq 5 ]] || {
   echo 'STOP: all five generated timing profile results are required.' >&2; exit 1;
@@ -474,8 +474,8 @@ for marker in \
  'PASS: identical full RAM/register digest for Android default/zero/timing/legacy and desktop; real clock-only writer, late frame-sync report; exact parent lacks clock-only hooks; altered frame count/replay override rejected'; do
   grep -Fq "$marker" "$LOGS/step115-captured-timing.log" || { echo "STOP: missing captured timing result: $marker" >&2; exit 1; }
 done
-[[ "$(grep -Fxc 'STATE cases=113 hash=ca5c17997dcf1b04' "$LOGS/step115-captured-timing.log")" -eq 5 ]] || {
-  echo 'STOP: all five 113-case captured timing profiles with the reviewed identical digest are required.' >&2; exit 1;
+[[ "$(grep -Ec '^STATE cases=113 ordinary_hash=[0-9a-f]{16} hash=[0-9a-f]{16}$' "$LOGS/step115-captured-timing.log")" -eq 5 ]] || {
+  echo 'STOP: all five 113-case captured timing profiles with ordinary-state equivalence checked by the source suite are required.' >&2; exit 1;
 }
 [[ "$(grep -Fc 'PASS: 249 ordinary, 336 successful replay and 48 terminal sampled records through generated input/game-timer/whole attract handler;' "$LOGS/step115-captured-timing.log")" -eq 5 ]] || {
   echo 'STOP: all 633 captured Step 115 records must pass in all five generated-consumer profiles.' >&2; exit 1;
@@ -523,8 +523,8 @@ for marker in \
  'PASS: identical full RAM/register digest for Android default/zero/timing/legacy and desktop; real clock-only writer, late frame-sync report; exact parent lacks clock-only hooks; altered frame count/replay override rejected'; do
   grep -Fq "$marker" "$LOGS/step118-captured-timing.log" || { echo "STOP: missing Step 118 clock result: $marker" >&2; exit 1; }
 done
-[[ "$(grep -Fxc 'STATE cases=113 hash=ca5c17997dcf1b04' "$LOGS/step118-captured-timing.log")" -eq 5 ]] || {
-  echo 'STOP: all five 113-case Step 118 profiles with the reviewed identical digest are required.' >&2; exit 1;
+[[ "$(grep -Ec '^STATE cases=113 ordinary_hash=[0-9a-f]{16} hash=[0-9a-f]{16}$' "$LOGS/step118-captured-timing.log")" -eq 5 ]] || {
+  echo 'STOP: all five 113-case Step 118 profiles with ordinary-state equivalence checked by the source suite are required.' >&2; exit 1;
 }
 [[ "$(grep -Fc 'PASS: 243 ordinary, 278 successful replay and 48 terminal sampled records through generated input/game-timer/whole attract handler;' "$LOGS/step118-captured-timing.log")" -eq 5 ]] || {
   echo 'STOP: all 569 Step 118 records, including captured divisors, must pass in five profiles.' >&2; exit 1;
@@ -705,6 +705,14 @@ grep -Fq 'PASS: UTF-16 input; torn/duplicate/mixed-process/owner/flags/NaN/absen
   echo 'STOP: captured-input corruption controls are absent.' >&2; exit 1;
 }
 grep '^PASS:' "$LOGS/geometry-capture.log"
+if ! (cd "$SRC" && CC="$CLOCK_CC" bash tools/test_demo_pacing.sh) > "$LOGS/demo-pacing.log" 2>&1; then
+  echo 'STOP: production demo pacing regressions failed.' >&2
+  tail -100 "$LOGS/demo-pacing.log"; exit 1
+fi
+grep -Fq 'PASS: exact-parent missing pacing and altered wait controls fail; desktop, ordinary timing, input and dt semantics retained' "$LOGS/demo-pacing.log" || {
+  echo 'STOP: production pacing negative controls were not verified.' >&2; exit 1;
+}
+grep '^PASS:' "$LOGS/demo-pacing.log"
 if ! (cd "$SRC" && CC="$CLOCK_CC" bash tools/test_demo_replay_clock.sh) > "$LOGS/demo-clock.log" 2>&1; then
   echo 'STOP: generated demo-clock controls failed.' >&2
   tail -100 "$LOGS/demo-clock.log"
@@ -1563,6 +1571,9 @@ for marker in (
     if marker not in data:raise SystemExit('STOP: packaged task/window-gap diagnostic missing: '+marker.decode())
 
 symbols = subprocess.run([readelf, '--dyn-syms', '--wide', library], capture_output=True, text=True, check=True).stdout
+pacing_rows = [line for line in symbols.splitlines() if line.split() and line.split()[-1] == 'tooie_demo_pacing']
+if not any(' UND ' not in (' ' + row + ' ') for row in pacing_rows):
+    raise SystemExit('STOP: production demo pacing bridge is not defined in the packaged native library.')
 for suffix in ('nativeFileDialogResult', 'nativeModFileDialogResult', 'nativePresentationLifecycle'):
     name = 'Java_io_github_banjotooierecompiled_BanjoTooieSDLActivity_' + suffix
     rows = [line for line in symbols.splitlines() if line.split() and line.split()[-1] == name]
@@ -1782,8 +1793,8 @@ PACKAGED_SDL_BUILD_ID="${PACKAGED_SDL_BUILD_ID:-unavailable}"
 
 printf '\n=== 7/7 EXPORT IMMUTABLE APK AND BUILD REPORT ===\n'
 SHORT_SHA="${FULL_SHA:0:12}"
-OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Task-Delivery-Timing-Debug.apk"
-REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Task-Delivery-Timing-Debug-build-report.txt"
+OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Cadence-Timing-Debug.apk"
+REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Cadence-Timing-Debug-build-report.txt"
 if [[ -e "$OUTPUT" || -e "$REPORT" ]]; then
   echo 'STOP: output APK or report already exists; nothing will be overwritten.' >&2
   exit 1
@@ -1808,7 +1819,7 @@ Player implementation: b679975a352bf2f63b650f78845a2bf1eb5f8d9c
 Mod/branding tested source: 82a6641c228d71756222bc0da96b0f159e51abd4
 Approved icon/name source: e1fcf938dcc24bb9865b743f900d107a9de26d9d
 Approved title source: @@BRANDING@@
-Integration: exact disjoint 98-file engineering and 61-file tested mod/branding/host delta from ffd520a; no implementation edits
+Integration: exact disjoint 103-file engineering and 61-file tested mod/branding/host delta from ffd520a; no implementation edits
 App name: Tooie Recompiled (compiled application/activity labels verified)
 Branding: approved round BT/Jiggy icon, legacy/round/foreground visible RGBA and adaptive references verified in final APK
 Branding audit: $LOGS/packaged-branding-verification.json
@@ -1826,7 +1837,8 @@ Full-sync producer trace: ON (same timing profile; prepare/advance/publish_reset
 Task delivery/display-list trace: ON (same timing profile; gfx-submit/gfx-dispatch/display-list, immutable IDs/timestamps, nested TLS correlation)
 Task timing scope: submit age includes enqueue/observation overhead; interpreter includes full-sync; entry gaps include previous work/logging; independent/nested maxima are not additive
 Producer diagnostics scope: observer only; queued work, candidate ordering, publication predicates and ownership waits unchanged
-Timing behavior: diagnostic observation only; no speed multiplier, divisor, replay consumption, graphics policy or synchronization correction
+Timing behavior: accepted replay spans extend existing guest VI waits; ordinary title/gameplay and global VI rate unchanged
+Demo cadence policy: accepted recorded-VI minimum in existing guest waits
 Timing measurement scope: includes bounded observer/logging overhead; not the normal observer-OFF performance baseline
 Player hierarchy: ON by Android default; eleven actual C/C++ environments verify player/actor switches and enabled macros equal 1
 Player hierarchy scope: validated animated player slots; owned pose/schema/occupant/frame metadata; exact submitted endpoints; invalid recognized history uses current pose; standard actor policy separately validated
@@ -1863,7 +1875,7 @@ First-person host results: $LOGS/jump-table-analysis.log; $LOGS/first-person-dis
 Four-consumer source profile: $LOGS/bsfirstp-source-profile.json (four complete function hashes, ordered ROM targets, scoped 306-function audit)
 Four-consumer host results: $LOGS/bsfirstp-dispatches.log (468 Android + 468 desktop full consumer/reference scenarios; four exact-parent failures and eight mutations; controlled peripheral callees, not gameplay)
 Four-consumer ROM excerpt SHA-256: 7bc7cd52c090d8da384833f342c9f9bfca6803515ebf72dbe0fd4d6f94612acd (23 slots and 2512 verified instruction bytes; no full ROM bundled)
-Guest timing host results: $LOGS/guest-timing-trace.log (565 complete consumer/profile scenarios, retained 1105 sparse events per profile, identical ca5c17997dcf1b04 digest and parent/frame/replay controls)
+Guest timing host results: $LOGS/guest-timing-trace.log (565 complete consumer/profile scenarios, retained 1105 sparse events per profile, ordinary-state digest equivalence and explicit replay-wait expectations and parent/frame/replay controls)
 Presentation input host results: $LOGS/presentation-input-trace.log (40 actual State::updateScreen cases and unchanged exact-parent publication/RAM controls)
 Timing compiler audit: $BUILD/timing-policy-profile.json (nine actual environments, four generated contextual lookup routes)
 Producer compiler audit: $BUILD/full-sync-policy-profile.json (actual ARM64 preprocessed State::fullSync body, observer and five boundaries)
@@ -1874,7 +1886,7 @@ Task compiler audit: $BUILD/task-delivery-policy-profile.json (actual ARM64 runt
 Task host results: $LOGS/gfx-task-trace.log (40 actual-source cases, five profiles, queue/skeletal lifetime/cross-TU and exact-parent/mutation controls; adapted services/clocks, not Odin scheduling)
 Step 118 captured timing results: $LOGS/step118-captured-timing.log (569 records: 243 ordinary, 278 replay and 48 terminal; all captured divisors retained, five profiles and 565 complete consumer/profile scenarios)
 Step 118 fixture SHA-256: 523ffe51c04051d383aa0891f8e0d2a2341378862e51b736128740cbc52bde49 (212256 committed LF bytes; external evidence-archive validation NOT RUN by this builder)
-Clock attribution limit: timer-input and attract ratios are separate observations; intended demo cadence and an entire-game speed multiplier are not established
+Clock attribution limit: encoded replay cadence enforced by source; original-reference appearance and Odin behavior remain unverified
 First-person assembler: $LOGS/first-person-assembler.json (actual compiler/version, verified MIPS words; private clang-19 alias for the retained test script)
 First-person compile audit: funcs_44.c and funcs_45.c required in the normal ARM64 command database and effective Android contextual-lookup preprocessing
 Generator: host library/emitter built Release; analyzer and consumer adapters retain their source suite sanitizer settings; no full ROM bundled; independent timing observer enabled separately
@@ -1904,7 +1916,7 @@ Odin: NOT installed; NOT launched; no ADB commands used
 App data, settings and existing PC build folders/artifacts: preserved
 EOF
 )
-printf '\nSUCCESS: VERIFIED TOOIE RECOMPILED TASK-DELIVERY TIMING DIAGNOSTIC APK READY (NOT INSTALLED)\n'
+printf '\nSUCCESS: VERIFIED TOOIE RECOMPILED DEMO-CADENCE APK READY (NOT INSTALLED)\n'
 printf 'Commit: %s\n' "$FULL_SHA"
 printf 'APK: %s\n' "$OUTPUT"
 printf 'Build ID: %s\n' "$PACKAGED_BUILD_ID"
@@ -1913,5 +1925,5 @@ printf 'Report: %s\n' "$REPORT"
 echo 'Task delivery/display-list, full-sync window gaps and independent guest-clock/frame-sync/input timing ON; geometry/correction capture and allocation probe OFF; player/actor hierarchy ON; clear selectors undefined.'
 echo 'Mod support, selected round BT icon, Tooie Recompiled name and red TOOIE / blue RECOMPILED title verified.'
 echo 'Retained first-person switch corrections passed host tests; prior b3401dd entrance/boss success is recorded. This diagnostic APK remains untested on Odin.'
-echo 'Demo speed and queue-wait cause remain unresolved. Observer overhead is included; pacing, graphics policy and safeguards are unchanged.'
+echo 'Replay wait correction passed host controls; Odin appearance and ordinary-title motion remain unverified. Observer overhead is included; global VI rate and safeguards are unchanged.'
 echo 'No ADB commands were used. Odin unchanged.'
