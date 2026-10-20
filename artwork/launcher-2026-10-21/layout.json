@@ -1,0 +1,54 @@
+{
+  "status": "approved design; staged for runtime integration",
+  "approval_date": "2026-10-21",
+  "canvas": {
+    "width": 1672,
+    "height": 941
+  },
+  "assets": [
+    {
+      "path": "background.png",
+      "bytes": 2037165,
+      "width": 1672,
+      "height": 941,
+      "mode": "RGB",
+      "sha256": "3c125d58ad008e837f3c7dc335133d03bb9aae19086ffbde90d8a71daa52c707",
+      "git_blob_sha": "e558ed480a5ddaed0d23bcbf89e1809f73305ec4"
+    },
+    {
+      "path": "recompiled-wordmark.png",
+      "bytes": 913984,
+      "width": 2203,
+      "height": 714,
+      "mode": "RGBA",
+      "sha256": "e76b97de0c685566db2505e85d42052a520c8f31237cbfdbfe405a1706295269",
+      "git_blob_sha": "51b5c61ad99a4a9f71ad4d4ef144e13154d55c61"
+    }
+  ],
+  "wordmark": {
+    "asset": "recompiled-wordmark.png",
+    "left_percent": 7,
+    "top_percent": 43.5,
+    "width_percent": 74,
+    "height": "preserve source aspect ratio",
+    "rotation_degrees": -4,
+    "transform_origin": "center"
+  },
+  "menu_preview": {
+    "left_percent": 82,
+    "right_percent": 1.5,
+    "top_percent": 52,
+    "bottom_percent": 7,
+    "gap_percent_of_menu_height": 2.2,
+    "font_size_percent_of_canvas_width": 2.65,
+    "letter_spacing_percent_of_canvas_width": 0.08,
+    "labels": [
+      "Start Game",
+      "Controls",
+      "Settings",
+      "Mods",
+      "Exit"
+    ]
+  },
+  "runtime_integration": "Keep the two approved PNG layers intact; register both through recompui before drawing. Do not use a new image-generation composition, which changes approved glyphs and motifs."
+}
