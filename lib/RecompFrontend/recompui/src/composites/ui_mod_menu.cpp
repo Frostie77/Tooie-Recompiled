@@ -289,7 +289,9 @@ void ModMenu::refresh_mods(bool scan_mods) {
 
 void ModMenu::open_mods_folder() {
     std::filesystem::path mods_directory = recomp::mods::get_mods_directory();
-#if defined(WIN32)
+#if defined(__ANDROID__)
+    return; // No desktop shell or public path for Android's private mod storage.
+#elif defined(WIN32)
     std::wstring path_wstr = mods_directory.wstring();
     ShellExecuteW(NULL, L"open", path_wstr.c_str(), NULL, NULL, SW_SHOWDEFAULT);
 #elif defined(__linux__)
@@ -729,8 +731,10 @@ ModMenu::ModMenu(ResourceId rid, Element *parent) : Element(rid, parent) {
             refresh_button = context.create_element<IconButton>(footer_container, "icons/Reset.svg", recompui::ButtonStyle::Secondary, recompui::IconButtonSize::XLarge);
             refresh_button->add_pressed_callback([this](){ refresh_mods(true); });
 
+#if !defined(__ANDROID__)
             mods_folder_button = context.create_element<Button>(footer_container, "Open Mods Folder", recompui::ButtonStyle::Tertiary);
             mods_folder_button->add_pressed_callback([this](){ open_mods_folder(); });
+#endif
         } // footer_container
     } // this
     
