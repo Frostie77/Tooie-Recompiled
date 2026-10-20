@@ -57,6 +57,7 @@ for filename in ['funcs_0.c','funcs_1.c','funcs_24.c','funcs_25.c','funcs_30.c',
   a=subprocess.check_output([*args,str(parent)],text=True);b=subprocess.check_output([*args,str(r/'RecompiledFuncs'/filename)],text=True)
   # The only new production hook calls are checked separately; guest instruction bodies stay exact.
   b=re.sub(r'\btooie_rt64_skeleton_builder\(rdram, ctx, [12]U\);','',b)
+  b=re.sub(r'\btooie_demo_pacing\(rdram, ctx, [0-3]U\);','',b)
   assert re.sub(r'\s+',' ',without_lookup_lines(a))==re.sub(r'\s+',' ',without_lookup_lines(b)),filename
 print('PASS: all six generated C files retain exact parent instruction bodies with trace undefined/0 (preprocessed with current bridge declarations)')
 PY

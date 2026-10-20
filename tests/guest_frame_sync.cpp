@@ -130,13 +130,22 @@ int main(int argc,char**) {
     // Hold the same elapsed VI inputs while executing the real input, replay,
     // capped game delta and game-timer consumers. The recorded span overrides
     // ordinary elapsed; this intentionally does not invent a playback cadence.
+    const uint64_t ordinaryDigest=digest;
     setup(ctx,2);swapDelay=0;
     W(0x8007B2D0)=1;W(0x8007B2DC)=0x42C80000;B(0x80127760)=2;
+    unsigned replayFrame=0;
     for(unsigned span:{3u,2u,6u}) {
-        func_80015410(rdram,&ctx);CHECK(H(0x80078F64)==2);
-        func_800A7D30(rdram,&ctx);CHECK(W(0x8012C764)==2);
+        const int elapsed=
+#if defined(__ANDROID__) && !defined(TOOIE_GUEST_TIMING_PARENT)
+            replayFrame==1?3:2;
+#else
+            2;
+#endif
+        ++replayFrame;
+        func_80015410(rdram,&ctx);CHECK(H(0x80078F64)==elapsed);
+        func_800A7D30(rdram,&ctx);CHECK(W(0x8012C764)==elapsed);
         timed_input(rdram,&ctx);
-        CHECK(W(0x8012C764)==int(span) && H(0x80078F64)==2);
+        CHECK(W(0x8012C764)==int(span) && H(0x80078F64)==elapsed);
         func_80018444(rdram,&ctx);hash(rdram,memory.size());hash(&ctx,sizeof(ctx));++cases;
     }
 #if TOOIE_TIMING_TRACE_ENABLED
@@ -151,7 +160,7 @@ int main(int argc,char**) {
     CHECK(!frameSync().calls && !frameSync().invalid && frameSync().maxUs==0);
     CHECK(memory==ramBefore && !std::memcmp(&ctx,&ctxBefore,sizeof(ctx)));
 #endif
-    std::printf("STATE cases=%u hash=%016llx\n",cases,(unsigned long long)digest);
+    std::printf("STATE cases=%u ordinary_hash=%016llx hash=%016llx\n",cases,(unsigned long long)ordinaryDigest,(unsigned long long)digest);
     CHECK(retained_clock_main()==0);
 #if TOOIE_GUEST_CLOCK_TRACE_ENABLED
     CHECK(tooie::correction::guest::clocks().depth==0 && tooie::correction::guest::clocks().invalid==0);

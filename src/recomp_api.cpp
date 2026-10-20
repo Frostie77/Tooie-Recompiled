@@ -53,6 +53,12 @@ extern "C" {
 #include "skeletal_pose_guest.h"
 #include "actor_pose_guest.h"
 #include "guest_lookup.h"
+#include "demo_pacing_guest.h"
+
+extern "C" void tooie_demo_pacing(uint8_t* rdram, recomp_context* ctx, uint32_t event) {
+    tooie::demo::event(rdram, ctx, event);
+}
+
 
 extern "C" void tooie_rt64_actor_scope(uint8_t* rdram, recomp_context* ctx, uint32_t stage) {
 #if TOOIE_ACTOR_POSE_ENABLED

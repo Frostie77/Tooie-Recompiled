@@ -1,0 +1,2798 @@
+{
+  "source": "3a8ef82eafc02a5318f4a16c6981f75628af1f7e",
+  "original_pid": 31303,
+  "new_log_sha256": "1db753bd7a7bc957e69a336d1ed1c7dccae1239492bc2099403fe5ea6033835e",
+  "scope": "Sparse successful replay inputs, not all events or recorded OS scheduling. Input payloads and peripheral timing are constructed in tests.",
+  "records": [
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "131/132",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "132/133",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "133/134",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "134/135",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "135/136",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "136/137",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "137/138",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "138/139",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "282/283",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "283/284",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "1",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "284/285",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "285/286",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "286/287",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "287/288",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "288/289",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "289/290",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "432/433",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "433/434",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "434/435",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "1",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "435/436",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "436/437",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "437/438",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "1",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "438/439",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "439/440",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "581/582",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "582/583",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "583/584",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "584/585",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "585/586",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "586/587",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "587/588",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "588/589",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "731/732",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "732/733",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "733/734",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "734/735",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "735/736",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "736/737",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "737/738",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "335/335",
+      "index": "738/739",
+      "count": "766/766"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "89/90",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "90/91",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "91/92",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "92/93",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "93/94",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "94/95",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "95/96",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "96/97",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "240/241",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "241/242",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "5",
+      "elapsed_span": "2",
+      "applied_span": "5",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "242/243",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "243/244",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "244/245",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "245/246",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "1",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "246/247",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "3",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "247/248",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "391/392",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "392/393",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "393/394",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "394/395",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "395/396",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "396/397",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "397/398",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "278/278",
+      "index": "398/399",
+      "count": "476/476"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "1",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "39/40",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "40/41",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "1",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "41/42",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "42/43",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "1",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "43/44",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "44/45",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "45/46",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "1",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "46/47",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "189/190",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "190/191",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "191/192",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "192/193",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "193/194",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "194/195",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "195/196",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "196/197",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "340/341",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "341/342",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "342/343",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "343/344",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "344/345",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "345/346",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "346/347",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "347/348",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "490/491",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "3",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "491/492",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "492/493",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "493/494",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "494/495",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "495/496",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "496/497",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "497/498",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "640/641",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "641/642",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "642/643",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "643/644",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "644/645",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "645/646",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "646/647",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "314/314",
+      "index": "647/648",
+      "count": "738/738"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "0/1",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "1/2",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "15",
+      "elapsed_span": "1",
+      "applied_span": "15",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "2/3",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "5",
+      "elapsed_span": "2",
+      "applied_span": "5",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "3/4",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "4/5",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "5/6",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "6/7",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "151/152",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "152/153",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "153/154",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "154/155",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "155/156",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "156/157",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "157/158",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "158/159",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "301/302",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "302/303",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "303/304",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "304/305",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "305/306",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "306/307",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "307/308",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "308/309",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "451/452",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "452/453",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "453/454",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "454/455",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "455/456",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "456/457",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "457/458",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "458/459",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "602/603",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "603/604",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "604/605",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "605/606",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "606/607",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "607/608",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "608/609",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "609/610",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "752/753",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "753/754",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "754/755",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "755/756",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "756/757",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "757/758",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "758/759",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "759/760",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "902/903",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "903/904",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "904/905",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "905/906",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "906/907",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "907/908",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "908/909",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "235/235",
+      "index": "909/910",
+      "count": "1012/1012"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "1/2",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "15",
+      "elapsed_span": "50",
+      "applied_span": "15",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "2/3",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "5",
+      "elapsed_span": "2",
+      "applied_span": "5",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "3/4",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "4/5",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "5/6",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "6/7",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "7/8",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "8/9",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "153/154",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "154/155",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "1",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "155/156",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "156/157",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "157/158",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "158/159",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "1",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "159/160",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "160/161",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "1",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "291/292",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "292/293",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "293/294",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "294/295",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "295/296",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "296/297",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "297/298",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "298/299",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "1",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "429/430",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "430/431",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "431/432",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "432/433",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "433/434",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "1",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "434/435",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "435/436",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "1",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "436/437",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "579/580",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "580/581",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "581/582",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "582/583",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "583/584",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "584/585",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "1",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "585/586",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "586/587",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "730/731",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "731/732",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "732/733",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "733/734",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "734/735",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "735/736",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "736/737",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "737/738",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "869/870",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "870/871",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "871/872",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "872/873",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "873/874",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "874/875",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "875/876",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "876/877",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "992/993",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "993/994",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "994/995",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "995/996",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "996/997",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "4",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "997/998",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "998/999",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "999/1000",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "1113/1114",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "1114/1115",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "1115/1116",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "1116/1117",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "1117/1118",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "1118/1119",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "1119/1120",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "296/296",
+      "index": "1120/1121",
+      "count": "1123/1123"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "111/112",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "112/113",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "113/114",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "114/115",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "115/116",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "116/117",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "117/118",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "118/119",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "261/262",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "262/263",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "3",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "263/264",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "264/265",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "265/266",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "266/267",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "267/268",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "268/269",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "411/412",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "412/413",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "413/414",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "414/415",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "415/416",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "416/417",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "417/418",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "418/419",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "561/562",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "562/563",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "563/564",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "4",
+      "elapsed_span": "2",
+      "applied_span": "4",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "564/565",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "565/566",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "566/567",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "567/568",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "568/569",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "711/712",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "712/713",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "713/714",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "714/715",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "715/716",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "716/717",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "2",
+      "elapsed_span": "2",
+      "applied_span": "2",
+      "delta_bits": "3D088889",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "717/718",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "718/719",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "862/863",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "863/864",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "864/865",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "865/866",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "1",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "866/867",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "3",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "867/868",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "868/869",
+      "count": "907/907"
+    },
+    {
+      "recorded_span": "3",
+      "elapsed_span": "2",
+      "applied_span": "3",
+      "delta_bits": "3D4CCCCE",
+      "mode": "2/2",
+      "map": "185/185",
+      "index": "869/870",
+      "count": "907/907"
+    }
+  ]
+}

@@ -13403,6 +13403,9 @@ RECOMP_FUNC void func_80015190(uint8_t* rdram, recomp_context* ctx) {
     return;
 ;}
 RECOMP_FUNC void func_800151BC(uint8_t* rdram, recomp_context* ctx) {
+#if defined(__ANDROID__)
+    tooie_demo_pacing(rdram, ctx, 1U);
+#endif
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
 #if TOOIE_TIMING_TRACE_ENABLED
@@ -13473,6 +13476,9 @@ L_80015204:
     // 0x80015208: nop
 
     after_4:
+#if defined(__ANDROID__)
+    tooie_demo_pacing(rdram, ctx, 2U);
+#endif
     // 0x8001520C: lui         $t6, 0x8008
     ctx->r14 = S32(0X8008 << 16);
     // 0x80015210: lui         $t8, 0x8008
@@ -13518,6 +13524,9 @@ L_80015238:
     // 0x80015248: nop
 
     after_6:
+#if defined(__ANDROID__)
+    tooie_demo_pacing(rdram, ctx, 2U);
+#endif
     // 0x8001524C: lui         $t0, 0x8008
     ctx->r8 = S32(0X8008 << 16);
     // 0x80015250: lui         $t2, 0x8008
@@ -13884,6 +13893,9 @@ L_800153F4:
     // 0x800153F8: addiu       $a0, $zero, 0xA
     ctx->r4 = ADD32(0, 0XA);
     after_25:
+#if defined(__ANDROID__)
+    tooie_demo_pacing(rdram, ctx, 3U);
+#endif
 #if TOOIE_TIMING_TRACE_ENABLED
     tooie_correction_probe(rdram, ctx, 17U, 0x800153FCU);
 #endif
@@ -16202,6 +16214,9 @@ RECOMP_FUNC void func_8001608C(uint8_t* rdram, recomp_context* ctx) {
     // 0x800160F4: addiu       $a1, $sp, 0x50
     ctx->r5 = ADD32(ctx->r29, 0X50);
     after_3:
+#if defined(__ANDROID__)
+    tooie_demo_pacing(rdram, ctx, 0U);
+#endif
     #if TOOIE_GUEST_CLOCK_TRACE_ENABLED
     tooie_correction_probe(rdram, ctx, 11U, 0x00000000U);
 #endif

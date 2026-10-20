@@ -759,3 +759,50 @@ text = """
 tooie_correction_probe(rdram, ctx, 17U, 0x800153FCU);
 #endif
 """
+
+# Native replay cadence: honor each accepted record in the existing VI wait.
+[[patches.hook]]
+func = "func_8001608C"
+before_vram = 0x800160F8
+text = """
+#if defined(__ANDROID__)
+tooie_demo_pacing(rdram, ctx, 0U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800151BC"
+before_vram = 0x800151BC
+text = """
+#if defined(__ANDROID__)
+tooie_demo_pacing(rdram, ctx, 1U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800151BC"
+before_vram = 0x8001520C
+text = """
+#if defined(__ANDROID__)
+tooie_demo_pacing(rdram, ctx, 2U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800151BC"
+before_vram = 0x8001524C
+text = """
+#if defined(__ANDROID__)
+tooie_demo_pacing(rdram, ctx, 2U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800151BC"
+before_vram = 0x800153FC
+text = """
+#if defined(__ANDROID__)
+tooie_demo_pacing(rdram, ctx, 3U);
+#endif
+"""
+

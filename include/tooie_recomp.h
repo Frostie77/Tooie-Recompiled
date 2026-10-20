@@ -67,6 +67,9 @@ void tooie_yield_pending_sound(uint8_t* rdram, recomp_context* ctx);
 // Clears the runtime's RDP freeze bit when Tooie signals the frame barrier.
 void tooie_clear_dp_freeze(uint8_t* rdram, recomp_context* ctx);
 
+// Apply accepted replay spans to the existing guest retrace wait.
+void tooie_demo_pacing(uint8_t* rdram, recomp_context* ctx, uint32_t event);
+
 // Turns a "culled" verdict from Tooie's float-AABB, s16-AABB and sphere
 // visibility wrappers into "visible" while the applied aspect ratio is Expand,
 // whose projection is wider than the planes those tests build.

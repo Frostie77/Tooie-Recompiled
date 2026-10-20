@@ -44,10 +44,11 @@ for f in ['funcs_0.c','funcs_1.c','funcs_24.c','funcs_77.c']:
   a=subprocess.check_output([*flags,str(parent)],text=True)
   b=subprocess.check_output([*flags,str(r/'RecompiledFuncs'/f)],text=True)
   b=re.sub(r'\btooie_correction_probe\(rdram, ctx, [0-9]+U, 0x[0-9A-F]+U\);','',b)
+  b=re.sub(r'\btooie_demo_pacing\(rdram, ctx, [0-3]U\);','',b)
   assert re.sub(r'\s+',' ',a)==re.sub(r'\s+',' ',b),(f,defs)
 print('PASS: complete generated instruction bodies equal exact parent across default/zero/timing and desktop profiles (observer calls excluded only when enabled)')
 s=(r/'src/recomp_api.cpp').read_text();a=s.index('extern "C" void tooie_correction_probe(');b=s.index('\n}\n',a)+3
-(t/'bridge.cpp').write_text('#include "tooie_recomp.h"\n#include "correction_trace_guest.h"\n'+s[a:b])
+(t/'bridge.cpp').write_text('#include "tooie_recomp.h"\n#include "correction_trace_guest.h"\n#include "demo_pacing_guest.h"\n'+s[a:b]+'\nextern "C" void tooie_demo_pacing(uint8_t *ram,recomp_context *ctx,uint32_t event) {tooie::demo::event(ram,ctx,event); }\n')
 PY
 python3 "$r/tests/correction_clock_records.py" "${TOOIE_CAPTURED_CLOCK_FIXTURE:-$r/tests/fixtures/odin-step86-clocks.txt}" "$t/captured_clocks.h"
 flags=(-O1 -g -fwrapv -fsanitize=address,undefined -fno-omit-frame-pointer -I"$r/include" -I"$r/src" -I"$r/tests" -I"$t" -I"$r/RecompiledFuncs" -I"$r/lib/N64Recomp/include")
@@ -61,6 +62,7 @@ for profile in android-default android-zero android-timing android-legacy deskto
  desktop-timing) defs=(-DTOOIE_ANDROID_TIMING_TRACE=1 -DTOOIE_ANDROID_CORRECTION_TRACE=1);;
  esac
  case "$profile" in parent|bad-frame|bad-timer) source=$profile;;esac
+ if [ "$profile" = parent ];then defs+=(-DTOOIE_GUEST_TIMING_PARENT=1);fi
  cp "$t/$source-input.inc" "$t/input-call.inc"
  cp "$t/$source-prime.inc" "$t/prime-call.inc"
  "${CC:-gcc}" -std=c11 "${flags[@]}" "${defs[@]}" -c "$t/$source.c" -o "$t/generated.o"
@@ -82,7 +84,8 @@ from pathlib import Path
 import re,sys
 t=Path(sys.argv[1]);hashes=set()
 for profile in ['android-default','android-zero','android-timing','android-legacy','desktop-timing']:
- hashes.add(re.search(r'^STATE.*', (t/(profile+'.txt')).read_text(),re.M)[0])
+ row=re.search(r'^STATE.*', (t/(profile+'.txt')).read_text(),re.M)[0]
+ hashes.add(re.search(r'ordinary_hash=([0-9a-f]+)',row)[1])
  log=t/profile/'banjotooi-debug.log';text=log.read_text() if log.exists() else ''
  if profile in ('android-timing','android-legacy'):
   assert 'Runtime correction-clock-event:' in text and 'Runtime correction-clock:' in text
