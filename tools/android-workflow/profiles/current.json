@@ -1114,7 +1114,7 @@
   },
   "templates": {
     "build.sh": "ee0d565eff784e67f725a3571d85cbb43b3f4cbf64749bfbf3f5aa12ca795547",
-    "collector.py": "8df823c83633aa29786a614a540ca3e7e38c6528dcca9ba5fb6d381457699685"
+    "collector.py": "c8bed6cf5123241f1f5e1534d60f22e78692b64c6e1c7f945ddbe504364bb129"
   },
   "demo_only": true
 }

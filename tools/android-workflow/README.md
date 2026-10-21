@@ -119,3 +119,12 @@ host regression and actual ARM64 preprocessed begin-frame check are required
 build gates. This profile requires its own verified PC artifact; it cannot reuse
 a receipt from the previous revision. Odin appearance and stutter remain
 unverified until the intro/demo test. Newly staged launcher art is separate.
+
+A package process may exist after an update before the game Activity launches.
+That alone no longer ends a capture. The runner still issues only one Activity
+launch. If Android reuses that process, the collector requires the same unique
+PID and the exact game Activity in the foreground after an unambiguous launch.
+Ambiguous launch responses, changed/multiple PIDs and failed/unknown checks
+still stop the session without a retry. Stop reasons and PID attribution are
+retained in the evidence ZIP. This recorder update reuses the already verified
+APK receipt; no native rebuild is needed.

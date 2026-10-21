@@ -40,6 +40,7 @@ MAX_UPLOAD_BYTES = 30 * 1024 * 1024
 PART_RAW_BYTES = 20 * 1024 * 1024
 CHUNK_BYTES = 8 * 1024 * 1024
 original_pid = None
+launch_existing_pids = ()
 finish_requested = False
 ENGINEERING = '9ec05e8667b9529d7b1096608a74c846c1bda4eb'
 NATIVE_SOURCE = SHA
@@ -536,7 +537,7 @@ def require_original_process(name):
 
 
 def main():
-    global prefix, attempted, baseline, capture_start
+    global prefix, attempted, baseline, capture_start, launch_existing_pids
     require(len(sys.argv) == 1, 'This collector takes no arguments.')
     require(sys.stdin.isatty(), 'Run this file directly in an interactive Ubuntu terminal; no piped input. No installation attempted.')
     require(not os.path.lexists(MARKER), 'This session already has a run marker. Start a new session through the workflow runner.')
@@ -726,7 +727,7 @@ def main():
     print(text(r), flush=True)
     require(r.returncode == 0 and 'Success' in text(r).splitlines(), 'Install success not confirmed. NO retry or launch.')
     health()
-    require(not pids('After-Install-PIDs'), 'App is already running after installation. NO launch.')
+    pids('After-Install-PIDs')  # A package process need not have an Activity.
     installed_paths = text(adb('shell', '-T', 'pm path ' + PKG, name='Installed-APK-Path')).splitlines()
     require(len(installed_paths) == 1 and installed_paths[0].startswith('package:/data/app/') and installed_paths[0].endswith('/base.apk'), 'Unexpected installed APK path; no launch.')
     installed = installed_paths[0][len('package:'):]
@@ -735,7 +736,14 @@ def main():
     r = adb('shell', '-T', f'run-as {PKG} cat files/data/banjotooi-debug.log', name='Baseline', strict=False)
     baseline = r.stdout if r.returncode == 0 else None
     health()
-    require(not pids('Before-Launch-PIDs'), 'App started before the single launch. NO launch.')
+    launch_existing_pids = pids('Before-Launch-PIDs')
+    require(len(launch_existing_pids) <= 1, 'Multiple package processes before launch; session ownership is ambiguous. No launch.')
+    if launch_existing_pids:
+        print('A package process already exists. The single Activity launch will still be attempted; capture requires confirmed process and foreground ownership.', flush=True)
+    save('Prelaunch-Process-Assessment', json.dumps({
+        'pids': list(launch_existing_pids),
+        'scope': 'A PID alone does not establish an existing game Activity or gameplay. No process is stopped or restarted here.',
+    }, indent=2) + '\n')
     clock('Launch-Device-Time')
     launch_log_offset = Path(str(prefix) + '-Logcat.txt').stat().st_size
     save('Launch-Logcat-Offset', str(launch_log_offset) + '\n')
@@ -754,9 +762,30 @@ def main():
 
 def original_launch_pid(offset):
     raw = Path(str(prefix) + '-Logcat.txt').read_bytes()[offset:].decode(errors='replace')
-    match = re.search(r'Start proc (\d+):' + re.escape(PKG) + r'[/\s]', raw)
-    require(match is not None, 'Original launch PID not identified in Logcat. No Start Game attempt.')
-    return int(match[1])
+    matches = set(int(value) for value in re.findall(r'Start proc (\d+):' + re.escape(PKG) + r'[/\s]', raw))
+    require(len(matches) <= 1, 'Multiple package process starts during launcher observation; ownership is ambiguous. No Start Game attempt.')
+    if matches:
+        pid = next(iter(matches))
+        save('Launch-PID-Assessment', json.dumps({'pid': pid, 'source': 'post-command Logcat process start'}, indent=2) + '\n')
+        return pid
+    # Android can create the package process before am start, without starting
+    # the game Activity. A successful launch then reuses that PID and produces
+    # no new Start proc line. Require a unique unchanged PID and this exact
+    # foreground Activity; never infer continuity from a missing log alone.
+    require(len(launch_existing_pids) == 1, 'Original launch PID not identified in Logcat. No Start Game attempt.')
+    active = pids('Launch-Reused-Process-PIDs')
+    require(active == launch_existing_pids, 'Prelaunch process did not remain uniquely present. No Start Game attempt.')
+    foreground = adb('shell', '-T', 'dumpsys activity activities', name='Launch-Reused-Process-Foreground')
+    resumed = [line for line in text(foreground).splitlines()
+               if re.search(r'\b(?:topResumedActivity|mResumedActivity)\s*[:=]\s*ActivityRecord\{', line)]
+    component = re.compile(r'\s' + re.escape(PKG) + r'/(?:\.BanjoTooieSDLActivity|' + re.escape(PKG) + r'\.BanjoTooieSDLActivity)(?:\s|\})')
+    require(resumed and all(component.search(line) for line in resumed), 'Exact game Activity foreground was not confirmed for the reused process. No Start Game attempt.')
+    pid = active[0]
+    save('Launch-PID-Assessment', json.dumps({
+        'pid': pid, 'source': 'unchanged unique prelaunch package PID plus exact foreground Activity after confirmed am start',
+        'new_process_start_observed': False,
+    }, indent=2) + '\n')
+    return pid
 
 
 def maybe_start_game(offset):
@@ -1071,6 +1100,11 @@ def run():
         main()
     except (Exception, KeyboardInterrupt) as error:
         code = 1
+        if prefix is not None:
+            try:
+                save('Stop-Reason', (str(error) or 'Interrupted') + '\n')
+            except OSError:
+                pass
         print('\nSTOPPED: '+(str(error) or 'Interrupted'),flush=True)
         print('This session has ended. Its evidence is retained. A later workflow test starts a separate session after fresh checks.' if attempted else 'No install or launch attempt was consumed; no device update or forced stop was performed.',flush=True)
     finally:

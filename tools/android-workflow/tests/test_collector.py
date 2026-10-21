@@ -120,15 +120,15 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
         if name == 'consumed-symlink': m.MARKER.symlink_to(work / 'missing-target')
         now = [0.0]
         m.time = types.SimpleNamespace(monotonic=lambda: now[0], sleep=lambda n: now.__setitem__(0, now[0] + n))
-        full = name in ('live-notes','gameplay','extension','reprompt','game-crash','game-restart','interrupt-game','dead-reader','demo-only','demo-extension','timed-pid-timeout','save-during-demo','save-during-game','device-marker-filter','demo-only-profile','demo-only-rejects-gameplay')
+        full = name in ('live-notes','gameplay','extension','reprompt','game-crash','game-restart','interrupt-game','dead-reader','demo-only','demo-extension','timed-pid-timeout','save-during-demo','save-during-game','device-marker-filter','demo-only-profile','demo-only-rejects-gameplay','reused-process')
         answers=('raedy\nReAdY' if name=='reprompt' else 'ready')+'\n'
         if full:
             answers+='watching\n'
             if name=='demo-extension':answers+='continue\n'
             if name=='save-during-demo':answers+='demo observed\n'
             else:
-                answers+=('save' if name in ('demo-only','demo-extension') else 'gameplay')+'\ndemos observed without input\n'
-                if name not in ('demo-only','demo-extension'):
+                answers+=('save' if name in ('demo-only','demo-extension','reused-process') else 'gameplay')+'\ndemos observed without input\n'
+                if name not in ('demo-only','demo-extension','reused-process'):
                     answers+='playing\n'
                     if name!='save-during-game':answers+=('continue\nsave' if name in ('extension','dead-reader') else 'save')+'\n'
                     answers+='areas and input observed\n'
@@ -212,7 +212,17 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
                     pid = 31000
                     if name_case == 'original-restarted' and alive: pid = 32000
                     if name_case == 'existing-app' and not phase['installed']: alive = True
-                    if name_case == 'auto-started' and phase['installed'] and not phase['launched']: alive = True
+                    if (name_case == 'auto-started' or name_case.startswith('reused-')) and phase['installed'] and not phase['launched']: alive = True
+                    # Exact observed ordering: no PID immediately after install,
+                    # then the package process appears before the Activity launch.
+                    if name_case == 'reused-process' and name == 'After-Install-PIDs': alive = False
+                    if name_case == 'reused-raced' and phase['launched']: pid = 32000
+                    if name_case == 'reused-multiple' and name == 'Before-Launch-PIDs':
+                        value = response('31000 32000\n\nTOOIE_PIDOF_RC=0\n')
+                        if name is not None:
+                            m.save(name,value.stdout);m.save(name+'-status','returncode=0\n')
+                        return value
+                    if name_case == 'reused-check-timeout' and name == 'Launch-Reused-Process-PIDs': raise RuntimeError('simulated reused-PID timeout')
                     if name_case == 'before-game-died' and name == 'Before-Start-Game-PIDs': alive = False
                     if name and name.startswith('Gameplay-01-PIDs-'):
                         if phase['game_start'] is None:
@@ -234,11 +244,16 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
                     elif name == 'FullLog' and name_case == 'log-read-fail': value = response(b'partial', -999)
                     else: value = response((b'rewritten\n' + fresh) if name_case == 'log-reset' and name == 'FullLog' else data)
                 elif remote.startswith('dumpsys activity '):
-                    value = response('mResumedActivity: ActivityRecord{123 u0 ' + ('other.app' if name_case == 'other-foreground' else m.PKG) + '/.Activity t7}\n')
+                    if name == 'Launch-Reused-Process-Foreground':
+                        payload = ('mResumedActivity: ActivityRecord{123 u0 '+('other.app' if name_case == 'reused-other-foreground' else m.PKG)+'/'+('.OtherActivity' if name_case == 'reused-wrong-activity' else '.BanjoTooieSDLActivity')+' t7}\n')
+                        if name_case == 'reused-empty-foreground': payload = ''
+                        value = response(payload, 1 if name_case == 'reused-foreground-fail' else 0)
+                    else:
+                        value = response('mResumedActivity: ActivityRecord{123 u0 ' + ('other.app' if name_case == 'other-foreground' else m.PKG) + '/.Activity t7}\n')
                 elif remote.startswith('dumpsys '): value = response('read-only snapshot\n')
                 elif remote.startswith('am start -n '):
                     counters['launch'] += 1; phase['launched'] = True
-                    if name_case != 'missing-start-pid':
+                    if name_case != 'missing-start-pid' and not name_case.startswith('reused-'):
                         with file(m, 'Logcat').open('ab') as out: out.write(timeline)
                         if name_case=='device-marker-filter':
                             rows=[]
@@ -247,7 +262,7 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
                                 rows.append('2026-10-20 19:00:00.100000 +1100 99000 99000 I TooieUserMark: '+json.dumps(payload))
                             with file(m,'Logcat').open('ab') as out:out.write(('\n'.join(rows)+'\n').encode())
 
-                    value = response('Warning: Activity not started') if name_case == 'ambiguous-launch' else response('completion unknown', -999) if name_case == 'launch-timeout' else response('Starting: Intent { cmp=' + m.PKG + '/.BanjoTooieSDLActivity }')
+                    value = response('Warning: Activity not started') if name_case in ('ambiguous-launch','reused-warning') else response('completion unknown', -999) if name_case == 'launch-timeout' else response('Starting: Intent { cmp=' + m.PKG + '/.BanjoTooieSDLActivity }')
                 else: raise AssertionError('Unapproved remote operation: ' + remote)
             assert value is not None, args
             if name is not None:
@@ -274,6 +289,8 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
             result = m.run()
         assert counters == {'install': installs, 'launch': launches}, (name, counters, out.getvalue())
         assert result == code, (name, result, out.getvalue())
+        if m.prefix is not None and result:
+            assert file(m, 'Stop-Reason').read_text().strip(), (name, out.getvalue())
         records = sorted(work.glob('*-Gameplay-*-Window.txt'))
         assert len(records) == windows, (name, len(records), out.getvalue())
         if windows:
@@ -316,12 +333,16 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
             assert 'Gameplay readiness' not in out.getvalue() and not file(m,'User-Gameplay-Readiness').exists()
             assert 'Choose gameplay' not in out.getvalue()
             assert 'no save loading or gameplay' in file(m,'Gameplay-Capture-Plan').read_text()
-        if name in ('demo-only','demo-extension','gameplay','save-during-demo','demo-only-profile','demo-only-rejects-gameplay'):
+        if name in ('demo-only','demo-extension','gameplay','save-during-demo','demo-only-profile','demo-only-rejects-gameplay','reused-process'):
             demos=sorted(work.glob(m.prefix.name+'-Demo-*-Window.txt'))
             assert len(demos)==(2 if name=='demo-extension' else 1),(name,demos,out.getvalue())
             for path in demos:
                 row=json.loads(path.read_text());assert row['stage']=='intro-automatic-demo' and row['requested_seconds']==300
                 assert row['completed_requested_window']==(name!='save-during-demo')
+        if name == 'reused-process':
+            assessment=json.loads(file(m,'Launch-PID-Assessment').read_text())
+            assert assessment['pid']==31000 and not assessment['new_process_start_observed']
+            assert file(m,'Original-Launch-PID').read_text().strip()=='31000'
         if name=='device-marker-filter':
             selected=file(m,'User-Marker-Logcat').read_text().splitlines()
             assert len(selected)==1 and '99000 99000' in selected[0]
@@ -340,8 +361,11 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
         if marker in (b'ModImporter', b'openModPicker', b'nativeModFileDialogResult'): scenario(f'missing-dex-{index}')
     for index in range(len(negative)): scenario(f'forbidden-{index}')
     scenario('capture-fail', 0, 0, 1)
-    for case in ('install-timeout', 'install-fail', 'auto-started', 'bad-installed-path', 'bad-installed-hash'): scenario(case, 1, 0, 1)
+    for case in ('install-timeout', 'install-fail', 'bad-installed-path', 'bad-installed-hash','reused-multiple'): scenario(case, 1, 0, 1)
     for case in ('ambiguous-launch', 'launch-timeout', 'launcher-died', 'original-restarted', 'missing-start-pid','before-game-died','before-game-timeout'): scenario(case, 1, 1, 1)
+    for case in ('reused-raced','reused-check-timeout','reused-other-foreground','reused-wrong-activity','reused-empty-foreground','reused-foreground-fail','reused-warning'): scenario(case, 1, 1, 1)
+    scenario('auto-started',1,1,0)
+    scenario('reused-process',1,1,0)
     for case in ('picker-stop', 'readiness-stop', 'existing-app', 'log-reset', 'log-read-fail', 'no-baseline', 'other-foreground'): scenario(case, 1, 1, 0)
     for case in ('gameplay', 'live-notes', 'reprompt', 'game-crash', 'game-restart'): scenario(case, 1, 1, 0, 1)
     scenario('interrupt-game', 1, 1, 1, 1)
