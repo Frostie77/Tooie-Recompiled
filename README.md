@@ -1,6 +1,6 @@
 # Tooie Recompiled
 
-**A native Android port of Banjo-Tooie (USA).**
+**A native Android port of Banjo-Tooie.**
 
 This project targets **Android ARM64 devices** and produces an **Android APK**.
 Windows and Linux are used as development/build hosts; they are not supported
