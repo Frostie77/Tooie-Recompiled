@@ -63,7 +63,7 @@ class Terminal(io.StringIO):
     def isatty(self): return True
 
 def report_fixture(m,sdl):
-    header='Tooie Recompiled Android verified task-delivery-timing build report'
+    header=profile['report_header']
     report=builder.read_text().split(header+'\n',1)[1].split('\nEOF\n',1)[0]
     replacements={'$FULL_SHA':m.SHA,'$BRANCH':profile['identity']['branch'],
       '$ACTUAL_PARENT':' '.join(profile['identity']['parents']),
@@ -117,6 +117,10 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
             }.items(): archive.writestr(entry, data)
         m.HASH = hashlib.sha256(m.APK.read_bytes()).hexdigest()
         report = report_fixture(m, sdl)
+        if name == 'bad-report-header':
+            report = report.replace(profile['report_header'], 'Unexpected report identity', 1)
+        if name == 'legacy-report-header':
+            report = report.replace(profile['report_header'], 'Tooie Recompiled Android verified task-delivery-timing build report', 1)
         if name == 'duplicate-report': report += 'Source commit: ' + m.SHA + '\n'
         if name.startswith('report-'):
             key = list(m.expected_report())[int(name.rsplit('-', 1)[1])]
@@ -304,7 +308,7 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
         assert result == code, (name, result, out.getvalue())
         if m.prefix is not None and result:
             assert file(m, 'Stop-Reason').read_text().strip(), (name, out.getvalue())
-        records = sorted(work.glob('*-Gameplay-*-Window.txt'))
+        records = sorted(work.glob(m.prefix.name + '-Gameplay-*-Window.txt')) if m.prefix is not None else []
         assert len(records) == windows, (name, len(records), out.getvalue())
         if windows:
             first = json.loads(records[0].read_text())
@@ -372,7 +376,7 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
             assert 'pid=32000' not in file(m,'Task-Delivery-Diagnostics').read_text()
         checks += 1
 
-    for case in ['bad-hash', 'bad-art', 'bad-wordmark', 'bad-launcher-layout', 'bad-build-id', 'bad-abi', 'undefined-mod-jni', 'duplicate-report', 'consumed', 'consumed-symlink', 'noninteractive', 'bad-serial','bad-model','preflight-pid-timeout']:
+    for case in ['bad-hash', 'bad-art', 'bad-wordmark', 'bad-launcher-layout', 'bad-build-id', 'bad-abi', 'undefined-mod-jni', 'duplicate-report', 'bad-report-header', 'legacy-report-header', 'consumed', 'consumed-symlink', 'noninteractive', 'bad-serial','bad-model','preflight-pid-timeout']:
         scenario(case)
     for index in range(len(module().expected_report())): scenario(f'report-{index}')
     # Every actual native component marker is checked as a rejection case.

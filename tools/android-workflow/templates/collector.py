@@ -20,6 +20,7 @@ BUILD_ID = '7da65931e98aa0e45eda5c237c2ba9e8662d67d1'
 DOWNLOADS = Path.home() / 'Downloads'
 APK = DOWNLOADS / 'Tooie-3a8ef82eafc0-Task-Delivery-Timing-Debug.apk'
 REPORT = DOWNLOADS / 'Tooie-3a8ef82eafc0-Task-Delivery-Timing-Debug-build-report.txt'
+REPORT_HEADER = 'Tooie Recompiled Android verified task-delivery-timing build report'
 ADB = os.environ.get('TOOIE_ADB', 'adb')
 READELF = Path.home() / 'Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'
 SERIAL = '7907333f'
@@ -594,7 +595,7 @@ def main():
             digest.update(chunk)
     require(digest.hexdigest() == HASH, 'APK SHA-256 mismatch.')
     report = REPORT.read_bytes()
-    require(report.decode().splitlines()[0] == 'Tooie Recompiled Android verified task-delivery-timing build report', 'Unexpected build report header.')
+    require(report.decode().splitlines()[0] == REPORT_HEADER, 'Unexpected build report header.')
     fields = {}
     for line in report.decode().splitlines():
         key, sep, value = line.partition(': ')
@@ -746,7 +747,7 @@ def main():
             symbol = 'Java_io_github_banjotooierecompiled_BanjoTooieSDLActivity_' + suffix
             require(any(len(parts := line.split()) >= 8 and parts[-1] == symbol and
                         parts[-2] != 'UND' for line in symbols.splitlines()), f'Missing defined JNI export: {symbol}')
-    print('PASS: exact Step 119 APK hash/report, task-delivery/display-list/full-sync window gaps and independent timing ON, geometry/correction capture OFF, hierarchy/mods/artwork retained, ZIP, ARM64 Build ID, DEX and all three JNI exports.', flush=True)
+    print('PASS: exact reviewed gameplay APK hash/report, task-delivery/display-list/full-sync window gaps and independent timing ON, geometry/correction capture OFF, hierarchy/mods/artwork retained, ZIP, ARM64 Build ID, DEX and all three JNI exports.', flush=True)
     apk_windows = text(command(['wslpath', '-w', APK]))
     require(text(adb('get-state')) == 'device', 'Expected Odin is unavailable.')
     require(text(adb('get-serialno')) == SERIAL, 'Device serial mismatch.')
@@ -1098,7 +1099,7 @@ def collect():
     save('Evidence', summary)
     print('Evidence saved for original PID ' + str(original_pid) + '; runtime counts: ' + str(counts), flush=True)
     bundles, index = archive_evidence()
-    print('CAPTURE COMPLETE. Demo-cadence APK; replay-wait correction requires hardware verification; no intentional probe exit. Observer cost is included. Process presence, frame counts and screenshots alone do not establish correct speed or gameplay.', flush=True)
+    print('CAPTURE COMPLETE. Gameplay diagnostic APK; visual corrections require hardware verification; no intentional probe exit. Observer cost is included. Process presence, frame counts and screenshots alone do not establish correct speed or gameplay.', flush=True)
     print('Saved ' + ('raw evidence ZIP:' if len(bundles) == 1 else 'independent evidence ZIP parts AND the upload index:') + '\n' + '\n'.join(str(p) for p in bundles), flush=True)
     if index is not None:
         print(index, flush=True)

@@ -36,6 +36,30 @@ and atomically records the latest verified artifact for that exact source/profil
 The default `test` selects that receipt and rechecks the report and APK bytes.
 Before the first successful build, testing this revision is refused.
 
+## Current build: transform upload correction
+
+The pinned source is `7a158a50b5b2e9936f99dc2488665a9459fd6559`, with the exact tree of main
+after PR #12 (`26d41b13a8350182a0018578fbcbb150eee7470c`). Its runtime differs from the
+tested d168 APK in one transform-upload history predicate. The round BT icon,
+approved launcher and all other game/renderer sources and shaders are identical.
+The integration adds provenance parents without changing that main tree.
+
+Run `tooie build` first. This profile has no prebuilt artifact receipt and cannot
+fall back to d168. The builder reruns the new eight-case ASan/UBSan staging test,
+exact-parent overread/byte controls and retained host/packaging checks. GitHub
+Android CI already passed the same runtime source tree with observers OFF; this
+PC build retains the timing observer for comparison and the established local
+signing identity. A CI debug APK must not replace the existing app by uninstalling it.
+
+Then use `tooie test --gameplay-only` in one Ubuntu terminal. Keep Manual 60 and
+the other graphics settings unchanged. This is a source-correctness fix, not a
+confirmed cure for climbing poses, ground/shadow artifacts or lower frame output.
+Prior d168 first-person entry/play passed. No device operation occurs during build.
+
+The long-running updater and build branches are distribution/provenance branches.
+Do not open or merge those entire branches into main; use the small reviewed
+pull requests. Updating this wrapper is a fast-forward and preserves its history.
+
 ## Bug pictures and optional output-rate comparison
 
 Frostie's current priority is smooth, responsive normal gameplay. Demo stutter
