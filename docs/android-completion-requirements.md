@@ -17,7 +17,7 @@ The intended experience is the complete Banjo-Tooie adventure with the clarity, 
 7. **Banjo and Kazooie themed Android launcher icon.** Create and integrate the promised launcher artwork.
 8. **Clean, reproducible Android source and builds.** Clear Android APK build instructions, pinned dependencies and reproducible packaging. Windows/Linux may be development hosts and host-test environments; desktop releases are outside this project's supported scope.
 9. **Release readiness and data preservation.** Proper release configuration/signing and licensing review, with no user ROMs or copyrighted game assets bundled. Preserve the existing Android package identity, ROMs, saves and settings.
-10. **Automatic startup update detection from GitHub.** When Trent or another user opens an online installation, the app checks for a newer published Android release and clearly offers the update.
+10. **Automatic startup update detection from GitHub.** When a user opens an online installation, the app checks for a newer published Android release and clearly offers the update.
 
 ## Public project scope
 
@@ -35,7 +35,7 @@ Preparing this wording does not publish a release or change repository visibilit
 
 ## Required Android mod support
 
-Trent explicitly confirmed on 16 October 2026 that mod support is a finished-project criterion. It is mandatory and remains unverified on hardware.
+Frostie explicitly confirmed on 16 October 2026 that mod support is a finished-project criterion. It is mandatory and remains unverified on hardware.
 
 - Document the supported mod formats, runtime/API versions and compatibility limits. Support compatible Tooie Recompiled mods on Android; do not imply that every PC mod automatically works.
 - Complete Android file selection, including multiple files where the supported mod workflow needs them. Imported mods must remain available after the picker closes and after an app/device restart, without relying on PC paths or temporary picker access.
@@ -48,7 +48,7 @@ Acceptance evidence must cover import, actual gameplay effect, multiple compatib
 
 ## Added requirement: startup updates
 
-Trent requested this future feature on 15 October 2026. It remains planned and unimplemented. Complete the current gameplay investigation first; the update feature remains part of the intended finished project.
+Frostie requested this future feature on 15 October 2026. It remains planned and unimplemented. Complete the current gameplay investigation first; the update feature remains part of the intended finished project.
 
 The planned behavior is:
 
@@ -65,7 +65,7 @@ Recording this requirement does not change the current source-engineering or con
 
 ## Gameplay test duration and coverage
 
-Trent requested longer gameplay capture on 16 October 2026. Three-minute captures are startup/smoke checks and are insufficient for gameplay or release acceptance.
+Frostie requested longer gameplay capture on 16 October 2026. Three-minute captures are startup/smoke checks and are insufficient for gameplay or release acceptance.
 
 - Future gameplay investigations use a ten-minute initial capture, with a choice to continue in five-minute blocks in the same process until the needed areas and actions have been exercised. Waiting at the launcher is recorded separately and does not count as gameplay coverage.
 - Allow enough active play to cover area entry and return transitions, NPC/enemy movement, combat, player movement/camera and shadows. Record which scenes and actions were actually reached, plus the user's observations; do not treat elapsed time or process survival alone as evidence of coverage.
@@ -132,7 +132,7 @@ signing/licensing, updates and release acceptance still need their own evidence.
 
 Earlier Step 77 evidence tested artwork integration `a1338bfae10c937a66a8c2c2581195a93b009372`, rendering parent `98f909cc6837cb9bc66cad1018fefd3b090add8d`. It installed and launched on Odin, and the supplied evidence archive retains original PID 16378 through the capture. The accepted TOOIE launcher artwork is present.
 
-Trent reported good input, no noticeable sluggishness, improved/less noticeable entry freezes, and no shunts in the area played. He still observed stretching, especially in enemy/NPC movement, and an awkward geometric shadow from Banjo. The timed capture ran approximately 11:18:50–11:21:51 on 16 October, with raw retention continuing until about 11:24:56. The longer launcher wait is not counted as gameplay.
+Frostie reported good input, no noticeable sluggishness, improved/less noticeable entry freezes, and no shunts in the area played. He still observed stretching, especially in enemy/NPC movement, and an awkward geometric shadow from Banjo. The timed capture ran approximately 11:18:50–11:21:51 on 16 October, with raw retention continuing until about 11:24:56. The longer launcher wait is not counted as gameplay.
 
 The evidence confirms substantially lower matching cost in this session, while scene differences prevent a controlled device speedup claim. Remaining records include four OpenSL ES mutex timeouts and intermittent presentation/rendering hitches. No app fatal, Vulkan device loss or descriptor rejection was found in the captured original-process logs. Sparse diagnostics and still images do not establish the cause of stretching or shadow appearance, nor complete visual, sound or full-game correctness.
 
