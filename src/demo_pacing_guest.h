@@ -85,6 +85,15 @@ inline void begin(uint8_t *ram) {
     state.pending = {};
 }
 
+// Drawing precedes frame-sync in the generated wrapper. Borrow the validated
+// record without consuming the one-use wait ticket. Stale and ordinary frames
+// retain their configured interval; no wall-time estimate or guest write is used.
+inline uint32_t renderInterval(uint8_t *ram, uint32_t original) {
+    const auto &pending = pacing().pending;
+    if (!original || original > 60U) return original;
+    return same(ram, pending) && pending.span > original ? pending.span : original;
+}
+
 inline uint32_t interval(uint8_t *ram, uint32_t original) {
     auto &state = pacing();
     if (!state.depth || state.depth > state.sync.size() || !original || original > 60U)
