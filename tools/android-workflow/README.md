@@ -128,3 +128,11 @@ Ambiguous launch responses, changed/multiple PIDs and failed/unknown checks
 still stop the session without a retry. Stop reasons and PID attribution are
 retained in the evidence ZIP. This recorder update reuses the already verified
 APK receipt; no native rebuild is needed.
+
+The current build profile integrates the exact approved two-layer Jiggy launcher,
+red TOOIE- and blue -RECOMPILED with the retained renderer-cadence source.
+Both PNGs and the layout manifest are checked in source, Android mirrors,
+packaged APK and preflight; the compiled layer-registration markers are checked
+as well. Its new source identity requires a new PC build. The previous
+verified APK and its completed evidence remain unchanged. The round BT icon
+and app name remain intact.

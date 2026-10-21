@@ -175,6 +175,9 @@ def render_collector(profile, artifact, downloads, session):
         'SHA': repr(identity['commit']), 'HASH': repr(artifact['sha256']),
         'BUILD_ID': repr(artifact['build_id']), 'ENGINEERING': repr(identity['engineering']),
         'NATIVE_SOURCE': repr(identity['commit']), 'DOWNLOADS': 'Path(' + repr(str(downloads)) + ')',
+        'ARTWORK_HASH': repr(profile['launcher_assets']['background']),
+        'WORDMARK_HASH': repr(profile['launcher_assets']['wordmark']),
+        'LAUNCHER_LAYOUT_HASH': repr(profile['launcher_assets']['layout']),
         'APK': 'Path(' + repr(artifact['apk']) + ')', 'REPORT': 'Path(' + repr(artifact['report']) + ')',
         'ADB': repr(profile['device']['adb']), 'SERIAL': repr(profile['device']['serial']),
         'READELF': "Path.home() / " + repr('Android/Sdk/ndk/' + profile['configuration']['ndk'] +

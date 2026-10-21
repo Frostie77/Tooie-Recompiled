@@ -44,7 +44,9 @@ launch_existing_pids = ()
 finish_requested = False
 ENGINEERING = '9ec05e8667b9529d7b1096608a74c846c1bda4eb'
 NATIVE_SOURCE = SHA
-ARTWORK_HASH = '87b0fdf84f30e5bff5516e6acfc7fa812713fdae2f4a4fb22b68333b16b89f26'
+ARTWORK_HASH = '3c125d58ad008e837f3c7dc335133d03bb9aae19086ffbde90d8a71daa52c707'
+WORDMARK_HASH = 'e76b97de0c685566db2505e85d42052a520c8f31237cbfdbfe405a1706295269'
+LAUNCHER_LAYOUT_HASH = 'b242f7244ce35c3eb656e30a48def2ece22c4c7a7ee2b38c8deb25e4b9d79d55'
 RUNTIME_DOMAINS = ('audio', 'vi', 'present', 'config', 'workload-stages',
                    'render-stages', 'present-stages', 'vulkan-build', 'shader-build', 'interpolation', 'present-queue', 'matching-stages', 'guest-fatal', 'skeletal-source', 'skeletal-rejected', 'skeletal', 'actor-source', 'actor-draw', 'lookup-failure', 'lookup-registers', 'lookup-neighbors', 'lookup-words', 'lookup-map', 'lookup-section', 'lookup-guest-table', 'lookup-guest-overlay', 'lookup-event', 'guest-frame-sync', 'present-input', 'full-sync', 'gfx-submit', 'gfx-dispatch', 'display-list', 'correction-rom', 'correction-clock', 'correction-clock-event', 'correction-clock-bucket')
 RUNTIME_RE = re.compile(r'^Runtime (?:' + '|'.join(map(re.escape, RUNTIME_DOMAINS)) + r'):')
@@ -563,14 +565,18 @@ def main():
         require(z.testzip() is None, 'APK ZIP integrity failure.')
         names = z.namelist()
         require(len(names) == len(set(names)), 'Duplicate APK ZIP entries.')
-        for name in ('lib/arm64-v8a/libmain.so', 'lib/arm64-v8a/libSDL2.so', 'assets/program/assets/menu.png', 'AndroidManifest.xml', 'resources.arsc'):
+        for name in ('lib/arm64-v8a/libmain.so', 'lib/arm64-v8a/libSDL2.so', 'assets/program/assets/menu.png', 'assets/program/assets/menu-recompiled.png', 'assets/program/assets/launcher-layout.json', 'AndroidManifest.xml', 'resources.arsc'):
             require(names.count(name) == 1, 'Missing or duplicate APK entry: ' + name)
         require(hashlib.sha256(z.read('assets/program/assets/menu.png')).hexdigest() == ARTWORK_HASH,
                 'Packaged TOOIE artwork hash mismatch.')
+        require(hashlib.sha256(z.read('assets/program/assets/menu-recompiled.png')).hexdigest() == WORDMARK_HASH,
+                'Packaged RECOMPILED wordmark hash mismatch.')
+        require(hashlib.sha256(z.read('assets/program/assets/launcher-layout.json')).hexdigest() == LAUNCHER_LAYOUT_HASH,
+                'Packaged launcher layout hash mismatch.')
         native = z.read('lib/arm64-v8a/libmain.so')
         sdl = z.read('lib/arm64-v8a/libSDL2.so')
         require(hashlib.sha256(sdl).hexdigest() == fields.get('Packaged SDL2 SHA-256'), 'Packaged SDL2 hash/report mismatch.')
-        for marker in (b'Descriptor indexing discovery:', b'Descriptor layout support:',
+        for marker in (b'?/tooie/launcher-recompiled', b'menu-recompiled.png', b'LauncherArtwork', b'Descriptor indexing discovery:', b'Descriptor layout support:',
                        b'Descriptor pool capacity:', b'Descriptor pool creation returned:',
                        b'Descriptor allocation returned:', b'Descriptor rejected: reason=',
                        b'framebuffer-shader-views', b'Descriptor pool device:',

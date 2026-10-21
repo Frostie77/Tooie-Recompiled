@@ -33,8 +33,8 @@ for command in git cmake ninja gradle rsync unzip sha256sum cmp awk grep rg floc
   command -v "$command" >/dev/null 2>&1 || { echo "STOP: missing command: $command" >&2; exit 1; }
 done
 command -v "${CXX:-clang++}" >/dev/null 2>&1 || { echo 'STOP: host C++ compiler missing' >&2; exit 1; }
-OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Render-Cadence-Timing-Debug.apk"
-REPORT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Render-Cadence-Timing-Debug-build-report.txt"
+OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Render-Launcher-Timing-Debug.apk"
+REPORT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Render-Launcher-Timing-Debug-build-report.txt"
 if [[ -e "$OUTPUT" || -e "$REPORT" ]]; then
   echo 'STOP: this gameplay APK or report already exists; existing results are preserved.' >&2
   exit 1
@@ -263,13 +263,18 @@ for entry in [*mod.values(),*engineering.values()]:
     observed=git('ls-tree','HEAD','--',entry['path']).split()
     if observed!=[entry['mode'],entry['type'],entry['sha'],entry['path']]:
         raise SystemExit('STOP: exact source blob/mode differs: '+entry['path'])
-for path in ('assets/menu.png','android/app/src/main/assets/program/assets/menu.png'):
-    data=source.joinpath(path).read_bytes()
-    if hashlib.sha256(data).hexdigest()!='87b0fdf84f30e5bff5516e6acfc7fa812713fdae2f4a4fb22b68333b16b89f26' or data[:8]!=b'\x89PNG\r\n\x1a\n' or struct.unpack('>II',data[16:24])!=(1670,942):
-        raise SystemExit('STOP: approved TOOIE artwork differs.')
+for root in ('assets','android/app/src/main/assets/program/assets'):
+    for name,digest,size in (
+        ('menu.png','3c125d58ad008e837f3c7dc335133d03bb9aae19086ffbde90d8a71daa52c707',(1672,941)),
+        ('menu-recompiled.png','e76b97de0c685566db2505e85d42052a520c8f31237cbfdbfe405a1706295269',(2203,714))):
+        data=source.joinpath(root,name).read_bytes()
+        if hashlib.sha256(data).hexdigest()!=digest or data[:8]!=b'\x89PNG\r\n\x1a\n' or struct.unpack('>II',data[16:24])!=size:
+            raise SystemExit('STOP: approved launcher image differs: '+root+'/'+name)
+    if hashlib.sha256(source.joinpath(root,'launcher-layout.json').read_bytes()).hexdigest()!='b242f7244ce35c3eb656e30a48def2ece22c4c7a7ee2b38c8deb25e4b9d79d55':
+        raise SystemExit('STOP: approved launcher layout differs.')
 if hashlib.sha256(source.joinpath('assets/android/launcher-master.png').read_bytes()).hexdigest()!='4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784':
     raise SystemExit('STOP: approved round BT/Jiggy master differs.')
-print('PASS: exact integration tree and both parents; 107 engineering files and 61 tested mod/branding/host files retained byte-for-byte, with no overlap.')
+print('PASS: exact integration tree and both parents; 107 engineering files and 69 mod/branding/host files retained byte-for-byte, with no overlap; both approved launcher layers verified.')
 VERIFY_INTEGRATED_SOURCE
 python3 - "$SRC" <<'VERIFY_FIRST_PERSON_SOURCE'
 from pathlib import Path
@@ -337,6 +342,14 @@ fi
 
 
 printf '\n=== 2/7 RUN TASK DELIVERY, PRODUCER TIMING, FIRST-PERSON, MOD AND GAMEPLAY REGRESSIONS ===\n'
+if ! (cd "$SRC" && CXX="$AUDIO_CXX" python3 tools/test_launcher_artwork.py) > "$LOGS/launcher-artwork.log" 2>&1; then
+  echo 'STOP: approved launcher layers or layout failed verification.' >&2
+  tail -80 "$LOGS/launcher-artwork.log"; exit 1
+fi
+grep -Fq 'PASS: exact approved launcher PNG layers, Android mirrors, registration route and preserved menu actions; no device-rendering claim' "$LOGS/launcher-artwork.log" || {
+  echo 'STOP: launcher layer verification result missing.' >&2; exit 1;
+}
+grep '^PASS:' "$LOGS/launcher-artwork.log"
 
 
 echo 'Checking MIPS HI16 carry and the complete USA first-person consumer; host compilation may take a few minutes.'
@@ -1607,11 +1620,16 @@ with zipfile.ZipFile(apk) as archive:
     for entry in ('lib/arm64-v8a/libmain.so', 'lib/arm64-v8a/libSDL2.so', 'AndroidManifest.xml', 'resources.arsc'):
         if names.count(entry) != 1:
             raise SystemExit('STOP: required APK member missing: ' + entry)
-    name = 'assets/program/assets/menu.png'
-    if archive.namelist().count(name) != 1:
-        raise SystemExit('STOP: TOOIE launcher asset absent or duplicated in APK.')
-    if hashlib.sha256(archive.read(name)).hexdigest() != '87b0fdf84f30e5bff5516e6acfc7fa812713fdae2f4a4fb22b68333b16b89f26':
-        raise SystemExit('STOP: packaged TOOIE launcher artwork hash mismatch.')
+    for name,digest in (
+        ('menu.png','3c125d58ad008e837f3c7dc335133d03bb9aae19086ffbde90d8a71daa52c707'),
+        ('menu-recompiled.png','e76b97de0c685566db2505e85d42052a520c8f31237cbfdbfe405a1706295269'),
+        ('launcher-layout.json','b242f7244ce35c3eb656e30a48def2ece22c4c7a7ee2b38c8deb25e4b9d79d55')):
+        member='assets/program/assets/'+name
+        if names.count(member)!=1 or hashlib.sha256(archive.read(member)).hexdigest()!=digest:
+            raise SystemExit('STOP: packaged approved launcher asset differs: '+name)
+    for marker in (b'?/tooie/launcher-recompiled',b'menu-recompiled.png',b'LauncherArtwork'):
+        if marker not in data:
+            raise SystemExit('STOP: compiled native launcher layer registration is missing.')
     dex = b''.join(archive.read(name) for name in archive.namelist() if name.startswith('classes') and name.endswith('.dex'))
     for marker in (b'RomImporter', b'ModImporter', b'openModPicker', b'nativeModFileDialogResult', b'mod-selection-', b'The mod archive exceeds the 1 GiB import limit.', b'openRomPicker', b'nativeFileDialogResult', b'nativePresentationLifecycle', b'WindowSnapshotLog', b'Runtime window:', b'mono_uptime_ms=', b'insets_ltrb=', b'sequence='):
         if marker not in dex:
@@ -1814,8 +1832,8 @@ PACKAGED_SDL_BUILD_ID="${PACKAGED_SDL_BUILD_ID:-unavailable}"
 
 printf '\n=== 7/7 EXPORT IMMUTABLE APK AND BUILD REPORT ===\n'
 SHORT_SHA="${FULL_SHA:0:12}"
-OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Render-Cadence-Timing-Debug.apk"
-REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Render-Cadence-Timing-Debug-build-report.txt"
+OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Render-Launcher-Timing-Debug.apk"
+REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Render-Launcher-Timing-Debug-build-report.txt"
 if [[ -e "$OUTPUT" || -e "$REPORT" ]]; then
   echo 'STOP: output APK or report already exists; nothing will be overwritten.' >&2
   exit 1
@@ -1840,11 +1858,15 @@ Player implementation: b679975a352bf2f63b650f78845a2bf1eb5f8d9c
 Mod/branding tested source: 82a6641c228d71756222bc0da96b0f159e51abd4
 Approved icon/name source: e1fcf938dcc24bb9865b743f900d107a9de26d9d
 Approved title source: @@BRANDING@@
-Integration: exact disjoint 107-file engineering and 61-file tested mod/branding/host delta from ffd520a; no implementation edits
+Integration: exact disjoint 107-file engineering and 69-file mod/branding/host delta from ffd520a; no implementation edits
 App name: Tooie Recompiled (compiled application/activity labels verified)
 Branding: approved round BT/Jiggy icon, legacy/round/foreground visible RGBA and adaptive references verified in final APK
 Branding audit: $LOGS/packaged-branding-verification.json
-Menu asset SHA-256: 87b0fdf84f30e5bff5516e6acfc7fa812713fdae2f4a4fb22b68333b16b89f26 (both source copies and exact APK member)
+Wordmark asset SHA-256: e76b97de0c685566db2505e85d42052a520c8f31237cbfdbfe405a1706295269 (both source copies and exact APK member)
+Launcher layout SHA-256: b242f7244ce35c3eb656e30a48def2ece22c4c7a7ee2b38c8deb25e4b9d79d55 (both source copies and exact APK member)
+Launcher artwork: exact approved Jiggy background/red TOOIE- and separate blue -RECOMPILED, shared cover coordinates and live five-action menu; device appearance unverified
+Launcher host checks: $LOGS/launcher-artwork.log
+Menu asset SHA-256: 3c125d58ad008e837f3c7dc335133d03bb9aae19086ffbde90d8a71daa52c707 (both source copies and exact APK member)
 Icon master SHA-256: 4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784
 Build mode: INDEPENDENT TASK DELIVERY TIMING DIAGNOSTIC DEBUG
 Native CMake build type: Release
@@ -1939,7 +1961,7 @@ Odin: NOT installed; NOT launched; no ADB commands used
 App data, settings and existing PC build folders/artifacts: preserved
 EOF
 )
-printf '\nSUCCESS: VERIFIED TOOIE RECOMPILED DEMO-RENDER-CADENCE APK READY (NOT INSTALLED)\n'
+printf '\nSUCCESS: VERIFIED TOOIE RECOMPILED DEMO-RENDER-LAUNCHER APK READY (NOT INSTALLED)\n'
 printf 'Commit: %s\n' "$FULL_SHA"
 printf 'APK: %s\n' "$OUTPUT"
 printf 'Build ID: %s\n' "$PACKAGED_BUILD_ID"

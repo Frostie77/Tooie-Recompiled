@@ -101,11 +101,17 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
         sdl = b'packaged-sdl-fixture'
         art = b'fixture-artwork-not-a-hardware-or-pixel-check'
         m.ARTWORK_HASH = hashlib.sha256(art).hexdigest() # Fixture bytes, not an actual packaged-artwork claim.
+        wordmark=b'fixture-wordmark-not-a-visual-check'
+        layout=b'fixture-layout-not-a-native-layout-check'
+        m.WORDMARK_HASH=hashlib.sha256(wordmark).hexdigest()
+        m.LAUNCHER_LAYOUT_HASH=hashlib.sha256(layout).hexdigest()
         with zipfile.ZipFile(m.APK, 'x') as archive:
             for entry, data in {
                 'lib/arm64-v8a/libmain.so': native,
                 'lib/arm64-v8a/libSDL2.so': sdl, 'classes.dex': dex,
                 'assets/program/assets/menu.png': b'wrong' if name == 'bad-art' else art,
+                'assets/program/assets/menu-recompiled.png': b'wrong' if name == 'bad-wordmark' else wordmark,
+                'assets/program/assets/launcher-layout.json': b'wrong' if name == 'bad-launcher-layout' else layout,
                 'AndroidManifest.xml': b'fixture manifest', 'resources.arsc': b'fixture resources',
             }.items(): archive.writestr(entry, data)
         m.HASH = hashlib.sha256(m.APK.read_bytes()).hexdigest()
@@ -351,7 +357,7 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
             assert 'pid=32000' not in file(m,'Task-Delivery-Diagnostics').read_text()
         checks += 1
 
-    for case in ['bad-hash', 'bad-art', 'bad-build-id', 'bad-abi', 'undefined-mod-jni', 'duplicate-report', 'consumed', 'consumed-symlink', 'noninteractive', 'bad-serial','bad-model','preflight-pid-timeout']:
+    for case in ['bad-hash', 'bad-art', 'bad-wordmark', 'bad-launcher-layout', 'bad-build-id', 'bad-abi', 'undefined-mod-jni', 'duplicate-report', 'consumed', 'consumed-symlink', 'noninteractive', 'bad-serial','bad-model','preflight-pid-timeout']:
         scenario(case)
     for index in range(len(module().expected_report())): scenario(f'report-{index}')
     # Every actual native component marker is checked as a rejection case.
