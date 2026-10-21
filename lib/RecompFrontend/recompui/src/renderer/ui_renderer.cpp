@@ -14,6 +14,9 @@
 #include "RmlUi/Core/RenderInterfaceCompatibility.h"
 
 #include "ui_renderer.h"
+#if defined(__ANDROID__)
+#include "ui_presentation.h"
+#endif
 
 // TODO: Forced game includes
 #include "InterfaceVS.hlsl.spirv.h"
@@ -109,7 +112,11 @@ class RmlRenderInterface_RT64_impl : public Rml::RenderInterfaceCompatibility {
     static constexpr uint32_t initial_index_buffer_size = 1024 * sizeof(int);
     static constexpr plume::RenderFormat RmlTextureFormat = plume::RenderFormat::R8G8B8A8_UNORM;
     static constexpr plume::RenderFormat RmlTextureFormatBgra = plume::RenderFormat::B8G8R8A8_UNORM;
-    static constexpr plume::RenderFormat SwapChainFormat = plume::RenderFormat::B8G8R8A8_UNORM;
+#if defined(__ANDROID__)
+    static constexpr plume::RenderFormat OffscreenUiFormat = recompui::UiOffscreenFormat;
+#else
+    static constexpr plume::RenderFormat OffscreenUiFormat = plume::RenderFormat::B8G8R8A8_UNORM;
+#endif
     static constexpr uint32_t RmlTextureFormatBytesPerPixel = RenderFormatSize(RmlTextureFormat);
     static_assert(RenderFormatSize(RmlTextureFormatBgra) == RmlTextureFormatBytesPerPixel);
     plume::RenderInterface* interface_;
@@ -136,7 +143,13 @@ class RmlRenderInterface_RT64_impl : public Rml::RenderInterfaceCompatibility {
     std::unique_ptr<plume::RenderDescriptorSet> sampler_set_{};
     std::unique_ptr<plume::RenderDescriptorSetBuilder> texture_set_builder_{};
     std::unique_ptr<plume::RenderPipelineLayout> layout_{};
+#if defined(__ANDROID__)
+    UiPresentationPipelines presentation_pipelines_;
+    plume::RenderGraphicsPipelineDesc pipeline_description_;
+    std::vector<plume::RenderInputElement> pipeline_vertex_elements_;
+#else
     std::unique_ptr<plume::RenderPipeline> pipeline_{};
+#endif
     std::unique_ptr<plume::RenderPipeline> pipeline_ms_{};
     std::unique_ptr<plume::RenderTexture> screen_texture_ms_{};
     std::unique_ptr<plume::RenderTexture> screen_texture_{};
@@ -163,7 +176,7 @@ public:
 
         // Enable 4X MSAA if supported by the device.
         const plume::RenderSampleCounts desired_sample_count = plume::RenderSampleCount::COUNT_8;
-        if (device_->getSampleCountsSupported(SwapChainFormat) & desired_sample_count) {
+        if (device_->getSampleCountsSupported(OffscreenUiFormat) & desired_sample_count) {
             multisampling_.sampleCount = desired_sample_count;
         }
 
@@ -242,7 +255,7 @@ public:
             .dstBlendAlpha = plume::RenderBlend::INV_SRC_ALPHA,
             .blendOpAlpha = plume::RenderBlendOperation::ADD,
         };
-        pipeline_desc.renderTargetFormat[0] = SwapChainFormat; // TODO: Use whatever format the swap chain was created with.
+        pipeline_desc.renderTargetFormat[0] = OffscreenUiFormat;
         pipeline_desc.renderTargetCount = 1;
         pipeline_desc.cullMode = plume::RenderCullMode::NONE;
         pipeline_desc.inputSlots = &vertex_slot_;
@@ -254,11 +267,23 @@ public:
         pipeline_desc.vertexShader = vertex_shader_.get();
         pipeline_desc.pixelShader = pixel_shader_.get();
 
+#if defined(__ANDROID__)
+        // Init precedes swapchain creation. Retain all referenced input data and
+        // create presentation variants lazily from each actual destination FBO.
+        pipeline_vertex_elements_ = std::move(vertex_elements);
+        pipeline_description_ = pipeline_desc;
+        pipeline_description_.inputElements = pipeline_vertex_elements_.data();
+#else
         pipeline_ = device_->createGraphicsPipeline(pipeline_desc);
+#endif
 
         if (multisampling_.sampleCount > 1) {
+#if defined(__ANDROID__)
+            pipeline_ms_ = CreateUiPipeline(device_, pipeline_description_, OffscreenUiFormat, multisampling_, UiPipelinePath::Offscreen);
+#else
             pipeline_desc.multisampling = multisampling_;
             pipeline_ms_ = device_->createGraphicsPipeline(pipeline_desc);
+#endif
 
             // Create the descriptor set for the screen drawer.
             plume::RenderDescriptorRange screen_descriptor_range(plume::RenderDescriptorRangeType::TEXTURE, 2, 1);
@@ -582,14 +607,14 @@ public:
         mvp_ = projection_mtx_ * transform_;
     }
 
-    void start(plume::RenderCommandList* list, int image_width, int image_height) {
+    void start(plume::RenderCommandList* list, int image_width, int image_height, plume::RenderFramebuffer* presentation_framebuffer) {
         list_ = list;
 
         if (multisampling_.sampleCount > 1) {
             if (window_width_ != image_width || window_height_ != image_height) {
                 screen_framebuffer_.reset();
-                screen_texture_ = device_->createTexture(plume::RenderTextureDesc::ColorTarget(image_width, image_height, SwapChainFormat));
-                screen_texture_ms_ = device_->createTexture(plume::RenderTextureDesc::ColorTarget(image_width, image_height, SwapChainFormat, multisampling_));
+                screen_texture_ = device_->createTexture(plume::RenderTextureDesc::ColorTarget(image_width, image_height, OffscreenUiFormat));
+                screen_texture_ms_ = device_->createTexture(plume::RenderTextureDesc::ColorTarget(image_width, image_height, OffscreenUiFormat, multisampling_));
                 const plume::RenderTexture *color_attachment = screen_texture_ms_.get();
                 screen_framebuffer_ = device_->createFramebuffer(plume::RenderFramebufferDesc(&color_attachment, 1));
                 screen_descriptor_set_->setTexture(0, screen_texture_.get(), plume::RenderTextureLayout::SHADER_READ);
@@ -598,7 +623,11 @@ public:
             list_->setPipeline(pipeline_ms_.get());
         }
         else {
+#if defined(__ANDROID__)
+            list_->setPipeline(presentation_pipelines_.get(device_, pipeline_description_, presentation_framebuffer, false));
+#else
             list_->setPipeline(pipeline_.get());
+#endif
         }
 
         list_->setGraphicsPipelineLayout(layout_.get());
@@ -640,7 +669,13 @@ public:
             list->resolveTexture(screen_texture_.get(), screen_texture_ms_.get());
             list->barriers(plume::RenderBarrierStage::GRAPHICS, plume::RenderTextureBarrier(screen_texture_.get(), plume::RenderTextureLayout::SHADER_READ));
             list->setFramebuffer(framebuffer);
+#if defined(__ANDROID__)
+            // The resolve remains BGRA. Sampling returns logical RGBA, and the
+            // destination pipeline uses its actual format and premultiplied RGB.
+            list->setPipeline(presentation_pipelines_.get(device_, pipeline_description_, framebuffer, true));
+#else
             list->setPipeline(pipeline_.get());
+#endif
             list->setGraphicsPipelineLayout(layout_.get());
             list->setGraphicsDescriptorSet(sampler_set_.get(), 0);
             list->setGraphicsDescriptorSet(screen_descriptor_set_.get(), 1);
@@ -702,10 +737,10 @@ Rml::RenderInterface* recompui::RmlRenderInterface_RT64::get_rml_interface() {
     return nullptr;
 }
 
-void recompui::RmlRenderInterface_RT64::start(plume::RenderCommandList* list, int image_width, int image_height) {
+void recompui::RmlRenderInterface_RT64::start(plume::RenderCommandList* list, int image_width, int image_height, plume::RenderFramebuffer* presentation_framebuffer) {
     assert(static_cast<bool>(impl));
 
-    impl->start(list, image_width, image_height);
+    impl->start(list, image_width, image_height, presentation_framebuffer);
 }
 
 void recompui::RmlRenderInterface_RT64::end(plume::RenderCommandList* list, plume::RenderFramebuffer* framebuffer) {

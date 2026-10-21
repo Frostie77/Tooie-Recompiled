@@ -26260,6 +26260,9 @@ L_800DE2C8:
     ctx->r25 = MEM_W(ctx->r25, 0X0);
     // 0x800DE2E0: or          $a1, $s0, $zero
     ctx->r5 = ctx->r16 | 0;
+    #if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 6U, 0x00000000U);
+#endif
     // 0x800DE2E4: jalr        $t9
     // 0x800DE2E8: nop
 
@@ -26268,6 +26271,9 @@ L_800DE2C8:
     // 0x800DE2E8: nop
 
     after_0:
+    #if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 7U, 0x00000000U);
+#endif
     // 0x800DE2EC: lw          $v0, 0x4($s0)
     ctx->r2 = MEM_W(ctx->r16, 0X4);
     // 0x800DE2F0: beql        $v0, $zero, L_800DE304

@@ -1,3 +1,5 @@
+#include "../../../../src/guest_failure.h"
+#include "../../../../src/guest_lookup.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
@@ -148,6 +150,9 @@ std::span<const RelocEntry> recomp::overlays::get_section_relocs(uint16_t code_s
 
 void recomp::overlays::add_loaded_function(int32_t ram, recomp_func_t* func) {
     func_map[ram] = func;
+#if defined(__ANDROID__)
+    tooie::lookup::journal().add("add-function", 0, uint32_t(ram), 0, SIZE_MAX);
+#endif
 }
 
 void load_overlay(size_t section_table_index, int32_t ram) {
@@ -160,6 +165,9 @@ void load_overlay(size_t section_table_index, int32_t ram) {
 
     loaded_sections.emplace_back(ram, section_table_index);
     section_addresses[section.index] = ram;
+#if defined(__ANDROID__)
+    tooie::lookup::journal().add("load", section.rom_addr, uint32_t(ram), section.size, section_table_index);
+#endif
 }
 
 static void load_special_overlay(const SectionTableEntry& section, int32_t ram) {
@@ -220,6 +228,9 @@ extern "C" void unload_overlay_by_id(uint32_t id) {
         // Reset the section's address in the address table
         section_addresses[section.index] = section.ram_addr;
         // Remove the section from the loaded section map
+#if defined(__ANDROID__)
+        tooie::lookup::journal().add("unload-id", section.rom_addr, uint32_t(find_it->loaded_ram_addr), section.size, section_table_index);
+#endif
         loaded_sections.erase(find_it);
     }
 }
@@ -251,8 +262,15 @@ extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
                     "  rom: 0x%08X size: 0x%08X loaded_addr: 0x%08X\n"
                     "  unloaded_ram: 0x%08X unloaded_size : 0x%08X\n",
                         section.rom_addr, section.size, it->loaded_ram_addr, ram_addr, size);
+#if defined(__ANDROID__)
+                tooie::reportGuestFailure("partial-overlay-unload", uint32_t(ram_addr), size, section.rom_addr);
+#endif
                 assert(false);
+#if defined(__ANDROID__)
+                ULTRAMODERN_QUICK_EXIT();
+#else
                 std::exit(EXIT_FAILURE);
+#endif
             }
             // Determine where each function was loaded to and remove that entry from the function map
             for (size_t func_index = 0; func_index < section.num_funcs; func_index++) {
@@ -263,6 +281,9 @@ extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
             // Reset the section's address in the address table
             section_addresses[section.index] = section.ram_addr;
             // Remove the section from the loaded section map
+#if defined(__ANDROID__)
+            tooie::lookup::journal().add("unload-range", section.rom_addr, uint32_t(it->loaded_ram_addr), section.size, it->section_table_index);
+#endif
             it = loaded_sections.erase(it);
             // Skip incrementing the iterator
             continue;
@@ -273,6 +294,9 @@ extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
 
 void recomp::overlays::init_overlays() {
     func_map.clear();
+#if defined(__ANDROID__)
+    tooie::lookup::journal() = {};
+#endif
     section_addresses = (int32_t *)calloc(sections_info.total_num_sections, sizeof(int32_t));
 
     // Sort the executable sections by rom address
@@ -361,15 +385,39 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t 
     return get_func_by_section_index_function_offset(find_section_it->second, func_offset);
 }
 
-extern "C" recomp_func_t * get_function(int32_t addr) {
+static recomp_func_t * lookup_function(int32_t addr
+#if defined(__ANDROID__)
+    , const tooie::lookup::Context *context = nullptr
+#endif
+) {
     auto func_find = func_map.find(addr);
     if (func_find == func_map.end()) {
         fprintf(stderr, "Failed to find function at 0x%08X\n", addr);
+#if defined(__ANDROID__)
+        tooie::reportGuestFailure("missing-function", uint32_t(addr), context ? context->line : 0,
+            context && context->registers ? uint32_t(context->registers->r31) : 0,
+            context && context->caller ? context->caller : "none");
+        tooie::lookup::report(uint32_t(addr), context, sections_info, loaded_sections, func_map, overlays_info);
+#endif
         assert(false);
+#if defined(__ANDROID__)
+        ULTRAMODERN_QUICK_EXIT();
+#else
         std::exit(EXIT_FAILURE);
+#endif
     }
     return func_find->second;
 }
+
+extern "C" recomp_func_t * get_function(int32_t addr) {
+    return lookup_function(addr);
+}
+
+#if defined(__ANDROID__)
+extern "C" recomp_func_t * get_function_with_context(int32_t addr, const tooie::lookup::Context *context) {
+    return lookup_function(addr, context);
+}
+#endif
 
 std::unordered_map<recomp_func_t*, recomp::overlays::BasePatchedFunction> recomp::overlays::get_base_patched_funcs() {
     std::unordered_map<recomp_func_t*, BasePatchedFunction> ret{};

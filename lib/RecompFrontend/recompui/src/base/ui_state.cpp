@@ -6,8 +6,12 @@
 #include <SDL2/SDL_video.h>
 #endif
 #include <chrono>
+#include <numeric>
 
 #include "rt64_render_hooks.h"
+#if defined(__ANDROID__)
+#include "../../../../../src/android_presentation_lifecycle.h"
+#endif
 
 #include "concurrentqueue.h"
 
@@ -515,6 +519,9 @@ void init_hook(plume::RenderInterface* interface, plume::RenderDevice* device) {
     std::locale::global(std::locale::classic());
 #endif
     tooie_android_debug_log("UI: init_hook entered");
+#if defined(__ANDROID__)
+    recompui::file::start_file_dialog_callbacks();
+#endif
     ui_state = std::make_unique<UIState>(window, interface, device);
     tooie_android_debug_log("UI: UIState constructed");
     ui_state->create_menus();
@@ -650,6 +657,21 @@ void recompui::activate_mouse() {
     ui_state->update_focus(true, false);
 }
 
+#if defined(__ANDROID__)
+static bool file_dialog_completed = false;
+void prepare_hook() {
+    {
+        auto &lifecycle = tooie::android::presentationLifecycle();
+        auto lock = lifecycle.lock();
+        if (!lifecycle.available()) return;
+    }
+    // Never hold the WSI lease across a callback: validation/error dialogs can
+    // synchronously wait on Android's UI thread and generate focus/pause events.
+    std::lock_guard lock{ ui_state_mutex };
+    if (ui_state) file_dialog_completed |= recompui::file::poll_file_dialog_callbacks();
+}
+#endif
+
 void draw_hook(plume::RenderCommandList* command_list, plume::RenderFramebuffer* swap_chain_framebuffer) {
     static int tooie_draw_probe_count = 0;
     const bool tooie_log_draw = tooie_draw_probe_count++ < 3;
@@ -671,7 +693,6 @@ void draw_hook(plume::RenderCommandList* command_list, plume::RenderFramebuffer*
     }
 
     std::lock_guard lock{ ui_state_mutex };
-
     SDL_Event cur_event{};
 
     bool mouse_moved = false;
@@ -689,6 +710,14 @@ void draw_hook(plume::RenderCommandList* command_list, plume::RenderFramebuffer*
     constexpr clock::duration repeat_rate = std::chrono::milliseconds{50};
     static clock::time_point next_repeat_time = {};
     static int latest_controller_key_pressed = SDLK_UNKNOWN;
+#if defined(__ANDROID__)
+    // A system picker can consume the controller release while SDL is paused.
+    // Do not repeat Select ROM or start the game from the pre-picker key hold.
+    if (file_dialog_completed) {
+        latest_controller_key_pressed = SDLK_UNKNOWN;
+        file_dialog_completed = false;
+    }
+#endif
 
     bool all_input_is_disabled = recompinput::all_input_disabled();
 
@@ -882,7 +911,7 @@ void draw_hook(plume::RenderCommandList* command_list, plume::RenderFramebuffer*
         // Scale the UI based on the window size with 1080 vertical resolution as the reference point.
         ui_state->context->SetDensityIndependentPixelRatio((height) / 1080.0f);
 
-        ui_state->render_interface.start(command_list, width, height);
+        ui_state->render_interface.start(command_list, width, height, swap_chain_framebuffer);
 
         static int prev_width = 0;
         static int prev_height = 0;
@@ -901,6 +930,10 @@ void draw_hook(plume::RenderCommandList* command_list, plume::RenderFramebuffer*
 }
 
 void deinit_hook() {
+#if defined(__ANDROID__)
+    std::lock_guard dialog_guard{ ui_state_mutex };
+    recompui::file::cancel_file_dialog_callbacks();
+#endif
     recompui::destroy_all_contexts();
 
     std::lock_guard lock {ui_state_mutex};
@@ -912,6 +945,9 @@ void deinit_hook() {
 
 void recompui::set_render_hooks() {
     RT64::SetRenderHooks(init_hook, draw_hook, deinit_hook);
+#if defined(__ANDROID__)
+    RT64::SetRenderHookPrepare(prepare_hook);
+#endif
 }
 
 void recompui::message_box(const char* msg) {
@@ -1025,6 +1061,14 @@ void recompui::release_image(const std::string &src) {
     Rml::ReleaseTexture(src);
 }
 
+static void show_mod_installation_errors(const std::vector<std::string>& errors, const char* title) {
+    if (errors.empty()) return;
+    std::string message = std::accumulate(errors.begin(), errors.end(), std::string{}, [](const std::string& text, const std::string& error) {
+        return text.empty() ? error : text + '\n' + error;
+    });
+    recompui::open_info_prompt(title, message, "OK", {}, recompui::ButtonStyle::Tertiary);
+}
+
 void recompui::drop_files(const std::list<std::filesystem::path> &file_list) {
     // Prevent mod installation after the game has started.
     if (ultramodern::is_game_started()) {
@@ -1039,7 +1083,7 @@ void recompui::drop_files(const std::list<std::filesystem::path> &file_list) {
     // TODO: Needs a progress callback and a prompt for every mod that needs to be confirmed to be overwritten.
     // TODO: Run this on a background thread and use the callbacks to advance the state instead of blocking.
     ModInstaller::Result result;
-    ModInstaller::start_mod_installation(file_list, nullptr, result);
+    ModInstaller::start_mod_installation(file_list, nullptr, result, recompui::get_game_mod_id());
 
     recompui::close_prompt();
 
@@ -1099,7 +1143,7 @@ void recompui::drop_files(const std::list<std::filesystem::path> &file_list) {
         if (old_context != ContextId::null()) {
             old_context.open();
         }
-        // TODO show errors
+        show_mod_installation_errors(error_messages, "Error Installing Mods");
     }
     else {
         std::string prompt_text = std::accumulate(confirmations.begin(), confirmations.end(), std::string{},
@@ -1131,12 +1175,12 @@ void recompui::drop_files(const std::list<std::filesystem::path> &file_list) {
                 if (old_context != ContextId::null()) {
                     old_context.open();
                 }
-                // TODO show errors
+                show_mod_installation_errors(error_messages, "Error Installing Mods");
             },
             [result]() {
                 std::vector<std::string> error_messages{};
                 ModInstaller::cancel_mod_installation(result, error_messages);
-                // TODO show errors
+                show_mod_installation_errors(error_messages, "Error Cancelling Installation");
             },
             recompui::ButtonStyle::Success,
             recompui::ButtonStyle::Danger,

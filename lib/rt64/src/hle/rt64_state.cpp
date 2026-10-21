@@ -1,3 +1,5 @@
+#include "../../../../src/presentation_input_trace.h"
+#include "../../../../src/full_sync_trace.h"
 //
 // RT64
 //
@@ -790,6 +792,9 @@ namespace RT64 {
     }
 
     void State::fullSync() {
+#if TOOIE_TIMING_TRACE_ENABLED
+        tooie::diagnostics::FullSyncTrace fullSyncTrace;
+#endif
         flush();
         submitFramebufferPair(FramebufferPair::FlushReason::ProcessDisplayListsEnd);
 
@@ -1318,17 +1323,27 @@ namespace RT64 {
 
                 // Create all GPU tile mappings and upload them.
                 bool uploadGPUTiles = (gpuTileCursor < rdpTileCursor);
-                if (uploadGPUTiles) {
+                if (uploadGPUTiles
+#if defined(__ANDROID__)
+                    || rdpTileCursor == 0 // Initialize empty work, including reused pairs.
+#endif
+                ) {
                     std::pair<size_t, size_t> gpuTileRange;
                     gpuTileRange.first = gpuTileCursor;
                     gpuTileRange.second = rdpTileCursor;
-                    framebufferRenderer->createGPUTiles(&workload.drawData.callTiles[gpuTileCursor], rdpTileCursor - gpuTileCursor,
-                        &workload.drawData.gpuTiles[gpuTileCursor], &framebufferManager, ext.textureCache, workload.submissionFrame);
+                    if (uploadGPUTiles) {
+                        framebufferRenderer->createGPUTiles(&workload.drawData.callTiles[gpuTileCursor], rdpTileCursor - gpuTileCursor,
+                            &workload.drawData.gpuTiles[gpuTileCursor], &framebufferManager, ext.textureCache, workload.submissionFrame);
+                    }
 
                     // Upload the GPU tiles.
+#if defined(__ANDROID__)
+                    workload.drawBuffers.gpuTilesBuffer.submit(ext.tilesUploader, ext.framebufferGraphicsWorker, workload.drawData.gpuTiles.data(), gpuTileRange);
+#else
                     ext.tilesUploader->submit(ext.framebufferGraphicsWorker, {
                         { workload.drawData.gpuTiles.data(), gpuTileRange, sizeof(interop::GPUTile), RenderBufferFlag::STORAGE, { }, &workload.drawBuffers.gpuTilesBuffer}
                     });
+#endif
 
                     gpuTileCursor = rdpTileCursor;
 
@@ -1346,7 +1361,7 @@ namespace RT64 {
                 }
 
                 // Record all setup previous to drawing any of the recorded framebuffers.
-                framebufferRenderer->endFramebuffers(ext.framebufferGraphicsWorker, &workload.drawBuffers, &workload.outputBuffers, false);
+                framebufferRenderer->endFramebuffers(ext.framebufferGraphicsWorker, &workload.drawBuffers, &workload.outputBuffers, false, rdpTileCursor);
                 framebufferRenderer->recordSetup(ext.framebufferGraphicsWorker, bufferUploaders, queuedProcessor, nullptr, &workload.outputBuffers, false);
 
                 // Record the command list for the framebuffer pairs.
@@ -1775,8 +1790,14 @@ namespace RT64 {
         }
         
         // Advance the workload queue at the end of a full synchronization.
+#if TOOIE_TIMING_TRACE_ENABLED
+        fullSyncTrace.prepared();
+#endif
         advanceWorkload(workload, false);
         ext.workloadQueue->advanceToNextWorkload();
+#if TOOIE_TIMING_TRACE_ENABLED
+        fullSyncTrace.advanced(workloadId, presentId);
+#endif
 
         // Make sure the profiler starts after the workload is advanced to ignore any waiting time.
         dlCpuProfiler.reset();
@@ -1784,6 +1805,9 @@ namespace RT64 {
         
         // Submit a presentation event instantly if applicable.
         const bool presentEarly = !ext.presentQueue->viewRDRAM && (ext.enhancementConfig->presentation.mode == EnhancementConfiguration::Presentation::Mode::PresentEarly);
+#if TOOIE_TIMING_TRACE_ENABLED
+        fullSyncTrace.selection(presentEarly, workload.fbPairCount, uint32_t(viHistory.history.size()));
+#endif
         if (presentEarly && (workload.fbPairCount > 0)) {
             thread_local std::unordered_set<uint32_t> colorImageAddressSet;
             colorImageAddressSet.clear();
@@ -1803,6 +1827,9 @@ namespace RT64 {
                     continue;
                 }
 
+#if TOOIE_TIMING_TRACE_ENABLED
+                fullSyncTrace.candidate();
+#endif
                 for (size_t h = 0; (h < viHistory.history.size()) && !viPresented; h++) {
                     const VIHistory::Present &entry = viHistory.history[h];
                     const uint32_t fbAddress = entry.vi.fbAddress();
@@ -1814,6 +1841,9 @@ namespace RT64 {
                     {
                         updateScreen(entry.vi, true);
                         viPresented = true;
+#if TOOIE_TIMING_TRACE_ENABLED
+                        fullSyncTrace.published();
+#endif
                     }
                 }
             }
@@ -1836,6 +1866,7 @@ namespace RT64 {
     }
     
     void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
+        tooie::diagnostics::PresentationInputTrace inputTrace(fromEarlyPresent);
         // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
         if (debuggerInspector.paused && !fromEarlyPresent) {
             if (ext.userConfig->developerMode) {
@@ -1857,6 +1888,9 @@ namespace RT64 {
             ext.presentQueue->repeatLastPresent();
 
             if (debuggerInspector.paused) {
+#if TOOIE_TIMING_TRACE_ENABLED
+                inputTrace.decision(tooie::diagnostics::PresentationInputTrace::Repeated, newVI.visible(), false, false, false, workloadId, presentId);
+#endif
                 return;
             }
         }
@@ -1890,6 +1924,7 @@ namespace RT64 {
 
             // We ignore processing the updateScreen altogether in early present mode.
             if (presentEarly) {
+                inputTrace.decision(tooie::diagnostics::PresentationInputTrace::EarlyIgnored, viVisible, viDifferent, false, false, workloadId, presentId);
                 return;
             }
         }
@@ -1962,6 +1997,9 @@ namespace RT64 {
             }
         }
 
+        inputTrace.decision((fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade)
+            ? tooie::diagnostics::PresentationInputTrace::Published : tooie::diagnostics::PresentationInputTrace::Unchanged,
+            viVisible, viDifferent, fbChangesMade, screenChangesMade, workloadId, presentId);
         screenCpuProfiler.end();
     }
 

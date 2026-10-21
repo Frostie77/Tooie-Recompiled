@@ -49,6 +49,58 @@ extern "C" {
 #include "ultramodern/config.hpp"
 #include "ultramodern/ultramodern.hpp"
 
+#include "correction_trace_guest.h"
+#include "skeletal_pose_guest.h"
+#include "actor_pose_guest.h"
+#include "guest_lookup.h"
+#include "demo_pacing_guest.h"
+
+extern "C" void tooie_demo_pacing(uint8_t* rdram, recomp_context* ctx, uint32_t event) {
+    tooie::demo::event(rdram, ctx, event);
+}
+
+
+extern "C" void tooie_rt64_actor_scope(uint8_t* rdram, recomp_context* ctx, uint32_t stage) {
+#if TOOIE_ACTOR_POSE_ENABLED
+    if (stage == 1) tooie::skeletal::actors::begin(rdram, uint32_t(ctx->r4), uint32_t(ctx->r5));
+    else tooie::skeletal::actors::end();
+#else
+    (void)rdram; (void)ctx; (void)stage;
+#endif
+}
+
+extern "C" void tooie_rt64_actor_lifetime(uint8_t* rdram, recomp_context* ctx, uint32_t event) {
+#if TOOIE_ACTOR_POSE_ENABLED
+    if (event == 1) tooie::skeletal::actors::created(rdram, uint32_t(ctx->r16));
+    else if (event == 2) tooie::skeletal::actors::registry().retire(uint32_t(ctx->r4));
+    else tooie::skeletal::actors::registry().clear();
+#else
+    (void)rdram; (void)ctx; (void)event;
+#endif
+}
+
+extern "C" void tooie_rt64_skeleton_builder(uint8_t* rdram, recomp_context* ctx, uint32_t stage) {
+#if TOOIE_SKELETAL_POSE_ENABLED
+    if (stage == 1) tooie::skeletal::guest::begin(rdram, uint32_t(ctx->r5), uint32_t(ctx->r6));
+    else tooie::skeletal::guest::end(rdram);
+#else
+    (void)rdram; (void)ctx; (void)stage;
+#endif
+}
+
+extern "C" void tooie_correction_probe(uint8_t* rdram, recomp_context* ctx,
+                                      uint32_t event, uint32_t site) {
+#if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie::correction::guest::probe(rdram, ctx, event, 0, site);
+#elif TOOIE_GUEST_CLOCK_TRACE_ENABLED
+    if (event >= 10) {
+        tooie::correction::guest::clockEvent(rdram, ctx, event, site, tooie::diagnostics::monotonicUs());
+    }
+#else
+    (void)rdram; (void)ctx; (void)event; (void)site;
+#endif
+}
+
 // --- Host backtraces, for the diagnostics below -----------------------------
 //
 // Several probes print the *host* call stack, because the generated C calls the
@@ -676,17 +728,30 @@ bool lookup_trace_enabled() {
 }
 }
 
-extern "C" recomp_func_t* tooie_lookup_func(int32_t vram) {
+namespace {
+void trace_lookup(int32_t vram, uintptr_t caller) {
     if (lookup_trace_enabled()) {
         static const uintptr_t image_base = host_image_base();
-        const uintptr_t caller =
-            reinterpret_cast<uintptr_t>(__builtin_return_address(0));
         std::fprintf(stderr, "[lookup] 0x%08X from rva 0x%zX\n",
             static_cast<uint32_t>(vram), caller - image_base);
         std::fflush(stderr);
     }
+}
+}
+
+extern "C" recomp_func_t* tooie_lookup_func(int32_t vram) {
+    trace_lookup(vram, reinterpret_cast<uintptr_t>(__builtin_return_address(0)));
     return get_function(vram);
 }
+
+#if defined(__ANDROID__)
+extern "C" recomp_func_t* tooie_lookup_func_at(int32_t vram, uint8_t* rdram, recomp_context* ctx,
+                                              const char* caller, uint32_t source_line) {
+    trace_lookup(vram, reinterpret_cast<uintptr_t>(__builtin_return_address(0)));
+    const tooie::lookup::Context context{rdram, ctx, caller, source_line};
+    return get_function_with_context(vram, &context);
+}
+#endif
 
 // TEMPORARY diagnostic: periodic frame-pipeline heartbeat.
 //
@@ -916,6 +981,16 @@ constexpr uint32_t kBoneGroupFlags = matrix_group_flags(
     G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_SKIP,
     G_EX_COMPONENT_INTERPOLATE, G_EX_ORDER_LINEAR,
     G_EX_ASPECT_AUTO, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO);
+// A registered actor with unsupported pose data still renders its submitted
+// bone matrix. Derive this through the same GBI layout as ordinary groups.
+constexpr uint32_t kCurrentBoneGroupFlags = matrix_group_flags(
+    1U, 0U, G_EX_INTERPOLATE_SIMPLE,
+    G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP,
+    G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP,
+    G_EX_COMPONENT_INTERPOLATE, G_EX_ORDER_LINEAR,
+    G_EX_ASPECT_AUTO, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO);
+static_assert(kCurrentBoneGroupFlags == (kBoneGroupFlags & ~0x1FFCU));
+
 // Projections are tagged with push = 0: a projection id stack entry *is* the
 // current projection, so each load overwrites rather than nests and no matching
 // pop is needed. Simple (whole-matrix) interpolation, because RT64 itself notes
@@ -1078,6 +1153,13 @@ bool append_matrix_group(uint8_t* rdram, uint32_t cursor, uint32_t transform_id,
 struct RootScope {
     uint32_t transform_id;
     bool pushed;
+#if TOOIE_SKELETAL_POSE_ENABLED
+    uint32_t model = 0;
+    std::shared_ptr<const tooie::skeletal::Pose> pose;
+#endif
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie::skeletal::actors::Owner actor;
+#endif
 };
 
 struct PlayerModelKey {
@@ -1089,6 +1171,9 @@ struct PlayerModelKey {
 // between adjacent frames, so this state is thread-local and never shared.
 thread_local uint32_t g_player_scope_depth = 0;
 thread_local uint32_t g_player_key = 0;
+#if TOOIE_SKELETAL_POSE_ENABLED
+thread_local uint32_t g_player_actor = 0;
+#endif
 thread_local PlayerModelKey g_player_models[kPlayerModelCount] = {};
 thread_local uint32_t g_player_model_count = 0;
 thread_local RootScope g_root_scopes[kRootScopeCount] = {};
@@ -1277,12 +1362,28 @@ extern std::atomic<uint32_t> g_bt_rt64_proj_skipped_other;
 // resets the extended-GBI enable whenever a display list starts, so the enable
 // is re-emitted at the head of every frame's list.
 extern "C" void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx) {
+#if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie::correction::guest::probe(rdram, ctx, 0, 0U);
+#endif
+#if TOOIE_GUEST_CLOCK_TRACE_ENABLED
+    static thread_local bool correctionRomLogged = false;
+    if (!correctionRomLogged) {
+        const auto rom = recomp::get_rom();
+        correctionRomLogged = tooie::correction::guest::romManifest(rom.data(), rom.size());
+    }
+#endif
     (void)ctx;
     if (rt64_disabled()) {
         return;
     }
 
     const uint32_t frame = read_word(rdram, kGameFrameCount);
+#if TOOIE_SKELETAL_POSE_ENABLED
+    tooie::skeletal::guest::frameBegin();
+#endif
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie::skeletal::actors::frameBegin();
+#endif
     if (rt64_trace_enabled()) {
         std::fprintf(stderr,
                      "[rt64] frame=%u enables=%u roots=%u bones=%u "
@@ -1362,6 +1463,9 @@ extern "C" void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx) {
     }
     g_player_scope_depth = 0;
     g_player_key = 0;
+#if TOOIE_SKELETAL_POSE_ENABLED
+    g_player_actor = 0;
+#endif
 
     if (!append_command(rdram, kRenderBufferState, kEnableWord0,
                         kEnableWord1)) {
@@ -1373,13 +1477,23 @@ extern "C" void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx) {
     // Tooie's VI manager keeps its current frame divisor at 0x8007913C: 2 for
     // the usual 30 Hz, 3 for the 20 Hz some overlays select. Report the rate
     // the game is actually running at, which is what RT64 interpolates from.
+#if defined(__ANDROID__)
+    const uint32_t divisor = tooie::demo::renderInterval(
+        rdram, read_word(rdram, kViRetraceInterval));
+#else
     const uint32_t divisor = read_word(rdram, kViRetraceInterval);
+#endif
     const uint32_t refresh_rate =
         (divisor > 0U && divisor <= 60U) ? 60U / divisor : 30U;
     if (!append_command(rdram, kRenderBufferState, kSetRefreshRateWord0,
                         refresh_rate)) {
         note_append_failure(1U);
     }
+#if TOOIE_CORRECTION_TRACE_ENABLED
+    if (!tooie::correction::guest::appendMarker(rdram, kRenderBufferState)) {
+        note_append_failure(9U);
+    }
+#endif
 }
 
 // func_80098BA8 is the player draw wrapper, so its entry and its exit bracket
@@ -1393,6 +1507,9 @@ extern "C" void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
         if (g_player_scope_depth++ == 0U) {
             g_player_key =
                 stable_player_key(rdram, static_cast<uint32_t>(ctx->r4));
+#if TOOIE_SKELETAL_POSE_ENABLED
+            g_player_actor = static_cast<uint32_t>(ctx->r4);
+#endif
             g_root_scope_depth = 0;
             g_bone_scope_depth = 0;
         }
@@ -1405,6 +1522,9 @@ extern "C" void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
 
     if (--g_player_scope_depth == 0U) {
         g_player_key = 0;
+#if TOOIE_SKELETAL_POSE_ENABLED
+        g_player_actor = 0;
+#endif
         g_root_scope_depth = 0;
         g_bone_scope_depth = 0;
     }
@@ -1421,13 +1541,20 @@ extern "C" void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
 // the player's model, or the sky layer the draw loop is on.
 extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
                                             recomp_context* ctx) {
+#if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie::correction::guest::probe(rdram, ctx, 3, g_player_scope_depth ? g_player_key : 0U);
+#endif
     if (rt64_disabled()) {
         return;
     }
 
     const bool in_player = g_player_scope_depth != 0U;
     const bool in_sky = g_sky_draw_depth != 0U;
-    if (!in_player && !in_sky) {
+    bool in_actor = false;
+#if TOOIE_ACTOR_POSE_ENABLED
+    in_actor = bool(tooie::skeletal::actors::current(rdram));
+#endif
+    if (!in_player && !in_sky && !in_actor) {
         return;
     }
 
@@ -1466,13 +1593,29 @@ extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
         return;
     }
 
-    scope.transform_id = player_model_transform_id(g_player_key, model);
+    scope.transform_id = in_player ? player_model_transform_id(g_player_key, model) : 0;
+#if TOOIE_ACTOR_POSE_ENABLED
+    if (!in_player && in_actor) {
+        scope.actor = tooie::skeletal::actors::current(rdram);
+        scope.transform_id = tooie::skeletal::actors::registry().model(scope.actor, model);
+    }
+#endif
+#if TOOIE_SKELETAL_POSE_ENABLED
+    scope.model = model;
+#endif
     if (scope.transform_id == 0U) {
         return;
     }
 
     scope.pushed =
         append_matrix_group(rdram, cursor, scope.transform_id, kRootGroupFlags);
+#if TOOIE_ACTOR_POSE_ENABLED
+    if (scope.pushed && scope.actor) {
+        ++tooie::skeletal::actors::stats().roots;
+        if (!read_word(rdram, kAnimationMatrixList))
+            tooie::skeletal::actors::note(rdram, scope.actor, model, 0, "root-metadata-no-pose");
+    }
+#endif
     if (scope.pushed) {
         ++g_frame_root_groups;
     }
@@ -1485,6 +1628,9 @@ extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
 // model matrix, so the N64 scope and the RT64 group close together.
 extern "C" void tooie_rt64_pop_player_root(uint8_t* rdram,
                                            recomp_context* ctx) {
+#if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie::correction::guest::probe(rdram, ctx, 4, 0U);
+#endif
     if (rt64_disabled()) {
         return;
     }
@@ -1513,10 +1659,17 @@ extern "C" void tooie_rt64_pop_player_root(uint8_t* rdram,
 // unique within a model, so it is a stable sub-id under the root group.
 extern "C" void tooie_rt64_push_player_bone(uint8_t* rdram,
                                             recomp_context* ctx) {
+#if TOOIE_CORRECTION_TRACE_ENABLED
+    tooie::correction::guest::probe(rdram, ctx, 5, 0U);
+#endif
     if (rt64_disabled()) {
         return;
     }
-    if (g_player_scope_depth == 0U || g_root_scope_depth == 0U) {
+    bool in_actor = false;
+#if TOOIE_ACTOR_POSE_ENABLED
+    in_actor = bool(tooie::skeletal::actors::current(rdram));
+#endif
+    if ((!g_player_scope_depth && !in_actor) || g_root_scope_depth == 0U) {
         return;
     }
 
@@ -1549,9 +1702,37 @@ extern "C" void tooie_rt64_push_player_bone(uint8_t* rdram,
     // func_800DCF48 keeps the graphics buffers in s0, and its bone pop runs
     // before s0 is restored, so the same register is valid at both sites.
     const uint32_t cursor = static_cast<uint32_t>(ctx->r16);
+#if TOOIE_SKELETAL_POSE_ENABLED
+    const uint32_t group_command = in_rdram(cursor, sizeof(uint32_t)) ? read_word(rdram, cursor) : 0;
+#endif
+    uint32_t bone_flags = kBoneGroupFlags;
+#if TOOIE_SKELETAL_POSE_ENABLED
+    if (g_player_scope_depth) {
+        root_scope.pose = tooie::skeletal::guest::pose(rdram, read_word(rdram, kAnimationMatrixList),
+            g_player_key, root_scope.model, root_scope.pose, g_player_actor);
+    }
+#if TOOIE_ACTOR_POSE_ENABLED
+    else if (root_scope.actor) {
+        root_scope.pose = tooie::skeletal::actors::pose(rdram, read_word(rdram, kAnimationMatrixList),
+            root_scope.model, root_scope.actor, root_scope.pose);
+        if (!root_scope.pose) {
+            // This actor/bone is identified, but its hierarchy is unsupported.
+            // Hold its submitted pose rather than blend independent world bones.
+            bone_flags = kCurrentBoneGroupFlags;
+        }
+    }
+#endif
+#endif
     g_bone_scopes[depth] = append_matrix_group(
         rdram, cursor, root_scope.transform_id + 1U + static_cast<uint32_t>(bone),
-        kBoneGroupFlags);
+        bone_flags);
+#if TOOIE_SKELETAL_POSE_ENABLED
+    if (g_bone_scopes[depth]) {
+        const uint32_t token = tooie::skeletal::guest::publish(rdram, group_command,
+            root_scope.transform_id + 1U + uint32_t(bone), unsigned(bone), root_scope.pose);
+        write_word(rdram, group_command + 12, token);
+    }
+#endif
     if (g_bone_scopes[depth]) {
         ++g_frame_bone_groups;
     }
@@ -2154,7 +2335,16 @@ extern "C" void recomp_syscall_handler(uint8_t* rdram, recomp_context* ctx,
         MEM_H(kOverlayRuntimeStateOffset, overlay_address) = 0;
     }
 
+#if defined(__ANDROID__)
+    // Preserve the decoded syscall provenance at the lookup itself. It is not
+    // retained across a successful call and needs no per-dispatch TLS or log.
+    const tooie::lookup::Context lookup{rdram, ctx, __func__, __LINE__,
+        uint32_t(instruction_vram), uint32_t(overlay_address), syscall_entry_offset, auto_unload};
+    trace_lookup(int32_t(target_address), reinterpret_cast<uintptr_t>(__builtin_return_address(0)));
+    get_function_with_context(int32_t(target_address), &lookup)(rdram, ctx);
+#else
     LOOKUP_FUNC(target_address)(rdram, ctx);
+#endif
 
     if (auto_unload) {
         const gpr return_v0 = ctx->r2;

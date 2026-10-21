@@ -122,7 +122,10 @@ bool analyze_instruction(const rabbitizer::InstructionCpu& instr, const N64Recom
         // be emitted as a runtime function lookup, which aborts the game with
         // "Failed to find function at 0x80193B8C" (glcutDll).
         if (auto target = reloc_target(instr.getVram())) {
-            reg_states[rt].prev_lui = *target & 0xFFFF0000;
+            // MIPS HI16 is rounded up when LO16 is negative. Masking the
+            // address alone loses 0x10000 for data tables such as bsfirstp's
+            // 0x8080A494 (lw immediate -0x5B6C).
+            reg_states[rt].prev_lui = (*target + 0x8000U) & 0xFFFF0000U;
         }
         reg_states[rt].valid_lui = true;
         break;

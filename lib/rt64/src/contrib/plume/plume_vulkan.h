@@ -41,6 +41,10 @@
 #pragma clang diagnostic pop
 #endif
 
+#if defined(__ANDROID__)
+#include "plume_vulkan_descriptors.h"
+#endif
+
 namespace plume {
     struct VulkanCommandQueue;
     struct VulkanDevice;
@@ -55,6 +59,9 @@ namespace plume {
         VmaAllocation allocation = VK_NULL_HANDLE;
         VmaAllocationInfo allocationInfo = {};
         RenderBufferDesc desc;
+#if defined(__ANDROID__)
+        VkBufferUsageFlags bufferUsage = 0;
+#endif
         RenderBarrierStages barrierStages = RenderBarrierStage::NONE;
 
         VulkanBuffer() = default;
@@ -70,6 +77,10 @@ namespace plume {
     struct VulkanBufferFormattedView : RenderBufferFormattedView {
         VkBufferView vk = VK_NULL_HANDLE;
         VulkanBuffer *buffer = nullptr;
+#if defined(__ANDROID__)
+        RenderFormat format = RenderFormat::UNKNOWN;
+        VulkanDevice *viewDevice = nullptr;
+#endif
 
         VulkanBufferFormattedView(VulkanBuffer *buffer, RenderFormat format);
         ~VulkanBufferFormattedView() override;
@@ -79,6 +90,7 @@ namespace plume {
         VkImage vk = VK_NULL_HANDLE;
         VkImageView imageView = VK_NULL_HANDLE;
         VkFormat imageFormat = VK_FORMAT_UNDEFINED;
+        VkImageUsageFlags imageUsage = 0;
         VkImageSubresourceRange imageSubresourceRange = {};
         VulkanDevice *device = nullptr;
         VulkanPool *pool = nullptr;
@@ -87,6 +99,7 @@ namespace plume {
         RenderTextureLayout textureLayout = RenderTextureLayout::UNKNOWN;
         RenderBarrierStages barrierStages = RenderBarrierStage::NONE;
         bool ownership = false;
+        bool isSwapChainImage = false;
         RenderTextureDesc desc;
 
         VulkanTexture() = default;
@@ -97,6 +110,9 @@ namespace plume {
         std::unique_ptr<RenderTextureView> createTextureView(const RenderTextureViewDesc &desc) const override;
         void setName(const std::string &name) override;
         void fillSubresourceRange();
+#if defined(__ANDROID__)
+        static bool validateImageConfiguration(VulkanDevice *device, const VkImageCreateInfo &info);
+#endif
     };
 
     struct VulkanTextureView : RenderTextureView {
@@ -104,6 +120,9 @@ namespace plume {
         const VulkanTexture *texture = nullptr;
         RenderTextureViewDesc desc;
 
+#if defined(__ANDROID__)
+        VulkanDevice *viewDevice = nullptr;
+#endif
         VulkanTextureView(const VulkanTexture *texture, const RenderTextureViewDesc &desc);
         ~VulkanTextureView() override;
     };
@@ -124,6 +143,14 @@ namespace plume {
         std::vector<uint32_t> descriptorBindingIndices;
         VulkanDevice *device = nullptr;
 
+#if defined(__ANDROID__)
+        std::vector<VkSampler> immutableSamplerHandles;
+        std::vector<std::pair<const void *, uint64_t>> immutableSamplerResources;
+        VkResult creationResult = VK_NOT_READY;
+        std::vector<VkDescriptorBindingFlags> bindingFlags;
+        VkDescriptorSetLayoutCreateFlags creationFlags = 0;
+        uint32_t maxVariableDescriptorCount = 0;
+#endif
         VulkanDescriptorSetLayout(VulkanDevice *device, const RenderDescriptorSetDesc &descriptorSetDesc);
         ~VulkanDescriptorSetLayout();
     };
@@ -211,6 +238,19 @@ namespace plume {
         VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
         VulkanDevice *device = nullptr;
 
+#if defined(__ANDROID__)
+        std::vector<uint32_t> allocatedCounts;
+        uint64_t reservedUpdateAfterBindSlots = 0;
+        uint32_t diagnosticWrites = 0;
+        const char *initializationFailure = "not-initialized";
+        struct WriteRecord {
+            const char *operation = "raw";
+            uint64_t resource = 0, view = 0, offset = 0, range = 0;
+            uint32_t format = 0, usage = 0, flags = 0, samples = 0, layout = 0;
+        } writeRecord;
+        [[noreturn]] void rejectDescriptor(uint32_t index, const char *reason, VkResult result = VK_SUCCESS) const;
+        void validateDescriptorIndex(uint32_t index) const;
+#endif
         VulkanDescriptorSet(VulkanDevice *device, const RenderDescriptorSetDesc &desc);
         ~VulkanDescriptorSet() override;
         void setBuffer(uint32_t descriptorIndex, const RenderBuffer *buffer, uint64_t bufferSize, const RenderBufferStructuredView *bufferStructuredView, const RenderBufferFormattedView *bufferFormattedView) override;
@@ -218,7 +258,7 @@ namespace plume {
         void setSampler(uint32_t descriptorIndex, const RenderSampler *sampler) override;
         void setAccelerationStructure(uint32_t descriptorIndex, const RenderAccelerationStructure *accelerationStructure) override;
         void setDescriptor(uint32_t descriptorIndex, const VkDescriptorBufferInfo *bufferInfo, const VkDescriptorImageInfo *imageInfo, const VkBufferView *texelBufferView, void *pNext);
-        static VkDescriptorPool createDescriptorPool(VulkanDevice *device, const std::unordered_map<VkDescriptorType, uint32_t> &typeCounts, bool lastRangeIsBoundless);
+        static VkDescriptorPool createDescriptorPool(VulkanDevice *device, const std::unordered_map<VkDescriptorType, uint32_t> &typeCounts, bool lastRangeIsBoundless, VkResult *creationResult = nullptr);
     };
 
     struct VulkanSwapChain : RenderSwapChain {
@@ -234,6 +274,8 @@ namespace plume {
         uint32_t height = 0;
         VkSwapchainCreateInfoKHR createInfo = {};
         VkSurfaceFormatKHR pickedSurfaceFormat = {};
+        bool initialized = false;
+        const char *initializationFailure = "not-initialized";
         VkPresentModeKHR createdPresentMode = VK_PRESENT_MODE_FIFO_KHR;
         VkPresentModeKHR requiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
         VkCompositeAlphaFlagBitsKHR pickedAlphaFlag = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -243,6 +285,8 @@ namespace plume {
         bool mailboxPresentModeSupported = false;
 
         VulkanSwapChain(VulkanCommandQueue *commandQueue, const RenderSwapChainDesc &desc);
+        void initializeSurface(const RenderSwapChainDesc &desc);
+        void failInitialization(const char *reason, VkResult result = VK_SUCCESS);
         ~VulkanSwapChain() override;
         bool present(uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, uint32_t waitSemaphoreCount) override;
         void wait() override;
@@ -254,6 +298,15 @@ namespace plume {
         uint32_t getHeight() const override;
         RenderTexture *getTexture(uint32_t textureIndex) override;
         uint32_t getTextureCount() const override;
+#if defined(__ANDROID__)
+        RenderFormat getFormat() const override;
+        bool surfaceSuspended = false;
+        bool surfaceLost = false;
+        void waitForIdle() override;
+        void suspendSurface() override;
+        bool isSurfaceSuspended() const override;
+        bool resumeSurface(RenderWindow window) override;
+#endif
         bool acquireTexture(RenderCommandSemaphore *signalSemaphore, uint32_t *textureIndex) override;
         RenderWindow getWindow() const override;
         bool isEmpty() const override;
@@ -267,6 +320,17 @@ namespace plume {
         VulkanDevice *device = nullptr;
         VkFramebuffer vk = VK_NULL_HANDLE;
         VkRenderPass renderPass = VK_NULL_HANDLE;
+#if defined(__ANDROID__)
+        std::vector<VkRenderPass> colorClearRenderPasses;
+        std::vector<VkFormat> colorAttachmentFormats;
+        std::vector<RenderFormat> colorAttachmentRhiFormats;
+        std::vector<VkImageView> colorAttachmentImageViews;
+        std::vector<bool> colorAttachmentUsesBaseView;
+        std::vector<RenderTextureViewDesc> colorAttachmentViewDescs;
+        mutable std::vector<VkPipeline> colorClearDrawPipelines;
+        mutable VkPipelineLayout colorClearDrawLayout = VK_NULL_HANDLE;
+        VkPipeline getColorClearDrawPipeline(uint32_t attachmentIndex) const;
+#endif
         std::vector<const VulkanTexture *> colorAttachments;
         const VulkanTexture *depthAttachment = nullptr;
         std::unique_ptr<VulkanTextureView> depthAttachmentView = nullptr;
@@ -279,6 +343,9 @@ namespace plume {
         uint32_t getWidth() const override;
         uint32_t getHeight() const override;
         bool contains(const VulkanTexture *attachment) const;
+#if defined(__ANDROID__)
+        RenderFormat getColorAttachmentFormat(uint32_t attachmentIndex) const override;
+#endif
     };
 
     struct VulkanQueryPool : RenderQueryPool {
@@ -302,6 +369,22 @@ namespace plume {
         const VulkanPipelineLayout *activeGraphicsPipelineLayout = nullptr;
         const VulkanPipelineLayout *activeRaytracingPipelineLayout = nullptr;
         VkRenderPass activeRenderPass = VK_NULL_HANDLE;
+#if defined(__ANDROID__)
+        struct GraphicsPushConstantWrite {
+            VkPipelineLayout layout;
+            VkShaderStageFlags stages;
+            uint32_t offset;
+            std::vector<uint8_t> data;
+        };
+        VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+        std::vector<VkViewport> graphicsViewports;
+        std::vector<VkRect2D> graphicsScissors;
+        std::vector<GraphicsPushConstantWrite> graphicsPushConstantWrites;
+        bool graphicsDepthBiasSet = false;
+        float graphicsDepthBias[3] = {};
+        void clearColorDraw(uint32_t attachmentIndex, RenderColor colorValue,
+            const RenderRect *clearRects, uint32_t clearRectsCount);
+#endif
 
         VulkanCommandList(VulkanCommandQueue *queue);
         ~VulkanCommandList() override;
@@ -414,9 +497,19 @@ namespace plume {
         RenderDeviceDescription description;
         VkPhysicalDeviceRayTracingPipelinePropertiesKHR rtPipelineProperties = {};
         VkPhysicalDeviceSampleLocationsPropertiesEXT sampleLocationProperties = {};
+#if defined(__ANDROID__)
+        VulkanDescriptorResources descriptorResources;
+        VkPhysicalDeviceDriverProperties driverProperties = {};
+        uint64_t liveUpdateAfterBindSlots = 0; // Guarded by descriptorResources.mutex.
+        VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures = {};
+        VkPhysicalDeviceDescriptorIndexingProperties descriptorIndexingProperties = {};
+#endif
         std::unique_ptr<RenderBuffer> nullBuffer;
         bool loadStoreOpNoneSupported = false;
         bool nullDescriptorSupported = false;
+#if defined(__ANDROID__)
+        bool independentBlendSupported = false;
+#endif
 
         VulkanDevice(VulkanInterface *renderInterface, const std::string &preferredDeviceName);
         ~VulkanDevice() override;

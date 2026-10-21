@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "../../../../src/correction_trace.h"
+
 #include <array>
 #include <bitset>
 #include <stdint.h>
@@ -131,6 +133,9 @@ namespace RT64 {
 
         State *state;
         std::array<hlslpp::float4x4, RSP_MATRIX_STACK_SIZE> modelMatrixStack;
+#if TOOIE_CORRECTION_TRACE_ENABLED
+        std::array<tooie::correction::Link, RSP_MATRIX_STACK_SIZE> correctionStack{};
+#endif
         std::array<uint32_t, RSP_MATRIX_STACK_SIZE> modelMatrixSegmentedAddressStack;
         std::array<uint32_t, RSP_MATRIX_STACK_SIZE> modelMatrixPhysicalAddressStack;
         int modelMatrixStackSize;
@@ -298,6 +303,9 @@ namespace RT64 {
         void endVertexTestZ();
         void matrixId(uint32_t id, bool push, bool proj, bool decompose, uint8_t pos, uint8_t rot, uint8_t scale, uint8_t skew, uint8_t persp, uint8_t vpos, uint8_t vtc, uint8_t tile, uint8_t lookat, uint8_t order, uint8_t aspect, uint8_t editable, bool idIsAddress, bool editGroup);
         void popMatrixId(uint8_t count, bool proj);
+#if TOOIE_SKELETAL_POSE_ENABLED
+        tooie::skeletal::BindingPtr skeletalBinding() const;
+#endif
         void forceBranch(bool force);
         void extendRDRAM(bool isExtended);
         void clearExtended();

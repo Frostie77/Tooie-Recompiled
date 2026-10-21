@@ -1,3 +1,4 @@
+#include "../../../../src/render_diagnostics.h"
 //
 // RT64
 //
@@ -60,7 +61,14 @@ namespace RT64 {
                 assert((shaderCache->shaderUber != nullptr) && "Ubershader should've been created by the time a new shader is submitted to the cache.");
                 const RenderPipelineLayout *uberPipelineLayout = shaderCache->shaderUber->pipelineLayout.get();
                 const RenderMultisampling multisampling = shaderCache->multisampling;
-                std::unique_ptr<RasterShader> newShader = std::make_unique<RasterShader>(shaderCache->device, shaderDesc, uberPipelineLayout, shaderCache->shaderFormat, multisampling, shaderCache->shaderCompiler.get(), &shaderCache->optimizerCacheSPIRV);
+                static thread_local tooie::diagnostics::StageWindow<1> stages("shader-build", {"construct"});
+                const auto buildStart = stages.stamp();
+                auto newShader = stages.measure(0, [&] { return std::make_unique<RasterShader>(shaderCache->device, shaderDesc, uberPipelineLayout, shaderCache->shaderFormat, multisampling, shaderCache->shaderCompiler.get(), &shaderCache->optimizerCacheSPIRV); });
+#if defined(__ANDROID__)
+                char context[160];
+                std::snprintf(context,sizeof(context),"shader=%llu samples=%u",(unsigned long long)shaderDesc.hash(),multisampling.sampleCount);
+                stages.report(buildStart,context);
+#endif
 
                 {
                     const std::unique_lock<std::mutex> lock(shaderCache->GPUShadersMutex);

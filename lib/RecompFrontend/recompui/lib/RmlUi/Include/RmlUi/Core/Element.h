@@ -606,6 +606,10 @@ public:
 	const ComputedValues& GetComputedValues() const;
 
 protected:
+	// Detach and release children while document state used by their callbacks
+	// is still alive. Also used by the base destructor for ordinary elements.
+	void DestroyChildren();
+
 	void Update(float dp_ratio, Vector2f vp_dimensions);
 	void Render();
 

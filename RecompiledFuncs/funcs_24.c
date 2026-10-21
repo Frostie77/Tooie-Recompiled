@@ -8238,6 +8238,9 @@ L_800A76CC:
     // 0x800A76D0: or          $a0, $zero, $zero
     ctx->r4 = 0 | 0;
     after_7:
+    #if TOOIE_GUEST_CLOCK_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 10U, 0x800A76D4U);
+#endif
     // 0x800A76D4: jal         0x8001608C
     // 0x800A76D8: nop
 
@@ -8246,6 +8249,9 @@ L_800A76CC:
     // 0x800A76D8: nop
 
     after_8:
+    #if TOOIE_GUEST_CLOCK_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 12U, 0x800A76D4U);
+#endif
     // 0x800A76DC: jal         0x800C08F8
     // 0x800A76E0: nop
 
@@ -15079,6 +15085,9 @@ L_800A9978:
     // 0x800A997C: nop
 
     after_2:
+    #if TOOIE_GUEST_CLOCK_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 10U, 0x800A9980U);
+#endif
     // 0x800A9980: jal         0x8001608C
     // 0x800A9984: nop
 
@@ -15087,6 +15096,9 @@ L_800A9978:
     // 0x800A9984: nop
 
     after_3:
+    #if TOOIE_GUEST_CLOCK_TRACE_ENABLED
+    tooie_correction_probe(rdram, ctx, 12U, 0x800A9980U);
+#endif
     // 0x800A9988: lw          $ra, 0x14($sp)
     ctx->r31 = MEM_W(ctx->r29, 0X14);
     // 0x800A998C: addiu       $sp, $sp, 0x18

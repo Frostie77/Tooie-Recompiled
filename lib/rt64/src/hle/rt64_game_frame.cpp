@@ -1,3 +1,4 @@
+#include "../../../../src/render_diagnostics.h"
 //
 // RT64
 //
@@ -5,6 +6,7 @@
 #include "common/rt64_math.h"
 
 #include "rt64_game_frame.h"
+#include "rt64_match_candidates.h"
 #include "rt64_workload_queue.h"
 
 #include "xxHash/xxh3.h"
@@ -41,6 +43,17 @@ std::atomic<uint32_t> g_bt_rt64_matched_sky{0};
 }
 
 namespace RT64 {
+    namespace {
+#if defined(__ANDROID__)
+        struct MatchingCounts { uint64_t callPairs=0, transformPairs=0, tilePairs=0, lookAtPairs=0, expansionVisits=0, tileLookups=0, inputCalls=0; };
+        thread_local MatchingCounts matchingCounts;
+#endif
+        auto &matchingStages() {
+            static thread_local tooie::diagnostics::StageWindow<12> stages("matching-stages",
+                {"map_ids", "scene_candidates", "scene_sort", "call_maps", "call_pairs", "transform_score", "transform_apply", "tiles", "look_at", "velocity_submit", "observer", "velocity_prepare"});
+            return stages;
+        }
+    }
     // GameFrame
     
     bool GameFrame::areFramebufferPairsCompatible(const WorkloadQueue &workloadQueue, const GameIndices::FramebufferPair &first, const GameIndices::FramebufferPair &second) {
@@ -284,6 +297,11 @@ namespace RT64 {
     }
 
     void GameFrame::match(RenderWorker *worker, WorkloadQueue &workloadQueue, const GameFrame &prevFrame, BufferUploader *velocityUploader, bool &velocityUploaderUsed, bool &tileInterpolationUsed, bool &lookAtInterpolationUsed) {
+        auto &stages = matchingStages();
+        const auto matchStart = stages.stamp();
+#if defined(__ANDROID__)
+        matchingCounts = {};
+#endif
         tileInterpolationUsed = false;
         lookAtInterpolationUsed = false;
         matched = true;
@@ -305,6 +323,9 @@ namespace RT64 {
             const Workload &prevWorkload = workloadQueue.workloads[workloadMap.prevWorkloadIndex];
             workloadMap.viewProjections.clear();
             workloadMap.viewProjections.resize(curWorkload.drawData.viewProjTransforms.size());
+#if TOOIE_SKELETAL_POSE_ENABLED
+            workloadMap.skeletalPairs.clear();
+#endif
             workloadMap.transforms.clear();
             workloadMap.transforms.resize(curWorkload.drawData.worldTransforms.size());
             workloadMap.tiles.clear();
@@ -341,7 +362,11 @@ namespace RT64 {
                 }
                 else {
                     matchTransform(curWorkload, prevWorkload, curWorkloadMap, prevWorkloadMap, curIt->second, prevIt->second, modifiedBuffers);
-                    if (curIt->first >= 0x10000000U) {
+                    if (curIt->first >= 0x10000000U
+#if TOOIE_ACTOR_POSE_ENABLED
+                        && curIt->first < 0x10010000U
+#endif
+                    ) {
                         g_bt_rt64_matched_transforms.fetch_add(1, std::memory_order_relaxed);
                     }
                     else if ((curIt->first >= 0x00F20000U) && (curIt->first < 0x00F30000U)) {
@@ -365,10 +390,12 @@ namespace RT64 {
             }
         }
 
+        stages.elapsed(0,matchStart);
         thread_local std::vector<MatchCandidate> matchCandidates;
         thread_local std::vector<bool> curScenesMatched;
         thread_local std::vector<bool> prevScenesMatched;
         auto matchScenes = [&](const std::vector<GameScene> &curScenes, const std::vector<GameScene> &prevScenes) {
+            const auto candidatesStart = stages.stamp();
             // Find the scenes that are the closest match possible.
             matchCandidates.clear();
             for (uint32_t i = 0; i < curScenes.size(); i++) {
@@ -389,11 +416,14 @@ namespace RT64 {
                 }
             }
 
+            stages.elapsed(1,candidatesStart);
+            const auto sortStart = stages.stamp();
             curScenesMatched.clear();
             prevScenesMatched.clear();
             curScenesMatched.resize(curScenes.size());
             prevScenesMatched.resize(prevScenes.size());
             std::stable_sort(matchCandidates.begin(), matchCandidates.end());
+            stages.elapsed(2,sortStart);
             for (const MatchCandidate &candidate : matchCandidates) {
                 if (curScenesMatched[candidate.curIndex]) {
                     continue;
@@ -412,6 +442,7 @@ namespace RT64 {
         matchScenes(perspectiveScenes, prevFrame.perspectiveScenes);
         matchScenes(orthographicScenes, prevFrame.orthographicScenes);
 
+        const auto velocityStart = stages.stamp();
         if (!workloadsModified.empty()) {
             thread_local std::vector<BufferUploader::Upload> uploads;
             uploads.clear();
@@ -433,6 +464,53 @@ namespace RT64 {
         else {
             velocityUploaderUsed = false;
         }
+        stages.elapsed(9,velocityStart);
+        const auto observerStart = stages.stamp();
+#if defined(__ANDROID__)
+        static thread_local tooie::diagnostics::RateWindow diagnosticWindow;
+        static thread_local uint64_t diagnosticMatches = 0;
+        if (diagnosticWindow.observe(tooie::diagnostics::monotonicUs(),++diagnosticMatches).ready) {
+            uint32_t playerMapped=0,playerUnmapped=0,playerDuplicates=0,invalidPairs=0,projectionMapped=0,projectionUnmapped=0;
+            for (uint32_t w : workloads) {
+                const Workload &workload = workloadQueue.workloads[w];
+                const auto &mapping = frameMap.workloads[w];
+                uint32_t lastId=0;
+                for (const auto &entry : workload.transformIdMap) {
+                    if (entry.first<0x10000000U || entry.first>=0x10010000U) continue;
+                    if (entry.first==lastId) ++playerDuplicates;
+                    lastId=entry.first;
+                    if (entry.second>=mapping.transforms.size()) {++playerUnmapped;continue;}
+                    const auto &transform = mapping.transforms[entry.second];
+                    if (transform.mapped) {
+                        ++playerMapped;
+                        if (!transform.rigidBody.transforms[0].valid || !transform.rigidBody.transforms[1].valid) ++invalidPairs;
+                    }
+                    else ++playerUnmapped;
+                }
+                for (const auto &projection : mapping.viewProjections) {
+                    if (projection.mapped) ++projectionMapped; else ++projectionUnmapped;
+                }
+            }
+            char record[512];
+            std::snprintf(record,sizeof(record),"workload=%llu batches=%zu player_mapped=%u player_unmapped=%u duplicate_player_ids=%u invalid_decomposition_pairs=%u projection_mapped=%u projection_unmapped=%u projection_auto_total=%u projection_gameplay_total=%u projection_sky_total=%u projection_mismatch_total=%u",
+                (unsigned long long)(workloads.empty()?0:workloadQueue.workloads[workloads.front()].workloadId),workloads.size(),
+                playerMapped,playerUnmapped,playerDuplicates,invalidPairs,projectionMapped,projectionUnmapped,
+                g_bt_rt64_proj_id_auto.load(std::memory_order_relaxed),g_bt_rt64_proj_id_gameplay.load(std::memory_order_relaxed),
+                g_bt_rt64_proj_id_sky.load(std::memory_order_relaxed),g_bt_rt64_projection_mismatches.load(std::memory_order_relaxed));
+            tooie::diagnostics::log("interpolation",record);
+        }
+#endif
+        stages.elapsed(10,observerStart);
+#if defined(__ANDROID__)
+        char stageContext[512];
+        std::snprintf(stageContext,sizeof(stageContext),"workload=%llu batches=%zu perspective=%zu orthographic=%zu velocity_upload=%u tiles=%u look_at=%u logical_call_pairs=%llu transform_pairs=%llu tile_pairs=%llu look_at_pairs=%llu expansion_visits=%llu tile_lookups=%llu input_calls=%llu",
+            (unsigned long long)(workloads.empty()?0:workloadQueue.workloads[workloads.front()].workloadId),workloads.size(),
+            perspectiveScenes.size(),orthographicScenes.size(),unsigned(velocityUploaderUsed),unsigned(tileInterpolationUsed),unsigned(lookAtInterpolationUsed),
+            (unsigned long long)matchingCounts.callPairs,(unsigned long long)matchingCounts.transformPairs,
+            (unsigned long long)matchingCounts.tilePairs,(unsigned long long)matchingCounts.lookAtPairs,
+            (unsigned long long)matchingCounts.expansionVisits,(unsigned long long)matchingCounts.tileLookups,(unsigned long long)matchingCounts.inputCalls);
+        stages.report(matchStart,stageContext);
+#endif
     }
 
     void GameFrame::matchScene(WorkloadQueue &workloadQueue, const GameFrame &prevFrame, const GameScene &curScene, const GameScene &prevScene, std::unordered_map<uint32_t, ModifiedBuffers> &workloadsModified, bool &tileInterpolationUsed, bool &lookAtInterpolationUsed) {
@@ -440,6 +518,8 @@ namespace RT64 {
             return;
         }
 
+        auto &stages = matchingStages();
+        const auto callsStart = stages.stamp();
         thread_local std::multimap<uint64_t, GameCallMap> curCallHashMap;
         thread_local std::multimap<uint64_t, GameCallMap> prevCallHashMap;
         curCallHashMap.clear();
@@ -536,7 +616,7 @@ namespace RT64 {
 
                     viewProjMap.rigidBody.updateLinear(prevView, curView, projectionLinearComponent);
                     viewProjMap.rigidBody.updateAngular(prevView, curView, projectionAngularComponent, projectionScaleComponent, projectionSkewComponent);
-                    viewProjMap.rigidBody.updateDecomposition(curView, projectionDecompose);
+                    viewProjMap.rigidBody.updateDecomposition(prevView, curView, projectionDecompose);
                     viewProjMap.prevTransformIndex = prevProj.transformsIndex;
                 }
                 else {
@@ -557,6 +637,8 @@ namespace RT64 {
             buildCallHashMap(p, prevWorkload, prevProj, prevCallHashMap);
         }
 
+        stages.elapsed(3,callsStart);
+        const auto pairsStart = stages.stamp();
         // FIXME: Transform set needs to be done per unique workload detected.
         thread_local std::set<IndexPair> transformCheckSet;
         thread_local std::set<IndexPair> tileCheckSet;
@@ -565,63 +647,24 @@ namespace RT64 {
         tileCheckSet.clear();
         lookAtCheckSet.clear();
 
-        // Traverse the map and fill the set with all the combinations of transforms to check.
-        for (std::pair<uint64_t, GameCallMap> curIt : curCallHashMap) {
-            auto prevRange = prevCallHashMap.equal_range(curIt.first);
-            for (auto prevIt = prevRange.first; prevIt != prevRange.second; prevIt++) {
-                const GameIndices::Projection &curProjIndices = curScene.projections[curIt.second.sceneProjIndex];
-                const Workload &curWorkload = workloadQueue.workloads[curProjIndices.workloadIndex];
-                const FramebufferPair &curFbPair = curWorkload.fbPairs[curProjIndices.fbPairIndex];
-                const Projection &curProj = curFbPair.projections[curProjIndices.projectionIndex];
-                const GameCall &curCall = curProj.gameCalls[curIt.second.callIndex];
-                const GameIndices::Projection &prevProjIndices = prevScene.projections[prevIt->second.sceneProjIndex];
-                const Workload &prevWorkload = workloadQueue.workloads[prevProjIndices.workloadIndex];
-                const FramebufferPair &prevFbPair = prevWorkload.fbPairs[prevProjIndices.fbPairIndex];
-                const Projection &prevProj = prevFbPair.projections[prevProjIndices.projectionIndex];
-                const GameCall &prevCall = prevProj.gameCalls[prevIt->second.callIndex];
-                const uint32_t curWorldMatrixCount = (curCall.callDesc.maxWorldMatrix - curCall.callDesc.minWorldMatrix) + 1;
-                const uint32_t prevWorldMatrixCount = (prevCall.callDesc.maxWorldMatrix - prevCall.callDesc.minWorldMatrix) + 1;
-                if ((curWorldMatrixCount == prevWorldMatrixCount) && curIt.second.doTransformMatching && prevIt->second.doTransformMatching) {
-                    for (uint32_t w = 0; w < curWorldMatrixCount; w++) {
-                        const uint32_t curWorldMatrix = curCall.callDesc.minWorldMatrix + w;
-                        const uint32_t curGroupIndex = curWorkload.drawData.worldTransformGroups[curWorldMatrix];
-                        const TransformGroup &curGroup = curWorkload.drawData.transformGroups[curGroupIndex];
-                        const uint32_t prevWorldMatrix = prevCall.callDesc.minWorldMatrix + w;
-                        const uint32_t prevGroupIndex = prevWorkload.drawData.worldTransformGroups[prevWorldMatrix];
-                        const TransformGroup &prevGroup = prevWorkload.drawData.transformGroups[prevGroupIndex];
-                        if ((curGroup.matrixId == prevGroup.matrixId) && ((curGroup.matrixId == G_EX_ID_AUTO) || ((curGroup.matrixId != G_EX_ID_IGNORE) && (curGroup.ordering == G_EX_ORDER_AUTO)))) {
-                            transformCheckSet.emplace(curWorldMatrix, prevWorldMatrix);
-                        }
-                    }
-                }
+        const auto expansion = buildMatchCandidates(workloadQueue.workloads, curScene, prevScene,
+            curCallHashMap, prevCallHashMap, transformCheckSet, tileCheckSet, lookAtCheckSet);
+#if defined(__ANDROID__)
+        matchingCounts.callPairs += expansion.logicalCallPairs;
+        matchingCounts.expansionVisits += expansion.transformRangePairs + expansion.tileVisits + expansion.lookAtVisits;
+        matchingCounts.tileLookups += expansion.tileLookups;
+        matchingCounts.inputCalls += expansion.inputCalls;
+#else
+        (void)expansion;
+#endif
 
-                if ((curCall.callDesc.tileCount == prevCall.callDesc.tileCount) && (curIt.second.doTileInterpolation && prevIt->second.doTileInterpolation)) {
-                    for (uint32_t t = 0; t < curCall.callDesc.tileCount; t++) {
-                        const DrawCallTile &curCallTile = curWorkload.drawData.callTiles[curCall.callDesc.tileIndex + t];
-                        const DrawCallTile &prevCallTile = prevWorkload.drawData.callTiles[prevCall.callDesc.tileIndex + t];
-                        bool doTileMatching = curIt.second.doTileMatching && prevIt->second.doTileMatching;
-                        if (doTileMatching && (curCallTile.tmemHashOrID != prevCallTile.tmemHashOrID)) {
-                            continue;
-                        }
-
-                        tileCheckSet.emplace(curCall.callDesc.tileIndex + t, prevCall.callDesc.tileIndex + t);
-                    }
-                }
-
-                const uint32_t textureGenMask = G_LIGHTING | G_TEXTURE_GEN;
-                const bool curUsesTextureGen = (curCall.callDesc.geometryMode & textureGenMask) == textureGenMask;
-                const bool prevUsesTextureGen = (prevCall.callDesc.geometryMode & textureGenMask) == textureGenMask;
-                if (curUsesTextureGen && prevUsesTextureGen && (true && true)) { // TODO: Do look at matching condition.
-                    // FIXME: We assume the same look at is used throughout the entire draw call, so we only check the first vertex.
-                    const uint32_t curVertexIndex = curWorkload.drawData.faceIndices[curCall.meshDesc.faceIndicesStart];
-                    const uint32_t prevVertexIndex = prevWorkload.drawData.faceIndices[prevCall.meshDesc.faceIndicesStart];
-                    const uint32_t curLookAtIndex = curWorkload.drawData.lookAtIndices[curVertexIndex] >> RSP_LOOKAT_INDEX_SHIFT;
-                    const uint32_t prevLookAtIndex = prevWorkload.drawData.lookAtIndices[prevVertexIndex] >> RSP_LOOKAT_INDEX_SHIFT;
-                    lookAtCheckSet.emplace(curLookAtIndex, prevLookAtIndex);
-                }
-            }
-        }
-
+#if defined(__ANDROID__)
+        matchingCounts.transformPairs += transformCheckSet.size();
+        matchingCounts.tilePairs += tileCheckSet.size();
+        matchingCounts.lookAtPairs += lookAtCheckSet.size();
+#endif
+        stages.elapsed(4,pairsStart);
+        const auto scoreStart = stages.stamp();
         // Compute all the differences between transforms and insert them into a vector that will be sorted according to the differences.
         thread_local std::vector<MatchCandidate> matchCandidates;
         matchCandidates.clear();
@@ -640,6 +683,8 @@ namespace RT64 {
             }
         }
 
+        stages.elapsed(5,scoreStart);
+        const auto applyStart = stages.stamp();
         ModifiedBuffers modifiedBuffers;
         std::stable_sort(matchCandidates.begin(), matchCandidates.end());
         for (const MatchCandidate candidate : matchCandidates) {
@@ -658,6 +703,8 @@ namespace RT64 {
             workloadsModified[firstCurProjIndices.workloadIndex].merge(modifiedBuffers);
         }
 
+        stages.elapsed(6,applyStart);
+        const auto tilesStart = stages.stamp();
         // Check for tile matches.
         for (const IndexPair &indices : tileCheckSet) {
             if (firstCurWorkloadMap.tiles[indices.first].mapped) {
@@ -730,6 +777,8 @@ namespace RT64 {
             tileInterpolationUsed = tileInterpolationUsed || tileScrolled;
         }
 
+        stages.elapsed(7,tilesStart);
+        const auto lookAtStart = stages.stamp();
         // Check for look at matches.
         for (const IndexPair &indices : lookAtCheckSet) {
             if (firstCurWorkloadMap.lookAt[indices.first].mapped) {
@@ -755,6 +804,7 @@ namespace RT64 {
             firstCurWorkloadMap.prevLookAtMapped[indices.second] = true;
             lookAtInterpolationUsed = lookAtInterpolationUsed || lookAtMoved;
         }
+        stages.elapsed(8,lookAtStart);
     }
 
     void GameFrame::matchTransform(Workload &curWorkload, const Workload &prevWorkload, GameFrameMap::WorkloadMap &curWorkloadMap, const GameFrameMap::WorkloadMap *prevWorkloadMap, uint32_t curTransformIndex, uint32_t prevTransformIndex, ModifiedBuffers &modifiedBuffers) {
@@ -770,11 +820,42 @@ namespace RT64 {
         curTransformMap.rigidBody.updateLinear(prevTransform, curTransform, curGroup.positionInterpolation);
         curTransformMap.rigidBody.updateAngular(prevTransform, curTransform, curGroup.rotationInterpolation, curGroup.scaleInterpolation, curGroup.skewInterpolation);
         curTransformMap.rigidBody.updatePerspective(prevTransform, curTransform, curGroup.perspectiveInterpolation);
-        curTransformMap.rigidBody.updateDecomposition(curTransform, curGroup.decompose);
+        curTransformMap.rigidBody.updateDecomposition(prevTransform, curTransform, curGroup.decompose);
         curTransformMap.prevTransformIndex = prevTransformIndex;
         curTransformMap.mapped = true;
         curWorkloadMap.prevTransformsMapped[prevTransformIndex] = true;
+#if TOOIE_SKELETAL_POSE_ENABLED
+        curTransformMap.skeletalPair.reset();
+        const auto currentPose = curWorkload.drawData.skeletalTransforms.find(curTransformIndex);
+        const auto previousPose = prevWorkload.drawData.skeletalTransforms.find(prevTransformIndex);
+        if (currentPose != curWorkload.drawData.skeletalTransforms.end() && previousPose != prevWorkload.drawData.skeletalTransforms.end() &&
+            currentPose->second->bone == previousPose->second->bone && curGroup.decompose &&
+            curGroup.positionInterpolation == G_EX_COMPONENT_INTERPOLATE && curGroup.rotationInterpolation == G_EX_COMPONENT_INTERPOLATE &&
+            curGroup.scaleInterpolation == G_EX_COMPONENT_INTERPOLATE && curGroup.skewInterpolation == G_EX_COMPONENT_INTERPOLATE &&
+            curGroup.perspectiveInterpolation == G_EX_COMPONENT_INTERPOLATE) {
+            const auto &a = previousPose->second->pose, &b = currentPose->second->pose;
+            bool attempted = false;
+            for (const auto &attempt : curWorkloadMap.skeletalPairs)
+                if (attempt.previous == a && attempt.current == b) { curTransformMap.skeletalPair = attempt.pair; attempted = true; break; }
+            if (!attempted) {
+                const char *reason = "unknown";
+                curTransformMap.skeletalPair = skeletal::Pair::create(a, b, &reason);
+                curWorkloadMap.skeletalPairs.push_back({a, b, curTransformMap.skeletalPair});
+                if (!curTransformMap.skeletalPair) {
+                    static thread_local uint64_t nextReport = 0;
+                    const auto now = tooie::diagnostics::monotonicUs();
+                    if (now >= nextReport) {
+                        char text[400]; std::snprintf(text, sizeof(text), "reason=%s player=%u model=0x%X previous_frame=%llu current_frame=%llu bones=%zu action=current-submitted-pose",
+                            reason, b->player, b->model, (unsigned long long)a->frame, (unsigned long long)b->frame, b->bones.size());
+                        tooie::diagnostics::log("skeletal-rejected", text); nextReport = now + 5'000'000;
+                    }
+                }
+            }
+        }
+#endif
 
+
+        const auto velocityPrepareStart = matchingStages().stamp();
         uint64_t curVertexHash = 0;
         uint64_t prevVertexHash = 0;
         uint32_t curVertexIndex = curWorkload.drawData.worldTransformVertexIndices[curTransformIndex];
@@ -830,6 +911,7 @@ namespace RT64 {
 
             modifiedBuffers.texcoordVelocity = true;
         }
+        matchingStages().elapsed(11,velocityPrepareStart);
     }
     
     void GameFrame::buildCallHashMap(uint32_t sceneProjIndex, const Workload &workload, const Projection &proj, std::multimap<uint64_t, GameCallMap> &hashMap) const {

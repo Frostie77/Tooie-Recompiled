@@ -10905,6 +10905,9 @@ L_801065CC:
 RECOMP_FUNC void func_801065E0(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie_rt64_actor_lifetime(rdram, ctx, 3U);
+#endif
     // 0x801065E0: addiu       $sp, $sp, -0x18
     ctx->r29 = ADD32(ctx->r29, -0X18);
     // 0x801065E4: sw          $ra, 0x14($sp)
@@ -10935,6 +10938,9 @@ RECOMP_FUNC void func_801065E0(uint8_t* rdram, recomp_context* ctx) {
 RECOMP_FUNC void func_80106608(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie_rt64_actor_lifetime(rdram, ctx, 3U);
+#endif
     // 0x80106608: addiu       $sp, $sp, -0x18
     ctx->r29 = ADD32(ctx->r29, -0X18);
     // 0x8010660C: sw          $ra, 0x14($sp)
@@ -15472,6 +15478,9 @@ L_80107E6C:
     // 0x80107E8C: lhu         $a1, 0x22($s1)
     ctx->r5 = MEM_HU(ctx->r17, 0X22);
     after_8:
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie_rt64_actor_lifetime(rdram, ctx, 1U);
+#endif
     // 0x80107E90: lbu         $t1, 0x75($s0)
     ctx->r9 = MEM_BU(ctx->r16, 0X75);
     // 0x80107E94: or          $a0, $s1, $zero

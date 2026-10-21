@@ -28,7 +28,7 @@ namespace recompui {
         void init(plume::RenderInterface* interface, plume::RenderDevice* device);
         Rml::RenderInterface* get_rml_interface();
         
-        void start(plume::RenderCommandList* list, int image_width, int image_height);
+        void start(plume::RenderCommandList* list, int image_width, int image_height, plume::RenderFramebuffer* presentation_framebuffer = nullptr);
         void end(plume::RenderCommandList* list, plume::RenderFramebuffer* framebuffer);
         void queue_image_from_bytes_file(const std::string &src, const std::vector<char> &bytes);
         void queue_image_from_bytes_rgba32(const std::string &src, const std::vector<char> &bytes, uint32_t width, uint32_t height);

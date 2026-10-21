@@ -24646,6 +24646,9 @@ RECOMP_FUNC void func_801017D0(uint8_t* rdram, recomp_context* ctx) {
 RECOMP_FUNC void func_80101808(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie_rt64_actor_scope(rdram, ctx, 1U);
+#endif
     // 0x80101808: addiu       $sp, $sp, -0x38
     ctx->r29 = ADD32(ctx->r29, -0X38);
     // 0x8010180C: sw          $s0, 0x20($sp)
@@ -24708,6 +24711,9 @@ RECOMP_FUNC void func_80101808(uint8_t* rdram, recomp_context* ctx) {
     // 0x80101858: lw          $a3, 0x2C($sp)
     ctx->r7 = MEM_W(ctx->r29, 0X2C);
     after_4:
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie_rt64_actor_scope(rdram, ctx, 2U);
+#endif
     // 0x8010185C: lw          $ra, 0x24($sp)
     ctx->r31 = MEM_W(ctx->r29, 0X24);
     // 0x80101860: lw          $s0, 0x20($sp)

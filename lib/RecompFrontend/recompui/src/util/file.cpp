@@ -1,8 +1,11 @@
 #include "file.h"
 
 #include <SDL.h>
+#if defined(__ANDROID__)
+#include "android_file_dialog_state.h"
+#else
 #include "nfd.h"
-#include "RmlUi/Core.h"
+#endif
 
 #include "recompui/program_config.h"
 
@@ -22,7 +25,7 @@
 namespace recompui {
     static void perform_file_dialog_operation(const std::function<void(bool, const std::filesystem::path&)>& callback) {
 #if defined(__ANDROID__)
-        callback(false, std::filesystem::path{});
+        file::android::open(callback);
 #else
         nfdnchar_t* native_path = nullptr;
         nfdresult_t result = NFD_OpenDialogN(&native_path, nullptr, 0, nullptr);
@@ -41,7 +44,10 @@ namespace recompui {
 
     static void perform_file_dialog_operation_multiple(const std::function<void(bool, const std::list<std::filesystem::path>&)>& callback) {
 #if defined(__ANDROID__)
-        callback(false, std::list<std::filesystem::path>{});
+        // One archive per Android request; ZIP bundles can contain several mods.
+        file::android::open_mod([callback](bool selected, const std::filesystem::path& path) {
+            callback(selected, selected ? std::list<std::filesystem::path>{path} : std::list<std::filesystem::path>{});
+        });
 #else
         const nfdpathset_t* native_paths = nullptr;
         nfdresult_t result = NFD_OpenDialogMultipleN(&native_paths, nullptr, 0, nullptr);
@@ -67,6 +73,10 @@ namespace recompui {
     }
 
     std::filesystem::path file::get_app_folder_path() {
+#if defined(__ANDROID__)
+        // Private Activity storage takes precedence over desktop portable mode.
+        if (const char* directory = getenv("APP_FOLDER_PATH")) return directory;
+#endif
         // directly check for portable.txt (windows and native linux binary)
         if (std::filesystem::exists("portable.txt")) {
             return std::filesystem::current_path();

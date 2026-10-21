@@ -1,0 +1,23 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+layout(local_size_x=1) in;
+// RT64's common binding 4. A CPU GPUTile is 13 scalar words (52 bytes).
+layout(set=0,binding=4,std430) readonly buffer Tiles { uint words[]; } tiles;
+layout(set=0,binding=24) uniform sampler nearestSampler;
+layout(set=1,binding=0) uniform texture2D textures[];
+layout(set=2,binding=0,rgba8) uniform writeonly image2D resultImage;
+layout(push_constant) uniform Count { uint count; uint selected; } pc;
+void main() {
+    vec4 color=vec4(1,0,1,1); // Incorrect initialization/data is visibly wrong.
+    if(pc.count==0) {
+        bool zero=true;
+        for(uint i=0;i<13;i++) zero=zero && tiles.words[i]==0;
+        if(zero) color=vec4(0.125,0.25,0.375,0.625);
+    } else {
+        uint base=pc.selected*13;
+        // Check real producer values, and use the uploaded texture index.
+        if(uintBitsToFloat(tiles.words[base])==1.0 && tiles.words[base+12]==1)
+            color=textureLod(sampler2D(textures[tiles.words[base+8]],nearestSampler),vec2(0.5),0);
+    }
+    imageStore(resultImage,ivec2(0),color);
+}

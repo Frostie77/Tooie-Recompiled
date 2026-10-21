@@ -8,6 +8,9 @@
 #include <stdint.h>
 
 #include "recomp.h"
+#include "correction_trace_config.h"
+#include "timing_trace_config.h"
+#include "skeletal_pose_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,6 +67,9 @@ void tooie_yield_pending_sound(uint8_t* rdram, recomp_context* ctx);
 // Clears the runtime's RDP freeze bit when Tooie signals the frame barrier.
 void tooie_clear_dp_freeze(uint8_t* rdram, recomp_context* ctx);
 
+// Apply accepted replay spans to the existing guest retrace wait.
+void tooie_demo_pacing(uint8_t* rdram, recomp_context* ctx, uint32_t event);
+
 // Turns a "culled" verdict from Tooie's float-AABB, s16-AABB and sphere
 // visibility wrappers into "visible" while the applied aspect ratio is Expand,
 // whose projection is wider than the planes those tests build.
@@ -74,7 +80,11 @@ void tooie_expand_visibility(uint8_t* rdram, recomp_context* ctx);
 // which distorts the player model above the game's own frame rate. These add
 // transform-group identities around the player's root and bone matrices
 // without touching a single game matrix; see src/recomp_api.cpp.
+void tooie_correction_probe(uint8_t* rdram, recomp_context* ctx, uint32_t event, uint32_t site);
 void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx);
+void tooie_rt64_skeleton_builder(uint8_t* rdram, recomp_context* ctx, uint32_t stage);
+void tooie_rt64_actor_scope(uint8_t* rdram, recomp_context* ctx, uint32_t stage);
+void tooie_rt64_actor_lifetime(uint8_t* rdram, recomp_context* ctx, uint32_t event);
 void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
                              uint32_t stage);
 void tooie_rt64_push_player_root(uint8_t* rdram, recomp_context* ctx);
@@ -91,12 +101,21 @@ void tooie_dump(uint8_t* rdram, uint32_t addr);
 // `Failed to find function at <vram>` can be attributed to the generated
 // function that made the call. Callers are symbolized against the linker map.
 recomp_func_t* tooie_lookup_func(int32_t vram);
+#if defined(__ANDROID__)
+// Static generated caller provenance is reliable even when guest $ra is stale.
+recomp_func_t* tooie_lookup_func_at(int32_t vram, uint8_t* rdram, recomp_context* ctx,
+                                    const char* caller, uint32_t source_line);
+#endif
 
 #ifdef __cplusplus
 }
 #endif
 
 #undef LOOKUP_FUNC
+#if defined(__ANDROID__)
+#define LOOKUP_FUNC(val) tooie_lookup_func_at((int32_t)(val), rdram, ctx, __func__, __LINE__)
+#else
 #define LOOKUP_FUNC(val) tooie_lookup_func((int32_t)(val))
+#endif
 
 #endif

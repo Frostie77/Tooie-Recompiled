@@ -14691,6 +14691,9 @@ RECOMP_FUNC void func_800EBFD4(uint8_t* rdram, recomp_context* ctx) {
 RECOMP_FUNC void func_800EBFF4(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie_rt64_actor_lifetime(rdram, ctx, 2U);
+#endif
     // 0x800EBFF4: addiu       $sp, $sp, -0x18
     ctx->r29 = ADD32(ctx->r29, -0X18);
     // 0x800EBFF8: sw          $ra, 0x14($sp)

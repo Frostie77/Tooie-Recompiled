@@ -1,4 +1,7 @@
 #include "../../../../src/android_debug_log.h"
+#include "../../../../src/runtime_diagnostics.h"
+#include "../../../../src/gfx_task_trace.h"
+#include "../../../../src/skeletal_pose.h"
 #include <thread>
 #include <atomic>
 #include <chrono>
@@ -20,6 +23,9 @@
 #include "ultramodern/renderer_context.hpp"
 
 static ultramodern::events::callbacks_t events_callbacks{};
+#if defined(__ANDROID__)
+static std::atomic<uint64_t> diagnostic_gfx_tasks{0};
+#endif
 
 void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
     events_callbacks = callbacks;
@@ -27,6 +33,12 @@ void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& 
 
 struct SpTaskAction {
     OSTask task;
+#if TOOIE_TIMING_TRACE_ENABLED
+    tooie::diagnostics::GfxTaskStamp timing;
+#endif
+#if TOOIE_SKELETAL_POSE_ENABLED
+    std::shared_ptr<const tooie::skeletal::TaskBindings> skeletal;
+#endif
 };
 
 struct ScreenUpdateAction {
@@ -193,6 +205,10 @@ void vi_thread_func() {
     using namespace std::chrono_literals;
 
     int remaining_retraces = 1;
+#if defined(__ANDROID__)
+    tooie::diagnostics::RateWindow diagnostic_window;
+    uint64_t diagnostic_vis=0,diagnostic_vi_messages=0;
+#endif
 
     while (!exited) {
         // Determine the next VI time (more accurate than adding 16ms each VI interrupt)
@@ -246,6 +262,9 @@ void vi_thread_func() {
                     // Send a message to the VI queue, and do not set it to be requeued if the queue was full.
                     // The worst case scenario is that the game misses a VI message and has to wait a little longer for the next. 
                     ultramodern::enqueue_external_message_src(cur_state->mq, cur_state->msg, false, ultramodern::EventMessageSource::Vi);
+#if defined(__ANDROID__)
+                    ++diagnostic_vi_messages; // Requests, not confirmed game consumption.
+#endif
                 }
                 remaining_retraces = cur_state->retrace_count;
             }
@@ -258,6 +277,18 @@ void vi_thread_func() {
         if (events_callbacks.vi_callback != nullptr) {
             events_callbacks.vi_callback();
         }
+#if defined(__ANDROID__)
+        const auto diagnostic_sample=diagnostic_window.observe(tooie::diagnostics::monotonicUs(),++diagnostic_vis);
+        if(diagnostic_sample.ready) {
+            char text[640];
+            std::snprintf(text,sizeof(text),"elapsed_us=%llu vi_iterations=%llu vi_schedule_total=%llu vi_message_requests_total=%llu gfx_tasks_total=%llu game_started=%u speed_multiplier=%u highres_is_steady=%u gap_min_us=%llu gap_max_us=%llu n64_count32=%u",
+                (unsigned long long)diagnostic_sample.elapsedUs,(unsigned long long)diagnostic_sample.count,(unsigned long long)total_vis,
+                (unsigned long long)diagnostic_vi_messages,(unsigned long long)diagnostic_gfx_tasks.load(std::memory_order_relaxed),
+                unsigned(ultramodern::is_game_started()),ultramodern::get_speed_multiplier(),unsigned(std::chrono::high_resolution_clock::is_steady),
+                (unsigned long long)diagnostic_sample.minGapUs,(unsigned long long)diagnostic_sample.maxGapUs,osGetCount());
+            tooie::diagnostics::log("vi",text);
+        }
+#endif
     }
 }
 
@@ -375,6 +406,12 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
         if (events_context.action_queue.wait_dequeue_timed(action, 1ms)) {
             // Determine the action type and act on it
             if (const auto* task_action = std::get_if<SpTaskAction>(&action)) {
+#if defined(__ANDROID__)
+                diagnostic_gfx_tasks.fetch_add(1,std::memory_order_relaxed);
+#endif
+#if TOOIE_TIMING_TRACE_ENABLED
+                tooie::diagnostics::GfxDispatchTrace taskTrace(task_action->timing, uint32_t(task_action->task.t.data_ptr), task_action->task.t.data_size);
+#endif
                 // Tell the game that the RSP completed instantly. This will allow it to queue other task types, but it won't
                 // start another graphics task until the RDP is also complete. Games usually preserve the RSP inputs until the RDP
                 // is finished as well, so sending this early shouldn't be an issue in most cases.
@@ -385,10 +422,19 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                 PTR(u64) displaylist = task_action->task.t.data_ptr;
                 ultramodern::extensions::on_displaylist_submitted(displaylist);
 
+#if TOOIE_TIMING_TRACE_ENABLED
+                taskTrace.rendererBegin();
+#endif
                 [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
+#if TOOIE_SKELETAL_POSE_ENABLED
+                tooie::skeletal::TaskScope skeletal_scope(task_action->skeletal);
+#endif
                 renderer_context->send_dl(&task_action->task);
                 [[maybe_unused]] auto renderer_end = std::chrono::high_resolution_clock::now();
 
+#if TOOIE_TIMING_TRACE_ENABLED
+                taskTrace.rendererEnd();
+#endif
                 dp_complete();
                 // TODO hook the parsed event up to the actual parsing point when a callback is added to RT64.
                 ultramodern::extensions::on_displaylist_parsed(displaylist);
@@ -578,7 +624,17 @@ void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
 
     // Send gfx tasks to the graphics action queue
     if (task->t.type == M_GFXTASK) {
-        events_context.action_queue.enqueue(SpTaskAction{ *task });
+#if TOOIE_TIMING_TRACE_ENABLED
+        tooie::diagnostics::GfxSubmitTrace submitTrace(uint32_t(task->t.data_ptr), task->t.data_size);
+#endif
+        SpTaskAction action{ *task };
+#if TOOIE_SKELETAL_POSE_ENABLED
+        action.skeletal = tooie::skeletal::mailbox().snapshot();
+#endif
+#if TOOIE_TIMING_TRACE_ENABLED
+        action.timing = submitTrace.packet();
+#endif
+        events_context.action_queue.enqueue(std::move(action));
     }
     // Set all other tasks as the RSP task
     else {

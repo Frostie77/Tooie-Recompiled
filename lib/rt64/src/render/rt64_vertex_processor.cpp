@@ -2,6 +2,10 @@
 // RT64
 //
 
+#if defined(__ANDROID__)
+#include "../../../../src/android_descriptor_context.h"
+#endif
+
 #include "rt64_vertex_processor.h"
 
 #include "rt64_buffer_uploader.h"
@@ -16,6 +20,9 @@ namespace RT64 {
     VertexProcessor::~VertexProcessor() { }
 
     void VertexProcessor::process(const ProcessParams &p) {
+#if defined(__ANDROID__)
+        tooie::android::DescriptorContextScope descriptorContext("world-vertices");
+#endif
         const DrawData &drawData = *p.drawData;
         const uint32_t drawVertexCount = drawData.vertexCount();
         worldCB.vertexStart = uint32_t(p.outputBuffers->worldPosBuffer.computedSize / (sizeof(float) * 4));
@@ -26,6 +33,10 @@ namespace RT64 {
         p.outputBuffers->worldNormBuffer.computedSize += worldCB.vertexCount * sizeof(float) * 4;
         p.outputBuffers->worldVelBuffer.computedSize += worldCB.vertexCount * sizeof(float) * 4;
         
+#if defined(__ANDROID__)
+        // recordCommandList already has no dispatch when there are no vertices.
+        if (worldCB.vertexCount == 0) return;
+#endif
         descriptorSet->setBuffer(descriptorSet->srcPos, p.drawBuffers->positionBuffer.get(), p.drawBuffers->positionBuffer.getView(0));
         descriptorSet->setBuffer(descriptorSet->srcVel, p.drawBuffers->velocityBuffer.get(), p.drawBuffers->velocityBuffer.getView(0));
         descriptorSet->setBuffer(descriptorSet->srcNorm, p.drawBuffers->normalColorBuffer.get(), p.drawBuffers->normalColorBuffer.getView(1));

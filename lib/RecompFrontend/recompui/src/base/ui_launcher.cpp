@@ -408,11 +408,35 @@ namespace recompui {
     }
 
     void GameOptionsMenu::select_rom(std::function<void(bool)> callback) {
+#if defined(__ANDROID__)
+        if (rom_selection_pending) { callback(false); return; }
+        rom_selection_pending = true;
+#endif
         recompui::file::open_file_dialog([this, callback](bool success, const std::filesystem::path& path) {
+#if defined(__ANDROID__)
+            rom_selection_pending = false;
+#endif
             if (success) {
                 recomp::RomValidationError rom_error = recomp::select_rom(path, this->game_id);
                 switch (rom_error) {
                     case recomp::RomValidationError::Good:
+#if defined(__ANDROID__)
+                        // select_rom currently ignores write_file failures. Read/hash
+                        // the canonical private copy before exposing Start Game.
+                        try {
+                            recomp::check_all_stored_roms();
+                            if (!recomp::is_rom_valid(this->game_id)) {
+                                recompui::message_box("Could not save the ROM in private storage. Check available space and retry.");
+                                callback(false);
+                                return;
+                            }
+                        }
+                        catch (const std::filesystem::filesystem_error&) {
+                            recompui::message_box("Could not access private ROM storage. Please retry after restarting the application.");
+                            callback(false);
+                            return;
+                        }
+#endif
                         callback(true);
                         return;
                     case recomp::RomValidationError::FailedToOpen:

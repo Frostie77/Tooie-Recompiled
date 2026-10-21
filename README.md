@@ -1,6 +1,6 @@
-# Banjo-Tooie: Recompiled
+#Tooie-Recompiled
 
-A native ANDROID port of **Banjo-Tooie (USA)** produced by statically recompiling the
+A native ANDROID port of Banjo-Tooie produced by statically recompiling the
 original N64 ROM with [N64Recomp](https://github.com/N64Recomp/N64Recomp), and
 rendering through [RT64](https://github.com/rt64/rt64).
 
@@ -36,11 +36,11 @@ widescreen, high refresh rates, and an in-game settings menu.
 Playable end to end. Verified working: boot, attract loop, the intro cutscene,
 gameplay, repeated scene transitions, audio, controller input, overlay
 load/unload, and save/load. Multi-minute soaks run without crashes, stalls, or
-missing-function lookups. That verification is on Windows x64; the Linux x64
+missing-function lookups. That verification is on ANDROID x64
 build is newer — see [Known Limitations](#known-limitations).
 
 The one known visual limitation is described under
-[Known Limitations](#known-limitations).
+(#known-limitations).
 
 ## System Requirements
 
@@ -119,25 +119,6 @@ Common: **CMake** 3.20+, **Ninja**, and **Python 3.8+** (tools only).
 GCC-style flags through `target_compile_options`, which MSVC's `cl` rejects
 outright with `D8021: invalid numeric argument '/Wno-unused-parameter'`.
 
-**Windows:**
-
-* **clang-cl** (LLVM) **19 or newer**. MSVC 14.44's standard library rejects
-  older clang with `STL1000: Unexpected compiler version`.
-* **Visual Studio Build Tools 2022** for the Windows SDK and libraries.
-
-**Linux (x64):**
-
-* **clang** — Ubuntu 24.04's 18 is fine. The LLVM 19 floor above is a Windows
-  one: it is MSVC's standard library that refuses older clang, not the code.
-* **libsdl2-dev**, **libfreetype-dev** (RmlUi's font engine) and
-  **libgtk-3-dev** (nativefiledialog-extended's Linux backend). `libsdl2-dev`
-  pulls in the X11/Wayland/ALSA headers that `SDL_syswm.h` includes.
-
-```bash
-sudo apt-get install -y clang ninja-build pkg-config \
-    libsdl2-dev libfreetype-dev libgtk-3-dev
-```
-
 ### Steps
 
 ```bash
@@ -167,8 +148,7 @@ cmake -S . -B build-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
 cmake --build build-cmake --target BanjoTooieRecompiled
 ```
 
-The executable is `build-cmake/BanjoTooieRecompiled.exe` on Windows and
-`build-cmake/BanjoTooieRecompiled` on Linux.
+The executable is `build-cmake/BanjoTooieRecompiled` on Linux.
 
 **The ROM is not needed to build.** The recompiled game code is committed (see
 below), so building requires only a compiler and the dependencies. You will be
@@ -187,9 +167,7 @@ asked for the ROM the first time you run the game.
 
 ## Running
 
-```
-build-cmake\BanjoTooieRecompiled.exe          # Windows
-build-cmake/BanjoTooieRecompiled              # Linux
+build-cmake/BanjoTooieRecompiled     # Linux
 ```
 
 ⚠ **Run it from the directory containing `assets/`** — the launcher resolves its
@@ -227,9 +205,6 @@ ROM to have been selected once.
 
 ### Runtime dependencies
 
-**Windows:** nothing to install. The release archive carries the SDL2 and DXC
-DLLs the executable loads.
-
 **Linux:** the release archive carries no shared libraries, so it needs the
 libraries it links against. A working Vulkan driver is required too — RT64 has
 no OpenGL backend on Linux.
@@ -261,10 +236,6 @@ Releases are built and published by
 [`.github/workflows/build.yml`](.github/workflows/build.yml); there is no manual
 release step. Every release carries both packages, built from the same commit:
 
-|Archive|Platform|
-|---|---|
-|`BanjoTooieRecompiled-windows-x64.zip`|the executable, the SDL2/DXC DLLs it loads, and `assets/`|
-|`BanjoTooieRecompiled-linux-x64.tar.gz`|the executable, `assets/`, and `run.sh`|
 
 Both are built from the same commit by the same workflow run, and published
 together. The Windows archive carries the DLLs it loads; the Linux one carries

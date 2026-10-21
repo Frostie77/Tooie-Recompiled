@@ -90,11 +90,18 @@ namespace RT64 {
         drawData.triTcFloats.clear();
         drawData.triColorFloats.clear();
         drawData.transformGroups.clear();
+#if TOOIE_SKELETAL_POSE_ENABLED
+        drawData.skeletalTransforms.clear();
+#endif
         drawData.worldTransformGroups.clear();
         drawData.viewProjTransformGroups.clear();
         drawData.worldTransformSegmentedAddresses.clear();
         drawData.worldTransformPhysicalAddresses.clear();
         drawData.worldTransformVertexIndices.clear();
+#if TOOIE_CORRECTION_TRACE_ENABLED
+        drawData.correctionLinks.clear();
+        drawData.correctionReported = false;
+#endif
         drawData.viewportClipRatios.push_back(1);
         drawData.viewportClipRatios.push_back(1);
         drawData.viewportClipRatios.push_back(-1);

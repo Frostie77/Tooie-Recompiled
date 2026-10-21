@@ -3,6 +3,7 @@
 //
 
 #include "rt64_gbi_extended.h"
+#include "hle/rt64_interpreter.h"
 
 #include <atomic>
 
@@ -25,7 +26,10 @@ namespace RT64 {
         static bool MapInitialized = false;
 
         void noOp(State *state, DisplayList **dl) {
-            // Does nothing.
+#if TOOIE_CORRECTION_TRACE_ENABLED
+            // Diagnostic metadata only; this remains a rendering NOOP.
+            state->ext.interpreter->correctionMarker.word((*dl)->w1);
+#endif
         }
 
         void print(State *state, DisplayList **dl) {
@@ -166,6 +170,17 @@ namespace RT64 {
 
         void matrixGroupV1(State *state, DisplayList **dl) {
             matrixGroupCommand(state, dl, false, false);
+#if TOOIE_SKELETAL_POSE_ENABLED
+            // V1 reserves this word. Only the queued native task can resolve a
+            // token; ordinary/mod commands and desktop retain their old policy.
+            auto &rsp = *state->rsp;
+            if ((*dl)->w1 && ((*dl)->w0 == 0x02008AADU)) {
+                auto &g = rsp.extended.modelMatrixIdStack[rsp.extended.modelMatrixIdStackSize - 1];
+                g.skeletal = tooie::skeletal::TaskScope::find(*dl - 1, (*dl)->w1, g.matrixId);
+                if (g.skeletal && (((*dl - 2)->w0 != 0xDA380002U) ||
+                    (((*dl - 2)->w1 & 0x7FFFFFU) != g.skeletal->address))) g.skeletal.reset();
+            }
+#endif
         }
 
         void popMatrixGroupV1(State *state, DisplayList **dl) {

@@ -2,6 +2,10 @@
 // RT64
 //
 
+#if defined(__ANDROID__)
+#include "../../../../src/android_descriptor_context.h"
+#endif
+
 #include "rt64_rsp_processor.h"
 
 #include "rt64_buffer_uploader.h"
@@ -17,6 +21,9 @@ namespace RT64 {
     RSPProcessor::~RSPProcessor() { }
     
     void RSPProcessor::process(const ProcessParams &p) {
+#if defined(__ANDROID__)
+        tooie::android::DescriptorContextScope descriptorContext("rsp-process");
+#endif
         const DrawData &drawData = *p.drawData;
         const uint32_t drawVertexCount = drawData.vertexCount();
         processCB.vertexStart = uint32_t(p.outputBuffers->screenPosBuffer.computedSize / (sizeof(float) * 4));
@@ -26,6 +33,9 @@ namespace RT64 {
         p.outputBuffers->screenPosBuffer.computedSize += processCB.vertexCount * sizeof(float) * 4;
         p.outputBuffers->genTexCoordBuffer.computedSize += processCB.vertexCount * sizeof(float) * 2;
         p.outputBuffers->shadedColBuffer.computedSize += processCB.vertexCount * sizeof(float) * 4;
+#if defined(__ANDROID__)
+        if (processCB.vertexCount > 0) {
+#endif
         processSet->setBuffer(processSet->srcPos, p.drawBuffers->positionBuffer.get(), p.drawBuffers->positionBuffer.getView(0));
         processSet->setBuffer(processSet->srcVel, p.drawBuffers->velocityBuffer.get(), p.drawBuffers->velocityBuffer.getView(0));
         processSet->setBuffer(processSet->srcTc, p.drawBuffers->texcoordBuffer.get(), p.drawBuffers->texcoordBuffer.getView(0));
@@ -48,10 +58,19 @@ namespace RT64 {
         processSet->setBuffer(processSet->dstTc, p.outputBuffers->genTexCoordBuffer.buffer.get(), RenderBufferStructuredView(sizeof(float) * 2));
         processSet->setBuffer(processSet->dstCol, p.outputBuffers->shadedColBuffer.buffer.get(), RenderBufferStructuredView(sizeof(float) * 4));
 
+#if defined(__ANDROID__)
+        }
+#endif
         const uint32_t modifyCount = drawData.modifyCount();
         modifyCB.modifyCount = modifyCount;
+#if defined(__ANDROID__)
+        if (modifyCount > 0) {
+#endif
         modifySet->setBuffer(modifySet->srcModifyPos, p.drawBuffers->modifyPosUintsBuffer.get(), p.drawBuffers->modifyPosUintsBuffer.getView(0));
         modifySet->setBuffer(modifySet->screenPos, p.outputBuffers->screenPosBuffer.buffer.get(), RenderBufferStructuredView(sizeof(float) * 4));
+#if defined(__ANDROID__)
+        }
+#endif
     }
 
     void RSPProcessor::recordCommandList(RenderWorker *worker, const ShaderLibrary *shaderLibrary, const OutputBuffers *outputBuffers) {

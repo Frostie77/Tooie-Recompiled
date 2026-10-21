@@ -43,6 +43,10 @@
 #undef Always
 #endif
 
+#include "queued_audio.h"
+#include "mod_support.h"
+#include "launcher_layout.h"
+
 #include "recompui/recompui.h"
 #include "recompui/program_config.h"
 #include "recompui/renderer.h"
@@ -94,6 +98,11 @@ void exit_error(const char* str, const char* arg) {
 ultramodern::gfx_callbacks_t::gfx_data_t create_gfx() {
     std::fprintf(stderr, "[tooie] create_gfx enter\n");
     tooie_android_debug_log("[tooie] create_gfx enter"); std::fflush(stderr);
+#ifdef __ANDROID__
+    // Keep SDL's event pump live while RT64's independent presentation worker
+    // is suspended by the explicit Android surface-lifecycle handshake.
+    SDL_SetHint(SDL_HINT_ANDROID_BLOCK_ON_PAUSE, "0");
+#endif
     SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
     SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, "1");
@@ -166,146 +175,12 @@ void update_gfx(void*) {
 
 // --- Audio -----------------------------------------------------------------
 
-static SDL_AudioCVT audio_convert;
-static SDL_AudioDeviceID audio_device = 0;
+static tooie::audio::QueuedAudio queued_audio;
 
-static uint32_t sample_rate = 48000;
-static uint32_t output_sample_rate = 48000;
-
-constexpr uint32_t input_channels = 2;
-static uint32_t output_channels = 2;
-
-constexpr uint32_t duplicated_input_frames = 4;
-static uint32_t discarded_output_frames = 0;
-
-constexpr uint32_t bytes_per_frame = input_channels * sizeof(float);
-
-void queue_samples(int16_t* audio_data, size_t sample_count) {
-    static std::vector<float> swap_buffer;
-    static std::array<float, duplicated_input_frames * input_channels>
-        duplicated_sample_buffer;
-
-    size_t resampled_sample_count =
-        sample_count + duplicated_input_frames * input_channels;
-    size_t max_sample_count =
-        std::max(resampled_sample_count,
-                 resampled_sample_count * audio_convert.len_mult);
-    if (max_sample_count > swap_buffer.size()) {
-        swap_buffer.resize(max_sample_count);
-    }
-
-    for (size_t i = 0; i < duplicated_input_frames * input_channels; i++) {
-        swap_buffer[i] = duplicated_sample_buffer[i];
-    }
-
-    for (size_t i = 0; i < sample_count; i += input_channels) {
-        swap_buffer[i + 0 + duplicated_input_frames * input_channels] =
-            audio_data[i + 1] * (0.5f / 32768.0f);
-        swap_buffer[i + 1 + duplicated_input_frames * input_channels] =
-            audio_data[i + 0] * (0.5f / 32768.0f);
-    }
-
-    if (sample_count <= duplicated_input_frames * input_channels) {
-        return;
-    }
-
-    for (size_t i = 0; i < duplicated_input_frames * input_channels; i++) {
-        duplicated_sample_buffer[i] = swap_buffer[i + sample_count];
-    }
-
-    audio_convert.buf = reinterpret_cast<Uint8*>(swap_buffer.data());
-    audio_convert.len =
-        (sample_count + duplicated_input_frames * input_channels) *
-        sizeof(swap_buffer[0]);
-
-    if (SDL_ConvertAudio(&audio_convert) < 0) {
-        std::fprintf(stderr, "Error using SDL audio converter: %s\n",
-                     SDL_GetError());
-        return;
-    }
-
-    const uint64_t cur_queued_microseconds =
-        static_cast<uint64_t>(SDL_GetQueuedAudioSize(audio_device)) /
-        bytes_per_frame * 1000000 / sample_rate;
-    uint32_t num_bytes_to_queue =
-        audio_convert.len_cvt -
-        output_channels * discarded_output_frames * sizeof(swap_buffer[0]);
-    float* samples_to_queue =
-        swap_buffer.data() + output_channels * discarded_output_frames / 2;
-
-    const uint32_t skip_factor = cur_queued_microseconds / 100000;
-    if (skip_factor != 0) {
-        const uint32_t skip_ratio = 1 << skip_factor;
-        num_bytes_to_queue /= skip_ratio;
-        for (size_t i = 0;
-             i < num_bytes_to_queue / (output_channels * sizeof(swap_buffer[0]));
-             i++) {
-            samples_to_queue[2 * i + 0] = samples_to_queue[2 * skip_ratio * i + 0];
-            samples_to_queue[2 * i + 1] = samples_to_queue[2 * skip_ratio * i + 1];
-        }
-    }
-
-    SDL_QueueAudio(audio_device, samples_to_queue, num_bytes_to_queue);
-}
-
-size_t get_frames_remaining() {
-    constexpr float buffer_offset_frames = 1.0f;
-    uint64_t buffered_byte_count = SDL_GetQueuedAudioSize(audio_device);
-
-    buffered_byte_count =
-        buffered_byte_count * 2 * sample_rate / output_sample_rate /
-        output_channels;
-
-    const uint32_t frames_per_vi = (sample_rate / 60);
-    if (buffered_byte_count >
-        (buffer_offset_frames * bytes_per_frame * frames_per_vi)) {
-        buffered_byte_count -=
-            (buffer_offset_frames * bytes_per_frame * frames_per_vi);
-    } else {
-        buffered_byte_count = 0;
-    }
-    return static_cast<size_t>(buffered_byte_count / bytes_per_frame);
-}
-
-void update_audio_converter() {
-    if (SDL_BuildAudioCVT(&audio_convert, AUDIO_F32, input_channels,
-                          sample_rate, AUDIO_F32, output_channels,
-                          output_sample_rate) < 0) {
-        std::fprintf(stderr, "Error creating SDL audio converter: %s\n",
-                     SDL_GetError());
-        throw std::runtime_error("Error creating SDL audio converter");
-    }
-    discarded_output_frames =
-        duplicated_input_frames * output_sample_rate / sample_rate;
-}
-
-void set_frequency(uint32_t freq) {
-    sample_rate = freq;
-    update_audio_converter();
-}
-
-bool reset_audio(uint32_t output_freq) {
-    SDL_AudioSpec spec_desired{};
-    spec_desired.freq = static_cast<int>(output_freq);
-    spec_desired.format = AUDIO_F32;
-    spec_desired.channels = static_cast<Uint8>(output_channels);
-    spec_desired.samples = 0x100;
-    spec_desired.callback = nullptr;
-    spec_desired.userdata = nullptr;
-
-    audio_device =
-        SDL_OpenAudioDevice(nullptr, false, &spec_desired, nullptr, 0);
-    if (audio_device == 0) {
-        std::fprintf(stderr, "Error opening audio device: %s\n",
-                     SDL_GetError());
-        return false;
-    }
-
-    SDL_PauseAudioDevice(audio_device, 0);
-    output_sample_rate = output_freq;
-    update_audio_converter();
-    return true;
-}
+void queue_samples(int16_t* data, size_t count) { queued_audio.queue(data, count); }
+size_t get_frames_remaining() { return queued_audio.remainingFrames(); }
+void set_frequency(uint32_t rate) { queued_audio.setFrequency(rate); }
+bool reset_audio(uint32_t rate) { return queued_audio.open(rate); }
 
 // --- Input -----------------------------------------------------------------
 
@@ -433,18 +308,74 @@ public:
         set_left(0.0f);
         set_width(100.0f, recompui::Unit::Percent);
         set_height(100.0f, recompui::Unit::Percent);
+        set_pointer_events(recompui::PointerEvents::None);
 
         // `set_attribute` is protected in recompui::Element and documented as
         // "use ... in inherited classes ... unless it's necessary" -- this is
         // that case: RmlUi has no typed setter for a decorator, and the inline
         // `style` attribute is the only way to reach one from the port.
         set_attribute("style", "decorator: image( " +
-                                   std::string(registered_name) + " cover );");
+                                   std::string(registered_name) + " cover ); transform-origin: 50% 50%;");
     }
 };
 
 // Registered image name for the wallpaper; the '?' keeps `JoinPath` out of it.
 static constexpr const char* kWallpaperImage = "?/tooie/wallpaper";
+static constexpr const char* kLauncherWordmark = "?/tooie/launcher-recompiled";
+
+// One cover-scaled art coordinate system keeps the title aligned with the
+// approved background at every viewport size. Context-owned queued updates
+// are discarded if this element is removed; no global UI pointer is retained.
+class LauncherArtwork : public recompui::Element {
+    recompui::LauncherMenu* menu;
+    float previousWidth = -1.0f, previousHeight = -1.0f;
+protected:
+    std::string_view get_type_name() override { return "LauncherArtwork"; }
+    void process_event(const recompui::Event& event) override {
+        if (event.type != recompui::EventType::Update) return;
+        const float width = get_parent()->get_client_width();
+        const float height = get_parent()->get_client_height();
+        const auto geometry = tooie::launcher::layout(width, height);
+        if (geometry.valid && (width != previousWidth || height != previousHeight)) {
+            previousWidth = width; previousHeight = height;
+            set_left(geometry.left, recompui::Unit::Px);
+            set_top(geometry.top, recompui::Unit::Px);
+            set_width(geometry.width, recompui::Unit::Px);
+            set_height(geometry.height, recompui::Unit::Px);
+            if (auto* options = menu->get_game_options_menu()) {
+                options->set_gap(geometry.gap, recompui::Unit::Px);
+                for (auto* option : options->get_options()) {
+                    option->set_height(geometry.rowHeight, recompui::Unit::Px);
+                    option->set_padding(0.0f);
+                    option->set_flex_shrink(0.0f);
+                    if (auto* label = option->get_label()) {
+                        label->set_font_size(geometry.fontSize, recompui::Unit::Px);
+                        label->set_line_height(geometry.fontSize, recompui::Unit::Px);
+                        label->set_letter_spacing(geometry.letterSpacing, recompui::Unit::Px);
+                        label->set_white_space(recompui::WhiteSpace::Nowrap);
+                    }
+                }
+            }
+        }
+        queue_update();
+    }
+public:
+    LauncherArtwork(recompui::ResourceId rid, recompui::Element* parent,
+                    recompui::LauncherMenu* owner)
+        : Element(rid, parent, recompui::Events(recompui::EventType::Update)), menu(owner) {
+        set_position(recompui::Position::Absolute);
+        set_pointer_events(recompui::PointerEvents::None);
+        auto context = recompui::get_current_context();
+        context.create_element<Wallpaper>(this, "menu.png", kWallpaperImage);
+        auto* title = context.create_element<Wallpaper>(this, "menu-recompiled.png", kLauncherWordmark);
+        title->set_left(tooie::launcher::titleLeft, recompui::Unit::Percent);
+        title->set_top(tooie::launcher::titleTop, recompui::Unit::Percent);
+        title->set_width(tooie::launcher::titleWidth, recompui::Unit::Percent);
+        title->set_height(tooie::launcher::titleHeight, recompui::Unit::Percent);
+        title->set_rotation(tooie::launcher::titleRotation);
+        queue_update();
+    }
+};
 
 // Option plates.
 //
@@ -475,11 +406,6 @@ void initialize_launcher_menu(recompui::LauncherMenu* menu) {
     // Behind the menu: `background_wrapper` is the launcher's first child, so
     // everything created later paints over it. It is also the element
     // `set_launcher_background_svg` fills, so this is the intended slot.
-    if (recompui::Element* background = menu->get_background_container()) {
-        recompui::get_current_context().create_element<Wallpaper>(
-            background, "menu.png", kWallpaperImage);
-    }
-
     const auto& game = supported_games.front();
     auto* game_options = menu->init_game_options_menu(
         game.game_id, game.mod_game_id, game.display_name,
@@ -492,11 +418,17 @@ void initialize_launcher_menu(recompui::LauncherMenu* menu) {
     game_options->add_mods_option();
     game_options->add_exit_option();
 
-    // `Right` anchors the column to the bottom-right corner of the menu
-    // container (right/bottom 24dp, which the container has already inset 24dp
-    // from the frame). Narrow it so the buttons read as a column rather than a
-    // band.
-    game_options->set_width(30.0f, recompui::Unit::Percent);
+    // Keep the menu in viewport coordinates so the controls remain reachable
+    // when a narrower window crops the cover-scaled art.
+    if (auto* container = game_options->get_parent()) {
+        container->set_left(0.0f); container->set_top(0.0f);
+        container->set_right(0.0f); container->set_bottom(0.0f);
+    }
+    game_options->unset_right(); game_options->unset_bottom();
+    game_options->set_left(82.0f, recompui::Unit::Percent);
+    game_options->set_top(52.0f, recompui::Unit::Percent);
+    game_options->set_width(16.5f, recompui::Unit::Percent);
+    game_options->set_height(41.0f, recompui::Unit::Percent);
 
     for (recompui::GameOption* option : game_options->get_options()) {
         // BanjoRecomp's menu text: family, size and tracking all come from its
@@ -538,7 +470,10 @@ void initialize_launcher_menu(recompui::LauncherMenu* menu) {
         option->disabled_style.set_background_color(kOptionPlate);
         option->hover_disabled_style.set_background_color(kOptionPlate);
     }
-
+    if (auto* background = menu->get_background_container()) {
+        background->set_overflow(recompui::Overflow::Hidden);
+        recompui::get_current_context().create_element<LauncherArtwork>(background, menu);
+    }
 }
 
 static int tooie_recomp_main(int argc, char** argv) {
@@ -745,6 +680,7 @@ static int tooie_recomp_main(int argc, char** argv) {
     configuration.error_handling_callbacks = error_handling_callbacks;
     configuration.threads_callbacks = threads_callbacks;
 
+    tooie::register_texture_pack_support();
     std::fprintf(stderr, "[tooie] step before start\n");
     tooie_android_debug_log("[tooie] step before start"); std::fflush(stderr);
     recomp::start(configuration);
@@ -754,9 +690,7 @@ static int tooie_recomp_main(int argc, char** argv) {
     if (window != nullptr) {
         SDL_DestroyWindow(window);
     }
-    if (audio_device != 0) {
-        SDL_CloseAudioDevice(audio_device);
-    }
+    queued_audio.close();
     SDL_Quit();
 #if !defined(__ANDROID__)
     NFD_Quit();

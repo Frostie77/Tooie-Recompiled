@@ -25,6 +25,10 @@ cmake_dependent_option(PLUME_SDL_VULKAN_ENABLED "Enable SDL Vulkan integration" 
 cmake_dependent_option(PLUME_D3D12_AGILITY_SDK_ENABLED "Enable D3D12 Agility SDK" OFF WIN32 OFF)
 cmake_dependent_option(PLUME_APPLE_RETINA_ENABLED "Enable Apple Retina display support" ON APPLE ON)
 option(PLUME_BUILD_EXAMPLES "Build example applications" OFF)
+option(TOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE "Run isolated Android descriptor allocation experiment and exit" OFF)
+if(TOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE AND NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
+    message(FATAL_ERROR "Descriptor allocation probe is an Android diagnostic")
+endif()
 
 # Windows-specific definitions
 if(WIN32)
@@ -58,6 +62,8 @@ message(STATUS "Plume - Building examples: ${PLUME_BUILD_EXAMPLES}")
 set(PLUME_SOURCES
     plume_vulkan.cpp
     plume_vulkan.h
+    plume_vulkan_descriptor_probe.h
+    plume_vulkan_descriptor_pool.h
 )
 
 # Platform-specific files
@@ -78,6 +84,9 @@ endif()
 
 # Create target
 add_library(plume STATIC ${PLUME_SOURCES})
+if(TOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE)
+    target_compile_definitions(plume PRIVATE TOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE=1)
+endif()
 
 # Include directories
 target_include_directories(plume PUBLIC

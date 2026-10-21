@@ -1,3 +1,4 @@
+#include "../../../../src/render_diagnostics.h"
 //
 // RT64
 //
@@ -11,6 +12,19 @@
 #define ENABLE_HIGH_RESOLUTION_RENDERER 1
 
 namespace RT64 {
+    namespace {
+        auto &workloadStages() {
+            static thread_local tooie::diagnostics::StageWindow<7> stages("workload-stages",
+                {"present_wait", "configuration", "matching", "target_reuse", "render", "retire_wait", "queue_lock"});
+            return stages;
+        }
+        auto &renderStages() {
+            static thread_local tooie::diagnostics::StageWindow<8> stages("render-stages",
+                {"workload_lock", "interpolation", "record", "upload_wait", "submit", "gpu_wait", "query", "worker_lock"});
+            return stages;
+        }
+        thread_local uint64_t diagnosticGpuNs = 0;
+    }
     // WorkloadQueue
 
     WorkloadQueue::WorkloadQueue() {
@@ -258,9 +272,9 @@ namespace RT64 {
                 // Wait until the other queue has stopped using the interpolated color targets.
                 std::unique_lock<std::mutex> interpolatedLock(ext.sharedResources->interpolatedMutex);
                 InterpolatedFrameCounters &curFrameCounters = ext.sharedResources->interpolatedFrames[ext.sharedResources->interpolatedFramesIndex];
-                ext.sharedResources->interpolatedCondition.wait(interpolatedLock, [&]() {
+                workloadStages().measure(5, [&] { ext.sharedResources->interpolatedCondition.wait(interpolatedLock, [&]() {
                     return curFrameCounters.presented >= curFrameCounters.available;
-                });
+                }); });
             }
 
             std::scoped_lock<std::mutex> managerLock(ext.sharedResources->managerMutex);
@@ -295,7 +309,12 @@ namespace RT64 {
         uint32_t overrideTargetModifier, bool uploadVelocity, bool uploadExtras, bool interpolateTiles, bool interpolateLookAts)
     {
 #   if ENABLE_HIGH_RESOLUTION_RENDERER
+        auto &stages = renderStages();
+        diagnosticGpuNs = 0;
+        const auto lockStart = stages.stamp();
         std::scoped_lock<std::mutex> managerLock(ext.sharedResources->workloadMutex);
+        stages.elapsed(0,lockStart);
+        const auto interpolationStart = stages.stamp();
         FramebufferManager &fbManager = ext.sharedResources->framebufferManager;
         RenderTargetManager &targetManager = ext.sharedResources->renderTargetManager;
         const bool usingMSAA = (targetManager.multisampling.sampleCount > 1);
@@ -362,6 +381,7 @@ namespace RT64 {
             uploadLookAts = true;
         }
 
+        stages.elapsed(1,interpolationStart);
         // Reset the max height tracking for all active framebuffers.
         fbManager.resetTracking();
 
@@ -371,6 +391,7 @@ namespace RT64 {
 
         for (uint32_t w = 0; w < curFrame.workloads.size(); w++) {
             Workload &workload = workloads[curFrame.workloads[w]];
+            const auto recordStart = stages.stamp();
 
             // There's no guarantee the RSP was processed if framebuffers were not rendered.
             const bool processRSP = true;
@@ -646,17 +667,26 @@ namespace RT64 {
             }
 
             // Create all GPU tile mappings and upload them.
-            if (!workload.drawData.gpuTiles.empty()) {
+#if !defined(__ANDROID__)
+            if (!workload.drawData.gpuTiles.empty())
+#endif
+            { // Android empty work also prepares an initialized common-set binding.
                 std::pair<size_t, size_t> gpuTileRange;
                 gpuTileRange.first = 0;
                 gpuTileRange.second = workload.drawData.gpuTiles.size();
-                framebufferRenderer->createGPUTiles(workload.drawData.callTiles.data(), uint32_t(workload.drawData.gpuTiles.size()),
-                    workload.drawData.gpuTiles.data(), &fbManager, ext.textureCache, workload.submissionFrame);
+                if (!workload.drawData.gpuTiles.empty()) {
+                    framebufferRenderer->createGPUTiles(workload.drawData.callTiles.data(), uint32_t(workload.drawData.gpuTiles.size()),
+                        workload.drawData.gpuTiles.data(), &fbManager, ext.textureCache, workload.submissionFrame);
+                }
 
                 // Upload the GPU tiles.
+#if defined(__ANDROID__)
+                workload.drawBuffers.gpuTilesBuffer.submit(ext.workloadTilesUploader, ext.workloadGraphicsWorker, workload.drawData.gpuTiles.data(), gpuTileRange);
+#else
                 ext.workloadTilesUploader->submit(ext.workloadGraphicsWorker, {
                     { workload.drawData.gpuTiles.data(), gpuTileRange, sizeof(interop::GPUTile), RenderBufferFlag::STORAGE, { }, &workload.drawBuffers.gpuTilesBuffer}
                 });
+#endif
 
                 bufferUploaders.emplace_back(ext.workloadTilesUploader);
             }
@@ -697,11 +727,11 @@ namespace RT64 {
             }
 #       endif
 
-            workerMutex.lock();
+            stages.measure(7, [&] { workerMutex.lock(); });
             ext.workloadGraphicsWorker->commandList->begin();
             ext.workloadGraphicsWorker->commandList->resetQueryPool(queryPool.get(), 0, 2);
             ext.workloadGraphicsWorker->commandList->writeTimestamp(queryPool.get(), 0);
-            framebufferRenderer->endFramebuffers(ext.workloadGraphicsWorker, &workload.drawBuffers, &workload.outputBuffers, workloadConfig.raytracingEnabled);
+            framebufferRenderer->endFramebuffers(ext.workloadGraphicsWorker, &workload.drawBuffers, &workload.outputBuffers, workloadConfig.raytracingEnabled, workload.drawData.gpuTiles.size());
             framebufferRenderer->recordSetup(ext.workloadGraphicsWorker, bufferUploaders, processRSP ? rspProcessor.get() : nullptr, processWorldVertices ? vertexProcessor.get() : nullptr, &workload.outputBuffers, workloadConfig.raytracingEnabled);
             
             // Record all framebuffer pairs.
@@ -839,14 +869,16 @@ namespace RT64 {
 
             ext.workloadGraphicsWorker->commandList->writeTimestamp(queryPool.get(), 1);
             ext.workloadGraphicsWorker->commandList->end();
-            framebufferRenderer->waitForUploaders();
-            ext.workloadGraphicsWorker->execute();
-            ext.workloadGraphicsWorker->wait();
+            stages.elapsed(2,recordStart);
+            stages.measure(3, [&] { framebufferRenderer->waitForUploaders(); });
+            stages.measure(4, [&] { ext.workloadGraphicsWorker->execute(); });
+            stages.measure(5, [&] { ext.workloadGraphicsWorker->wait(); });
             workerMutex.unlock();
 
             // Update the GPU profiler with the results from the timestamps of the frame.
-            queryPool->queryResults();
+            stages.measure(6, [&] { queryPool->queryResults(); });
             const uint64_t *frameTimestamps = queryPool->getResults();
+            diagnosticGpuNs += frameTimestamps[1] - frameTimestamps[0];
             rendererGPUProfiler.log(double(frameTimestamps[1] - frameTimestamps[0]) / 1000000.0);
 
             // Indicate to the texture cache it's safe to delete the textures if no locks are active.
@@ -902,9 +934,12 @@ namespace RT64 {
             }
 
             if (processCursor >= 0) {
+                auto &stages = workloadStages();
+                const auto stageStart = stages.stamp();
                 std::unique_lock<std::mutex> threadLock(threadMutex);
+                stages.elapsed(6,stageStart);
                 Workload &workload = workloads[processCursor];
-                ext.presentQueue->waitForPresentId(workload.presentId);
+                stages.measure(0, [&] { ext.presentQueue->waitForPresentId(workload.presentId); });
 
                 if (!threadsRunning) {
                     continue;
@@ -912,7 +947,7 @@ namespace RT64 {
 
                 ElapsedTimer workloadTimer;
                 workloadProfiler.start();
-                threadConfigurationUpdate(workload.viFbSize, workloadConfig);
+                stages.measure(1, [&] { threadConfigurationUpdate(workload.viFbSize, workloadConfig); });
 
                 // FIXME: This is a very hacky way to find out if we need to advance the frame if the workload was paused for the first time.
                 if (!workload.paused || (!gameFrames[curFrameIndex].workloads.empty() && (gameFrames[curFrameIndex].workloads[0] != (uint32_t)processCursor))) {
@@ -981,7 +1016,7 @@ namespace RT64 {
                 if (requiresFrameMatching) {
                     matchingProfiler.reset();
                     matchingProfiler.start();
-                    curFrame.match(ext.workloadGraphicsWorker, *this, prevFrame, ext.workloadVelocityUploader, velocityUploaderUsed, tileInterpolationUsed, lookAtInterpolationUsed);
+                    stages.measure(2, [&] { curFrame.match(ext.workloadGraphicsWorker, *this, prevFrame, ext.workloadVelocityUploader, velocityUploaderUsed, tileInterpolationUsed, lookAtInterpolationUsed); });
                     matchingProfiler.end();
                     matchingProfiler.log();
 
@@ -1031,9 +1066,9 @@ namespace RT64 {
                 // if the frame counter has never presented anything yet, as it'll only be a valid value if the previous present event actually did something.
                 else if (generateInterpolatedFrames) {
                     std::unique_lock<std::mutex> interpolatedLock(ext.sharedResources->interpolatedMutex);
-                    ext.sharedResources->interpolatedCondition.wait(interpolatedLock, [&]() {
+                    stages.measure(3, [&] { ext.sharedResources->interpolatedCondition.wait(interpolatedLock, [&]() {
                         return (prevFrameCounters.presented == 0) || (prevFrameCounters.presented >= prevFrameCounters.available);
-                    });
+                    }); });
                 }
 
                 InterpolatedFrameCounters &curFrameCounters = ext.sharedResources->interpolatedFrames[ext.sharedResources->interpolatedFramesIndex];
@@ -1092,10 +1127,10 @@ namespace RT64 {
                             if (useDifferentCounters && (prevFrameCounters.available > 0) && (targetIndex < prevFrameCounters.available)) {
                                 // Wait until the target has finished presenting if the alternate frame counter (used by the present queue) is making use of this target.
                                 std::unique_lock<std::mutex> interpolatedLock(ext.sharedResources->interpolatedMutex);
-                                ext.sharedResources->interpolatedCondition.wait(interpolatedLock, [&]() {
+                                stages.measure(3, [&] { ext.sharedResources->interpolatedCondition.wait(interpolatedLock, [&]() {
                                     frameReduction = frameReduction || (prevFrameCounters.presented <= targetIndex);
                                     return prevFrameCounters.presented > targetIndex;
-                                });
+                                }); });
                             }
 
                             targetIndex++;
@@ -1117,11 +1152,15 @@ namespace RT64 {
                     }
 
                     int64_t renderTimeMicro = workloadTimer.elapsedMicroseconds();
-                    threadRenderFrame(curFrame, prevFrame, workloadConfig, workload.debuggerRenderer, workload.debuggerCamera, curFrameWeight, prevFrameWeight, deltaTimeMs,
+                    const auto frameStageStart = renderStages().stamp();
+                    stages.measure(4, [&] {
+                        threadRenderFrame(curFrame, prevFrame, workloadConfig, workload.debuggerRenderer, workload.debuggerCamera, curFrameWeight, prevFrameWeight, deltaTimeMs,
                         interpolationTargetKey, interpolationTargetFbPairIndex, overrideTarget, overrideModifier, velocityUploaderUsed, uploadExtras, tileInterpolationUsed, lookAtInterpolationUsed);
+                    });
 
                     // Add total time the frame took to render.
                     renderTimeTotalMicro += workloadTimer.elapsedMicroseconds() - renderTimeMicro;
+
 
                     // After one frame is rendered, we indicate the workload has been processed so the present thread can start presenting frames as soon as it can.
                     if (frame == 0) {
@@ -1150,6 +1189,13 @@ namespace RT64 {
                     }
 
                     framesRendered++;
+#if defined(__ANDROID__)
+                    char frameContext[512];
+                    std::snprintf(frameContext,sizeof(frameContext),"workload=%llu present=%llu frame=%u source_hz=%u target_hz=%u cur_weight=%.5f prev_weight=%.5f target_slot=%u override=%u msaa=%u gpu_ns=%llu",
+                        (unsigned long long)workload.workloadId,(unsigned long long)workload.presentId,frame,workload.viOriginalRate,workloadConfig.targetRate,
+                        double(curFrameWeight),double(prevFrameWeight),overrideTarget?targetIndex-1:UINT32_MAX,overrideModifier,unsigned(usingMSAA),(unsigned long long)diagnosticGpuNs);
+                    renderStages().report(frameStageStart,frameContext);
+#endif
                 }
 
                 // Set the skipped parameter on the frame counter if the workload wasn't skipped but some of its frames were.
@@ -1162,6 +1208,18 @@ namespace RT64 {
                     ext.sharedResources->interpolatedCondition.notify_all();
                 }
 
+#if defined(__ANDROID__)
+                char stageContext[512];
+                {
+                    std::scoped_lock lock(ext.sharedResources->interpolatedMutex);
+                    std::snprintf(stageContext,sizeof(stageContext),"workload=%llu present=%llu prev_workload=%llu cur_frame=%u prev_frame=%u counter_slot=%u count=%u available=%u presented=%u skipped=%u prev_available=%u prev_presented=%u rendered=%u planned=%u source_hz=%u target_hz=%u msaa=%u new_counters=%u",
+                        (unsigned long long)workload.workloadId,(unsigned long long)workload.presentId,
+                        (unsigned long long)(prevFrame.workloads.empty()?0:workloads[prevFrame.workloads.front()].workloadId),curFrameIndex,prevFrameIndex,
+                        unsigned(&curFrameCounters-ext.sharedResources->interpolatedFrames),curFrameCounters.count,curFrameCounters.available,curFrameCounters.presented,
+                        unsigned(curFrameCounters.skipped),prevFrameCounters.available,prevFrameCounters.presented,framesRendered,displayFrames,
+                        workload.viOriginalRate,workloadConfig.targetRate,unsigned(usingMSAA),unsigned(useDifferentCounters));
+                }
+#endif
                 threadConfigurationValidate();
 
                 if (!workload.paused) {
@@ -1172,6 +1230,10 @@ namespace RT64 {
                 workloadProfiler.end();
                 workloadProfiler.log();
                 workloadProfiler.reset();
+#if defined(__ANDROID__)
+                stages.report(stageStart,stageContext);
+#endif
+
             }
         }
     }
