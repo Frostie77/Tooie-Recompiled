@@ -141,12 +141,15 @@ class Workflow(unittest.TestCase):
         self.assertTrue(self.profile['demo_only'])
         engineering = self.profile['source_manifest']['engineering_entries']
         mods = self.profile['source_manifest']['mod_entries']
-        self.assertEqual(len(engineering), 107)
+        self.assertEqual(len(engineering), 111)
         self.assertEqual(len(mods), 69)
         self.assertFalse({x['path'] for x in engineering} & {x['path'] for x in mods})
         builder = tooie.render_builder(self.profile)
         self.assertIn('bash tools/test_demo_pacing.sh', builder)
         self.assertIn('python3 tools/test_demo_render_cadence.py', builder)
+        self.assertIn('python3 tools/test_match_candidate_storage.py', builder)
+        self.assertIn('MATCH_OPTIONS=(--scalar)', builder)
+        self.assertIn('MATCH_OPTIONS=(--require-simd)', builder)
         self.assertIn('python3 tools/test_launcher_artwork.py', builder)
         self.assertIn('menu-recompiled.png', builder)
         self.assertIn('actual ARM64 begin-frame source-rate command', builder)

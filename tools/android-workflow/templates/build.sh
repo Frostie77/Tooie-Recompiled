@@ -33,8 +33,8 @@ for command in git cmake ninja gradle rsync unzip sha256sum cmp awk grep rg floc
   command -v "$command" >/dev/null 2>&1 || { echo "STOP: missing command: $command" >&2; exit 1; }
 done
 command -v "${CXX:-clang++}" >/dev/null 2>&1 || { echo 'STOP: host C++ compiler missing' >&2; exit 1; }
-OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Render-Launcher-Timing-Debug.apk"
-REPORT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Render-Launcher-Timing-Debug-build-report.txt"
+OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Match-Storage-Timing-Debug.apk"
+REPORT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Match-Storage-Timing-Debug-build-report.txt"
 if [[ -e "$OUTPUT" || -e "$REPORT" ]]; then
   echo 'STOP: this gameplay APK or report already exists; existing results are preserved.' >&2
   exit 1
@@ -274,7 +274,7 @@ for root in ('assets','android/app/src/main/assets/program/assets'):
         raise SystemExit('STOP: approved launcher layout differs.')
 if hashlib.sha256(source.joinpath('assets/android/launcher-master.png').read_bytes()).hexdigest()!='4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784':
     raise SystemExit('STOP: approved round BT/Jiggy master differs.')
-print('PASS: exact integration tree and both parents; 107 engineering files and 69 mod/branding/host files retained byte-for-byte, with no overlap; both approved launcher layers verified.')
+print('PASS: exact integration tree and both parents; 111 engineering files and 69 mod/branding/host files retained byte-for-byte, with no overlap; both approved launcher layers verified.')
 VERIFY_INTEGRATED_SOURCE
 python3 - "$SRC" <<'VERIFY_FIRST_PERSON_SOURCE'
 from pathlib import Path
@@ -734,6 +734,32 @@ grep -Fq 'PASS: exact 8bcaad0 command-emission control fails the replay renderer
   echo 'STOP: exact-parent renderer-duration control was not verified.' >&2; exit 1;
 }
 grep '^PASS:' "$LOGS/demo-render-cadence.log"
+# The scalar and SIMD full-matcher gates retain all ordered candidates and
+# consumed geometry against the exact tested engineering parent.
+MATCH_SIMD_CXX="${SIMD_CXX:-clang++}"
+command -v "$MATCH_SIMD_CXX" >/dev/null 2>&1 || {
+  echo 'STOP: independent matcher SIMD checks require clang++ (or SIMD_CXX).' >&2; exit 1;
+}
+for MATCH_PATH in scalar simd; do
+  if [[ "$MATCH_PATH" = scalar ]]; then
+    MATCH_COMPILER="$AUDIO_CXX"
+    MATCH_OPTIONS=(--scalar)
+  else
+    MATCH_COMPILER="$MATCH_SIMD_CXX"
+    MATCH_OPTIONS=(--require-simd)
+  fi
+  if ! (cd "$SRC" && CXX="$MATCH_COMPILER" python3 tools/test_match_candidate_storage.py "${MATCH_OPTIONS[@]}") > "$LOGS/match-storage-$MATCH_PATH.log" 2>&1; then
+    echo "STOP: exact-parent matcher storage $MATCH_PATH checks failed." >&2
+    tail -100 "$LOGS/match-storage-$MATCH_PATH.log"; exit 1
+  fi
+  grep -Fq 'PASS: 303 full-matcher frames are byte-identical to exact d403031 parent' "$LOGS/match-storage-$MATCH_PATH.log" || {
+    echo 'STOP: full-matcher storage equivalence was not verified.' >&2; exit 1;
+  }
+  grep -Fq "Fixture math path: $([[ "$MATCH_PATH" = scalar ]] && echo scalar || echo SIMD)" "$LOGS/match-storage-$MATCH_PATH.log" || {
+    echo 'STOP: requested matcher math path was not verified.' >&2; exit 1;
+  }
+  grep '^PASS:' "$LOGS/match-storage-$MATCH_PATH.log"
+done
 if ! (cd "$SRC" && CC="$CLOCK_CC" bash tools/test_demo_replay_clock.sh) > "$LOGS/demo-clock.log" 2>&1; then
   echo 'STOP: generated demo-clock controls failed.' >&2
   tail -100 "$LOGS/demo-clock.log"
@@ -1832,8 +1858,8 @@ PACKAGED_SDL_BUILD_ID="${PACKAGED_SDL_BUILD_ID:-unavailable}"
 
 printf '\n=== 7/7 EXPORT IMMUTABLE APK AND BUILD REPORT ===\n'
 SHORT_SHA="${FULL_SHA:0:12}"
-OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Render-Launcher-Timing-Debug.apk"
-REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Render-Launcher-Timing-Debug-build-report.txt"
+OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Match-Storage-Timing-Debug.apk"
+REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Match-Storage-Timing-Debug-build-report.txt"
 if [[ -e "$OUTPUT" || -e "$REPORT" ]]; then
   echo 'STOP: output APK or report already exists; nothing will be overwritten.' >&2
   exit 1
@@ -1852,19 +1878,19 @@ Tooie Recompiled Android verified task-delivery-timing build report
 Source commit: $FULL_SHA
 Source branch: $BRANCH
 Source parent: $ACTUAL_PARENT
-Source tree: @@TREE@@
-Engineering revision: @@ENGINEERING@@
+Source tree: d79f881b3e168cd70d7b41961fe1511847e63179
+Engineering revision: cc8a8fabadd7f2c6d516a762b5910b088a012c4d
 Player implementation: b679975a352bf2f63b650f78845a2bf1eb5f8d9c
 Mod/branding tested source: 82a6641c228d71756222bc0da96b0f159e51abd4
 Approved icon/name source: e1fcf938dcc24bb9865b743f900d107a9de26d9d
-Approved title source: @@BRANDING@@
-Integration: exact disjoint 107-file engineering and 69-file mod/branding/host delta from ffd520a; no implementation edits
+Approved title source: d54c70c4eae603b6b66dffd26909dea1889fbd6d
+Integration: exact disjoint 111-file engineering and 69-file mod/branding/host delta from ffd520a; no implementation edits
 App name: Tooie Recompiled (compiled application/activity labels verified)
 Branding: approved round BT/Jiggy icon, legacy/round/foreground visible RGBA and adaptive references verified in final APK
 Branding audit: $LOGS/packaged-branding-verification.json
 Wordmark asset SHA-256: e76b97de0c685566db2505e85d42052a520c8f31237cbfdbfe405a1706295269 (both source copies and exact APK member)
 Launcher layout SHA-256: b242f7244ce35c3eb656e30a48def2ece22c4c7a7ee2b38c8deb25e4b9d79d55 (both source copies and exact APK member)
-Launcher artwork: exact approved Jiggy background/red TOOIE- and separate blue -RECOMPILED, shared cover coordinates and live five-action menu; device appearance unverified
+Launcher artwork: exact approved Jiggy background/red TOOIE- and separate blue -RECOMPILED; appearance approved on prior 5f8c906f Odin launcher check, no new UI change
 Launcher host checks: $LOGS/launcher-artwork.log
 Menu asset SHA-256: 3c125d58ad008e837f3c7dc335133d03bb9aae19086ffbde90d8a71daa52c707 (both source copies and exact APK member)
 Icon master SHA-256: 4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784
@@ -1931,7 +1957,7 @@ Task compiler audit: $BUILD/task-delivery-policy-profile.json (actual ARM64 runt
 Task host results: $LOGS/gfx-task-trace.log (40 actual-source cases, five profiles, queue/skeletal lifetime/cross-TU and exact-parent/mutation controls; adapted services/clocks, not Odin scheduling)
 Step 118 captured timing results: $LOGS/step118-captured-timing.log (569 records: 243 ordinary, 278 replay and 48 terminal; all captured divisors retained, five profiles and 565 complete consumer/profile scenarios)
 Step 118 fixture SHA-256: 523ffe51c04051d383aa0891f8e0d2a2341378862e51b736128740cbc52bde49 (212256 committed LF bytes; external evidence-archive validation NOT RUN by this builder)
-Clock attribution limit: encoded replay wait retained; renderer duration corrected in source; this revision remains untested on Odin
+Clock attribution limit: accepted replay wait/source interval retained; prior b8d06b5 clocks near wall time in selected windows; remaining appearance/stutter unverified for this revision
 First-person assembler: $LOGS/first-person-assembler.json (actual compiler/version, verified MIPS words; private clang-19 alias for the retained test script)
 First-person compile audit: funcs_44.c and funcs_45.c required in the normal ARM64 command database and effective Android contextual-lookup preprocessing
 Generator: host library/emitter built Release; analyzer and consumer adapters retain their source suite sanitizer settings; no full ROM bundled; independent timing observer enabled separately
@@ -1959,9 +1985,11 @@ Automatic update checking: planned only; not implemented here
 Existing package/activity: io.github.banjotooierecompiled / .BanjoTooieSDLActivity (unchanged)
 Odin: NOT installed; NOT launched; no ADB commands used
 App data, settings and existing PC build folders/artifacts: preserved
+Candidate storage: reusable contiguous ordered pair unions; compaction before growth and before matching; no candidate pruning or cap
+Candidate storage validation: 303 full-matcher frames byte-identical to exact d403031 parent in required scalar and independent SIMD host gates; wrong-order/dedup controls; hardware benefit unverified
 EOF
 )
-printf '\nSUCCESS: VERIFIED TOOIE RECOMPILED DEMO-RENDER-LAUNCHER APK READY (NOT INSTALLED)\n'
+printf '\nSUCCESS: VERIFIED TOOIE RECOMPILED DEMO-MATCH-STORAGE APK READY (NOT INSTALLED)\n'
 printf 'Commit: %s\n' "$FULL_SHA"
 printf 'APK: %s\n' "$OUTPUT"
 printf 'Build ID: %s\n' "$PACKAGED_BUILD_ID"

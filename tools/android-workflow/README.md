@@ -72,28 +72,44 @@ ZIP without any ADB command.
 
 ## Current version and maintenance
 
-`profiles/current.json` pins integration `8bcaad010df3ff89f1833c7958a8a52cad77259b`,
-engineering `c444d590a162fe77502bd8d3d3cab4e7bf1ea1b2`, both parents, the disjoint
-source manifests, approved artwork, build artifact names and template digests.
-This revision enforces recorded demo VI spans in existing guest waits. Ordinary
-title/gameplay waits and the global VI rate are unchanged; Odin behavior remains
-unverified until tested.
-The supported configuration is NDK r28c/API 24/ARM64, task-delivery timing ON,
-geometry/correction/allocation probes OFF, queue isolation 0 and undefined
-transfer/fallback/barrier selectors. Current templates deliberately reject other
-configurations until their checks have been reviewed.
+The current source profile pins integration
+`d168ed6bb91a560496d3701ea9e11759c6e1a4dc`, engineering
+`cc8a8fabadd7f2c6d516a762b5910b088a012c4d` and approved launcher parent
+`d54c70c4eae603b6b66dffd26909dea1889fbd6d`. Its disjoint manifests contain
+111 engineering files and 69 Mods/branding/host files. Both exact PNG layers,
+layout manifest, round BT icon and Tooie Recompiled labels are retained.
 
-For the same supported diagnostic profile, update the version manifest and its
-source/report identities when integrating a new reviewed revision. A changed
-diagnostic protocol, toolchain or build configuration also needs a reviewed
-template change, its digest and the applicable host tests. This tool does not
-guess which arbitrary repository head is safe or compatible.
+The new source reuses contiguous matching-candidate storage, compacts repeats
+before growth and restores the exact ordered unions before matching. There is
+no candidate pruning/cap, pacing or graphics-setting change. The builder adds
+303-frame exact-parent comparisons and wrong-order/deduplication controls in
+required scalar and independent SIMD compiler paths. A scalar compiler cannot
+silently satisfy the SIMD gate. Actual ARM64 and all retained host/package
+gates remain mandatory. Host timing observations do not establish Odin benefit.
+
+The accepted replay wait/source-rate corrections are retained. The previous
+b8d06b5 intro/demo capture remains valid evidence; the newer 5f8c906f capture
+was launcher-only and its appearance was approved. The remaining stutter,
+slow-looking characters and snowy-scene lines are unresolved. Continue with
+intro/automatic demos only; do not request a gameplay test yet.
+
+This source needs a new verified PC APK receipt. Earlier artifacts and captures
+cannot be relabeled as this revision. The configuration remains NDK r28c,
+API 24/ARM64, timing ON, geometry/correction/allocation probes OFF, queue
+isolation 0, and undefined transfer/fallback/barrier selectors.
 
 The runner lives on the isolated `tools/android-workflow-20261020` branch.
-Explicitly run `~/projects/tooie-tools/tooie update` to fetch and fast-forward
-that tooling checkout; local edits or a divergent history stop the update.
-This does not update or install the game. Main, the engineering branch, PR #1
-and releases are not modified by the runner.
+Run `~/projects/tooie-tools/tooie update` to fetch and fast-forward its checkout;
+local edits or divergence stop the update. This updates tooling, not the
+installed app. It does not change main, PR #1, repository visibility or releases.
+The Android-only public README is prepared separately on
+`docs/android-public-readme-20261021`. Windows/Linux are build/test hosts here,
+not supported game releases.
+
+For a future reviewed revision, update the version manifest, report identities,
+source manifests and any changed template digests together. Configuration or
+protocol changes require their applicable host tests. The workflow never guesses
+which arbitrary repository head is compatible.
 
 ## Host validation
 
@@ -110,29 +126,15 @@ Temporary local Git repositories test source-cache reuse and refusal of dirty
 tracked inputs. These checks do not build an Android APK or establish Odin
 rendering, demo cadence, mod execution or performance.
 
-## Current source profile
+## Launcher and process attribution
 
-The demo renderer-cadence integration is `b8d06b5d3456ad85e668ae110d95fe89a2430620`.
-It retains the accepted Mods/artwork and aligns the Android renderer source
-interval with the already validated replay wait. The new command/RT64-consumer
-host regression and actual ARM64 preprocessed begin-frame check are required
-build gates. This profile requires its own verified PC artifact; it cannot reuse
-a receipt from the previous revision. Odin appearance and stutter remain
-unverified until the intro/demo test. Newly staged launcher art is separate.
+A launcher-only check can type `stop` at the `ready / stop` assessment to save
+its evidence without Start Game or a demo window. That deliberate choice does
+not by itself report an unavailable launcher or a crash.
 
-A package process may exist after an update before the game Activity launches.
-That alone no longer ends a capture. The runner still issues only one Activity
-launch. If Android reuses that process, the collector requires the same unique
-PID and the exact game Activity in the foreground after an unambiguous launch.
-Ambiguous launch responses, changed/multiple PIDs and failed/unknown checks
-still stop the session without a retry. Stop reasons and PID attribution are
-retained in the evidence ZIP. This recorder update reuses the already verified
-APK receipt; no native rebuild is needed.
-
-The current build profile integrates the exact approved two-layer Jiggy launcher,
-red TOOIE- and blue -RECOMPILED with the retained renderer-cadence source.
-Both PNGs and the layout manifest are checked in source, Android mirrors,
-packaged APK and preflight; the compiled layer-registration markers are checked
-as well. Its new source identity requires a new PC build. The previous
-verified APK and its completed evidence remain unchanged. The round BT icon
-and app name remain intact.
+A package process may exist after an update before the Activity launches.
+The collector still issues one Activity launch per session. If Android reuses
+that process, it requires the same unique PID and the exact game Activity in
+the foreground after an unambiguous launch. Ambiguous responses, raced/multiple
+PIDs or failed/unknown checks stop the session without a blind retry. Stop
+reasons and PID attribution remain in the evidence ZIP.
