@@ -147,7 +147,7 @@ namespace RT64 {
         uploads.clear();
 
         for (uint32_t w : p.curFrame->workloads) {
-            const bool prevFrameValid = (p.prevFrame != nullptr);
+            const bool prevFrameValid = (p.prevFrame != nullptr) && p.curFrame->frameMap.workloads[w].mapped;
             Workload &workload = p.workloadQueue->workloads[w];
             const DrawData &drawData = workload.drawData;
             DrawBuffers &drawBuffers = workload.drawBuffers;
