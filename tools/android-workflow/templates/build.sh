@@ -33,8 +33,8 @@ for command in git cmake ninja gradle rsync unzip sha256sum cmp awk grep rg floc
   command -v "$command" >/dev/null 2>&1 || { echo "STOP: missing command: $command" >&2; exit 1; }
 done
 command -v "${CXX:-clang++}" >/dev/null 2>&1 || { echo 'STOP: host C++ compiler missing' >&2; exit 1; }
-OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Cadence-Timing-Debug.apk"
-REPORT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Cadence-Timing-Debug-build-report.txt"
+OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Render-Cadence-Timing-Debug.apk"
+REPORT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Demo-Render-Cadence-Timing-Debug-build-report.txt"
 if [[ -e "$OUTPUT" || -e "$REPORT" ]]; then
   echo 'STOP: this gameplay APK or report already exists; existing results are preserved.' >&2
   exit 1
@@ -269,7 +269,7 @@ for path in ('assets/menu.png','android/app/src/main/assets/program/assets/menu.
         raise SystemExit('STOP: approved TOOIE artwork differs.')
 if hashlib.sha256(source.joinpath('assets/android/launcher-master.png').read_bytes()).hexdigest()!='4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784':
     raise SystemExit('STOP: approved round BT/Jiggy master differs.')
-print('PASS: exact integration tree and both parents; 103 engineering files and 61 tested mod/branding/host files retained byte-for-byte, with no overlap.')
+print('PASS: exact integration tree and both parents; 107 engineering files and 61 tested mod/branding/host files retained byte-for-byte, with no overlap.')
 VERIFY_INTEGRATED_SOURCE
 python3 - "$SRC" <<'VERIFY_FIRST_PERSON_SOURCE'
 from pathlib import Path
@@ -713,6 +713,14 @@ grep -Fq 'PASS: exact-parent missing pacing and altered wait controls fail; desk
   echo 'STOP: production pacing negative controls were not verified.' >&2; exit 1;
 }
 grep '^PASS:' "$LOGS/demo-pacing.log"
+if ! (cd "$SRC" && CXX="$AUDIO_CXX" python3 tools/test_demo_render_cadence.py) > "$LOGS/demo-render-cadence.log" 2>&1; then
+  echo 'STOP: native demo renderer-cadence regressions failed.' >&2
+  tail -100 "$LOGS/demo-render-cadence.log"; exit 1
+fi
+grep -Fq 'PASS: exact 8bcaad0 command-emission control fails the replay renderer-duration requirement' "$LOGS/demo-render-cadence.log" || {
+  echo 'STOP: exact-parent renderer-duration control was not verified.' >&2; exit 1;
+}
+grep '^PASS:' "$LOGS/demo-render-cadence.log"
 if ! (cd "$SRC" && CC="$CLOCK_CC" bash tools/test_demo_replay_clock.sh) > "$LOGS/demo-clock.log" 2>&1; then
   echo 'STOP: generated demo-clock controls failed.' >&2
   tail -100 "$LOGS/demo-clock.log"
@@ -935,7 +943,7 @@ fi
 # Verify the actual application, audio, VI, presentation, config and Plume commands.
 python3 - "$BUILD" "$SRC" <<'VERIFY_GAMEPLAY_CONFIGURATION'
 from pathlib import Path
-import json, re, shlex, subprocess, sys
+import hashlib, json, re, shlex, subprocess, sys
 
 build, source = map(Path, sys.argv[1:])
 profile = '-DTOOIE_ANDROID_TIMING_TRACE=1 -DTOOIE_ANDROID_CORRECTION_TRACE=0 -DTOOIE_ANDROID_GEOMETRY_TRACE=0 -DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=0'
@@ -1071,6 +1079,19 @@ for relative in policy_units:
              'TOOIE_ANDROID_ACTOR_INTERPOLATION','TOOIE_ACTOR_POSE_ENABLED')
     if any(macros.get(name)!='1' for name in enabled) or macros.get('TOOIE_ACTOR_POLICY')!='"validated-marker-hierarchy"':
         raise SystemExit('STOP: authored player/actor hierarchy is not effectively enabled in '+relative)
+    if relative == 'src/recomp_api.cpp':
+        preprocessed=subprocess.run([*arguments,'-E','-P'],cwd=entry['directory'],capture_output=True,text=True,timeout=120)
+        if preprocessed.returncode:
+            raise SystemExit('STOP: actual renderer-cadence preprocessing failed\n'+preprocessed.stderr[-8000:])
+        bodies=re.findall(r'void tooie_rt64_begin_frame\([^;{}]*\)\s*\{.*?\n\}',preprocessed.stdout,re.S)
+        expected_divisor='constuint32_tdivisor=tooie::demo::renderInterval(rdram,read_word(rdram,kViRetraceInterval));'
+        if len(bodies)!=1 or expected_divisor not in re.sub(r'\s+','',bodies[0]):
+            raise SystemExit('STOP: actual ARM64 begin-frame body lacks the accepted replay renderer interval.')
+        build.joinpath('demo-render-cadence-compile-profile.json').write_text(json.dumps({
+            'file':relative,'profile':profile,'accepted_replay_interval':True,
+            'preprocessed_body_sha256':hashlib.sha256(bodies[0].encode()).hexdigest(),
+        },indent=2)+'\n')
+        print('PASS: actual ARM64 begin-frame source-rate command borrows the validated accepted replay interval.')
     policy_checks.append({'file':relative,**{name:1 for name in enabled},
                           'TOOIE_ACTOR_POLICY':'validated-marker-hierarchy'})
 build.joinpath('skeletal-policy-profile.json').write_text(json.dumps(policy_checks,indent=2)+'\n')
@@ -1793,8 +1814,8 @@ PACKAGED_SDL_BUILD_ID="${PACKAGED_SDL_BUILD_ID:-unavailable}"
 
 printf '\n=== 7/7 EXPORT IMMUTABLE APK AND BUILD REPORT ===\n'
 SHORT_SHA="${FULL_SHA:0:12}"
-OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Cadence-Timing-Debug.apk"
-REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Cadence-Timing-Debug-build-report.txt"
+OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Render-Cadence-Timing-Debug.apk"
+REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Demo-Render-Cadence-Timing-Debug-build-report.txt"
 if [[ -e "$OUTPUT" || -e "$REPORT" ]]; then
   echo 'STOP: output APK or report already exists; nothing will be overwritten.' >&2
   exit 1
@@ -1819,7 +1840,7 @@ Player implementation: b679975a352bf2f63b650f78845a2bf1eb5f8d9c
 Mod/branding tested source: 82a6641c228d71756222bc0da96b0f159e51abd4
 Approved icon/name source: e1fcf938dcc24bb9865b743f900d107a9de26d9d
 Approved title source: @@BRANDING@@
-Integration: exact disjoint 103-file engineering and 61-file tested mod/branding/host delta from ffd520a; no implementation edits
+Integration: exact disjoint 107-file engineering and 61-file tested mod/branding/host delta from ffd520a; no implementation edits
 App name: Tooie Recompiled (compiled application/activity labels verified)
 Branding: approved round BT/Jiggy icon, legacy/round/foreground visible RGBA and adaptive references verified in final APK
 Branding audit: $LOGS/packaged-branding-verification.json
@@ -1837,8 +1858,10 @@ Full-sync producer trace: ON (same timing profile; prepare/advance/publish_reset
 Task delivery/display-list trace: ON (same timing profile; gfx-submit/gfx-dispatch/display-list, immutable IDs/timestamps, nested TLS correlation)
 Task timing scope: submit age includes enqueue/observation overhead; interpreter includes full-sync; entry gaps include previous work/logging; independent/nested maxima are not additive
 Producer diagnostics scope: observer only; queued work, candidate ordering, publication predicates and ownership waits unchanged
-Timing behavior: accepted replay spans extend existing guest VI waits; ordinary title/gameplay and global VI rate unchanged
-Demo cadence policy: accepted recorded-VI minimum in existing guest waits
+Timing behavior: accepted replay spans extend existing guest VI waits and describe renderer source intervals; ordinary title/gameplay and global VI rate unchanged
+Demo cadence policy: accepted recorded-VI minimum in existing guest waits and Android renderer source interval
+Demo renderer cadence: accepted replay interval in the existing Android source-rate command; exact-parent emission failure and actual ARM64 preprocessed body verified
+Demo renderer cadence logs: $LOGS/demo-render-cadence.log and $BUILD/demo-render-cadence-compile-profile.json
 Timing measurement scope: includes bounded observer/logging overhead; not the normal observer-OFF performance baseline
 Player hierarchy: ON by Android default; eleven actual C/C++ environments verify player/actor switches and enabled macros equal 1
 Player hierarchy scope: validated animated player slots; owned pose/schema/occupant/frame metadata; exact submitted endpoints; invalid recognized history uses current pose; standard actor policy separately validated
@@ -1886,7 +1909,7 @@ Task compiler audit: $BUILD/task-delivery-policy-profile.json (actual ARM64 runt
 Task host results: $LOGS/gfx-task-trace.log (40 actual-source cases, five profiles, queue/skeletal lifetime/cross-TU and exact-parent/mutation controls; adapted services/clocks, not Odin scheduling)
 Step 118 captured timing results: $LOGS/step118-captured-timing.log (569 records: 243 ordinary, 278 replay and 48 terminal; all captured divisors retained, five profiles and 565 complete consumer/profile scenarios)
 Step 118 fixture SHA-256: 523ffe51c04051d383aa0891f8e0d2a2341378862e51b736128740cbc52bde49 (212256 committed LF bytes; external evidence-archive validation NOT RUN by this builder)
-Clock attribution limit: encoded replay cadence enforced by source; original-reference appearance and Odin behavior remain unverified
+Clock attribution limit: encoded replay wait retained; renderer duration corrected in source; this revision remains untested on Odin
 First-person assembler: $LOGS/first-person-assembler.json (actual compiler/version, verified MIPS words; private clang-19 alias for the retained test script)
 First-person compile audit: funcs_44.c and funcs_45.c required in the normal ARM64 command database and effective Android contextual-lookup preprocessing
 Generator: host library/emitter built Release; analyzer and consumer adapters retain their source suite sanitizer settings; no full ROM bundled; independent timing observer enabled separately
@@ -1916,7 +1939,7 @@ Odin: NOT installed; NOT launched; no ADB commands used
 App data, settings and existing PC build folders/artifacts: preserved
 EOF
 )
-printf '\nSUCCESS: VERIFIED TOOIE RECOMPILED DEMO-CADENCE APK READY (NOT INSTALLED)\n'
+printf '\nSUCCESS: VERIFIED TOOIE RECOMPILED DEMO-RENDER-CADENCE APK READY (NOT INSTALLED)\n'
 printf 'Commit: %s\n' "$FULL_SHA"
 printf 'APK: %s\n' "$OUTPUT"
 printf 'Build ID: %s\n' "$PACKAGED_BUILD_ID"

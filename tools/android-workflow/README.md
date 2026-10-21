@@ -109,3 +109,13 @@ live terminal notes, original-PID filtering, exact deltas and lossless uploads.
 Temporary local Git repositories test source-cache reuse and refusal of dirty
 tracked inputs. These checks do not build an Android APK or establish Odin
 rendering, demo cadence, mod execution or performance.
+
+## Current source profile
+
+The demo renderer-cadence integration is `b8d06b5d3456ad85e668ae110d95fe89a2430620`.
+It retains the accepted Mods/artwork and aligns the Android renderer source
+interval with the already validated replay wait. The new command/RT64-consumer
+host regression and actual ARM64 preprocessed begin-frame check are required
+build gates. This profile requires its own verified PC artifact; it cannot reuse
+a receipt from the previous revision. Odin appearance and stutter remain
+unverified until the intro/demo test. Newly staged launcher art is separate.
