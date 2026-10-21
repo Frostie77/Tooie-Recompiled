@@ -1,6 +1,6 @@
 # Banjo-Tooie: Recompiled
 
-A native PC port of **Banjo-Tooie (USA)** produced by statically recompiling the
+A native ANDROID port of **Banjo-Tooie (USA)** produced by statically recompiling the
 original N64 ROM with [N64Recomp](https://github.com/N64Recomp/N64Recomp), and
 rendering through [RT64](https://github.com/rt64/rt64).
 
