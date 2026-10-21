@@ -39,6 +39,9 @@ class OneWindow(unittest.TestCase):
             self.assertEqual(rows[-1]['delivery'], 'pending')
             return subprocess.CompletedProcess([], 0, b'', b'')
         self.m.adb = adb
+        self.real_screenshot = self.m.screenshot
+        self.shots = []
+        self.m.screenshot = lambda label: self.shots.append(label)
         self.output = io.StringIO()
         self.redirect = contextlib.redirect_stdout(self.output)
         self.redirect.__enter__()
@@ -180,7 +183,10 @@ class OneWindow(unittest.TestCase):
         for value in ('5 enemy bug','save','6 more stretching'):
             hub.items.put(self.item(value))
         self.m.input_hub = lambda:hub
-        self.m.wait_with_live_notes(0.02, 'Gameplay-01')
+        # This checks ordered handling of already queued input, independently
+        # of disk/fsync load from other tests or screenshot bookkeeping.
+        with patch.object(self.m.time, 'monotonic', return_value=100.0):
+            self.m.wait_with_live_notes(0.02, 'Gameplay-01')
         self.assertEqual([x['marker'] for x in self.m.live_events], [5])
         self.assertTrue(self.m.finish_requested)
         self.assertEqual(hub.items.get_nowait()['text'], '6 more stretching')
@@ -221,6 +227,119 @@ class OneWindow(unittest.TestCase):
             self.assertLess(time.monotonic()-started,1)
             self.assertFalse(hub.thread.is_alive())
         os.close(write_fd)
+
+    def test_marker_screenshot_identity_and_note_correction(self):
+        self.m.handle_live_note(self.item('5 lines over snow'), 'Demo-01')
+        self.m.handle_live_note(self.item('note 5 across the ground'), 'Demo-01')
+        self.assertEqual(self.shots, ['Screenshot-Marker-001'])
+        meta = json.loads(self.path('Screenshot-Marker-001-Marker').read_text())
+        self.assertEqual(meta['event_id'], self.m.live_events[0]['id'])
+        self.assertEqual(meta['host_read_mono_seconds'], self.m.live_events[0]['host_read_mono_seconds'])
+        self.assertEqual(meta['marker'], 5)
+
+    def test_marker_shots_are_bounded_and_all_notes_survive(self):
+        for _ in range(13):
+            self.m.handle_live_note(self.item('1 visual bug'), 'Demo-01')
+        self.assertEqual(len(self.shots), 10)
+        self.assertEqual(len(self.m.live_events), 13)
+        self.assertIn('limit reached', self.path('Screenshot-Marker-013-Marker').read_text())
+
+    def test_stale_or_prompt_notes_do_not_capture_images(self):
+        item = self.item('2 delayed note')
+        item['host_read_mono_seconds'] -= 11
+        self.m.handle_live_note(item, 'Demo-01')
+        self.m.handle_live_note({**self.item('3 launcher note'), 'phase_at_read':'prompt: ready'}, 'prompt: ready')
+        self.assertEqual(self.shots, [])
+        self.assertIn('stale screenshot', self.path('Screenshot-Marker-001-Marker').read_text())
+
+    def test_unconfirmed_marker_does_not_add_device_reads(self):
+        self.m.adb = lambda *a, **k: subprocess.CompletedProcess([], 1, b'', b'failed')
+        self.m.handle_live_note(self.item('4 bug'), 'Demo-01')
+        self.assertEqual(self.shots, [])
+        self.assertEqual(self.m.marker_shots, 0)
+        self.assertIn('unconfirmed', self.path('Screenshot-Marker-001-Marker').read_text())
+
+    def test_screenshot_failure_retains_marker(self):
+        def fail(label): raise OSError('read failed')
+        self.m.screenshot = fail
+        self.assertTrue(self.m.handle_live_note(self.item('7 bug'), 'Demo-01'))
+        self.assertEqual(self.m.live_events[0]['description'], 'bug')
+        self.assertIn('read failed', self.path('Screenshot-Marker-001-Marker').read_text())
+
+    def screenshot_fixture(self, *, foreground=True, valid_png=True, active=True):
+        self.m.original_pid = 22851
+        calls = []
+        def adb(*args, **kwargs):
+            calls.append((args, kwargs))
+            if 'pidof ' in args[-1]:
+                data = b'22851\n\nTOOIE_PIDOF_RC=0\n' if active else b'\nTOOIE_PIDOF_RC=1\n'
+            elif args[-1] == 'dumpsys activity activities':
+                pkg = self.m.PKG if foreground else 'another.application'
+                data = ('topResumedActivity=ActivityRecord{abc u0 '+pkg+'/.BanjoTooieSDLActivity t1}\n').encode()
+            else:
+                data = b'2026-10-21 19:22:10\n'
+            return subprocess.CompletedProcess([], 0, data, b'')
+        def command(args, **kwargs):
+            calls.append((tuple(args), kwargs))
+            png = b'\x89PNG\r\n\x1a\nfixture'+bytes.fromhex('0000000049454e44ae426082')
+            return subprocess.CompletedProcess([], 0, png if valid_png else png[:-1], b'')
+        self.m.adb, self.m.command = adb, command
+        return calls
+
+    def test_actual_screenshot_retains_png_timing_and_archive(self):
+        calls = self.screenshot_fixture()
+        self.real_screenshot('Screenshot-Marker-001')
+        png = Path(str(self.m.prefix)+'-Screenshot-Marker-001.png')
+        self.assertTrue(png.is_file())
+        self.assertEqual(len(calls), 4)
+        self.assertTrue(all(0 < kw['timeout'] <= 10 for _, kw in calls))
+        self.assertTrue(all(calls[i+1][1]['timeout'] <= calls[i][1]['timeout'] for i in range(3)))
+        self.assertIn('not the exact', self.path('Screenshot-Marker-001-Timing').read_text().lower())
+        bundles, _ = self.m.archive_evidence()
+        with zipfile.ZipFile(bundles[0]) as archive:
+            self.assertEqual(archive.read(png.name), png.read_bytes())
+
+    def test_actual_screenshot_refuses_foreign_foreground_and_missing_pid(self):
+        for name, opts, expected in [('Foreign', {'foreground':False}, 2), ('Gone', {'active':False}, 1)]:
+            calls = self.screenshot_fixture(**opts)
+            self.real_screenshot(name)
+            self.assertEqual(len(calls), expected)
+            self.assertTrue(self.path(name+'-Skipped').is_file())
+            self.assertFalse(Path(str(self.m.prefix)+'-'+name+'.png').exists())
+
+    def test_actual_screenshot_rejects_torn_png(self):
+        self.screenshot_fixture(valid_png=False)
+        self.real_screenshot('Torn')
+        self.assertTrue(self.path('Torn-error').is_file())
+        self.assertFalse(Path(str(self.m.prefix)+'-Torn.png').exists())
+
+    def test_screenshot_total_budget_prevents_later_commands(self):
+        calls = self.screenshot_fixture()
+        with patch.object(self.m.time, 'monotonic', side_effect=[100., 100., 111., 111.]):
+            self.real_screenshot('Budget')
+        self.assertEqual(len(calls), 1)
+        self.assertIn('budget exhausted', self.path('Budget-error').read_text())
+
+    def test_screenshot_pid_timeout_does_not_retry(self):
+        calls = []
+        def timeout(*args, **kwargs):
+            calls.append((args, kwargs))
+            raise subprocess.TimeoutExpired('adb', kwargs['timeout'])
+        self.m.adb = timeout
+        self.real_screenshot('Timeout')
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(self.path('Timeout-Skipped').is_file())
+
+    def test_presentation_comparison_only_records_intent_and_prints_setup(self):
+        self.m.presentation_setup()
+        self.assertFalse(self.path('Presentation-Control').exists())
+        self.m.PRESENTATION_TEST_HZ = 60
+        self.m.presentation_setup()
+        self.assertEqual(self.commands, [])
+        meta = json.loads(self.path('Presentation-Control').read_text())
+        self.assertEqual(meta['requested_output_hz'], 60)
+        self.assertIn('Framerate to Manual', self.output.getvalue())
+        self.assertIn('not the gameplay clock', self.output.getvalue())
 
 
 if __name__=='__main__':
