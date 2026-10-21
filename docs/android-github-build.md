@@ -27,8 +27,9 @@ Download URLs and SHA-256 digests are in
 [`tools/ci/android-dependencies.json`](../tools/ci/android-dependencies.json).
 The dependency archives are verified before extraction. FreeType's optional
 BZip2, PNG, HarfBuzz and Brotli integrations are disabled rather than discovering
-host libraries during the Android cross build. SDL uses its Android defaults.
-These dependencies are rebuilt in each fresh runner, independently of Trent's
+host libraries during the Android cross build; its bundled gzip implementation
+is used instead of external zlib. SDL uses its Android defaults.
+These dependencies are rebuilt in each fresh runner, independently of Frostie's
 previously cached local libraries.
 
 The repository contains vendored dependency source and committed generated C.
@@ -66,7 +67,7 @@ This is a **CI debug artifact**, signed with the fresh runner's debug key. It is
 not the established Odin build's signing identity or a public release/update
 channel. An installed app can only be replaced while retaining its data when
 the signing identity matches; keep using the established local builder for
-Trent's existing Odin installation. Do not uninstall or reset data to try a CI
+Frostie's existing Odin installation. Do not uninstall or reset data to try a CI
 artifact.
 
 A stable protected release signing identity, distribution/asset review, device

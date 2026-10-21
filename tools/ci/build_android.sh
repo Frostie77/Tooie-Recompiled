@@ -27,7 +27,8 @@ prepare)
   cmake --install "$work/sdl-build"
   cmake -S "$ft_source" -B "$work/freetype-build" "${common[@]}" \
     -DCMAKE_INSTALL_PREFIX="$freetype" -DBUILD_SHARED_LIBS=OFF \
-    -DFT_DISABLE_BZIP2=ON -DFT_DISABLE_PNG=ON -DFT_DISABLE_HARFBUZZ=ON -DFT_DISABLE_BROTLI=ON
+    -DFT_DISABLE_ZLIB=ON -DFT_DISABLE_BZIP2=ON -DFT_DISABLE_PNG=ON \
+    -DFT_DISABLE_HARFBUZZ=ON -DFT_DISABLE_BROTLI=ON
   cmake --build "$work/freetype-build"
   cmake --install "$work/freetype-build"
   cmake -S "$source_root/lib/rt64/src/tools/file_to_c" -B "$source_root/build-host-tools" \
