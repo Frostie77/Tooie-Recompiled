@@ -6,7 +6,6 @@
 #else
 #include "nfd.h"
 #endif
-#include "RmlUi/Core.h"
 
 #include "recompui/program_config.h"
 
@@ -45,7 +44,10 @@ namespace recompui {
 
     static void perform_file_dialog_operation_multiple(const std::function<void(bool, const std::list<std::filesystem::path>&)>& callback) {
 #if defined(__ANDROID__)
-        callback(false, std::list<std::filesystem::path>{});
+        // One archive per Android request; ZIP bundles can contain several mods.
+        file::android::open_mod([callback](bool selected, const std::filesystem::path& path) {
+            callback(selected, selected ? std::list<std::filesystem::path>{path} : std::list<std::filesystem::path>{});
+        });
 #else
         const nfdpathset_t* native_paths = nullptr;
         nfdresult_t result = NFD_OpenDialogMultipleN(&native_paths, nullptr, 0, nullptr);

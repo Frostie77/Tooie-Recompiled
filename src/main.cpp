@@ -44,6 +44,8 @@
 #endif
 
 #include "queued_audio.h"
+#include "mod_support.h"
+#include "launcher_layout.h"
 
 #include "recompui/recompui.h"
 #include "recompui/program_config.h"
@@ -306,18 +308,74 @@ public:
         set_left(0.0f);
         set_width(100.0f, recompui::Unit::Percent);
         set_height(100.0f, recompui::Unit::Percent);
+        set_pointer_events(recompui::PointerEvents::None);
 
         // `set_attribute` is protected in recompui::Element and documented as
         // "use ... in inherited classes ... unless it's necessary" -- this is
         // that case: RmlUi has no typed setter for a decorator, and the inline
         // `style` attribute is the only way to reach one from the port.
         set_attribute("style", "decorator: image( " +
-                                   std::string(registered_name) + " cover );");
+                                   std::string(registered_name) + " cover ); transform-origin: 50% 50%;");
     }
 };
 
 // Registered image name for the wallpaper; the '?' keeps `JoinPath` out of it.
 static constexpr const char* kWallpaperImage = "?/tooie/wallpaper";
+static constexpr const char* kLauncherWordmark = "?/tooie/launcher-recompiled";
+
+// One cover-scaled art coordinate system keeps the title aligned with the
+// approved background at every viewport size. Context-owned queued updates
+// are discarded if this element is removed; no global UI pointer is retained.
+class LauncherArtwork : public recompui::Element {
+    recompui::LauncherMenu* menu;
+    float previousWidth = -1.0f, previousHeight = -1.0f;
+protected:
+    std::string_view get_type_name() override { return "LauncherArtwork"; }
+    void process_event(const recompui::Event& event) override {
+        if (event.type != recompui::EventType::Update) return;
+        const float width = get_parent()->get_client_width();
+        const float height = get_parent()->get_client_height();
+        const auto geometry = tooie::launcher::layout(width, height);
+        if (geometry.valid && (width != previousWidth || height != previousHeight)) {
+            previousWidth = width; previousHeight = height;
+            set_left(geometry.left, recompui::Unit::Px);
+            set_top(geometry.top, recompui::Unit::Px);
+            set_width(geometry.width, recompui::Unit::Px);
+            set_height(geometry.height, recompui::Unit::Px);
+            if (auto* options = menu->get_game_options_menu()) {
+                options->set_gap(geometry.gap, recompui::Unit::Px);
+                for (auto* option : options->get_options()) {
+                    option->set_height(geometry.rowHeight, recompui::Unit::Px);
+                    option->set_padding(0.0f);
+                    option->set_flex_shrink(0.0f);
+                    if (auto* label = option->get_label()) {
+                        label->set_font_size(geometry.fontSize, recompui::Unit::Px);
+                        label->set_line_height(geometry.fontSize, recompui::Unit::Px);
+                        label->set_letter_spacing(geometry.letterSpacing, recompui::Unit::Px);
+                        label->set_white_space(recompui::WhiteSpace::Nowrap);
+                    }
+                }
+            }
+        }
+        queue_update();
+    }
+public:
+    LauncherArtwork(recompui::ResourceId rid, recompui::Element* parent,
+                    recompui::LauncherMenu* owner)
+        : Element(rid, parent, recompui::Events(recompui::EventType::Update)), menu(owner) {
+        set_position(recompui::Position::Absolute);
+        set_pointer_events(recompui::PointerEvents::None);
+        auto context = recompui::get_current_context();
+        context.create_element<Wallpaper>(this, "menu.png", kWallpaperImage);
+        auto* title = context.create_element<Wallpaper>(this, "menu-recompiled.png", kLauncherWordmark);
+        title->set_left(tooie::launcher::titleLeft, recompui::Unit::Percent);
+        title->set_top(tooie::launcher::titleTop, recompui::Unit::Percent);
+        title->set_width(tooie::launcher::titleWidth, recompui::Unit::Percent);
+        title->set_height(tooie::launcher::titleHeight, recompui::Unit::Percent);
+        title->set_rotation(tooie::launcher::titleRotation);
+        queue_update();
+    }
+};
 
 // Option plates.
 //
@@ -348,11 +406,6 @@ void initialize_launcher_menu(recompui::LauncherMenu* menu) {
     // Behind the menu: `background_wrapper` is the launcher's first child, so
     // everything created later paints over it. It is also the element
     // `set_launcher_background_svg` fills, so this is the intended slot.
-    if (recompui::Element* background = menu->get_background_container()) {
-        recompui::get_current_context().create_element<Wallpaper>(
-            background, "menu.png", kWallpaperImage);
-    }
-
     const auto& game = supported_games.front();
     auto* game_options = menu->init_game_options_menu(
         game.game_id, game.mod_game_id, game.display_name,
@@ -365,11 +418,17 @@ void initialize_launcher_menu(recompui::LauncherMenu* menu) {
     game_options->add_mods_option();
     game_options->add_exit_option();
 
-    // `Right` anchors the column to the bottom-right corner of the menu
-    // container (right/bottom 24dp, which the container has already inset 24dp
-    // from the frame). Narrow it so the buttons read as a column rather than a
-    // band.
-    game_options->set_width(30.0f, recompui::Unit::Percent);
+    // Keep the menu in viewport coordinates so the controls remain reachable
+    // when a narrower window crops the cover-scaled art.
+    if (auto* container = game_options->get_parent()) {
+        container->set_left(0.0f); container->set_top(0.0f);
+        container->set_right(0.0f); container->set_bottom(0.0f);
+    }
+    game_options->unset_right(); game_options->unset_bottom();
+    game_options->set_left(82.0f, recompui::Unit::Percent);
+    game_options->set_top(52.0f, recompui::Unit::Percent);
+    game_options->set_width(16.5f, recompui::Unit::Percent);
+    game_options->set_height(41.0f, recompui::Unit::Percent);
 
     for (recompui::GameOption* option : game_options->get_options()) {
         // BanjoRecomp's menu text: family, size and tracking all come from its
@@ -411,7 +470,10 @@ void initialize_launcher_menu(recompui::LauncherMenu* menu) {
         option->disabled_style.set_background_color(kOptionPlate);
         option->hover_disabled_style.set_background_color(kOptionPlate);
     }
-
+    if (auto* background = menu->get_background_container()) {
+        background->set_overflow(recompui::Overflow::Hidden);
+        recompui::get_current_context().create_element<LauncherArtwork>(background, menu);
+    }
 }
 
 static int tooie_recomp_main(int argc, char** argv) {
@@ -618,6 +680,7 @@ static int tooie_recomp_main(int argc, char** argv) {
     configuration.error_handling_callbacks = error_handling_callbacks;
     configuration.threads_callbacks = threads_callbacks;
 
+    tooie::register_texture_pack_support();
     std::fprintf(stderr, "[tooie] step before start\n");
     tooie_android_debug_log("[tooie] step before start"); std::fflush(stderr);
     recomp::start(configuration);
