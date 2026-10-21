@@ -3,10 +3,36 @@
 #include "rt64_game_frame.h"
 #include "rt64_workload.h"
 #include <array>
+#include <algorithm>
 #include <map>
 #include <set>
+#include <vector>
 
 namespace RT64 {
+    // Candidate generation only appends; matching consumes the final ordered
+    // union. Reuse contiguous storage instead of allocating a tree node for
+    // every pair. Finalize before reading so stable score ties keep the exact
+    // lexicographic order of the previous std::set representation.
+    class MatchCandidateSet {
+        using Pair = std::pair<uint32_t, uint32_t>;
+        std::vector<Pair> pairs;
+    public:
+        void clear() { pairs.clear(); }
+        void emplace(uint32_t current, uint32_t previous) {
+            // Compact repeats before growing. A union repeated by many hash
+            // groups must not retain one entry per repeated expansion.
+            if (pairs.size() == pairs.capacity()) finalize();
+            pairs.emplace_back(current, previous);
+        }
+        void finalize() {
+            std::sort(pairs.begin(), pairs.end());
+            pairs.erase(std::unique(pairs.begin(), pairs.end()), pairs.end());
+        }
+        size_t size() const { return pairs.size(); }
+        auto begin() const { return pairs.begin(); }
+        auto end() const { return pairs.end(); }
+    };
+
     struct CandidateExpansionStats {
         uint64_t inputCalls = 0, logicalCallPairs = 0, transformRangePairs = 0;
         uint64_t tileLookups = 0, tileVisits = 0, lookAtVisits = 0;
@@ -16,14 +42,12 @@ namespace RT64 {
     // its union of candidates independently: duplicate expansion inputs can be
     // coalesced, while different ranges/flags/context remain distinct. Final
     // sets retain the original lexicographic order used by stable tie-breaking.
-    template<class Workloads>
+    template<class Workloads, class PairSet>
     CandidateExpansionStats buildMatchCandidates(const Workloads &workloads,
         const GameScene &curScene, const GameScene &prevScene,
         const std::multimap<uint64_t, GameCallMap> &curCalls,
         const std::multimap<uint64_t, GameCallMap> &prevCalls,
-        std::set<std::pair<uint32_t, uint32_t>> &transforms,
-        std::set<std::pair<uint32_t, uint32_t>> &tiles,
-        std::set<std::pair<uint32_t, uint32_t>> &lookAt)
+        PairSet &transforms, PairSet &tiles, PairSet &lookAt)
     {
         using Ref = std::pair<uint32_t, uint32_t>; // workload, first element
         using Refs = std::set<Ref>;

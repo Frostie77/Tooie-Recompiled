@@ -640,15 +640,18 @@ namespace RT64 {
         stages.elapsed(3,callsStart);
         const auto pairsStart = stages.stamp();
         // FIXME: Transform set needs to be done per unique workload detected.
-        thread_local std::set<IndexPair> transformCheckSet;
-        thread_local std::set<IndexPair> tileCheckSet;
-        thread_local std::set<IndexPair> lookAtCheckSet;
+        thread_local MatchCandidateSet transformCheckSet;
+        thread_local MatchCandidateSet tileCheckSet;
+        thread_local MatchCandidateSet lookAtCheckSet;
         transformCheckSet.clear();
         tileCheckSet.clear();
         lookAtCheckSet.clear();
 
         const auto expansion = buildMatchCandidates(workloadQueue.workloads, curScene, prevScene,
             curCallHashMap, prevCallHashMap, transformCheckSet, tileCheckSet, lookAtCheckSet);
+        transformCheckSet.finalize();
+        tileCheckSet.finalize();
+        lookAtCheckSet.finalize();
 #if defined(__ANDROID__)
         matchingCounts.callPairs += expansion.logicalCallPairs;
         matchingCounts.expansionVisits += expansion.transformRangePairs + expansion.tileVisits + expansion.lookAtVisits;
