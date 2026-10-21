@@ -2,6 +2,8 @@
 # directory alone is ~1.3 GB.
 build/*
 build-cmake/
+.ci-android/
+build-host-tools/
 package/
 *.log
 *.obj

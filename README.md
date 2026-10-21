@@ -97,11 +97,13 @@ That workflow presently assumes an established development machine and restored
 Android dependencies; it is not a complete clean-machine setup guide for the
 public.
 
-Contributor build instructions and a signed Android release pipeline remain
-release requirements. The inherited desktop publisher is [archived](docs/archive/legacy-desktop-build.yml)
-outside the active GitHub Actions directory. No Android release job is enabled
-by this documentation update. Automatic startup update checks are planned and are not
-implemented; pushing to GitHub does not automatically update installed games.
+GitHub Actions builds an **Android ARM64 debug APK** and retains its checksum,
+build report and logs as run artifacts. See the [Android CI build guide](docs/android-github-build.md)
+for the clean-checkout toolchain, verification, signing limitations and local
+commands. The inherited desktop publisher is [archived](docs/archive/legacy-desktop-build.yml).
+A signed Android release pipeline remains a release requirement. Automatic
+startup update checks are planned and are not implemented; pushing to GitHub
+does not automatically update installed games.
 
 ## Reporting problems
 
