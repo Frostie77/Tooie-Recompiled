@@ -34,6 +34,7 @@ capture_start = None
 OBSERVE_SECONDS = 20
 DEMO_SECONDS = 300
 DEMO_ONLY = False
+GAMEPLAY_ONLY = False
 PRESENTATION_TEST_HZ = 0
 GAMEPLAY_SECONDS = 600
 EXTENSION_SECONDS = 300
@@ -753,14 +754,17 @@ def main():
     initial_pids = pids()
     print('PASS: Odin2 Portal / 7907333f. Existing app PIDs: ' + (', '.join(map(str, initial_pids)) or 'none'), flush=True)
     print('This test performs one replacement install and one launch of this exact APK. Updating ends any running app session. App data is retained. No force-stop, uninstall, data reset or settings change is performed.', flush=True)
-    print('Replay wait correction is enabled. Timing diagnostics include observer/logging cost. This profile observes only the intro and automatic demos.' if DEMO_ONLY else 'Replay wait correction and timing diagnostics are enabled; measurements include observer/logging cost. Optional gameplay is available after demo capture.', flush=True)
-    print(('INTRO/DEMO ONLY. Follow ready and watching in this ONE Ubuntu window; leave Odin untouched after Start Game. Type 1–10 plus a note during capture, or save to finish. Notes go in the SAME evidence ZIP. Do not type done.' if DEMO_ONLY else 'ONE UBUNTU WINDOW. Follow ready, watching and playing. Type 1–10 plus a note during capture, or save to finish. Notes go in the SAME evidence ZIP. Do not type done.'), flush=True)
+    if GAMEPLAY_ONLY:
+        print('GAMEPLAY TEST. Follow ready and playing in this ONE Ubuntu window. Load your existing save after Start Game. The ten-minute timer starts only when you can move Banjo and type playing. No timed demo is required. Use 1–10 plus a note, or save to finish. Notes and bug pictures go in the SAME ZIP.', flush=True)
+    else:
+        print('Replay wait correction is enabled. Timing diagnostics include observer/logging cost. This profile observes only the intro and automatic demos.' if DEMO_ONLY else 'Replay wait correction and timing diagnostics are enabled; measurements include observer/logging cost. Optional gameplay is available after demo capture.', flush=True)
+        print(('INTRO/DEMO ONLY. Follow ready and watching in this ONE Ubuntu window; leave Odin untouched after Start Game. Type 1–10 plus a note during capture, or save to finish. Notes go in the SAME evidence ZIP. Do not type done.' if DEMO_ONLY else 'ONE UBUNTU WINDOW. Follow ready, watching and playing. Type 1–10 plus a note during capture, or save to finish. Notes go in the SAME evidence ZIP. Do not type done.'), flush=True)
     # Running this supplied collector requests the described one-install/one-launch test.
     stamp = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
     prefix = DOWNLOADS / f'Tooie-3a8ef82eafc0-Task-Delivery-Timing-Odin-{stamp}-{uuid.uuid4().hex[:8]}'
     save('Identity', f'commit={SHA}\nengineering_ancestor={ENGINEERING}\nnative_source_commit={NATIVE_SOURCE}\napp_name=Tooie Recompiled\nicon_master_sha256=4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784\nartwork_sha256={ARTWORK_HASH}\nhash={HASH}\nbuild_id={BUILD_ID}\nserial={SERIAL}\nhost_time={dt.datetime.now().astimezone().isoformat()}\n')
     save('Build-Report', report)
-    save('Authorization', ('User invoked the demo-only collector: one replacement install and one launch, responsive launcher check, one manual Start Game, then untouched 300-second intro/demo windows with optional extensions. No save loading or gameplay is requested. App data/settings retained; no reset, force-stop or automatic input.\n' if DEMO_ONLY else 'User invoked the supplied one-window collector: one exact-APK replacement install and one launch, responsive-launcher check, optional one manual Start Game, 300-second untouched intro/automatic-demo observation with optional same-process extensions, then optional 600-second gameplay and 300-second extensions. Task-delivery/display-list, report-window producer gaps and independent timing diagnostics are enabled; rendering/pacing policies are unchanged. Existing app session ends during update; app data retained. No mod/ROM selection, automatic game input, forced stop, uninstall, reset, setting change or retry.\n'))
+    save('Authorization', ('User invoked --gameplay-only: one replacement install and one launch, responsive launcher check, one manual Start Game and existing save loading. Timed gameplay begins after playing confirmation, for 600 seconds plus optional 300-second extensions. No timed demo is required. App data/settings retained; no reset, force-stop or automatic input.\n' if GAMEPLAY_ONLY else 'User invoked the demo-only collector: one replacement install and one launch, responsive launcher check, one manual Start Game, then untouched 300-second intro/demo windows with optional extensions. No save loading or gameplay is requested. App data/settings retained; no reset, force-stop or automatic input.\n' if DEMO_ONLY else 'User invoked the supplied one-window collector: one exact-APK replacement install and one launch, responsive-launcher check, optional one manual Start Game, 300-second untouched intro/automatic-demo observation with optional same-process extensions, then optional 600-second gameplay and 300-second extensions. Task-delivery/display-list, report-window producer gaps and independent timing diagnostics are enabled; rendering/pacing policies are unchanged. Existing app session ends during update; app data retained. No mod/ROM selection, automatic game input, forced stop, uninstall, reset, setting change or retry.\n'))
     save('Preflight-PIDs', ' '.join(map(str, initial_pids)) + '\n')
     capture_start = clock('Capture-Start-Device-Time')
     start_capture(capture_start)
@@ -873,6 +877,11 @@ def maybe_start_game(offset):
     health()
     clock('Start-Game-Instructions-Device-Time')
     save('Start-Game-Instructions', 'One manual Start Game attempt from the original responsive launcher. No new launch, ROM import or retry.\n')
+    if GAMEPLAY_ONLY:
+        save('Gameplay-Capture-Plan', 'Gameplay-only: no timed demo window. Ten minutes after playing confirmation; optional five-minute extensions. Loading and readiness waits excluded; raw logging already runs.\n')
+        print('Press Start Game ONCE now, then load your existing save. There is no need to wait through automatic demos.', flush=True)
+        capture_gameplay()
+        return
     save('Gameplay-Capture-Plan', ('Intro/demo-only profile: five-minute untouched windows and optional extensions; no save loading or gameplay.\n' if DEMO_ONLY else '300-second untouched intro/demo windows after watching confirmation; extend until automatic demos are seen. Optional gameplay starts 600 seconds after playing confirmation, then optional 300-second extensions in the SAME process. Prompt/loading waits excluded from timed windows; raw logging remains continuous. Foreground-only host screenshots at approximately 60/180 seconds in five-minute windows and 60/180/300/420/540 seconds in the initial gameplay window. No automatic game input or audio/video recording.\n'))
     print('STEP 1: Press Start Game ONCE on Odin now. Leave the intro and automatic demos running untouched; do not press through them or load your save.', flush=True)
     print('STEP 2: Immediately after pressing Start Game, type watching HERE in Ubuntu and press Enter. Logging is already running. Type stop if the game is unavailable.', flush=True)
@@ -916,6 +925,10 @@ def maybe_start_game(offset):
     save('User-Demo-Observation', prompt('Briefly describe which intro/demo scenes ran, visible speed and any Odin buttons pressed (or press Enter): ') + '\n')
     if DEMO_ONLY or decision == 'save':
         return
+    capture_gameplay()
+
+
+def capture_gameplay():
     print('NOW use the running game to load your existing save. Once you can move Banjo, type playing HERE in Ubuntu. Type stop if unavailable. The TEN-MINUTE gameplay timer starts only after playing; logging is already running. Do not reopen or relaunch the app.', flush=True)
     answers = []
     while True:
@@ -1074,7 +1087,9 @@ def collect():
              'Peak matching context ends before stage_units=; phase maxima can belong to different events. '
              'Initial untouched intro/automatic-demo windows are 300 seconds after watching confirmation, optionally extended in the same process. Optional gameplay is 600 seconds after user declares Banjo movable, followed by optional 300-second windows. A user save/stop during timed capture ends observation and is explicitly recorded. Exact per-window metadata records completion or interruption. Loading/prompt waits and final evidence reads are additional raw-log coverage. Task-delivery/display-list, separate lifetime/report-window full-sync gaps and independent guest-clock/frame-sync/input/split-wait timing is ON, including bounded observer/logging overhead; geometry/correction-source observers are OFF. Clock records keep their historical correction-clock names despite geometry capture being disabled. Timing-Capture-Scope defines attribution/units and limits. Authored player and validated standard-actor hierarchy are ON. Counters describe application/fallback, not appearance. Accepted prerecorded spans extend the existing guest VI wait; global VI rate and ordinary title/gameplay waits are unchanged. Failure-only lookup diagnostics are included. All five corrected USA first-person switches are present (47 retained plus 23 further slots). Entrance/boss success was reported for prior b3401dd hardware; this timing build requires its own observations. This replay-wait correction requires Odin verification; ordinary-title motion and presentation stalls remain separate unresolved issues. Actual mod execution/texture replacement are not tested here. '
              'No audio/video content was recorded. Screenshots alone cannot establish motion, sound quality or simulation speed.\n')
-    if DEMO_ONLY:
+    if GAMEPLAY_ONLY:
+        scope = 'GAMEPLAY ONLY: user-selected existing-save test, ten minutes after playing confirmation with optional extensions; no timed demo window. ' + scope
+    elif DEMO_ONLY:
         scope = 'INTRO/DEMO ONLY: no save loading or playable-area test is requested. ' + scope
     save('Capture-Scope', scope)
     summary += '\nRuntime records correlated with original PID ' + str(original_pid) + ': ' + str(counts) + '; window=' + str(len(window)) + '\n' + scope

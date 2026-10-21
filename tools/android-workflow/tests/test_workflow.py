@@ -425,5 +425,22 @@ class Workflow(unittest.TestCase):
             tooie.render_collector(self.profile, artifact, self.args.downloads, self.root/'bad', 30)
 
 
+    def test_gameplay_only_is_an_explicit_session_override(self):
+        artifact = {**self.profile['artifact'], 'sha256':'a'*64, 'build_id':'b'*40,
+                    'apk':str(self.root/'game.apk'), 'report':str(self.root/'report.txt')}
+        args = tooie.parser().parse_args(['test', '--gameplay-only'])
+        self.assertTrue(args.gameplay_only)
+        self.assertFalse(tooie.parser().parse_args(['test']).gameplay_only)
+        normal = tooie.render_collector(self.profile, artifact, self.args.downloads, self.root/'session')
+        direct = tooie.render_collector(self.profile, artifact, self.args.downloads, self.root/'session', gameplay_only=True)
+        def assignments(source):
+            return {n.targets[0].id: ast.dump(n.value) for n in ast.parse(source).body
+                    if isinstance(n,ast.Assign) and isinstance(n.targets[0],ast.Name)}
+        one,two = assignments(normal),assignments(direct)
+        self.assertEqual(two.pop('GAMEPLAY_ONLY'), 'Constant(value=True)')
+        self.assertEqual(one.pop('GAMEPLAY_ONLY'), 'Constant(value=False)')
+        self.assertEqual(one,two)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

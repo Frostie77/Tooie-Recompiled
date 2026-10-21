@@ -2,6 +2,11 @@
 
 ## Task for the next Codex investigation
 
+**Updated priority:** Frostie is less concerned about automatic-demo stutter
+provided it does not occur during actual gameplay. Demo stutter alone no longer
+blocks a gameplay test. The newer Manual-60-Hz capture now includes visible
+snowy-scene bands; see [the new evidence and gameplay plan](android-gameplay-readiness-20261021.md).
+
 Investigate and correct the remaining intro/automatic-demo stutters and the
 reported lines in the snowy demo. Start with the existing device evidence and
 production renderer. Do not apply a global slowdown: sampled guest timers are
@@ -13,8 +18,8 @@ and then and those strange graphic bug that appear in the snowy area of the game
 Use an isolated branch from current main, inspect its current instructions, and
 preserve Android-only packaging, approved launcher/icon/name, Mods, authored
 player/actor hierarchy, first-person corrections, descriptor/pool/tile guards,
-ownership waits and five-second timeouts. Do not request playable-area testing
-until the intro/demo issue is resolved. Refer to the project owner as Frostie
+ownership waits and five-second timeouts. Prioritize smooth, responsive normal
+gameplay; keep demo-only findings separate. Refer to the project owner as Frostie
 in new public prose. No ROM is committed or needed for the evidence analysis.
 
 Do not treat this document, a host benchmark, a manual 60 Hz output target or
