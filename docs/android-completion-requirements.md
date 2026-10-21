@@ -1,8 +1,8 @@
-# Tooie-Recompiled completion requirements
+# Tooie Recompiled completion requirements
 
-Updated: 20 October 2026 (Australia/Hobart).
+Updated: 21 October 2026 (Australia/Hobart).
 
-The goal is a release-ready native Android Tooie-Recompiled APK, optimized and tested on the AYN Odin 2 Portal. These requirements record the agreed scope; they do not assert that the features are finished.
+The goal is a release-ready native Android Tooie Recompiled APK, optimized and tested on the AYN Odin 2 Portal. These requirements record the agreed scope; they do not assert that the features are finished.
 
 The intended experience is the complete Banjo-Tooie adventure with the clarity, smooth presentation and useful settings of the working PC recompiled version adapted to the Odin. Game speed, movement, camera behavior, sound and progression must remain correct. Visual quality should be compared in matching scenes and settings, with sustainable performance on the device. Full-game functionality, long sessions and normal Android use are part of acceptance.
 
@@ -13,17 +13,31 @@ The intended experience is the complete Banjo-Tooie adventure with the clarity, 
 3. **Complete gameplay functions.** Physical controller support, working audio, saving and loading, and normal gameplay functions.
 4. **Correct Android lifecycle.** Switching away and returning, pause/resume and surface recreation without crashes or broken rendering.
 5. **Working Android mod support is required for completion.** Import and manage compatible mods through the Android Mods interface, including multiple-file selection, persistent installation, enable/disable and removal, and verify that the selected mods actually affect gameplay. A visible Mods button or a working picker alone does not satisfy this requirement.
-6. **Permanent Tooie-Recompiled branding.** Consistent naming throughout the visible UI, app labels, repository and documentation.
+6. **Permanent Tooie Recompiled branding.** Consistent naming throughout the visible UI, app labels, repository and documentation.
 7. **Banjo and Kazooie themed Android launcher icon.** Create and integrate the promised launcher artwork.
-8. **Clean, reproducible source and builds.** Clear build instructions and dependency cleanup while preserving desktop compatibility.
+8. **Clean, reproducible Android source and builds.** Clear Android APK build instructions, pinned dependencies and reproducible packaging. Windows/Linux may be development hosts and host-test environments; desktop releases are outside this project's supported scope.
 9. **Release readiness and data preservation.** Proper release configuration/signing and licensing review, with no user ROMs or copyrighted game assets bundled. Preserve the existing Android package identity, ROMs, saves and settings.
-10. **Automatic startup update detection from GitHub.** When Trent or another user opens an online installation, the app checks for a newer published Android release and clearly offers the update.
+10. **Automatic startup update detection from GitHub.** When a user opens an online installation, the app checks for a newer published Android release and clearly offers the update.
+
+## Public project scope
+
+This project is **Android only**. Its supported distributable is an ARM64 Android
+APK; it does not offer a Windows or Linux game build. Desktop code, historical
+build files and host compilation tests may remain for development/reference.
+They must not be advertised as supported downloadable products in the README,
+repository description, release notes or future update feed.
+
+The public project name is **Tooie Recompiled**. Public-facing documentation
+must identify the current development status, tested Odin hardware, incomplete
+acceptance work and the requirement to supply a supported USA ROM. Working
+Android mods and startup update detection remain mandatory completion criteria.
+Preparing this wording does not publish a release or change repository visibility.
 
 ## Required Android mod support
 
-Trent explicitly confirmed on 16 October 2026 that mod support is a finished-project criterion. It is mandatory and remains unverified on hardware.
+Frostie explicitly confirmed on 16 October 2026 that mod support is a finished-project criterion. It is mandatory and remains unverified on hardware.
 
-- Document the supported mod formats, runtime/API versions and compatibility limits. Support compatible Tooie-Recompiled mods on Android; do not imply that every PC mod automatically works.
+- Document the supported mod formats, runtime/API versions and compatibility limits. Support compatible Tooie Recompiled mods on Android; do not imply that every PC mod automatically works.
 - Complete Android file selection, including multiple files where the supported mod workflow needs them. Imported mods must remain available after the picker closes and after an app/device restart, without relying on PC paths or temporary picker access.
 - Provide a usable Mods interface to view installed mods, enable or disable them, and remove them. Expose supplied configuration or ordering controls when the supported format requires them, and explain when a restart is needed.
 - Apply enabled mods to the actual running game. Demonstrate the intended change with at least one known-compatible mod and multiple compatible mods together; disabling them must restore the expected base-game behavior.
@@ -34,7 +48,7 @@ Acceptance evidence must cover import, actual gameplay effect, multiple compatib
 
 ## Added requirement: startup updates
 
-Trent requested this future feature on 15 October 2026. It remains planned and unimplemented. Complete the current gameplay investigation first; the update feature remains part of the intended finished project.
+Frostie requested this future feature on 15 October 2026. It remains planned and unimplemented. Complete the current gameplay investigation first; the update feature remains part of the intended finished project.
 
 The planned behavior is:
 
@@ -51,7 +65,7 @@ Recording this requirement does not change the current source-engineering or con
 
 ## Gameplay test duration and coverage
 
-Trent requested longer gameplay capture on 16 October 2026. Three-minute captures are startup/smoke checks and are insufficient for gameplay or release acceptance.
+Frostie requested longer gameplay capture on 16 October 2026. Three-minute captures are startup/smoke checks and are insufficient for gameplay or release acceptance.
 
 - Future gameplay investigations use a ten-minute initial capture, with a choice to continue in five-minute blocks in the same process until the needed areas and actions have been exercised. Waiting at the launcher is recorded separately and does not count as gameplay coverage.
 - Allow enough active play to cover area entry and return transitions, NPC/enemy movement, combat, player movement/camera and shadows. Record which scenes and actions were actually reached, plus the user's observations; do not treat elapsed time or process survival alone as evidence of coverage.
@@ -62,6 +76,30 @@ Trent requested longer gameplay capture on 16 October 2026. Three-minute capture
 This is the required protocol for subsequent collectors. The already-consumed Step 77 script remains the original three-minute collector; its evidence is not relabeled as a ten-minute test.
 
 ## Current project state
+
+On 21 October, integration `b8d06b5d3456ad85e668ae110d95fe89a2430620`
+(engineering `d403031830c34ad0146724cf6d20a85c96502d26`) completed a five-minute
+intro/demo capture on Odin. The accepted replay wait and renderer source-rate
+corrections are present. Selected accepted-record clock windows were close to
+real time, while the user still reported stutter, slow-looking characters in
+the Mumbo demo and lines in the snowy scene. Those visual/performance issues
+remain unresolved; clock ratios alone do not establish correct animation.
+
+Integration `5f8c906f924755ea77cbf13266f1295c071d2ece` subsequently passed the
+PC APK build and packaging gates. APK SHA-256
+`9101ac6bd4b9aec2eedfc87e6939141725930759bb42052dff3759716e75d62c`
+and ELF Build ID `5aaefb3302e596ee23c5280deb79c2bb87f0e3a2` were verified.
+Its separate launcher-only Odin capture retained PID 27083; the screenshot
+shows the approved red TOOIE-/blue -RECOMPILED Jiggy artwork and menu. Trent
+approved the appearance. Start Game was deliberately skipped, so this capture
+adds no intro/demo or gameplay acceptance. The round BT icon and the visible
+name Tooie Recompiled are retained. This integration adds no further timing fix.
+
+The repository README is being prepared for an Android-only public project.
+A public APK release, update client, complete mod/gameplay acceptance and the
+other requirements above remain unfinished.
+
+### Earlier validation record
 
 The latest supplied manual gameplay evidence is Step 111's integration
 `b3401ddb72942f99958828ffc27723fb049d50bd`, engineering parent
@@ -94,7 +132,7 @@ signing/licensing, updates and release acceptance still need their own evidence.
 
 Earlier Step 77 evidence tested artwork integration `a1338bfae10c937a66a8c2c2581195a93b009372`, rendering parent `98f909cc6837cb9bc66cad1018fefd3b090add8d`. It installed and launched on Odin, and the supplied evidence archive retains original PID 16378 through the capture. The accepted TOOIE launcher artwork is present.
 
-Trent reported good input, no noticeable sluggishness, improved/less noticeable entry freezes, and no shunts in the area played. He still observed stretching, especially in enemy/NPC movement, and an awkward geometric shadow from Banjo. The timed capture ran approximately 11:18:50–11:21:51 on 16 October, with raw retention continuing until about 11:24:56. The longer launcher wait is not counted as gameplay.
+Frostie reported good input, no noticeable sluggishness, improved/less noticeable entry freezes, and no shunts in the area played. He still observed stretching, especially in enemy/NPC movement, and an awkward geometric shadow from Banjo. The timed capture ran approximately 11:18:50–11:21:51 on 16 October, with raw retention continuing until about 11:24:56. The longer launcher wait is not counted as gameplay.
 
 The evidence confirms substantially lower matching cost in this session, while scene differences prevent a controlled device speedup claim. Remaining records include four OpenSL ES mutex timeouts and intermittent presentation/rendering hitches. No app fatal, Vulkan device loss or descriptor rejection was found in the captured original-process logs. Sparse diagnostics and still images do not establish the cause of stretching or shadow appearance, nor complete visual, sound or full-game correctness.
 

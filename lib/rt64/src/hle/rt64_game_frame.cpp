@@ -649,9 +649,6 @@ namespace RT64 {
 
         const auto expansion = buildMatchCandidates(workloadQueue.workloads, curScene, prevScene,
             curCallHashMap, prevCallHashMap, transformCheckSet, tileCheckSet, lookAtCheckSet);
-        transformCheckSet.finalize();
-        tileCheckSet.finalize();
-        lookAtCheckSet.finalize();
 #if defined(__ANDROID__)
         matchingCounts.callPairs += expansion.logicalCallPairs;
         matchingCounts.expansionVisits += expansion.transformRangePairs + expansion.tileVisits + expansion.lookAtVisits;
