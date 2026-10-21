@@ -80,12 +80,21 @@ def main():
         fixture = build / 'fixture.o'
         run([compiler, *flags, '-c', root / 'tests/matching_equivalence.cpp', '-o', fixture])
         header = (rt / 'hle/rt64_match_candidates.h').read_text()
+        source = (rt / 'hle/rt64_game_frame.cpp').read_text()
+        unfinalized = source
+        for name in ['transformCheckSet', 'tileCheckSet', 'lookAtCheckSet']:
+            anchor = name + '.finalize();'
+            assert unfinalized.count(anchor) == 1, 'Missing production finalization: ' + name
+            unfinalized = unfinalized.replace(anchor, '/* wrong unfinished candidate union */')
+        assert header.count('std::sort(pairs.begin(), pairs.end());') == 1
+        assert header.count('pairs.erase(std::unique(pairs.begin(), pairs.end()), pairs.end());') == 1
         variants = {
             'parent': (parent['rt64_game_frame.cpp'], parent['rt64_match_candidates.h']),
-            'current': ((rt / 'hle/rt64_game_frame.cpp').read_text(), header),
-            'unordered': ((rt / 'hle/rt64_game_frame.cpp').read_text(),
+            'current': (source, header),
+            'unfinalized': (unfinalized, header),
+            'unordered': (source,
                           header.replace('std::sort(pairs.begin(), pairs.end());', '/* wrong ordering */')),
-            'duplicates': ((rt / 'hle/rt64_game_frame.cpp').read_text(),
+            'duplicates': (source,
                            header.replace('pairs.erase(std::unique(pairs.begin(), pairs.end()), pairs.end());',
                                           '/* wrong union */')),
         }
