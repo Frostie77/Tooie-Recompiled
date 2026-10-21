@@ -6,8 +6,14 @@ system; finished APKs and upload bundles go to Windows Downloads.
 ```bash
 ~/projects/tooie-tools/tooie build
 ~/projects/tooie-tools/tooie test
-~/projects/tooie-tools/tooie package /mnt/c/Users/Trent/Downloads/Tooie-...-Evidence.zip
+~/projects/tooie-tools/tooie package /path/to/Tooie-...-Evidence.zip
 ```
+
+In WSL, Windows Downloads and the Windows Android SDK ADB path are detected
+from the current Windows user profile. No personal account name is stored in
+the public profile. `TOOIE_DOWNLOADS` or `--downloads` can override Downloads;
+`TOOIE_ADB` can select an installed ADB executable. Detection reads local account
+metadata and does not issue a device command.
 
 `build` reuses the current exact APK when its report, source identity and SHA-256
 match. The full packaged-native/DEX/JNI checks still run before any installation.
@@ -29,6 +35,38 @@ differs. After all builder checks pass, the runner creates an artifact receipt
 and atomically records the latest verified artifact for that exact source/profile.
 The default `test` selects that receipt and rechecks the report and APK bytes.
 Before the first successful build, testing this revision is refused.
+
+## Bug pictures and optional output-rate comparison
+
+During a timed demo/gameplay window, the first ten fresh numbered events such
+as `5 lines over the snow` also attempt a foreground screenshot in the same
+evidence ZIP. Use the same Ubuntu terminal. Later `note 5 ...` corrections do
+not take another picture. All notes are retained even if the picture fails,
+the process disappears, the app loses focus, or the session image limit is met.
+Each picture has its marker identity and attempt timing. It is a picture after
+the note, not proof of the exact bug onset. Marker delivery must succeed first;
+stale queued notes are not photographed. Screenshot reads share one ten-second
+budget with no retry. ADB/USB work itself can affect timings; use the saved
+attempt intervals when interpreting nearby stalls. Existing lossless splitting
+handles evidence bundles that grow beyond the upload limit.
+
+For the reviewed d168 demo APK, a guided comparison can reuse the verified
+artifact receipt without rebuilding:
+
+```bash
+~/projects/tooie-tools/tooie test --presentation-hz 60
+```
+
+At the launcher prompt, manually open **Settings > Graphics**, choose
+**Framerate: Manual**, and set the number below it to **60**. Return to the
+launcher before typing `ready`. Keep resolution, antialiasing and sound as they
+were. Follow `watching` in the same terminal; this profile remains intro/demo
+only. Do not load a save. The workflow neither changes nor restores settings.
+The requested target is saved separately from the observed `Runtime present`
+`target_hz` and effective configuration records: the request alone is not proof
+that the setting was applied. Startup may still log the previous 120 Hz target.
+After comparison, selecting **Display** restores the previous framerate mode.
+This changes the output frame target, not the guest timer or replay VI waits.
 
 ## Recording a test
 
@@ -102,8 +140,9 @@ The runner lives on the isolated `tools/android-workflow-20261020` branch.
 Run `~/projects/tooie-tools/tooie update` to fetch and fast-forward its checkout;
 local edits or divergence stop the update. This updates tooling, not the
 installed app. It does not change main, PR #1, repository visibility or releases.
-The Android-only public README is prepared separately on
-`docs/android-public-readme-20261021`. Windows/Linux are build/test hosts here,
+The public README and GitHub APK build are now on main. The GitHub debug
+artifact uses a separate signing identity; use this established local workflow
+for the existing Odin installation. Windows/Linux are build/test hosts here,
 not supported game releases.
 
 For a future reviewed revision, update the version manifest, report identities,

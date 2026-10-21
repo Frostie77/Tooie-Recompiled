@@ -7,10 +7,11 @@ import ast
 import contextlib
 import datetime as dt
 import fcntl
+from functools import lru_cache
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
 import shlex
 import shutil
@@ -60,6 +61,47 @@ def run(args, **kwargs):
 def git(source, *args):
     return run(['git', '-C', source, *args], stdin=subprocess.DEVNULL,
                capture_output=True, text=True, timeout=180).stdout.strip()
+
+
+@lru_cache(maxsize=1)
+def windows_profile():
+    """Read the current Windows account path without embedding a personal name."""
+    if not shutil.which('cmd.exe') or not shutil.which('wslpath'):
+        return None
+    try:
+        output = run(['cmd.exe', '/d', '/u', '/c', 'set', 'USERPROFILE'],
+                     stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                     encoding='utf-16-le', timeout=8).stdout
+        values = [line.partition('=')[2] for line in output.splitlines()
+                  if line.partition('=')[0].upper() == 'USERPROFILE']
+        if len(values) != 1:
+            return None
+        path = PureWindowsPath(values[0])
+        if not path.is_absolute() or not re.fullmatch('[A-Za-z]:', path.drive):
+            return None
+        value = run(['wslpath', '-u', str(path)], stdin=subprocess.DEVNULL,
+                    capture_output=True, text=True, timeout=8).stdout.strip()
+        return Path(value) if value and Path(value).is_absolute() else None
+    except (OSError, UnicodeError, subprocess.SubprocessError):
+        return None
+
+
+def default_downloads():
+    if os.environ.get('TOOIE_DOWNLOADS'):
+        return Path(os.environ['TOOIE_DOWNLOADS']).expanduser()
+    profile = windows_profile()
+    return (profile if profile is not None else Path.home()) / 'Downloads'
+
+
+def default_adb():
+    if os.environ.get('TOOIE_ADB'):
+        return os.environ['TOOIE_ADB']
+    profile = windows_profile()
+    if profile is not None:
+        candidate = profile / 'AppData/Local/Android/Sdk/platform-tools/adb.exe'
+        if candidate.is_file():
+            return str(candidate)
+    return shutil.which('adb.exe') or shutil.which('adb') or 'adb'
 
 
 def load_profile(path):
@@ -168,7 +210,8 @@ def replace_assignments(source, values):
     return ''.join(lines)
 
 
-def render_collector(profile, artifact, downloads, session):
+def render_collector(profile, artifact, downloads, session, presentation_hz=None):
+    require(presentation_hz in (None, 60), 'Unsupported presentation comparison.')
     source = (HERE / 'templates/collector.py').read_text()
     identity = profile['identity']
     replacements = {
@@ -179,11 +222,13 @@ def render_collector(profile, artifact, downloads, session):
         'WORDMARK_HASH': repr(profile['launcher_assets']['wordmark']),
         'LAUNCHER_LAYOUT_HASH': repr(profile['launcher_assets']['layout']),
         'APK': 'Path(' + repr(artifact['apk']) + ')', 'REPORT': 'Path(' + repr(artifact['report']) + ')',
-        'ADB': repr(profile['device']['adb']), 'SERIAL': repr(profile['device']['serial']),
+        'ADB': repr(default_adb() if profile['device']['adb'] == 'auto' else profile['device']['adb']),
+        'SERIAL': repr(profile['device']['serial']),
         'READELF': "Path.home() / " + repr('Android/Sdk/ndk/' + profile['configuration']['ndk'] +
                                              '/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'),
         'MARKER': 'Path(' + repr(str(session / 'attempt.started')) + ')',
         'DEMO_ONLY': repr(profile.get('demo_only', False)),
+        'PRESENTATION_TEST_HZ': repr(presentation_hz or 0),
     }
     source = replace_assignments(source, replacements)
     node = next(n for n in ast.parse(source).body if isinstance(n, ast.FunctionDef) and n.name == 'expected_report')
@@ -449,9 +494,10 @@ def capture(args, profile):
             session = args.state / 'sessions' / unique_id()
             session.mkdir(parents=True)
             script = session / 'collector.py'
-            write_new(script, render_collector(profile, artifact, args.downloads, session))
+            write_new(script, render_collector(profile, artifact, args.downloads, session, args.presentation_hz))
             json_new(session / 'session.json', {'session': session.name, 'number': number,
                      'requested_sessions': args.sessions, 'artifact': artifact,
+                     'requested_presentation_hz': args.presentation_hz,
                      'authorization': 'User invoked repeat-capable workflow. One install/launch per session. Saves retained.'})
             print('\nSESSION ' + str(number) + '/' + str(args.sessions) + ': ' + session.name, flush=True)
             process = subprocess.Popen([sys.executable, '-u', str(script)])
@@ -497,7 +543,7 @@ def update_runner():
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument('--profile', type=Path, default=HERE / 'profiles/current.json')
-    result.add_argument('--downloads', type=Path, default=Path('/mnt/c/Users/Trent/Downloads'))
+    result.add_argument('--downloads', type=Path, default=default_downloads())
     result.add_argument('--tool-root', type=Path, default=Path.home() / 'projects/tooie-tools')
     sub = result.add_subparsers(dest='command', required=True)
     build_parser = sub.add_parser('build', help='Reuse a verified APK, or incrementally build and verify a pinned version.')
@@ -507,6 +553,8 @@ def parser():
     test_parser = sub.add_parser('test', help='Install, launch, capture notes and automatically prepare a handoff.')
     test_parser.add_argument('--sessions', type=int, default=1)
     test_parser.add_argument('--artifact', type=Path, help='Receipt from a new workflow build.')
+    test_parser.add_argument('--presentation-hz', type=int, choices=[60],
+                             help='Guide a manual 60 Hz output comparison before Start Game; no automatic setting change.')
     package_parser = sub.add_parser('package', help='Prepare a handoff from an existing evidence ZIP; no device commands.')
     package_parser.add_argument('evidence', type=Path)
     sub.add_parser('update', help='Explicitly fast-forward this isolated tooling checkout.')

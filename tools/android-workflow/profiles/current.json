@@ -1177,7 +1177,7 @@
   "device": {
     "serial": "7907333f",
     "package": "io.github.banjotooierecompiled",
-    "adb": "/mnt/c/Users/Trent/AppData/Local/Android/Sdk/platform-tools/adb.exe"
+    "adb": "auto"
   },
   "configuration": {
     "ndk": "28.2.13676358",
@@ -1191,7 +1191,7 @@
   },
   "templates": {
     "build.sh": "72da0097e5b0e04fe79afd11045efb3e4c93bc75c0503e86b64c633fcad6a901",
-    "collector.py": "d4a46a6a1e17a19db875bb83fe2d2dd35de369b1c44d123d508bb7b44361a9c5"
+    "collector.py": "c4222258c962779aed51b5e49a7d342159510a060936c5053629ec97feb08c6d"
   },
   "demo_only": true,
   "launcher_assets": {

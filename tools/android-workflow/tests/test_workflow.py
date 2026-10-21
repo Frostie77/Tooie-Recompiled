@@ -95,6 +95,68 @@ class Workflow(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'configuration'):
             tooie.load_profile(path)
 
+    def test_windows_profile_reads_named_variable_without_expansion(self):
+        tooie.windows_profile.cache_clear()
+        replies = [subprocess.CompletedProcess([], 0, 'USERPROFILE=C:\\Users\\Frostie & Friends\r\n', ''),
+                   subprocess.CompletedProcess([], 0, '/mnt/c/Users/Frostie & Friends\n', '')]
+        try:
+            with patch.object(tooie.shutil, 'which', return_value='/installed/tool'), \
+                 patch.object(tooie, 'run', side_effect=replies) as run:
+                expected = Path('/mnt/c/Users/Frostie & Friends')
+                self.assertEqual(tooie.windows_profile(), expected)
+                self.assertEqual(tooie.windows_profile(), expected)
+                self.assertEqual(run.call_count, 2)
+                self.assertEqual(run.call_args_list[0].args[0],
+                                 ['cmd.exe', '/d', '/u', '/c', 'set', 'USERPROFILE'])
+                self.assertEqual(run.call_args_list[1].args[0],
+                                 ['wslpath', '-u', 'C:\\Users\\Frostie & Friends'])
+                self.assertEqual(run.call_args_list[0].kwargs['timeout'], 8)
+                self.assertEqual(run.call_args_list[0].kwargs['encoding'], 'utf-16-le')
+        finally:
+            tooie.windows_profile.cache_clear()
+
+    def test_windows_profile_failure_does_not_guess_an_account(self):
+        for reply in ('USERPROFILE=relative\n', 'USERPROFILE=\\\\server\\share\n',
+                      'USERPROFILE=C:\\Users\\Frostie\nUSERPROFILE=C:\\Other\n', ''):
+            tooie.windows_profile.cache_clear()
+            with patch.object(tooie.shutil, 'which', return_value='/installed/tool'), \
+                 patch.object(tooie, 'run', return_value=subprocess.CompletedProcess([], 0, reply, '')) as run:
+                self.assertIsNone(tooie.windows_profile())
+                self.assertEqual(run.call_count, 1)
+        tooie.windows_profile.cache_clear()
+        try:
+            with patch.object(tooie.shutil, 'which', return_value='/installed/tool'), \
+                 patch.object(tooie, 'run', side_effect=subprocess.TimeoutExpired('metadata', 8)):
+                self.assertIsNone(tooie.windows_profile())
+        finally:
+            tooie.windows_profile.cache_clear()
+
+    def test_download_and_adb_defaults_use_local_profile_or_explicit_override(self):
+        profile = self.root / 'windows-profile'
+        adb = profile / 'AppData/Local/Android/Sdk/platform-tools/adb.exe'
+        adb.parent.mkdir(parents=True); adb.touch()
+        with patch.dict(os.environ, {}, clear=True), patch.object(tooie, 'windows_profile', return_value=profile):
+            self.assertEqual(tooie.default_downloads(), profile / 'Downloads')
+            self.assertEqual(tooie.default_adb(), str(adb))
+        with patch.dict(os.environ, {'TOOIE_DOWNLOADS':str(self.root / 'export'), 'TOOIE_ADB':'/selected/adb'}, clear=True), \
+             patch.object(tooie, 'windows_profile', side_effect=AssertionError('unnecessary account read')):
+            self.assertEqual(tooie.default_downloads(), self.root / 'export')
+            self.assertEqual(tooie.default_adb(), '/selected/adb')
+        with patch.dict(os.environ, {}, clear=True), patch.object(tooie, 'windows_profile', return_value=None), \
+             patch.object(tooie.Path, 'home', return_value=self.root), \
+             patch.object(tooie.shutil, 'which', side_effect=lambda name:'/installed/adb' if name=='adb' else None):
+            self.assertEqual(tooie.default_downloads(), self.root / 'Downloads')
+            self.assertEqual(tooie.default_adb(), '/installed/adb')
+
+    def test_auto_adb_is_resolved_when_rendering_the_owned_session(self):
+        artifact = {**self.profile['artifact'], 'sha256':'a'*64, 'build_id':'b'*40,
+                    'apk':str(self.root/'game.apk'), 'report':str(self.root/'report.txt')}
+        with patch.object(tooie, 'default_adb', return_value='/selected/sdk/adb.exe'):
+            script = tooie.render_collector(self.profile, artifact, self.args.downloads, self.root/'session')
+        assignment = next(node for node in ast.parse(script).body if isinstance(node,ast.Assign)
+                          and isinstance(node.targets[0],ast.Name) and node.targets[0].id=='ADB')
+        self.assertEqual(ast.literal_eval(assignment.value), '/selected/sdk/adb.exe')
+
     def test_artifact_report_bytes_identity_and_receipt_binding(self):
         apk = self.root / 'game.apk'; apk.write_bytes(b'host-fixture-no-executable')
         report = self.root / 'report.txt'
@@ -341,6 +403,26 @@ class Workflow(unittest.TestCase):
             text = bundle.read('README.txt').decode()
             self.assertIn('Captured source: ' + self.profile['identity']['commit'], text)
             self.assertIn('Workflow profile at packaging: ' + 'f' * 40, text)
+
+
+    def test_presentation_control_preserves_artifact_and_default_mode(self):
+        artifact = {**self.profile['artifact'], 'sha256':'a'*64, 'build_id':'b'*40,
+                    'apk':str(self.root/'game.apk'), 'report':str(self.root/'report.txt')}
+        args = tooie.parser().parse_args(['test', '--presentation-hz', '60'])
+        self.assertEqual(args.presentation_hz, 60)
+        self.assertIsNone(tooie.parser().parse_args(['test']).presentation_hz)
+        normal = tooie.render_collector(self.profile, artifact, self.args.downloads, self.root/'normal')
+        control = tooie.render_collector(self.profile, artifact, self.args.downloads, self.root/'control', 60)
+        def assignments(source):
+            return {n.targets[0].id: ast.dump(n.value) for n in ast.parse(source).body
+                    if isinstance(n,ast.Assign) and isinstance(n.targets[0],ast.Name)}
+        one,two = assignments(normal),assignments(control)
+        self.assertEqual(one['PRESENTATION_TEST_HZ'], 'Constant(value=0)')
+        self.assertEqual(two['PRESENTATION_TEST_HZ'], 'Constant(value=60)')
+        self.assertEqual({k:v for k,v in one.items() if k not in ('MARKER','PRESENTATION_TEST_HZ')},
+                         {k:v for k,v in two.items() if k not in ('MARKER','PRESENTATION_TEST_HZ')})
+        with self.assertRaises(RuntimeError):
+            tooie.render_collector(self.profile, artifact, self.args.downloads, self.root/'bad', 30)
 
 
 if __name__ == '__main__':

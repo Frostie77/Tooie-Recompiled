@@ -187,7 +187,7 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
 
         def command(args, name=None, strict=True, timeout=30):
             args = [str(x) for x in args]
-            if args[0] == 'wslpath': return response(r'C:\Users\Trent\Downloads\fixture.apk')
+            if args[0] == 'wslpath': return response(r'C:\Users\Frostie\Downloads\fixture.apk')
             if args[0] == str(m.READELF):
                 if '-n' in args: return response('Build ID: ' + ('0' * 40 if name_case == 'bad-build-id' else m.BUILD_ID))
                 if '-h' in args: return response('Class: ELF64\nMachine: ' + ('X86-64' if name_case == 'bad-abi' else 'AArch64'))

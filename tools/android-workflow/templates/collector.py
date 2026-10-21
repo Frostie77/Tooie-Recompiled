@@ -17,10 +17,10 @@ import zipfile
 SHA = '3a8ef82eafc02a5318f4a16c6981f75628af1f7e'
 HASH = 'f4e0ec9a30d2f1a57e3b19a052f6e284fec7c26910913ab87d2a622c20b6038a'
 BUILD_ID = '7da65931e98aa0e45eda5c237c2ba9e8662d67d1'
-DOWNLOADS = Path('/mnt/c/Users/Trent/Downloads')
+DOWNLOADS = Path.home() / 'Downloads'
 APK = DOWNLOADS / 'Tooie-3a8ef82eafc0-Task-Delivery-Timing-Debug.apk'
 REPORT = DOWNLOADS / 'Tooie-3a8ef82eafc0-Task-Delivery-Timing-Debug-build-report.txt'
-ADB = '/mnt/c/Users/Trent/AppData/Local/Android/Sdk/platform-tools/adb.exe'
+ADB = os.environ.get('TOOIE_ADB', 'adb')
 READELF = Path.home() / 'Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'
 SERIAL = '7907333f'
 PKG = 'io.github.banjotooierecompiled'
@@ -34,6 +34,7 @@ capture_start = None
 OBSERVE_SECONDS = 20
 DEMO_SECONDS = 300
 DEMO_ONLY = False
+PRESENTATION_TEST_HZ = 0
 GAMEPLAY_SECONDS = 600
 EXTENSION_SECONDS = 300
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
@@ -97,36 +98,41 @@ def parse_pids(result):
     require(bool(values) == (marker[1] == '0'), 'Inconsistent pidof result.')
     return values
 
-def pids(name=None):
+def pids(name=None, timeout=30):
     cmd = f'pidof {PKG}; result=$?; printf "\\nTOOIE_PIDOF_RC=%s\\n" "$result"'
-    return parse_pids(adb('shell', '-T', cmd, name=name))
+    return parse_pids(adb('shell', '-T', cmd, name=name, timeout=timeout))
 
-def sample_pids(name):
+def sample_pids(name, timeout=30):
     # Post-launch observation is read-only. A sampling error must not truncate
     # the evidence window or trigger another launch.
     try:
-        return pids(name)
+        return pids(name, timeout=timeout)
     except Exception as error:
         save(name + '-error', str(error) + '\n')
         print('ADB process status is unconfirmed; the error details were saved.', flush=True)
         return None
 
-def screenshot(label):
+def screenshot(label, budget_seconds=10):
     # Host-only PNG, and only while the original app is foreground. No recording
     # files are created on Odin and no input/focus change is sent to the app.
-    active = sample_pids(label + '-PIDs')
-    if original_pid is None or active is None or original_pid not in active:
-        save(label + '-Skipped', 'Original process unavailable; no screenshot taken.\n')
-        return
+    started = time.monotonic()
+    def remaining():
+        value = budget_seconds - (time.monotonic() - started)
+        require(value > 0, 'Screenshot read budget exhausted; no retry.')
+        return value
     try:
-        foreground = adb('shell', '-T', 'dumpsys activity activities', name=label + '-Foreground', strict=False, timeout=10)
+        active = sample_pids(label + '-PIDs', timeout=remaining())
+        if original_pid is None or active is None or original_pid not in active:
+            save(label + '-Skipped', 'Original process unavailable; no screenshot taken.\n')
+            return
+        foreground = adb('shell', '-T', 'dumpsys activity activities', name=label + '-Foreground', strict=False, timeout=remaining())
         resumed = [line for line in text(foreground).splitlines()
                    if re.search(r'\b(?:topResumedActivity|mResumedActivity)\s*[:=]\s*ActivityRecord\{', line)]
         if foreground.returncode != 0 or not resumed or not all(re.search(r'\s' + re.escape(PKG) + r'/', line) for line in resumed):
             save(label + '-Skipped', 'Expected app foreground could not be confirmed; no screenshot taken.\n')
             return
-        clock(label + '-Device-Time')
-        result = command([ADB, '-s', SERIAL, 'exec-out', 'screencap', '-p'], strict=False, timeout=10)
+        clock(label + '-Device-Time', timeout=remaining())
+        result = command([ADB, '-s', SERIAL, 'exec-out', 'screencap', '-p'], strict=False, timeout=remaining())
         save(label + '-status', f'returncode={result.returncode}\n' + result.stderr.decode(errors='replace'))
         if result.returncode == 0 and result.stdout.startswith(b'\x89PNG\r\n\x1a\n') and result.stdout.endswith(bytes.fromhex('0000000049454e44ae426082')):
             with Path(str(prefix) + '-' + label + '.png').open('xb') as output:
@@ -135,6 +141,13 @@ def screenshot(label):
             save(label + '-error', 'Screenshot was not a complete PNG response; no image claimed.\n')
     except Exception as error:
         save(label + '-error', str(error) + '\n')
+    finally:
+        save(label + '-Timing', json.dumps({
+            'host_start_monotonic_seconds': started,
+            'host_end_monotonic_seconds': time.monotonic(),
+            'read_budget_seconds': budget_seconds,
+            'scope': 'Read-only screenshot attempt after the marker or timer. Not the exact visual bug onset; ADB/USB work can affect measured timings.'
+        }, indent=2) + '\n')
 
 
 
@@ -191,6 +204,34 @@ class LiveInput:
 
 live_input = None
 live_events = []
+marker_shots = 0
+MARKER_SHOT_LIMIT = 10
+
+def marker_screenshot(record):
+    global marker_shots
+    if record['kind'] != 'event' or not record['phase_at_read'].startswith(('Demo-', 'Gameplay-')):
+        return
+    label = 'Screenshot-Marker-' + str(record['sequence']).zfill(3)
+    info = {'event_id': record['id'], 'sequence': record['sequence'],
+            'marker': record['marker'], 'host_read_wall': record['host_read_wall'],
+            'host_read_mono_seconds': record['host_read_mono_seconds'],
+            'original_game_pid': original_pid, 'label': label}
+    if marker_shots >= MARKER_SHOT_LIMIT:
+        info['result'] = 'session screenshot limit reached; note retained'
+    elif record['delivery'] != 'command-acknowledged':
+        info['result'] = 'marker delivery unconfirmed; no additional device read'
+    elif time.monotonic() - record['host_read_mono_seconds'] > 10:
+        info['result'] = 'marker handled more than ten seconds after receipt; no stale screenshot'
+    else:
+        marker_shots += 1
+        info['result'] = 'attempted; inspect screenshot status, timing and PNG'
+        # This is bounded independently of marker delivery. Failures must never
+        # discard the durable note or end the ongoing log capture.
+        try:
+            screenshot(label)
+        except Exception as error:
+            info['result'] = 'screenshot failed: ' + str(error)
+    save(label + '-Marker', json.dumps(info, indent=2) + '\n')
 live_latest = {}
 
 def input_hub():
@@ -250,6 +291,7 @@ def handle_live_note(item, phase):
     record['host_handled_mono_seconds'] = time.monotonic()
     append({'kind':'delivery','event_id':identifier,'metadata':record.copy()})
     print('Saved marker '+str(number)+' (entry '+str(record['sequence'])+'). Capture continues.', flush=True)
+    marker_screenshot(record)
     return True
 
 def wait_with_live_notes(seconds, phase):
@@ -300,7 +342,7 @@ def observe(label):
     else:
         print(f'Collecting launcher evidence for {duration} seconds. Leave the app untouched; do not reopen it if it closes.', flush=True)
     if timed:
-        print('Notes: 1 intro looks fast  [then Enter]. A number alone also works; reuse 1–10 for more markers. Use note 1 DESCRIPTION to add detail later. Type save at any time to finish. Keep graphics/volume settings unchanged. No camera or second window is needed.', flush=True)
+        print('Notes: 1 intro looks fast  [then Enter]. The first ten fresh numbered events also attempt a foreground screenshot in the SAME ZIP; notes are always saved. A number alone works; reuse 1–10 for more markers. Use note 1 DESCRIPTION to add detail later. Type save at any time to finish. Keep graphics/volume settings unchanged during capture. No camera or second window is needed.', flush=True)
     started = time.monotonic()
     started_wall = dt.datetime.now().astimezone().isoformat()
     deadline = started + duration
@@ -351,8 +393,8 @@ def observe(label):
             }, indent=2) + '\n')
 
 
-def clock(name):
-    r = adb('shell', '-T', 'date "+%Y-%m-%d %H:%M:%S"', name=name)
+def clock(name, timeout=30):
+    r = adb('shell', '-T', 'date "+%Y-%m-%d %H:%M:%S"', name=name, timeout=timeout)
     value = text(r)
     require(re.fullmatch(r'\d{4}-\d\d-\d\d \d\d:\d\d:\d\d', value), 'Unexpected device clock format.')
     return value
@@ -794,6 +836,18 @@ def original_launch_pid(offset):
     return pid
 
 
+def presentation_setup():
+    if not PRESENTATION_TEST_HZ:
+        return
+    require(PRESENTATION_TEST_HZ == 60, 'Unsupported presentation comparison.')
+    save('Presentation-Control', json.dumps({
+        'requested_output_hz': PRESENTATION_TEST_HZ,
+        'setting_method': 'User selects Framerate Manual, numeric value 60 in launcher Settings / Graphics.',
+        'scope': 'Requested control only. Check fresh original-PID Runtime present target_hz/config records for actual application. Startup can still report the previous target. No automatic setting change or restoration; no simulation clock change.'
+    }, indent=2) + '\n')
+    print('60 Hz OUTPUT COMPARISON: On Odin, open launcher Settings > Graphics. Set Framerate to Manual, then set the number below it to 60. Return to the launcher before typing ready. Leave resolution, antialiasing, sound and all other settings as they are. This changes the output frame target, not the gameplay clock. The workflow does not change settings for you.', flush=True)
+
+
 def maybe_start_game(offset):
     global original_pid
     original_pid = original_launch_pid(offset)
@@ -801,6 +855,7 @@ def maybe_start_game(offset):
     require_original_process('After-Launcher-PIDs')
     screenshot('Screenshot-Launcher')
 
+    presentation_setup()
     print('Launcher capture finished. Check launcher response and enabled Start Game. NOW type ready here in Ubuntu. Do not press Start Game yet. Type stop if the launcher is unavailable. No mod-picker or ROM-import test is required.', flush=True)
     answers = []
     while True:
