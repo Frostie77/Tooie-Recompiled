@@ -81,7 +81,8 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
         work = area / name
         work.mkdir()
         m = module()
-        m.DEMO_ONLY = name in ('demo-only-profile', 'demo-only-rejects-gameplay')
+        m.GAMEPLAY_ONLY = name.startswith('gameplay-only-')
+        m.DEMO_ONLY = m.GAMEPLAY_ONLY or name in ('demo-only-profile', 'demo-only-rejects-gameplay')
         m.DOWNLOADS = work
         m.APK = work / 'fixture.apk'
         m.REPORT = work / 'report.txt'
@@ -142,8 +143,14 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
         elif name in ('before-game-died','before-game-timeout'):answers='ready\n'
         else:answers='stop\n'
         if name=='live-notes':answers=answers.replace('watching\n','1 demo looks fast\nwatching\n')
-        if m.DEMO_ONLY:
+        if m.DEMO_ONLY and not m.GAMEPLAY_ONLY:
             answers='ready\nwatching\n'+('gameplay\n' if name=='demo-only-rejects-gameplay' else '')+'save\ndemo observation\n'
+        if m.GAMEPLAY_ONLY:
+            answers = 'stop\n' if name == 'gameplay-only-launcher-stop' else 'ready\n'
+            if name != 'gameplay-only-launcher-stop':
+                answers += 'stop\n' if name == 'gameplay-only-loading-stop' else 'playing\n'
+                if name != 'gameplay-only-loading-stop':
+                    answers += ('continue\nsave\n' if name == 'gameplay-only-extension' else 'save\n') + 'walking and controls observed\n'
         stdin = Terminal(answers)
         if name == 'noninteractive': stdin = io.StringIO(answers)
         m.sys = types.SimpleNamespace(argv=[str(source)], stdin=stdin)
@@ -301,7 +308,7 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
         assert len(records) == windows, (name, len(records), out.getvalue())
         if windows:
             first = json.loads(records[0].read_text())
-            if starts:assert starts[0]>=638,(name,starts)
+            if starts:assert starts[0]>=(338 if m.GAMEPLAY_ONLY else 638),(name,starts)
             assert first['requested_seconds'] == 600
             assert first['measured_observer_seconds'] == (70 if name in ('game-crash','game-restart') else 20 if name=='interrupt-game' else 5 if name=='save-during-game' else 600), (name, first)
             assert first['completed_requested_window'] == (name not in ('game-crash','game-restart','interrupt-game','save-during-game'))
@@ -335,10 +342,18 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
             assert file(m,'Live-Input-Journal').exists()
             assert 'pid=31000' in file(m,'Actor-Diagnostics').read_text()
             assert 'pid=32000' not in file(m,'Actor-Diagnostics').read_text()
-        if m.DEMO_ONLY:
+        if m.DEMO_ONLY and not m.GAMEPLAY_ONLY:
             assert 'Gameplay readiness' not in out.getvalue() and not file(m,'User-Gameplay-Readiness').exists()
             assert 'Choose gameplay' not in out.getvalue()
             assert 'no save loading or gameplay' in file(m,'Gameplay-Capture-Plan').read_text()
+        if m.GAMEPLAY_ONLY:
+            assert 'Intro/demo readiness' not in out.getvalue()
+            assert not list(work.glob(m.prefix.name+'-Demo-*-Window.txt'))
+            assert not file(m,'User-Demo-Readiness').exists()
+            assert 'GAMEPLAY ONLY' in file(m,'Capture-Scope').read_text()
+            if name != 'gameplay-only-launcher-stop':
+                assert 'no timed demo' in file(m,'Gameplay-Capture-Plan').read_text()
+            assert 'no timed demo is required' in out.getvalue().lower()
         if name in ('demo-only','demo-extension','gameplay','save-during-demo','demo-only-profile','demo-only-rejects-gameplay','reused-process'):
             demos=sorted(work.glob(m.prefix.name+'-Demo-*-Window.txt'))
             assert len(demos)==(2 if name=='demo-extension' else 1),(name,demos,out.getvalue())
@@ -379,6 +394,10 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
     for case in ('demo-only','demo-extension','save-during-demo','demo-only-profile','demo-only-rejects-gameplay'):scenario(case,1,1,0)
     for case in ('timed-pid-timeout','save-during-game','device-marker-filter'):scenario(case,1,1,0,1)
     scenario('dead-reader', 1, 1, 1, 1)
+    scenario('gameplay-only-normal', 1, 1, 0, 1)
+    scenario('gameplay-only-extension', 1, 1, 0, 2)
+    scenario('gameplay-only-loading-stop', 1, 1, 0, 0)
+    scenario('gameplay-only-launcher-stop', 1, 1, 0, 0)
 
     # Independent upload-size and lossless reconstruction test, including a
     # multi-chunk binary log, empty file and image. Limits scaled only in test.

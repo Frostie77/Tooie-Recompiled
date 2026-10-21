@@ -38,6 +38,21 @@ Before the first successful build, testing this revision is refused.
 
 ## Bug pictures and optional output-rate comparison
 
+Frostie's current priority is smooth, responsive normal gameplay. Demo stutter
+alone does not block that test. To load an existing save without waiting for a
+timed demo, run this in **Ubuntu**:
+
+```bash
+~/projects/tooie-tools/tooie test --gameplay-only
+```
+
+Follow `ready`, press Start Game once and load your save. Type `playing` in the
+same terminal only when you can move Banjo. The timer then runs for ten minutes,
+with optional five-minute extensions and the same numbered notes/screenshots.
+Loading and prompt waits do not consume gameplay time. This option reuses the
+exact verified APK, preserves saves/settings and does not change rendering or
+game clocks. The default command keeps its demo-only session scope.
+
 During a timed demo/gameplay window, the first ten fresh numbered events such
 as `5 lines over the snow` also attempt a foreground screenshot in the same
 evidence ZIP. Use the same Ubuntu terminal. Later `note 5 ...` corrections do

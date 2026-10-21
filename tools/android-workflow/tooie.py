@@ -210,7 +210,7 @@ def replace_assignments(source, values):
     return ''.join(lines)
 
 
-def render_collector(profile, artifact, downloads, session, presentation_hz=None):
+def render_collector(profile, artifact, downloads, session, presentation_hz=None, gameplay_only=False):
     require(presentation_hz in (None, 60), 'Unsupported presentation comparison.')
     source = (HERE / 'templates/collector.py').read_text()
     identity = profile['identity']
@@ -228,6 +228,7 @@ def render_collector(profile, artifact, downloads, session, presentation_hz=None
                                              '/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'),
         'MARKER': 'Path(' + repr(str(session / 'attempt.started')) + ')',
         'DEMO_ONLY': repr(profile.get('demo_only', False)),
+        'GAMEPLAY_ONLY': repr(bool(gameplay_only)),
         'PRESENTATION_TEST_HZ': repr(presentation_hz or 0),
     }
     source = replace_assignments(source, replacements)
@@ -494,10 +495,11 @@ def capture(args, profile):
             session = args.state / 'sessions' / unique_id()
             session.mkdir(parents=True)
             script = session / 'collector.py'
-            write_new(script, render_collector(profile, artifact, args.downloads, session, args.presentation_hz))
+            write_new(script, render_collector(profile, artifact, args.downloads, session, args.presentation_hz, args.gameplay_only))
             json_new(session / 'session.json', {'session': session.name, 'number': number,
                      'requested_sessions': args.sessions, 'artifact': artifact,
                      'requested_presentation_hz': args.presentation_hz,
+                     'gameplay_only': args.gameplay_only,
                      'authorization': 'User invoked repeat-capable workflow. One install/launch per session. Saves retained.'})
             print('\nSESSION ' + str(number) + '/' + str(args.sessions) + ': ' + session.name, flush=True)
             process = subprocess.Popen([sys.executable, '-u', str(script)])
@@ -555,6 +557,8 @@ def parser():
     test_parser.add_argument('--artifact', type=Path, help='Receipt from a new workflow build.')
     test_parser.add_argument('--presentation-hz', type=int, choices=[60],
                              help='Guide a manual 60 Hz output comparison before Start Game; no automatic setting change.')
+    test_parser.add_argument('--gameplay-only', action='store_true',
+                             help='Load an existing save and capture ten minutes after playing confirmation, without a timed demo window.')
     package_parser = sub.add_parser('package', help='Prepare a handoff from an existing evidence ZIP; no device commands.')
     package_parser.add_argument('evidence', type=Path)
     sub.add_parser('update', help='Explicitly fast-forward this isolated tooling checkout.')

@@ -183,7 +183,10 @@ class OneWindow(unittest.TestCase):
         for value in ('5 enemy bug','save','6 more stretching'):
             hub.items.put(self.item(value))
         self.m.input_hub = lambda:hub
-        self.m.wait_with_live_notes(0.02, 'Gameplay-01')
+        # This checks ordered handling of already queued input, independently
+        # of disk/fsync load from other tests or screenshot bookkeeping.
+        with patch.object(self.m.time, 'monotonic', return_value=100.0):
+            self.m.wait_with_live_notes(0.02, 'Gameplay-01')
         self.assertEqual([x['marker'] for x in self.m.live_events], [5])
         self.assertTrue(self.m.finish_requested)
         self.assertEqual(hub.items.get_nowait()['text'], '6 more stretching')
