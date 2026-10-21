@@ -1,6 +1,6 @@
 name: Build
 
-# Builds the port for Windows x64 and Linux x64, and publishes a GitHub Release
+# Builds the port for ANDROID, and publishes a GitHub Release
 # carrying both packages. A release asset *is* the deployment here: there is no
 # server component, and the repository ships no game content, so users supply
 # their own ROM.
@@ -102,10 +102,6 @@ jobs:
               fh.write("version=%s\n" % version)
               fh.write("tag=%s\n" % tag)
           print("version=%s tag=%s" % (version, tag))
-
-  build-windows:
-    needs: version
-    runs-on: windows-latest
 
     steps:
       - name: Check out, with submodules
