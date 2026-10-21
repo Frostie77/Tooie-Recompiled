@@ -77,6 +77,9 @@ jobs:
           set -o pipefail
           mkdir -p .ci-android/logs
           {
+            python3 tools/android-workflow/tests/test_workflow.py
+            python3 tools/android-workflow/tests/test_terminal.py
+            python3 tools/android-workflow/tests/test_collector.py
             python3 tools/test_transform_upload.py
             bash tools/test_audio_runtime.sh
             bash tools/test_android_surface_lifecycle.sh

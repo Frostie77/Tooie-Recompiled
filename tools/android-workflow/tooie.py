@@ -222,6 +222,7 @@ def render_collector(profile, artifact, downloads, session, presentation_hz=None
         'WORDMARK_HASH': repr(profile['launcher_assets']['wordmark']),
         'LAUNCHER_LAYOUT_HASH': repr(profile['launcher_assets']['layout']),
         'APK': 'Path(' + repr(artifact['apk']) + ')', 'REPORT': 'Path(' + repr(artifact['report']) + ')',
+        'REPORT_HEADER': repr(profile['report_header']),
         'ADB': repr(default_adb() if profile['device']['adb'] == 'auto' else profile['device']['adb']),
         'SERIAL': repr(profile['device']['serial']),
         'READELF': "Path.home() / " + repr('Android/Sdk/ndk/' + profile['configuration']['ndk'] +

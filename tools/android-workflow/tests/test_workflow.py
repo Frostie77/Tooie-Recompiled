@@ -79,9 +79,73 @@ class Workflow(unittest.TestCase):
             return next(n.value for n in ast.parse(source).body if isinstance(n, ast.Assign)
                         and isinstance(n.targets[0], ast.Name) and n.targets[0].id == 'MARKER')
         self.assertNotEqual(ast.dump(marker(one)), ast.dump(marker(two)))
+        header = next(n.value.value for n in ast.parse(one).body if isinstance(n, ast.Assign)
+                      and isinstance(n.targets[0], ast.Name) and n.targets[0].id == 'REPORT_HEADER')
+        self.assertEqual(header, self.profile['report_header'])
         self.assertIn("'install', '-r'", one)
         self.assertIn('gradle --build-cache assembleDebug', script.read_text())
         self.assertNotIn('gradle clean', script.read_text())
+
+    def test_main_tree_provenance_and_corrupt_manifest_controls(self):
+        source = self.root / 'source-fixture'
+        source.mkdir()
+        environment = dict(os.environ, GIT_AUTHOR_NAME='Frostie', GIT_COMMITTER_NAME='Frostie',
+                           GIT_AUTHOR_EMAIL='fixture@example.invalid', GIT_COMMITTER_EMAIL='fixture@example.invalid')
+
+        def git(*args):
+            return subprocess.run(['git', '-C', str(source), *args], env=environment,
+                                  capture_output=True, text=True, check=True).stdout.strip()
+
+        git('init', '-b', 'main')
+        (source / 'approved-art.txt').write_text('unchanged artwork fixture\n')
+        git('add', '.')
+        git('commit', '-m', 'Approved artwork fixture')
+        branding = git('rev-parse', 'HEAD')
+        (source / 'upload.cpp').write_text('reviewed upload fixture\n')
+        git('add', '.')
+        git('commit', '-m', 'Reviewed main fixture')
+        engineering = git('rev-parse', 'HEAD')
+        tree = git('rev-parse', 'HEAD^{tree}')
+        commit = git('commit-tree', tree, '-p', engineering, '-p', branding, '-m', 'Provenance fixture')
+        git('reset', '--hard', commit)
+        mode, kind, sha, path = git('ls-tree', 'HEAD', '--', 'upload.cpp').split()
+        entry = {'path': path, 'mode': mode, 'type': kind, 'sha': sha}
+        profile = copy.deepcopy(self.profile)
+        profile['identity'] = {'commit': commit, 'tree': tree, 'parents': [engineering, branding],
+                               'engineering': engineering, 'branding': branding, 'branch': 'main'}
+        profile['source_manifest'] = {'mod_entries': [], 'engineering_entries': [entry]}
+
+        def verify(value):
+            builder = tooie.render_builder(value)
+            body = builder.split("<<'VERIFY_INTEGRATED_SOURCE'\n", 1)[1].split('\nVERIFY_INTEGRATED_SOURCE', 1)[0]
+            # Execute the actual tree/parent/delta/blob/cleanliness checks. The
+            # unchanged image hash/dimension checks are outside this fixture.
+            body = body.split("for root in ('assets'", 1)[0]
+            return subprocess.run([sys.executable, '-c', body, str(source)], env=environment,
+                                  capture_output=True, text=True)
+
+        self.assertEqual(verify(profile).returncode, 0)
+        for mutation, expected in [('unlisted', 'outside the reviewed disjoint parent deltas'),
+                                   ('overlap', 'source deltas overlap'),
+                                   ('blob', 'exact source blob/mode differs'),
+                                   ('parents', 'integration parent order differs')]:
+            bad = copy.deepcopy(profile)
+            if mutation == 'unlisted':
+                bad['source_manifest']['engineering_entries'] = []
+            elif mutation == 'overlap':
+                bad['source_manifest']['mod_entries'] = [entry]
+            elif mutation == 'blob':
+                bad['source_manifest']['engineering_entries'][0]['sha'] = '0' * 40
+            else:
+                bad['identity']['parents'].reverse()
+            with self.subTest(mutation=mutation):
+                result = verify(bad)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(expected, result.stderr)
+        (source / 'upload.cpp').write_text('changed tracked source\n')
+        dirty = verify(profile)
+        self.assertNotEqual(dirty.returncode, 0)
+        self.assertIn('tracked source differs before validation', dirty.stderr)
 
     def test_template_changes_and_unsupported_flags_rejected(self):
         changed = copy.deepcopy(self.profile)
@@ -203,10 +267,17 @@ class Workflow(unittest.TestCase):
         self.assertTrue(self.profile['demo_only'])
         engineering = self.profile['source_manifest']['engineering_entries']
         mods = self.profile['source_manifest']['mod_entries']
-        self.assertEqual(len(engineering), 111)
-        self.assertEqual(len(mods), 69)
+        self.assertEqual(len(engineering), 137)
+        self.assertEqual(mods, [])
+        entries = {x['path']: x for x in engineering}
+        self.assertEqual(entries['lib/rt64/src/render/rt64_transform_processor.cpp']['sha'],
+                         '7223ebab3e3d5892b784d34ec08dba0af3943cf2')
+        self.assertIn('tests/transform_upload.cpp', entries)
+        self.assertIn('tools/test_transform_upload.py', entries)
         self.assertFalse({x['path'] for x in engineering} & {x['path'] for x in mods})
         builder = tooie.render_builder(self.profile)
+        self.assertIn('python3 tools/test_transform_upload.py', builder)
+        self.assertIn('exact-parent fails the independent byte check and grown-source ASan control', builder)
         self.assertIn('bash tools/test_demo_pacing.sh', builder)
         self.assertIn('python3 tools/test_demo_render_cadence.py', builder)
         self.assertIn('python3 tools/test_match_candidate_storage.py', builder)
