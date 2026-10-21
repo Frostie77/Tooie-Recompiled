@@ -1,0 +1,330 @@
+[
+  {
+    "map": 335,
+    "elapsed_us": 5008196,
+    "timer": 4.98333373293,
+    "attract": 5.01667118073,
+    "events": 112,
+    "span": 301
+  },
+  {
+    "map": 335,
+    "elapsed_us": 5008350,
+    "timer": 4.85000039265,
+    "attract": 5.000020504,
+    "events": 108,
+    "span": 301
+  },
+  {
+    "map": 335,
+    "elapsed_us": 5000068,
+    "timer": 4.8333337307,
+    "attract": 5.00000190735,
+    "events": 106,
+    "span": 299
+  },
+  {
+    "map": 335,
+    "elapsed_us": 5033252,
+    "timer": 4.8833337687,
+    "attract": 5.0166053772,
+    "events": 98,
+    "span": 301
+  },
+  {
+    "map": 335,
+    "elapsed_us": 5000500,
+    "timer": 5.03333376348,
+    "attract": 5.04992485046,
+    "events": 105,
+    "span": 300
+  },
+  {
+    "map": 335,
+    "elapsed_us": 5015877,
+    "timer": 4.96666700765,
+    "attract": 4.9665927887,
+    "events": 128,
+    "span": 301
+  },
+  {
+    "map": 278,
+    "elapsed_us": 5032933,
+    "timer": 4.58333372325,
+    "attract": 4.96666812897,
+    "events": 98,
+    "span": 302
+  },
+  {
+    "map": 278,
+    "elapsed_us": 5033347,
+    "timer": 4.41666702554,
+    "attract": 5.03333711624,
+    "events": 98,
+    "span": 302
+  },
+  {
+    "map": 278,
+    "elapsed_us": 5016705,
+    "timer": 4.78333372995,
+    "attract": 5.01668930054,
+    "events": 104,
+    "span": 299
+  },
+  {
+    "map": 278,
+    "elapsed_us": 5050015,
+    "timer": 4.81666707247,
+    "attract": 5.04995346069,
+    "events": 103,
+    "span": 304
+  },
+  {
+    "map": 314,
+    "elapsed_us": 5049505,
+    "timer": 4.40000039339,
+    "attract": 5.00000327826,
+    "events": 89,
+    "span": 303
+  },
+  {
+    "map": 314,
+    "elapsed_us": 5016522,
+    "timer": 5.00000041351,
+    "attract": 5.01669025421,
+    "events": 109,
+    "span": 301
+  },
+  {
+    "map": 314,
+    "elapsed_us": 5033447,
+    "timer": 4.85000042617,
+    "attract": 5.03335094452,
+    "events": 99,
+    "span": 302
+  },
+  {
+    "map": 314,
+    "elapsed_us": 5000138,
+    "timer": 4.75000037625,
+    "attract": 4.99995040894,
+    "events": 108,
+    "span": 301
+  },
+  {
+    "map": 314,
+    "elapsed_us": 5000624,
+    "timer": 4.0500003621,
+    "attract": 5.00002288818,
+    "events": 81,
+    "span": 301
+  },
+  {
+    "map": 314,
+    "elapsed_us": 5015915,
+    "timer": 4.36666704714,
+    "attract": 5.01665496826,
+    "events": 90,
+    "span": 298
+  },
+  {
+    "map": 235,
+    "elapsed_us": 5000208,
+    "timer": 4.95000040904,
+    "attract": 5.00000548363,
+    "events": 108,
+    "span": 299
+  },
+  {
+    "map": 235,
+    "elapsed_us": 5016549,
+    "timer": 4.98333364725,
+    "attract": 5.01670885086,
+    "events": 135,
+    "span": 301
+  },
+  {
+    "map": 235,
+    "elapsed_us": 5017054,
+    "timer": 4.9833336696,
+    "attract": 5.01668930054,
+    "events": 129,
+    "span": 302
+  },
+  {
+    "map": 235,
+    "elapsed_us": 5050097,
+    "timer": 5.03333365545,
+    "attract": 5.04992485046,
+    "events": 135,
+    "span": 302
+  },
+  {
+    "map": 235,
+    "elapsed_us": 5032868,
+    "timer": 4.93333372846,
+    "attract": 5.0332660675,
+    "events": 111,
+    "span": 303
+  },
+  {
+    "map": 235,
+    "elapsed_us": 5016556,
+    "timer": 5.00000037253,
+    "attract": 5.01659202576,
+    "events": 120,
+    "span": 300
+  },
+  {
+    "map": 235,
+    "elapsed_us": 5016705,
+    "timer": 4.85000041127,
+    "attract": 5.01659011841,
+    "events": 103,
+    "span": 302
+  },
+  {
+    "map": 296,
+    "elapsed_us": 5049511,
+    "timer": 4.88333373517,
+    "attract": 3.03333210945,
+    "events": 107,
+    "span": 299
+  },
+  {
+    "map": 296,
+    "elapsed_us": 5016396,
+    "timer": 4.71666704491,
+    "attract": 5.01667284966,
+    "events": 106,
+    "span": 302
+  },
+  {
+    "map": 296,
+    "elapsed_us": 5000088,
+    "timer": 4.83333371952,
+    "attract": 4.9833612442,
+    "events": 109,
+    "span": 298
+  },
+  {
+    "map": 296,
+    "elapsed_us": 5016650,
+    "timer": 4.58333366364,
+    "attract": 4.98335361481,
+    "events": 113,
+    "span": 299
+  },
+  {
+    "map": 296,
+    "elapsed_us": 5000029,
+    "timer": 4.96666696295,
+    "attract": 4.98325920105,
+    "events": 139,
+    "span": 300
+  },
+  {
+    "map": 296,
+    "elapsed_us": 5016691,
+    "timer": 4.91666702926,
+    "attract": 5.0166015625,
+    "events": 119,
+    "span": 301
+  },
+  {
+    "map": 296,
+    "elapsed_us": 5033343,
+    "timer": 4.76666709036,
+    "attract": 5.01661109924,
+    "events": 96,
+    "span": 301
+  },
+  {
+    "map": 296,
+    "elapsed_us": 5005760,
+    "timer": 4.16666703671,
+    "attract": 5.01659011841,
+    "events": 84,
+    "span": 300
+  },
+  {
+    "map": 296,
+    "elapsed_us": 5027712,
+    "timer": 4.85000041872,
+    "attract": 4.91659164429,
+    "events": 101,
+    "span": 296
+  },
+  {
+    "map": 296,
+    "elapsed_us": 5000349,
+    "timer": 4.96666708216,
+    "attract": 4.9832572937,
+    "events": 106,
+    "span": 296
+  },
+  {
+    "map": 185,
+    "elapsed_us": 5016660,
+    "timer": 4.58333374187,
+    "attract": 4.6666674614,
+    "events": 92,
+    "span": 300
+  },
+  {
+    "map": 185,
+    "elapsed_us": 5033362,
+    "timer": 4.95000040531,
+    "attract": 5.03334665298,
+    "events": 109,
+    "span": 303
+  },
+  {
+    "map": 185,
+    "elapsed_us": 5033303,
+    "timer": 5.00000037253,
+    "attract": 5.03337097168,
+    "events": 120,
+    "span": 301
+  },
+  {
+    "map": 185,
+    "elapsed_us": 5016657,
+    "timer": 5.00000030547,
+    "attract": 5.01662635803,
+    "events": 138,
+    "span": 301
+  },
+  {
+    "map": 185,
+    "elapsed_us": 5033393,
+    "timer": 4.75000039861,
+    "attract": 5.03328514099,
+    "events": 102,
+    "span": 303
+  },
+  {
+    "map": 185,
+    "elapsed_us": 5016733,
+    "timer": 4.58333373815,
+    "attract": 5.01663970947,
+    "events": 93,
+    "span": 301
+  },
+  {
+    "map": 185,
+    "elapsed_us": 5000611,
+    "timer": 5.00000042468,
+    "attract": 5.04992485046,
+    "events": 105,
+    "span": 300
+  },
+  {
+    "map": 185,
+    "elapsed_us": 5015987,
+    "timer": 4.96666710824,
+    "attract": 4.96659088135,
+    "events": 101,
+    "span": 301
+  }
+]
