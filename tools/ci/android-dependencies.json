@@ -1,0 +1,18 @@
+{
+  "sdl": {
+    "url": "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz",
+    "sha256": "5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165"
+  },
+  "freetype": {
+    "url": "https://github.com/freetype/freetype/archive/42608f77f20749dd6ddc9e0536788eaad70ea4b5.tar.gz",
+    "sha256": "68ce87bb59ea209eb7350f41a94a27519ce16b37011b475a1e62d4abee154b66"
+  },
+  "zstd-cmake": {
+    "url": "https://github.com/facebook/zstd/archive/794ea1b0afca0f020f4e57b6732332231fb23c70.tar.gz",
+    "sha256": "33eaa5611d330dbc037e32554521d4e4a8edf2358df7d9b74d586c510a4bcec6"
+  },
+  "dxc": {
+    "url": "https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.8.2407/linux_dxc_2024_07_31.x86_64.tar.gz",
+    "sha256": "b58725ac191df0686994fb9d54d27ee8dd3f180b023d562733112a499ea1195c"
+  }
+}

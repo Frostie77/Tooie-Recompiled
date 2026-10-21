@@ -836,7 +836,23 @@ cleanly, but clean output is not proof of correct boundaries. ~929 functions /
 69 KB of core code were originally unnamed and recovered by gap-filling; treat
 this as the most likely source of a latent bug.
 
-### Releases are published by CI, and the version is stamped into the binary
+### Current Android CI (October 2026)
+
+The supported distributable is an Android ARM64 APK. `.github/workflows/build.yml`
+builds and verifies a debug APK on a GitHub-hosted Ubuntu build machine; it does
+not publish releases or produce desktop game packages. See
+`docs/android-github-build.md` for pinned tools, dependency restoration, actual
+compile-command/packaged-library checks, signing limitations and artifact access.
+Dependencies in this snapshot are vendored trees, not submodules; the current
+Android CI must not invoke the historical submodule patch installer.
+
+The previous desktop workflow is retained at
+`docs/archive/legacy-desktop-build.yml`. The notes below describe that historical
+publisher and its findings, not the current Android workflow. In particular,
+main pushes no longer create tags/releases, and a CI debug APK does not use the
+established Odin signing identity or prove device gameplay.
+
+### Historical desktop releases and binary version stamps
 
 `.github/workflows/build.yml`. Every push to `main` publishes a release; a `v*`
 tag publishes one for that tag; pull requests only build and upload an artifact.

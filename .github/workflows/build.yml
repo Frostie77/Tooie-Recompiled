@@ -1,0 +1,104 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-android:
+    name: Android ARM64 debug APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    env:
+      ANDROID_NDK_VERSION: 28.2.13676358
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
+      TOOIE_CI_ROOT: ${{ github.workspace }}/.ci-android
+    steps:
+      - name: Check out the source snapshot
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          # Dependencies are vendored in this repository, not git submodules.
+          submodules: false
+
+      - name: Install native build and host test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build pkg-config libsdl2-dev python3 python3-pil curl unzip
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+
+      - name: Install pinned Android packages
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;${ANDROID_NDK_VERSION}"
+
+      - name: Set up Gradle 9.1.0 for AGP 9.0.1
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+        with:
+          gradle-version: '9.1.0'
+          cache-disabled: true
+
+      - name: Prepare pinned Android dependencies and host shader tools
+        run: bash tools/ci/build_android.sh prepare
+
+      - name: Run Android host regressions
+        env:
+          CXX: clang++
+          TOOIE_JDK: ${{ env.JAVA_HOME }}
+        run: |
+          set -o pipefail
+          mkdir -p .ci-android/logs
+          {
+            bash tools/test_audio_runtime.sh
+            bash tools/test_android_surface_lifecycle.sh
+            bash tools/test_android_rom_picker.sh
+            python3 tools/test_android_mod_support.py --android-jar "$ANDROID_HOME/platforms/android-36/android.jar" --jni-include "$JAVA_HOME/include"
+            bash tools/test_android_vulkan_clear.sh
+            bash tools/test_android_vulkan_descriptors.sh
+          } 2>&1 | tee .ci-android/logs/host-tests.log
+
+      - name: Compile the Android ARM64 runtime
+        run: bash tools/ci/build_android.sh native
+
+      - name: Assemble and verify the APK
+        run: bash tools/ci/build_android.sh package
+
+      - name: Upload verified Android APK and build report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Tooie-Recompiled-Android-arm64-${{ github.sha }}-${{ github.run_attempt }}
+          path: .ci-android/artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Retain build diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Android-build-logs-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            .ci-android/logs/
+            .ci-android/native/CMakeCache.txt
+            .ci-android/native/compile_commands.json
+          if-no-files-found: warn
+          retention-days: 14
