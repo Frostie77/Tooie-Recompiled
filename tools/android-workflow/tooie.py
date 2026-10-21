@@ -210,7 +210,8 @@ def replace_assignments(source, values):
     return ''.join(lines)
 
 
-def render_collector(profile, artifact, downloads, session):
+def render_collector(profile, artifact, downloads, session, presentation_hz=None):
+    require(presentation_hz in (None, 60), 'Unsupported presentation comparison.')
     source = (HERE / 'templates/collector.py').read_text()
     identity = profile['identity']
     replacements = {
@@ -227,6 +228,7 @@ def render_collector(profile, artifact, downloads, session):
                                              '/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'),
         'MARKER': 'Path(' + repr(str(session / 'attempt.started')) + ')',
         'DEMO_ONLY': repr(profile.get('demo_only', False)),
+        'PRESENTATION_TEST_HZ': repr(presentation_hz or 0),
     }
     source = replace_assignments(source, replacements)
     node = next(n for n in ast.parse(source).body if isinstance(n, ast.FunctionDef) and n.name == 'expected_report')
@@ -492,9 +494,10 @@ def capture(args, profile):
             session = args.state / 'sessions' / unique_id()
             session.mkdir(parents=True)
             script = session / 'collector.py'
-            write_new(script, render_collector(profile, artifact, args.downloads, session))
+            write_new(script, render_collector(profile, artifact, args.downloads, session, args.presentation_hz))
             json_new(session / 'session.json', {'session': session.name, 'number': number,
                      'requested_sessions': args.sessions, 'artifact': artifact,
+                     'requested_presentation_hz': args.presentation_hz,
                      'authorization': 'User invoked repeat-capable workflow. One install/launch per session. Saves retained.'})
             print('\nSESSION ' + str(number) + '/' + str(args.sessions) + ': ' + session.name, flush=True)
             process = subprocess.Popen([sys.executable, '-u', str(script)])
@@ -550,6 +553,8 @@ def parser():
     test_parser = sub.add_parser('test', help='Install, launch, capture notes and automatically prepare a handoff.')
     test_parser.add_argument('--sessions', type=int, default=1)
     test_parser.add_argument('--artifact', type=Path, help='Receipt from a new workflow build.')
+    test_parser.add_argument('--presentation-hz', type=int, choices=[60],
+                             help='Guide a manual 60 Hz output comparison before Start Game; no automatic setting change.')
     package_parser = sub.add_parser('package', help='Prepare a handoff from an existing evidence ZIP; no device commands.')
     package_parser.add_argument('evidence', type=Path)
     sub.add_parser('update', help='Explicitly fast-forward this isolated tooling checkout.')

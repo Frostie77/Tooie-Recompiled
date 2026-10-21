@@ -405,5 +405,25 @@ class Workflow(unittest.TestCase):
             self.assertIn('Workflow profile at packaging: ' + 'f' * 40, text)
 
 
+    def test_presentation_control_preserves_artifact_and_default_mode(self):
+        artifact = {**self.profile['artifact'], 'sha256':'a'*64, 'build_id':'b'*40,
+                    'apk':str(self.root/'game.apk'), 'report':str(self.root/'report.txt')}
+        args = tooie.parser().parse_args(['test', '--presentation-hz', '60'])
+        self.assertEqual(args.presentation_hz, 60)
+        self.assertIsNone(tooie.parser().parse_args(['test']).presentation_hz)
+        normal = tooie.render_collector(self.profile, artifact, self.args.downloads, self.root/'normal')
+        control = tooie.render_collector(self.profile, artifact, self.args.downloads, self.root/'control', 60)
+        def assignments(source):
+            return {n.targets[0].id: ast.dump(n.value) for n in ast.parse(source).body
+                    if isinstance(n,ast.Assign) and isinstance(n.targets[0],ast.Name)}
+        one,two = assignments(normal),assignments(control)
+        self.assertEqual(one['PRESENTATION_TEST_HZ'], 'Constant(value=0)')
+        self.assertEqual(two['PRESENTATION_TEST_HZ'], 'Constant(value=60)')
+        self.assertEqual({k:v for k,v in one.items() if k not in ('MARKER','PRESENTATION_TEST_HZ')},
+                         {k:v for k,v in two.items() if k not in ('MARKER','PRESENTATION_TEST_HZ')})
+        with self.assertRaises(RuntimeError):
+            tooie.render_collector(self.profile, artifact, self.args.downloads, self.root/'bad', 30)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
