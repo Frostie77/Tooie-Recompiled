@@ -268,7 +268,7 @@ class Workflow(unittest.TestCase):
         self.assertFalse(self.profile['demo_only'])
         engineering = self.profile['source_manifest']['engineering_entries']
         mods = self.profile['source_manifest']['mod_entries']
-        self.assertEqual(len(engineering), 155)
+        self.assertEqual(len(engineering), 175)
         self.assertEqual(mods, [])
         entries = {x['path']: x for x in engineering}
         self.assertEqual(entries['lib/rt64/src/render/rt64_transform_processor.cpp']['sha'],
@@ -277,9 +277,15 @@ class Workflow(unittest.TestCase):
         self.assertIn('tools/test_transform_upload.py', entries)
         self.assertIn('src/mod_runtime.h', entries)
         self.assertIn('examples/mods/tooie_mod_check/mod.c', entries)
+        self.assertIn('src/aiming_controls.cpp', entries)
+        self.assertIn('lib/N64ModernRuntime/librecomp/include/librecomp/zip_read.hpp', entries)
         self.assertFalse({x['path'] for x in engineering} & {x['path'] for x in mods})
         builder = tooie.render_builder(self.profile)
         self.assertIn('python3 tools/test_mod_runtime.py', builder)
+        self.assertIn('python3 tools/test_aiming_controls.py', builder)
+        self.assertIn('--compression-base-root "$COMPRESSION_BASELINE"', builder)
+        self.assertIn('pkg-config --exists libzstd', builder)
+        self.assertIn('720 actual generated aiming/first-person cases', builder)
         self.assertIn('Example mod SHA-256: $MOD_SHA', builder)
         self.assertIn('python3 tools/test_transform_upload.py', builder)
         self.assertIn('exact-parent fails the independent byte check and grown-source ASan control', builder)
@@ -290,6 +296,22 @@ class Workflow(unittest.TestCase):
         self.assertIn('MATCH_OPTIONS=(--require-simd)', builder)
         self.assertIn('python3 tools/test_launcher_artwork.py', builder)
         self.assertIn('menu-recompiled.png', builder)
+
+    def test_texture_aiming_build_and_collector_require_the_new_features(self):
+        self.assertEqual(self.profile['identity']['commit'], 'dcba2d96d8155ba3d8c93460345eeb9c0d23ef8f')
+        builder = tooie.render_builder(self.profile)
+        artifact = {**self.profile['artifact'], 'sha256':'a'*64, 'build_id':'b'*40,
+                    'apk':str(self.root/'game.apk'), 'report':str(self.root/'report.txt')}
+        collector = tooie.render_collector(self.profile, artifact, self.args.downloads, self.root/'session')
+        for marker in ('Aiming Invert', 'aiming_invert', 'tooie_aiming_invert',
+                       'A Zstandard archive entry failed decoding, size validation or its checksum.',
+                       'The texture pack has no readable rt64.json database.'):
+            self.assertIn(repr(marker.encode()), builder)
+            self.assertIn(repr(marker.encode()), collector)
+        self.assertIn("'src/aiming_controls.cpp'", builder)
+        self.assertIn("'RecompiledFuncs/funcs_39.c'", builder)
+        self.assertIn('default OFF', self.profile['report_fields']['Aiming Invert'])
+        self.assertIn('no GPU rendering claim', self.profile['report_fields']['Texture host validation'])
         self.assertIn('actual ARM64 begin-frame source-rate command', builder)
         audit = builder.split("<<'VERIFY_GAMEPLAY_CONFIGURATION'\n", 1)[1].split('\nVERIFY_GAMEPLAY_CONFIGURATION', 1)[0]
         ast.parse(audit)

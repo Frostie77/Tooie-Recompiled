@@ -1,16 +1,16 @@
 {
   "schema": 1,
-  "name": "mod-check-gameplay",
-  "label": "Mod-Check-Gameplay",
+  "name": "texture-aiming-gameplay",
+  "label": "Texture-Aiming-Gameplay",
   "identity": {
-    "commit": "386d58e4946fed5f02164924cd76d26a47ef43d6",
-    "tree": "f18df588e1edfc2b282020ca0dfacb8e309eaadf",
+    "commit": "dcba2d96d8155ba3d8c93460345eeb9c0d23ef8f",
+    "tree": "222a8ad6ea6975cd9b10b6987fd297ca056bd429",
     "parents": [
-      "a44bd5c36222c2c0f6a73e9a77718359f4d88e87",
+      "b95665529932c22750f1926b3180786f5aedda35",
       "d54c70c4eae603b6b66dffd26909dea1889fbd6d"
     ],
-    "branch": "build/android-mod-check-20261022",
-    "engineering": "a44bd5c36222c2c0f6a73e9a77718359f4d88e87",
+    "branch": "build/android-texture-aiming-20261022",
+    "engineering": "b95665529932c22750f1926b3180786f5aedda35",
     "branding": "d54c70c4eae603b6b66dffd26909dea1889fbd6d"
   },
   "source_manifest": {
@@ -20,7 +20,7 @@
         "path": ".github/workflows/build.yml",
         "mode": "100644",
         "type": "blob",
-        "sha": "0d39f987bfcec5a359a397ec32448709f4b166ce"
+        "sha": "b922b04f79e89f75002533a88d7ae0b044841515"
       },
       {
         "path": ".gitignore",
@@ -33,6 +33,12 @@
         "mode": "100755",
         "type": "blob",
         "sha": "fcb951383d9df92eab8d20bec5e1361f65b35b25"
+      },
+      {
+        "path": "CMakeLists.txt",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "5a79551326efa4aee17acc315c357da43a8d4c24"
       },
       {
         "path": "README.md",
@@ -77,10 +83,16 @@
         "sha": "8d294d6871fe9b65df2d16c1ae9e6523fd6d2d1d"
       },
       {
+        "path": "RecompiledFuncs/funcs_39.c",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "a30a2f90264a5f529772484c8513f7b56ade43ec"
+      },
+      {
         "path": "RecompiledFuncs/funcs_44.c",
         "mode": "100755",
         "type": "blob",
-        "sha": "f60960325af7cff15743977499dc7e861ada2add"
+        "sha": "d9d2cd00423f8b8ef26626288da28d685ae05694"
       },
       {
         "path": "RecompiledFuncs/funcs_45.c",
@@ -95,10 +107,22 @@
         "sha": "40eadd3568f19d71febaefc8860db312851e9d6f"
       },
       {
+        "path": "android/app/src/main/java/io/github/banjotooierecompiled/ModImporter.java",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "76e25f99362cf556d1962e9b0938ea4d3cf43319"
+      },
+      {
         "path": "banjotooie.us.toml",
         "mode": "100755",
         "type": "blob",
-        "sha": "77d9ac907059a000306d3966f2afc028f4d41717"
+        "sha": "a92d1c18caa0a4553d8402cc6bca664c7926ad1f"
+      },
+      {
+        "path": "docs/android-aiming-invert-20261022.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b57188b7e2638bb05b1e1196b7a0981dd80d957b"
       },
       {
         "path": "docs/android-code-mod-preview-20261022.md",
@@ -215,6 +239,12 @@
         "sha": "ffa8417739bfe582d20e28e42dc50cfda8854776"
       },
       {
+        "path": "docs/android-zstd-texture-import-20261022.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d7e7aad03f9a9e905881e195edee9f7c2c4d7f36"
+      },
+      {
         "path": "docs/archive/legacy-desktop-build.yml",
         "mode": "100755",
         "type": "blob",
@@ -296,7 +326,25 @@
         "path": "include/tooie_recomp.h",
         "mode": "100755",
         "type": "blob",
-        "sha": "ba739ce01412b64168af19db1004da5f1a73cc5d"
+        "sha": "6d5f38de24615fb0acd8caad85810ddd191b0a80"
+      },
+      {
+        "path": "lib/N64ModernRuntime/librecomp/CMakeLists.txt",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "782c5a9991f20e24467ce2b9d5bc373d58f5d5e6"
+      },
+      {
+        "path": "lib/N64ModernRuntime/librecomp/include/librecomp/zip_read.hpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "53f6aa01690e5953f04bea07a7bec00a928abb4d"
+      },
+      {
+        "path": "lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "5598111727725a9b9a046a9495711bcb4c2faf24"
       },
       {
         "path": "lib/N64ModernRuntime/librecomp/src/overlays.cpp",
@@ -321,6 +369,18 @@
         "mode": "100755",
         "type": "blob",
         "sha": "75eba98a5a45cd1acc54211e1097c53d79e52798"
+      },
+      {
+        "path": "lib/RecompFrontend/recompui/CMakeLists.txt",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "55dee9bfdb04d08c1bcbde2eb375fb68fd313d5f"
+      },
+      {
+        "path": "lib/RecompFrontend/recompui/src/composites/android_mod_installer.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ecaa5660dcdb71b6c74c3bb49ef00b4a7f489bdc"
       },
       {
         "path": "lib/RecompFrontend/recompui/src/renderer/rt64_render_context.cpp",
@@ -383,6 +443,18 @@
         "sha": "2fcadc6c6eccb3cda7f4f37a23cc5e9ab27ee068"
       },
       {
+        "path": "src/aiming_controls.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "518ba3ae4c959da27c51d1380e09246b45c8597c"
+      },
+      {
+        "path": "src/aiming_controls.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d043b1d0c035f28c83d342a59a09edf6d83d2491"
+      },
+      {
         "path": "src/correction_trace_guest.h",
         "mode": "100644",
         "type": "blob",
@@ -422,7 +494,7 @@
         "path": "src/main.cpp",
         "mode": "100755",
         "type": "blob",
-        "sha": "30a0e25938d1dfbfcd595dbfc80cd7324488be7b"
+        "sha": "9e89640f3507632653d4beeccac18539217a075c"
       },
       {
         "path": "src/mod_runtime.h",
@@ -473,6 +545,18 @@
         "sha": "c358c82b714c36022f68d0937a4a989569ad4bd7"
       },
       {
+        "path": "tests/aiming_controls.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "40b88550cd18dd927f8cdd558899e622379ece33"
+      },
+      {
+        "path": "tests/android_mod_installer.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9bbea7fe18e019b101e9ab6af1e6a92b6d298f17"
+      },
+      {
         "path": "tests/bsfirstp_dispatches.cpp",
         "mode": "100644",
         "type": "blob",
@@ -513,6 +597,12 @@
         "mode": "100644",
         "type": "blob",
         "sha": "ba5148608ed440ecf85ecc7eb7b771179ab76344"
+      },
+      {
+        "path": "tests/fixtures/aiming-consumers-parent.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b64bb8cb3b68f94780da29d36b757e79ddd6dc56"
       },
       {
         "path": "tests/fixtures/bsfirstp_dispatches_us.json",
@@ -593,6 +683,18 @@
         "sha": "dd0d74cf251302a722f5858701b3bff19242ac05"
       },
       {
+        "path": "tests/java/io/github/banjotooierecompiled/ModArchiveCopyTest.java",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ab17059dd556b7a528b8fbfa06457f860ca671d4"
+      },
+      {
+        "path": "tests/java/io/github/banjotooierecompiled/ModImporterTest.java",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cec06f6dd0d13c0cb7f35ecf36fa3144ff1c8ad1"
+      },
+      {
         "path": "tests/jump_table_analysis.cpp",
         "mode": "100644",
         "type": "blob",
@@ -614,7 +716,13 @@
         "path": "tests/mod_runtime/CMakeLists.txt",
         "mode": "100644",
         "type": "blob",
-        "sha": "abc2e26956575200c1d687436899be33b549218c"
+        "sha": "26d65786938e26a7d5a18584480f5b00f92bc248"
+      },
+      {
+        "path": "tests/mod_texture_archive.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4eda8c4974ee14c65e6407ed200761c2a27b924d"
       },
       {
         "path": "tests/prepare_first_person_dispatch.py",
@@ -806,7 +914,7 @@
         "path": "tools/ci/verify_android.py",
         "mode": "100644",
         "type": "blob",
-        "sha": "0d7ff4a236b0a9a4a5a42b9565ac33bd8a1ff2a9"
+        "sha": "4834f290225575615dcb26e06c3fb8126a01e11e"
       },
       {
         "path": "tools/inspect_first_person_table.py",
@@ -833,10 +941,22 @@
         "sha": "ebaeeed63026ca88480bc0fca0fb6b159173db61"
       },
       {
+        "path": "tools/test_aiming_controls.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2e32a07ac5d38c782f92f656c51846ef8e24b992"
+      },
+      {
         "path": "tools/test_android_guest_failure.sh",
         "mode": "100755",
         "type": "blob",
         "sha": "57751079b7a75d7508ad62f558d9fe18fa1426e4"
+      },
+      {
+        "path": "tools/test_android_mod_support.py",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "0ab73f27c10be9e93687bb09d0f5e369739d4cd2"
       },
       {
         "path": "tools/test_bsfirstp_dispatches.sh",
@@ -948,20 +1068,20 @@
       }
     ]
   },
-  "report_header": "Tooie Recompiled Android verified code-mod gameplay build report",
+  "report_header": "Tooie Recompiled Android verified texture-import and aiming build report",
   "report_fields": {
-    "Source tree": "f18df588e1edfc2b282020ca0dfacb8e309eaadf",
-    "Engineering revision": "a44bd5c36222c2c0f6a73e9a77718359f4d88e87",
+    "Source tree": "222a8ad6ea6975cd9b10b6987fd297ca056bd429",
+    "Engineering revision": "b95665529932c22750f1926b3180786f5aedda35",
     "Player implementation": "b679975a352bf2f63b650f78845a2bf1eb5f8d9c",
     "Mod/branding tested source": "82a6641c228d71756222bc0da96b0f159e51abd4",
     "Approved icon/name source": "e1fcf938dcc24bb9865b743f900d107a9de26d9d",
     "Approved title source": "d54c70c4eae603b6b66dffd26909dea1889fbd6d",
-    "Integration": "exact code-mod feature tree based on reviewed main; 155 engineering/main entries and zero additional branding entries; approved assets unchanged",
+    "Integration": "exact reviewed texture-import/aiming feature tree; 175 engineering/main entries and zero additional branding entries; approved assets unchanged",
     "App name": "Tooie Recompiled (compiled application/activity labels verified)",
     "Branding": "approved round BT/Jiggy icon, legacy/round/foreground visible RGBA and adaptive references verified in final APK",
     "Menu asset SHA-256": "3c125d58ad008e837f3c7dc335133d03bb9aae19086ffbde90d8a71daa52c707 (both source copies and exact APK member)",
     "Icon master SHA-256": "4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784",
-    "Build mode": "CODE MOD GAMEPLAY TIMING DIAGNOSTIC DEBUG",
+    "Build mode": "TEXTURE IMPORT AND AIMING GAMEPLAY TIMING DIAGNOSTIC DEBUG",
     "Native CMake build type": "Release",
     "Android packaging variant": "Debug (existing isolated Gradle workflow; no release/key configuration changes)",
     "Descriptor allocation probe": "OFF",
@@ -1006,9 +1126,9 @@
     "Existing package/activity": "io.github.banjotooierecompiled / .BanjoTooieSDLActivity (unchanged)",
     "Odin": "NOT installed; NOT launched; no ADB commands used",
     "App data, settings and existing PC build folders/artifacts": "preserved",
-    "Source commit": "386d58e4946fed5f02164924cd76d26a47ef43d6",
-    "Source branch": "build/android-mod-check-20261022",
-    "Source parent": "a44bd5c36222c2c0f6a73e9a77718359f4d88e87 d54c70c4eae603b6b66dffd26909dea1889fbd6d",
+    "Source commit": "dcba2d96d8155ba3d8c93460345eeb9c0d23ef8f",
+    "Source branch": "build/android-texture-aiming-20261022",
+    "Source parent": "b95665529932c22750f1926b3180786f5aedda35 d54c70c4eae603b6b66dffd26909dea1889fbd6d",
     "Demo cadence policy": "accepted recorded-VI minimum in existing guest waits and Android renderer source interval",
     "Demo renderer cadence": "accepted replay interval in the existing Android source-rate command; exact-parent emission failure and actual ARM64 preprocessed body verified",
     "Wordmark asset SHA-256": "e76b97de0c685566db2505e85d42052a520c8f31237cbfdbfe405a1706295269 (both source copies and exact APK member)",
@@ -1018,17 +1138,21 @@
     "Candidate storage validation": "303 full-matcher frames byte-identical to exact d403031 parent in required scalar and independent SIMD host gates; wrong-order/dedup controls; hardware benefit unverified",
     "Transform upload policy": "per-workload history mapping; unmatched workloads upload current matrices for both world-transform buffers",
     "Transform upload validation": "8 host ASan/UBSan staging cases plus exact-99c7296 parent and mutation controls; no GPU output or Odin claim",
-    "Runtime delta from tested d168 APK": "retained transform-upload correction plus code-mod startup event registration/dispatch; game instructions, timing, shaders and artwork unchanged",
+    "Runtime delta from tested d168 APK": "retained transform-upload and code-mod startup corrections, Zstandard texture imports and optional saved vertical aiming; pacing, shaders and artwork unchanged",
     "Code-mod startup": "recomp_on_init after core2 mapping; mod/heap/stack setup precedes callback; actor/world initialization not promised",
-    "Code-mod host validation": "production archive, manifest, symbols, live compiler, config import, saved colour/enabled state, dispatcher and exact-parent rejection/no-dispatch controls; UI imports record ABI calls, no Odin rendering claim"
+    "Code-mod host validation": "production archive, manifest, symbols, live compiler, config import, saved colour/enabled state, dispatcher and exact-parent rejection/no-dispatch controls; UI imports record ABI calls, no Odin rendering claim",
+    "Aiming Invert": "Settings > General; default OFF; saved vertical egg/first-person aiming only; walking, horizontal aim and regular camera unchanged",
+    "Aiming host validation": "720 complete generated-consumer cases; Config/file persistence, RAM/ABI preservation and missing-hook/walking/horizontal/load-callback controls; no Odin controller claim",
+    "Texture archive support": "native validated Zstandard method 93; Java opaque private copy; unchanged stored/Deflate and executable-ID guards; bounded size/CRC and safe texture IDs",
+    "Texture host validation": "194 production installer checks and 49 rejection fixtures; real JVM/JNI, 65 transactions, runtime/RT64 byte agreement and four exact-a44bd5c failing controls; no GPU rendering claim"
   },
   "artifact": {
-    "apk": "Tooie-386d58e4946f-Mod-Check-Gameplay-Timing-Debug.apk",
-    "report": "Tooie-386d58e4946f-Mod-Check-Gameplay-Timing-Debug-build-report.txt",
+    "apk": "Tooie-dcba2d96d815-Texture-Aiming-Gameplay-Timing-Debug.apk",
+    "report": "Tooie-dcba2d96d815-Texture-Aiming-Gameplay-Timing-Debug-build-report.txt",
     "sha256": null,
     "build_id": null,
-    "mod": "Tooie-386d58e4946f-Mod-Check.nrm",
-    "mod_report": "Tooie-386d58e4946f-Mod-Check-build-report.json"
+    "mod": "Tooie-dcba2d96d815-Mod-Check.nrm",
+    "mod_report": "Tooie-dcba2d96d815-Mod-Check-build-report.json"
   },
   "device": {
     "serial": "7907333f",
@@ -1046,8 +1170,8 @@
     "descriptor_probe": false
   },
   "templates": {
-    "build.sh": "52cf0433f4ffa0c7f22320a62ff68a937bb5e6951f35ac99d90b74c9a979b059",
-    "collector.py": "3f45b50c3f5dbd1723282c7265264eb83dec01fe0a0c35f9eb0515a74fd23898"
+    "build.sh": "c775cae75aefcce998e3fd89007baba0ce56ab68d75f50866ffaf096c67e6b2e",
+    "collector.py": "4f7c6bc37422dc95913e5693c55fdf2c9b00288fe754d9721f86592d35ca5841"
   },
   "demo_only": false,
   "launcher_assets": {

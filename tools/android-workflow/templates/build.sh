@@ -40,8 +40,8 @@ for command in git cmake ninja gradle rsync unzip sha256sum cmp awk grep rg floc
   command -v "$command" >/dev/null 2>&1 || { echo "STOP: missing command: $command" >&2; exit 1; }
 done
 command -v "${CXX:-clang++}" >/dev/null 2>&1 || { echo 'STOP: host C++ compiler missing' >&2; exit 1; }
-OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Mod-Check-Gameplay-Timing-Debug.apk"
-REPORT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Mod-Check-Gameplay-Timing-Debug-build-report.txt"
+OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Texture-Aiming-Gameplay-Timing-Debug.apk"
+REPORT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Texture-Aiming-Gameplay-Timing-Debug-build-report.txt"
 if [[ -e "$OUTPUT" || -e "$REPORT" ]]; then
   echo 'STOP: this gameplay APK or report already exists; existing results are preserved.' >&2
   exit 1
@@ -66,6 +66,11 @@ command -v "$AUDIO_CXX" >/dev/null 2>&1 || { echo 'STOP: audio host checks requi
 if ! pkg-config --exists sdl2; then
   echo 'STOP: host SDL2 development files missing (Ubuntu package libsdl2-dev).' >&2
   echo 'Existing builds are preserved. Install the prerequisite and rerun this builder.' >&2
+  exit 1
+fi
+if ! pkg-config --exists libzstd; then
+  echo 'STOP: host Zstandard development files missing. In Ubuntu run: sudo apt install libzstd-dev' >&2
+  echo 'Install the prerequisite and rerun the build. Existing results are preserved.' >&2
   exit 1
 fi
 if [[ -n "${TOOIE_JDK:-}" ]]; then
@@ -581,20 +586,25 @@ git -C "$SRC" diff --exit-code > "$LOGS/timing-source-clean.log" || {
 
 # The baseline is a separate detached worktree; no prior working folder changes.
 git -C "$SRC" worktree add --detach "$BASELINE" '4a0a30912b4e54a31d00f64ed91f5bc8b2adcc37' > "$LOGS/mod-baseline.log" 2>&1
+COMPRESSION_BASELINE="$RUN_ROOT/compression-baseline"
+git -C "$SRC" worktree add --detach "$COMPRESSION_BASELINE" 'a44bd5c36222c2c0f6a73e9a77718359f4d88e87' > "$LOGS/compression-baseline.log" 2>&1
 echo 'Checking the production mod importer/JNI/archive/transaction/texture registration paths.'
 if ! (cd "$SRC" && JAVA_HOME="$AUDIO_JDK" PATH="$AUDIO_JDK/bin:$PATH" \
   python3 tools/test_android_mod_support.py --root "$SRC" --build-dir "$RUN_ROOT/mod-host" \
   --android-jar "$ANDROID_JAR" --jni-include "$AUDIO_JDK/include" \
-  --tested-base-root "$BASELINE" --cxx "$AUDIO_CXX" --cc "$CLOCK_CC") > "$LOGS/mod-support.log" 2>&1; then
+  --tested-base-root "$BASELINE" --compression-base-root "$COMPRESSION_BASELINE" \
+  --cxx "$AUDIO_CXX" --cc "$CLOCK_CC") > "$LOGS/mod-support.log" 2>&1; then
   echo 'STOP: Android mod copy/JNI/archive/transaction/registration checks failed.' >&2
   tail -100 "$LOGS/mod-support.log"; exit 1
 fi
 for marker in \
-  'PASS: 51 actual Java mod-copy checks:' \
+  'PASS: 50 actual Java mod-copy checks:' \
   'PASS: real JVM/production JNI bridge,' \
   'PASS: 65 transaction checks:' \
   'PASS: strict C99 POSIX ftello/fseeko prototypes and 64-bit file offsets;' \
-  'PASS: 104 actual Android installer checks with production miniz/manifest/version/config code:' \
+  'PASS: 194 actual Android installer checks with production miniz/manifest/version/config code:' \
+  'PASS: four exact-parent controls reproduce Java CEN rejection, native compression and texture-ID rejection, and missing Zstandard reads independently' \
+  'production mod reader and RT64 filesystem agree; no GPU/rendering claim' \
   'PASS: actual startup registration exposes rt64.json and .rtz,' \
   'PASS: actual Activity, import helpers and packaged SDL Java compile against Android SDK' \
   'PASS: exact-base picker fails the selected-file requirement;' \
@@ -605,6 +615,20 @@ if grep -Eq '^SKIP:|^FAIL|Traceback|RuntimeError|WARNING in native method|runtim
   echo 'STOP: mod suite includes a skip/failure or sanitizer/JNI warning.' >&2; exit 1
 fi
 grep '^PASS:' "$LOGS/mod-support.log"
+
+echo 'Checking saved Aiming Invert through the actual generated consumers and production Config.'
+if ! (cd "$SRC" && CXX="$AUDIO_CXX" CC="$CLOCK_CC" python3 tools/test_aiming_controls.py \
+  --build-dir "$RUN_ROOT/aiming-host") > "$LOGS/aiming-controls.log" 2>&1; then
+  echo 'STOP: aiming input/config regression checks failed.' >&2
+  tail -100 "$LOGS/aiming-controls.log"; exit 1
+fi
+for marker in \
+  'PASS: 720 actual generated aiming/first-person cases:' \
+  'PASS: production General config defaults, visible Aiming Invert,' \
+  'PASS: missing-hook, first-person walking, horizontal-axis and config-load mutation controls fail'; do
+  grep -Fq "$marker" "$LOGS/aiming-controls.log" || { echo "STOP: missing aiming result: $marker" >&2; exit 1; }
+done
+grep '^PASS:' "$LOGS/aiming-controls.log"
 
 echo 'Building and executing the real Tooie code-mod example through the production loader and live recompiler.'
 MOD_EXAMPLE="$RUN_ROOT/mod-example"
@@ -1046,7 +1070,7 @@ targets = (
     'lib/rt64/src/render/rt64_transform_processor.cpp',
     'lib/rt64/src/hle/rt64_rsp.cpp', 'lib/rt64/src/hle/rt64_interpreter.cpp',
     'lib/rt64/src/gbi/rt64_gbi_extended.cpp', 'lib/rt64/src/hle/rt64_workload.cpp',
-    'src/recomp_api.cpp',
+    'src/recomp_api.cpp', 'src/aiming_controls.cpp', 'RecompiledFuncs/funcs_39.c',
     'RecompiledFuncs/funcs_0.c', 'RecompiledFuncs/funcs_1.c', 'RecompiledFuncs/funcs_2.c',
     'RecompiledFuncs/funcs_24.c', 'RecompiledFuncs/funcs_25.c',
     'RecompiledFuncs/funcs_30.c', 'RecompiledFuncs/funcs_77.c',
@@ -1529,6 +1553,9 @@ import hashlib, subprocess, sys, zipfile
 library, readelf, apk = sys.argv[1:]
 data = Path(library).read_bytes()
 markers = [
+    b'Aiming Invert', b'aiming_invert', b'tooie_aiming_invert',
+    b'A Zstandard archive entry failed decoding, size validation or its checksum.',
+    b'The texture pack has no readable rt64.json database.',
     b'Descriptor pool device:', b'Descriptor pool policy:', b'Descriptor pool retired:',
     b'adreno-740-proprietary-declared-bound', b'Descriptor allocation binding:',
     b'reservedType=', b'Descriptor allocation ABI:', b'Descriptor allocation arguments:',
@@ -1896,8 +1923,8 @@ PACKAGED_SDL_BUILD_ID="${PACKAGED_SDL_BUILD_ID:-unavailable}"
 
 printf '\n=== 7/7 EXPORT IMMUTABLE APK AND BUILD REPORT ===\n'
 SHORT_SHA="${FULL_SHA:0:12}"
-OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Mod-Check-Gameplay-Timing-Debug.apk"
-REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Mod-Check-Gameplay-Timing-Debug-build-report.txt"
+OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Texture-Aiming-Gameplay-Timing-Debug.apk"
+REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Texture-Aiming-Gameplay-Timing-Debug-build-report.txt"
 if [[ -e "$OUTPUT" || -e "$REPORT" ]]; then
   echo 'STOP: output APK or report already exists; nothing will be overwritten.' >&2
   exit 1
@@ -1923,17 +1950,17 @@ cmp -s "$MOD_OUTPUT" "$MOD_EXAMPLE/tooie_mod_check.nrm" || { echo 'STOP: example
 MOD_SHA=$(sha256sum "$MOD_OUTPUT" | awk '{print $1}')
 
 (set -o noclobber; cat > "$REPORT" <<EOF
-Tooie Recompiled Android verified code-mod gameplay build report
-Source commit: $FULL_SHA
-Source branch: $BRANCH
-Source parent: $ACTUAL_PARENT
-Source tree: f18df588e1edfc2b282020ca0dfacb8e309eaadf
-Engineering revision: a44bd5c36222c2c0f6a73e9a77718359f4d88e87
+Tooie Recompiled Android verified texture-import and aiming build report
+Source commit: dcba2d96d8155ba3d8c93460345eeb9c0d23ef8f
+Source branch: build/android-texture-aiming-20261022
+Source parent: b95665529932c22750f1926b3180786f5aedda35 d54c70c4eae603b6b66dffd26909dea1889fbd6d
+Source tree: 222a8ad6ea6975cd9b10b6987fd297ca056bd429
+Engineering revision: b95665529932c22750f1926b3180786f5aedda35
 Player implementation: b679975a352bf2f63b650f78845a2bf1eb5f8d9c
 Mod/branding tested source: 82a6641c228d71756222bc0da96b0f159e51abd4
 Approved icon/name source: e1fcf938dcc24bb9865b743f900d107a9de26d9d
 Approved title source: d54c70c4eae603b6b66dffd26909dea1889fbd6d
-Integration: exact code-mod feature tree based on reviewed main; 155 engineering/main entries and zero additional branding entries; approved assets unchanged
+Integration: exact reviewed texture-import/aiming feature tree; 175 engineering/main entries and zero additional branding entries; approved assets unchanged
 App name: Tooie Recompiled (compiled application/activity labels verified)
 Branding: approved round BT/Jiggy icon, legacy/round/foreground visible RGBA and adaptive references verified in final APK
 Branding audit: $LOGS/packaged-branding-verification.json
@@ -1943,7 +1970,7 @@ Launcher artwork: exact approved Jiggy background/red TOOIE- and separate blue -
 Launcher host checks: $LOGS/launcher-artwork.log
 Menu asset SHA-256: 3c125d58ad008e837f3c7dc335133d03bb9aae19086ffbde90d8a71daa52c707 (both source copies and exact APK member)
 Icon master SHA-256: 4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784
-Build mode: CODE MOD GAMEPLAY TIMING DIAGNOSTIC DEBUG
+Build mode: TEXTURE IMPORT AND AIMING GAMEPLAY TIMING DIAGNOSTIC DEBUG
 Code-mod startup: recomp_on_init after core2 mapping; mod/heap/stack setup precedes callback; actor/world initialization not promised
 Code-mod host validation: production archive, manifest, symbols, live compiler, config import, saved colour/enabled state, dispatcher and exact-parent rejection/no-dispatch controls; UI imports record ABI calls, no Odin rendering claim
 Native CMake build type: Release
@@ -2043,11 +2070,15 @@ Candidate storage: reusable contiguous ordered pair unions; compaction before gr
 Candidate storage validation: 303 full-matcher frames byte-identical to exact d403031 parent in required scalar and independent SIMD host gates; wrong-order/dedup controls; hardware benefit unverified
 Transform upload policy: per-workload history mapping; unmatched workloads upload current matrices for both world-transform buffers
 Transform upload validation: 8 host ASan/UBSan staging cases plus exact-99c7296 parent and mutation controls; no GPU output or Odin claim
-Runtime delta from tested d168 APK: retained transform-upload correction plus code-mod startup event registration/dispatch; game instructions, timing, shaders and artwork unchanged
+Runtime delta from tested d168 APK: retained transform-upload and code-mod startup corrections, Zstandard texture imports and optional saved vertical aiming; pacing, shaders and artwork unchanged
 Transform upload host results: $LOGS/transform-upload.log (CPU staging/source selection only; complete processor and real GPU output require separate checks)
+Texture host validation: 194 production installer checks and 49 rejection fixtures; real JVM/JNI, 65 transactions, runtime/RT64 byte agreement and four exact-a44bd5c failing controls; no GPU rendering claim
+Aiming Invert: Settings > General; default OFF; saved vertical egg/first-person aiming only; walking, horizontal aim and regular camera unchanged
+Aiming host validation: 720 complete generated-consumer cases; Config/file persistence, RAM/ABI preservation and missing-hook/walking/horizontal/load-callback controls; no Odin controller claim
+Texture archive support: native validated Zstandard method 93; Java opaque private copy; unchanged stored/Deflate and executable-ID guards; bounded size/CRC and safe texture IDs
 EOF
 )
-printf '\nSUCCESS: VERIFIED TOOIE RECOMPILED CODE-MOD GAMEPLAY APK READY (NOT INSTALLED)\n'
+printf '\nSUCCESS: VERIFIED TEXTURE-IMPORT / AIMING GAMEPLAY APK READY (NOT INSTALLED)\n'
 printf 'Commit: %s\n' "$FULL_SHA"
 printf 'APK: %s\n' "$OUTPUT"
 printf 'Build ID: %s\n' "$PACKAGED_BUILD_ID"
@@ -2056,7 +2087,7 @@ printf 'Report: %s\n' "$REPORT"
 printf 'Example mod: %s\n' "$MOD_OUTPUT"
 echo 'Task delivery/display-list, full-sync window gaps and independent guest-clock/frame-sync/input timing ON; geometry/correction capture and allocation probe OFF; player/actor hierarchy ON; clear selectors undefined.'
 echo 'Mod support, selected round BT icon, Tooie Recompiled name and red TOOIE / blue RECOMPILED title verified.'
-echo 'Prior 7a158 first-person/kickball gameplay succeeded; code-mod badge, settings and texture replacement need Odin verification.'
+echo 'Aiming Invert is in Settings > General. Texture application/disable and the new aiming preference need Odin verification; the earlier example-mod phases passed.'
 echo 'Current-matrix upload correction passed eight staging cases and exact-parent/mutation controls; climbing appearance and ground/shadow artifacts are not confirmed fixed.'
 echo 'Replay wait correction passed host controls; Odin appearance and ordinary-title motion remain unverified. Observer overhead is included; global VI rate and safeguards are unchanged.'
 echo 'No ADB commands were used. Odin unchanged.'
