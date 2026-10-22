@@ -39,9 +39,9 @@ No second terminal, camera, automatic controller input or global graphics
 setting change is used. Normal gameplay captures still start their ten-minute
 timer only after `playing` and support extensions.
 
-Actual Odin badge rendering, restart behaviour and a real Tooie texture
-replacement are still required before claiming working mods for an Android
-preview. Keep Manual 60 and the existing graphics settings. Automatic startup
+GOLD execution, BLUE selection and BLUE persistence across a recorded fresh
+launch have passed on Odin. Disabling/removal and a real Tooie texture
+replacement still need device acceptance before claiming the preview scope. Keep Manual 60 and the existing graphics settings. Automatic startup
 update checks are not implemented by this work.
 
 Use one Ubuntu terminal. Keep source and compiler outputs in the Linux file
@@ -183,13 +183,29 @@ completion, not proof of app death. There are no blind retries of an uncertain
 install or launch. Fix the connection, then invoke a separate test session.
 The same session cannot be replayed, and simultaneous device tests are locked.
 
-The runner automatically prepares a `Handoff-...zip` after the collector saves
-its evidence. For ordinary captures it contains the original ZIP unchanged,
-the version profile and a derived summary. For large captures it contains the
-summary and lists all independently bounded evidence parts and their index;
-share every listed file. Original raw logs, byte deltas and archives remain.
-The `package` command can prepare a handoff from an existing original evidence
-ZIP without any ADB command.
+After each test the terminal prints **UPLOAD THIS ONE FILE** and a
+`Tooie-...-Share-...zip` path. Upload only that file. It contains the summary,
+profile, notes, status/error records, fresh logs and screenshots. There are no
+automatic evidence parts, external upload index or separate handoff ZIP.
+
+The complete `...-Evidence.zip` and individual raw files remain on the PC.
+The compact upload normally omits the accumulated FullLog and its baseline,
+which repeat previous sessions; the exact fresh NewLog is included when it fits.
+If an unusually large capture reaches 30 MiB, the internal manifest identifies
+every omitted screenshot/file and any explicitly named, hashed byte excerpts.
+Partial logs are never named NewLog. A missing delta stays missing; FullLog can
+provide separately identified fallback evidence. No original is deleted or
+changed, and summary counts are attributed to the local full capture.
+
+To repackage the most recent existing test without another install or launch:
+
+```bash
+~/projects/tooie-tools/tooie package --latest
+```
+
+An explicit `package /path/to/Tooie-...-Evidence.zip` also works for older tests.
+Both forms only read local evidence; they issue no ADB command. Existing parts
+from older workflow versions can stay on the PC and need not be uploaded again.
 
 ## Current version and maintenance
 
@@ -243,7 +259,7 @@ python3 tools/android-workflow/tests/test_workflow.py
 
 Device commands are stubbed in these tests. They exercise rejected artifacts,
 install/launch limits within one session, repeat-session isolation, uncertainty,
-live terminal notes, original-PID filtering, exact deltas and lossless uploads.
+live terminal notes, original-PID filtering, exact deltas, intact local archives and bounded compact uploads.
 Temporary local Git repositories test source-cache reuse and refusal of dirty
 tracked inputs. These checks do not build an Android APK or establish Odin
 rendering, demo cadence, mod execution or performance.

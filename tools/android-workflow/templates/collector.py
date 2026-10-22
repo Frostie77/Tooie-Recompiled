@@ -43,9 +43,6 @@ MOD_REMOTE = ''
 PRESENTATION_TEST_HZ = 0
 GAMEPLAY_SECONDS = 600
 EXTENSION_SECONDS = 300
-MAX_UPLOAD_BYTES = 30 * 1024 * 1024
-PART_RAW_BYTES = 20 * 1024 * 1024
-CHUNK_BYTES = 8 * 1024 * 1024
 original_pid = None
 launch_existing_pids = ()
 finish_requested = False
@@ -1137,75 +1134,19 @@ def collect():
     print('Evidence saved for original PID ' + str(original_pid) + '; runtime counts: ' + str(counts), flush=True)
     bundles, index = archive_evidence()
     print('CAPTURE COMPLETE. Gameplay diagnostic APK; visual corrections require hardware verification; no intentional probe exit. Observer cost is included. Process presence, frame counts and screenshots alone do not establish correct speed or gameplay.', flush=True)
-    print('Saved ' + ('raw evidence ZIP:' if len(bundles) == 1 else 'independent evidence ZIP parts AND the upload index:') + '\n' + '\n'.join(str(p) for p in bundles), flush=True)
-    if index is not None:
-        print(index, flush=True)
+    print('Full raw archive saved locally. The workflow will print the ONE file to upload.', flush=True)
     print('Capture is saved. You may close the app normally. For another separately recorded session, use the workflow test command again.', flush=True)
 
 def archive_evidence():
-    # Retain every raw file. If the complete ZIP exceeds the per-upload limit,
-    # also emit independent, bounded ZIPs with byte offsets and hashes. No log
-    # truncation, device files, or reassembly-dependent split-ZIP format is used.
+    # Keep one complete local archive. The workflow makes a single compact
+    # upload from this sealed snapshot; no automatic parts or separate index.
     sources = [p for p in sorted(DOWNLOADS.glob(prefix.name + '-*'))
                if p.is_file() and p.suffix in ('.txt', '.png')]
     bundle = Path(str(prefix) + '-Evidence.zip')
     with zipfile.ZipFile(bundle, 'x', zipfile.ZIP_DEFLATED) as archive:
         for path in sources:
             archive.write(path, path.name)
-    if bundle.stat().st_size <= MAX_UPLOAD_BYTES:
-        return [bundle], None
-    groups = [[]]
-    group_bytes = 0
-    manifest = {'complete_local_zip': bundle.name, 'upload_limit_bytes': MAX_UPLOAD_BYTES,
-                'scope': 'Upload every listed independent ZIP plus this index. Chunk entries are exact raw byte ranges, with zero-based offsets. Original files and full ZIP remain locally intact.',
-                'sources': [], 'parts': []}
-    for path in sources:
-        size = path.stat().st_size
-        source = {'name': path.name, 'size_bytes': size, 'chunks': []}
-        digest = hashlib.sha256()
-        with path.open('rb') as stream:
-            offset = chunk_number = 0
-            while True:
-                data = stream.read(CHUNK_BYTES)
-                if not data and (size or chunk_number):
-                    break
-                digest.update(data)
-                if groups[-1] and group_bytes + len(data) > PART_RAW_BYTES:
-                    groups.append([])
-                    group_bytes = 0
-                member = path.name if size <= CHUNK_BYTES else path.name + f'.chunk{chunk_number:04d}'
-                entry = {'member': member, 'source_offset': offset, 'length': len(data),
-                         'sha256': hashlib.sha256(data).hexdigest(), 'part_number': len(groups)}
-                groups[-1].append((path, entry))
-                source['chunks'].append(entry)
-                group_bytes += len(data)
-                offset += len(data)
-                chunk_number += 1
-                if not data:
-                    break
-        source['sha256'] = digest.hexdigest()
-        manifest['sources'].append(source)
-    bundles = []
-    for number, group in enumerate(groups, 1):
-        part = Path(str(prefix) + f'-Evidence-Part{number:03d}.zip')
-        with zipfile.ZipFile(part, 'x', zipfile.ZIP_DEFLATED) as archive:
-            for path, entry in group:
-                with path.open('rb') as stream:
-                    stream.seek(entry['source_offset'])
-                    data = stream.read(entry['length'])
-                require(len(data) == entry['length'] and hashlib.sha256(data).hexdigest() == entry['sha256'], 'A retained source changed while packaging; all raw files/full ZIP retained.')
-                archive.writestr(entry['member'], data)
-        require(part.stat().st_size <= MAX_UPLOAD_BYTES, 'An upload part exceeds its size bound; all raw files/full ZIP retained.')
-        digest = hashlib.sha256()
-        with part.open('rb') as stream:
-            for data in iter(lambda: stream.read(1024 * 1024), b''):
-                digest.update(data)
-        manifest['parts'].append({'part_number': number, 'name': part.name,
-                                  'size_bytes': part.stat().st_size, 'sha256': digest.hexdigest()})
-        bundles.append(part)
-    save('Upload-Index', json.dumps(manifest, indent=2) + '\n')
-    print('The full ZIP exceeds 30 MiB. It is retained locally; upload the smaller parts below instead.', flush=True)
-    return bundles, Path(str(prefix) + '-Upload-Index.txt')
+    return [bundle], None
 
 def run():
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))

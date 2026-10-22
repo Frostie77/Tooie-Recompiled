@@ -42,7 +42,7 @@ class Workflow(unittest.TestCase):
         self.redirect.__exit__(None, None, None)
         self.temp.cleanup()
 
-    def evidence(self, directory=None, uncertain=False, original='31000'):
+    def evidence(self, directory=None, uncertain=False, original='31000', extra=None):
         directory = directory or self.args.downloads
         prefix = 'Tooie-' + self.profile['identity']['commit'][:12] + '-Task-Delivery-Timing-Odin-' + tooie.unique_id()
         archive = directory / (prefix + '-Evidence.zip')
@@ -60,6 +60,7 @@ class Workflow(unittest.TestCase):
                 'FullLog': b'old data\n' + delta}
             if uncertain:
                 values['Demo-01-PIDs-000-status'] = 'returncode=-999\nTIMED OUT: completion is unknown'
+            values.update(extra or {})
             for suffix, value in values.items():
                 bundle.writestr(prefix + '-' + suffix + '.txt', value)
         return archive
@@ -320,7 +321,7 @@ class Workflow(unittest.TestCase):
         with tooie.exclusive_lock(self.args.state, 'device'):
             pass
 
-    def test_handoff_preserves_original_zip_and_only_counts_original_pid(self):
+    def test_compact_upload_preserves_fresh_bytes_notes_and_original_archive(self):
         archive = self.evidence()
         before = archive.read_bytes()
         handoff, summary = tooie.package_evidence(archive, self.profile)
@@ -328,8 +329,17 @@ class Workflow(unittest.TestCase):
         self.assertEqual(len(summary['windows']), 1)
         self.assertEqual(summary['user_markers'][0]['description'], 'NPC stretches')
         with zipfile.ZipFile(handoff) as bundle:
-            self.assertEqual(bundle.read(archive.name), before)
+            prefix = tooie.archive_prefix(archive)
+            with zipfile.ZipFile(archive) as original:
+                self.assertEqual(bundle.read(prefix + '-NewLog.txt'), original.read(prefix + '-NewLog.txt'))
+                self.assertEqual(bundle.read(prefix + '-User-Markers.txt'), original.read(prefix + '-User-Markers.txt'))
+            self.assertNotIn(prefix + '-FullLog.txt', bundle.namelist())
+            self.assertNotIn(archive.name, bundle.namelist())
+            manifest = json.loads(bundle.read('share-manifest.json'))
+            self.assertEqual(manifest['original_archive_sha256'], tooie.sha256(archive))
             self.assertIsNone(bundle.testzip())
+        self.assertTrue(summary['compact_upload']['complete_delta_included'])
+        self.assertEqual(summary['upload_files'], [handoff.name])
         self.assertEqual(archive.read_bytes(), before)
 
     def test_no_missing_delta_or_unknown_pid_is_invented(self):
@@ -346,27 +356,97 @@ class Workflow(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'member path'):
                 tooie.summarize_archive(archive)
 
-    def test_large_handoff_keeps_all_upload_parts_and_rejects_corruption(self):
-        archive = self.evidence()
+    def test_accumulated_logs_stay_local_without_upload_parts_or_index(self):
+        archive = self.evidence(extra={'FullLog': os.urandom(1300000), 'Baseline': os.urandom(1300000)})
+        before = tooie.sha256(archive)
         prefix = tooie.archive_prefix(archive)
-        # Inflate the original without changing any derivable metadata.
-        with zipfile.ZipFile(archive, 'a') as bundle:
-            bundle.writestr(prefix + '-Extra.txt', os.urandom(1100000))
-        part = self.root / (prefix + '-Evidence-Part001.zip')
-        part.write_bytes(b'chunk-fixture')
-        # Evidence and its parts normally share a directory.
-        target = archive.with_name(part.name); part.rename(target)
-        index = archive.with_name(prefix + '-Upload-Index.txt')
-        index.write_text(json.dumps({'parts': [{'name': target.name,
-            'size_bytes': target.stat().st_size, 'sha256': tooie.sha256(target)}]}))
         with patch.object(tooie, 'UPLOAD_LIMIT', 1200000):
             handoff, result = tooie.package_evidence(archive, self.profile)
-            self.assertEqual(result['upload_files'], [target.name, index.name])
+            self.assertEqual(result['upload_files'], [handoff.name])
+            self.assertLess(handoff.stat().st_size, 1200000)
             with zipfile.ZipFile(handoff) as bundle:
-                self.assertNotIn(archive.name, bundle.namelist())
-            target.write_bytes(b'corrupted')
-            with self.assertRaisesRegex(RuntimeError, 'part differs'):
-                tooie.package_evidence(archive, self.profile)
+                manifest = json.loads(bundle.read('share-manifest.json'))
+                local = {s['name'] for s in manifest['sources'] if s['mode'] == 'local-only'}
+                self.assertEqual(local, {prefix + '-Baseline.txt', prefix + '-FullLog.txt'})
+                self.assertIn(prefix + '-NewLog.txt', bundle.namelist())
+        self.assertEqual(tooie.sha256(archive), before)
+        self.assertFalse(list(self.args.downloads.glob('*-Evidence-Part*.zip')))
+        self.assertFalse(list(self.args.downloads.glob('*-Upload-Index.txt')))
+
+    def test_oversized_fresh_log_has_named_hashed_byte_excerpts(self):
+        data = os.urandom(400000)
+        archive = self.evidence(extra={'NewLog': data})
+        prefix = tooie.archive_prefix(archive)
+        with patch.object(tooie, 'UPLOAD_LIMIT', 120000):
+            output, summary = tooie.package_evidence(archive, self.profile)
+        self.assertLessEqual(output.stat().st_size, 120000)
+        self.assertFalse(summary['compact_upload']['complete_delta_included'])
+        with zipfile.ZipFile(output) as bundle:
+            self.assertNotIn(prefix + '-NewLog.txt', bundle.namelist())
+            entry = next(s for s in json.loads(bundle.read('share-manifest.json'))['sources']
+                         if s['name'] == prefix + '-NewLog.txt')
+            self.assertEqual(entry['mode'], 'excerpt')
+            self.assertEqual(entry['sha256'], tooie.hashlib.sha256(data).hexdigest())
+            self.assertEqual(len(entry['stored_files']), 2)
+            for part in entry['stored_files']:
+                raw = bundle.read(part['name'])
+                self.assertEqual(raw, data[part['offset']:part['offset'] + part['length']])
+                self.assertEqual(tooie.hashlib.sha256(raw).hexdigest(), part['sha256'])
+
+    def test_size_budget_prefers_mod_and_marker_images_and_declares_omissions(self):
+        images = {'Mod-Check-Ready-blue.png': os.urandom(12000),
+                  'Screenshot-Marker-001.png': os.urandom(12000),
+                  'Screenshot-Gameplay-01-01.png': os.urandom(60000)}
+        archive = self.evidence()
+        prefix = tooie.archive_prefix(archive)
+        with zipfile.ZipFile(archive, 'a') as bundle:
+            for suffix, data in images.items(): bundle.writestr(prefix + '-' + suffix, data)
+        with patch.object(tooie, 'UPLOAD_LIMIT', 65000):
+            output, summary = tooie.package_evidence(archive, self.profile)
+        self.assertLessEqual(output.stat().st_size, 65000)
+        with zipfile.ZipFile(output) as bundle:
+            for suffix in list(images)[:2]:
+                self.assertEqual(bundle.read(prefix + '-' + suffix), images[suffix])
+            omitted = next(s for s in json.loads(bundle.read('share-manifest.json'))['sources']
+                           if s['name'].endswith('Screenshot-Gameplay-01-01.png'))
+            self.assertEqual(omitted['mode'], 'local-only')
+            self.assertIn('size budget', omitted['reason'])
+
+    def test_missing_delta_stays_missing_with_explicit_fulllog_fallback(self):
+        archive = self.evidence()
+        prefix = tooie.archive_prefix(archive)
+        with zipfile.ZipFile(archive) as bundle:
+            values = {n: bundle.read(n) for n in bundle.namelist() if not n.endswith('-NewLog.txt')}
+        with zipfile.ZipFile(archive, 'w') as bundle:
+            for n, data in values.items(): bundle.writestr(n, data)
+        output, summary = tooie.package_evidence(archive, self.profile)
+        self.assertNotIn('delta_sha256', summary)
+        self.assertFalse(summary['compact_upload']['complete_delta_included'])
+        with zipfile.ZipFile(output) as bundle:
+            self.assertNotIn(prefix + '-NewLog.txt', bundle.namelist())
+            self.assertEqual(bundle.read(prefix + '-FullLog.txt'), values[prefix + '-FullLog.txt'])
+
+    def test_package_latest_selects_raw_archive_without_any_device_operation(self):
+        first = self.evidence(); second = self.evidence()
+        os.utime(first, ns=(1, 1)); os.utime(second, ns=(2, 2))
+        misleading = second.with_name('Tooie-newest-Share-file.zip')
+        misleading.write_bytes(b'not a raw capture')
+        self.assertEqual(tooie.latest_evidence(self.args.downloads), second)
+        with patch.object(tooie, 'default_downloads', return_value=self.args.downloads), \
+             patch.object(tooie.subprocess, 'Popen', side_effect=AssertionError('No device/subprocess allowed')):
+            self.assertEqual(tooie.main(['--downloads', str(self.args.downloads), 'package', '--latest']), 0)
+        self.assertEqual(len(list(self.args.downloads.glob('*-Share-*.zip'))), 2)  # Includes the misleading fixture.
+
+    def test_corrupt_excluded_history_is_detected_before_share_export(self):
+        archive = self.evidence(extra={'Baseline': b'old baseline'})
+        with zipfile.ZipFile(archive) as bundle:
+            info = next(i for i in bundle.infolist() if i.filename.endswith('-Baseline.txt'))
+        raw = bytearray(archive.read_bytes())
+        raw[info.header_offset + 30 + len(info.filename.encode())] ^= 1
+        archive.write_bytes(raw)
+        with self.assertRaises(zipfile.BadZipFile):
+            tooie.package_evidence(archive, self.profile)
+        self.assertFalse(list(self.args.downloads.glob('*-Share-*.zip')))
 
     def fake_capture(self, codes, uncertain_at=None):
         calls = []
@@ -394,7 +474,7 @@ class Workflow(unittest.TestCase):
              patch.object(tooie.subprocess, 'Popen', side_effect=popen):
             self.assertEqual(tooie.capture(self.args, self.profile), 0)
         self.assertEqual(len(set(calls)), 2)
-        self.assertEqual(len(list(self.args.downloads.glob('*-Handoff-*.zip'))), 2)
+        self.assertEqual(len(list(self.args.downloads.glob('*-Share-*.zip'))), 2)
         prefixes = [(p / 'attempt.started/evidence-prefix.txt').read_text() for p in calls]
         self.assertEqual(len(set(prefixes)), 2)
 
