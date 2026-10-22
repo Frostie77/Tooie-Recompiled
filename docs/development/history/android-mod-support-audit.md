@@ -1,7 +1,7 @@
 # Tooie-Recompiled: Android mod-support audit
 
 Historical baseline: these are the gaps at `5db2d7f`.
-[Android mod support](android-mod-support.md) records the subsequent source
+[Android mod support](../mod-support.md) records the subsequent source
 implementation and its host/device validation boundaries. The original audit
 reproducer intentionally targets the previous cancellation stub.
 

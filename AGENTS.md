@@ -841,7 +841,7 @@ this as the most likely source of a latent bug.
 The supported distributable is an Android ARM64 APK. `.github/workflows/build.yml`
 builds and verifies a debug APK on a GitHub-hosted Ubuntu build machine; it does
 not publish releases or produce desktop game packages. See
-`docs/android-github-build.md` for pinned tools, dependency restoration, actual
+`BUILDING.md` for pinned tools, dependency restoration, actual
 compile-command/packaged-library checks, signing limitations and artifact access.
 Dependencies in this snapshot are vendored trees, not submodules; the current
 Android CI must not invoke the historical submodule patch installer.

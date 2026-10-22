@@ -1,5 +1,8 @@
 # Android update readiness
 
+This is the 17 October design audit. For the current Android CI pipeline, see
+[BUILDING.md](../../BUILDING.md). Startup update detection remains unimplemented.
+
 Status: source audit and proposed implementation sequence, 17 October 2026.
 No update client, signing change, release or device operation is implemented by
 this document.
@@ -19,10 +22,10 @@ The audit uses engineering revision
 
 | Source | Observation | Work needed |
 | --- | --- | --- |
-| [android/app/build.gradle](../android/app/build.gradle) | `versionCode 1`, `versionName '0.1.0-android'`; ARM64 only, minimum API 24, target API 35 | Assign a greater code to every published Android update and stamp an identifiable version name. |
+| [android/app/build.gradle](../../android/app/build.gradle) | `versionCode 1`, `versionName '0.1.0-android'`; ARM64 only, minimum API 24, target API 35 | Assign a greater code to every published Android update and stamp an identifiable version name. |
 | Same Gradle file | No explicit release signing configuration | Establish the signing process and continuity with existing installs before public distribution. The actual installed certificate has not been inspected. |
-| [AndroidManifest.xml](../android/app/src/main/AndroidManifest.xml) | Stable application identity `io.github.banjotooierecompiled`; no Internet or package-install permission in this source manifest | Add the networking capability when implementing the client; inspect the final merged manifest. A later in-app installer needs its own platform integration. |
-| [.github/workflows/build.yml](../.github/workflows/build.yml) | The only workflow in this pinned snapshot builds Windows/Linux packages and publishes them from main or version tags; manual dispatch also reaches its publisher | Add a verified Android release path. Do not use an arbitrary existing desktop release as proof that an Android update exists. |
+| [AndroidManifest.xml](../../android/app/src/main/AndroidManifest.xml) | Stable application identity `io.github.banjotooierecompiled`; no Internet or package-install permission in this source manifest | Add the networking capability when implementing the client; inspect the final merged manifest. A later in-app installer needs its own platform integration. |
+| [.github/workflows/build.yml](../../.github/workflows/build.yml) | The only workflow in this pinned snapshot builds Windows/Linux packages and publishes them from main or version tags; manual dispatch also reaches its publisher | Add a verified Android release path. Do not use an arbitrary existing desktop release as proof that an Android update exists. |
 | Same workflow | Supplies a native `BT_VERSION` stamp, while Android Gradle has separate fixed values | Generate Android, native, release and build-report versions from one validated release record. |
 
 The source manifest is not proof of the permissions in a previously built APK.

@@ -30,7 +30,7 @@ Main Build ID `5dc6b504dc88b0daafbaa4b241a54580e704d0de` is packaging provenance
 no unrelated ELF was symbolized. The rendering branch and artwork integration
 branch stay separate. A future integration must retain those accepted images.
 
-Trent reported good input, less noticeable entry freezes, no shunts in the area
+Frostie reported good input, less noticeable entry freezes, no shunts in the area
 played, continued stretching particularly in enemies/NPCs, and an awkward
 geometric Banjo shadow. That observation is retained without claiming complete
 visual, audio or game correctness. The timed gameplay window was approximately
@@ -223,7 +223,7 @@ shadow, audio or full-game hardware-verification claim follows from these tests.
 
 ## Completion and later device review
 
-[The supplied completion checklist](android-completion-requirements.md) records
+[The supplied completion checklist](../../android-completion-requirements.md) records
 required scope without claiming completion. Android Mods import/manage/**apply**
 remains mandatory, including actual gameplay effects, compatible multiple mods,
 enable/disable/removal, persistence across restarts/compatible upgrades and clear

@@ -8,9 +8,9 @@ persistence manually after the captured texture/aiming session.
 
 [PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14), now merged,
 records exact source/APK identities and separates captured from manual results.
-See [code-mod preparation](android-code-mod-preview-20261022.md),
-[Zstandard texture import](android-zstd-texture-import-20261022.md) and the
-[completion checklist](android-completion-requirements.md) for current scope.
+See [code-mod preparation](history/android-code-mod-preview-20261022.md),
+[Zstandard texture import](history/android-zstd-texture-import-20261022.md) and the
+[completion checklist](../android-completion-requirements.md) for current scope.
 
 The Mods interface provides import, enable/disable and configuration. An in-app
 Remove control is not required. General mod compatibility and combinations

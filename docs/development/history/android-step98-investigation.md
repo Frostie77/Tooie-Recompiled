@@ -32,7 +32,7 @@ the final read retain that process. The declared ten-minute observation
 completed. Eight Java wall/uptime anchors have 471 microseconds of offset
 spread; whole-second device boundary reads are approximate alignment only.
 
-Trent reports improved player/Talon Trot appearance, surviving NPC and feather
+Frostie reports improved player/Talon Trot appearance, surviving NPC and feather
 stretching, and a still-fast-looking automatic demo. The markers were entered
 at the end prompt: there are no individual bug timestamps or `TooieUserMark`
 events. The green monsters, friendly NPCs, wall enemy and feather pile cannot

@@ -56,7 +56,7 @@ Regeneration requires Python and Pillow:
 ```sh
 python3 tools/generate_android_launcher_icons.py
 python3 tools/generate_android_launcher_icons.py --check
-python3 tools/generate_android_launcher_icons.py --preview docs/android-launcher-icon-preview.png
+python3 tools/generate_android_launcher_icons.py --preview docs/development/history/android-launcher-icon-preview.png
 ```
 
 `--check` compares decoded PNG pixels and XML. PNG compression differences alone

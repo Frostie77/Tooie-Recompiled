@@ -35,7 +35,7 @@ On 16 October 2026, independently checked:
 
 Device times are Australia/Hobart (+1100). The active windows are approximately
 14:04:12–14:14:12 and 14:14:29–14:19:29; retained later logs are not another
-verified five minutes of play. Input and sound felt acceptable to Trent;
+verified five minutes of play. Input and sound felt acceptable to Frostie;
 stretching during Talon Trot/enemy reactions, boxy shadows, jigsaw glitches and
 fast automatic PRESS START demos remain separate observations.
 

@@ -26,7 +26,7 @@ that arbitrary game functions are safe to call.
 
 ## Real example and host evidence
 
-The [Tooie Mod Check example](../examples/mods/tooie_mod_check/README.md) adds a
+The [Tooie Mod Check example](../../../examples/mods/tooie_mod_check/README.md) adds a
 small GOLD or BLUE badge using existing RecompUI exports and an Enum setting.
 It explicitly declines input/mouse capture. It contains no ROM assets, game
 patches, native libraries or save writes. Its game ID is `bt`. The API headers
@@ -93,4 +93,4 @@ the intended update path.
 
 The Android-only preview must state tested hardware and known minor graphics
 issues. Automatic startup update checks remain a later completion requirement.
-See the [checked completion requirements](android-completion-requirements.md).
+See the [checked completion requirements](../../android-completion-requirements.md).
