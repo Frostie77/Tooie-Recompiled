@@ -1,4 +1,4 @@
-# Tooie-Recompiled Android ROM selection
+# Android ROM selection
 
 Base: `06b2f6cc87e24f8111718edab73bad2bfc83416d`. The user reports that the Odin 2
 Portal reaches the graphical launcher and can navigate Controls, Settings and
@@ -6,12 +6,12 @@ Mods. Select ROM previously returned immediately because Android's single-file
 dialog called `callback(false, {})`. The original selection implementation did
 not establish that gameplay works. The later picker-transition crash and
 Android WSI lifetime fix are documented in
-[Android Vulkan lifecycle](android-vulkan-lifecycle.md).
+[Android Vulkan lifecycle](history/android-vulkan-lifecycle.md).
 
 The user now confirms successful Android ROM selection, USA ROM acceptance and
 Start Game on `e95638d`, after the lifecycle fix. Gameplay then crashes in a
 separate Vulkan descriptor update; see
-[Android Vulkan descriptors](android-vulkan-descriptors.md).
+[Android Vulkan descriptors](history/android-vulkan-descriptors.md).
 
 ## Selection and import
 
@@ -55,7 +55,7 @@ data/uninstalling removes this private selection.
 - Activity/result/request fields and Intent launches stay on Android's main
   thread. Provider IO runs on a cancellable worker. The later confirmed native
   surface crash requires an explicit RT64 quiescence barrier before SDL's
-  lifecycle handlers; see [Android Vulkan lifecycle](android-vulkan-lifecycle.md).
+  lifecycle handlers; see [Android Vulkan lifecycle](history/android-vulkan-lifecycle.md).
   SDL's superclass handlers still run, and no new `JNI_OnLoad` replaces SDL setup.
 - JNI result functions only enqueue completions under a mutex. An Android UI
   preparation hook delivers callbacks while holding the existing RmlUi mutex,
@@ -138,7 +138,7 @@ mkdir -p /tmp/tooie-java-classes /tmp/tooie-jni-headers
 The user subsequently confirmed that the picker opens on `cf2d780`, but SDL
 pause/surface transition crashes the native Vulkan process before a selection can
 return. The separate lifecycle revision and its tests are described in
-[Android Vulkan lifecycle](android-vulkan-lifecycle.md). For that fix, the real
+[Android Vulkan lifecycle](history/android-vulkan-lifecycle.md). For that fix, the real
 Android picker/provider return and SDL surface pause/resume on a device, the
 retail USA hash validation and the rendered Select ROM → Start Game transition
 have not been executed in this environment. Host JNI tests use a fixture Activity,

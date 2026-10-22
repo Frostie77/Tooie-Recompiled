@@ -1,4 +1,4 @@
-# GitHub Actions Android APK build
+# Building Tooie Recompiled for Android
 
 `.github/workflows/build.yml` builds an **Android ARM64 debug APK** on a fresh
 GitHub-hosted Ubuntu 24.04 machine. Ubuntu is a build host; there is no Linux or
@@ -24,7 +24,7 @@ not create tags or GitHub Releases, install anything, or contact an Odin.
 | Missing zstd CMake recipes | v1.5.6; existing vendored C sources remain in use |
 
 Download URLs and SHA-256 digests are in
-[`tools/ci/android-dependencies.json`](../tools/ci/android-dependencies.json).
+[`tools/ci/android-dependencies.json`](tools/ci/android-dependencies.json).
 The dependency archives are verified before extraction. FreeType's optional
 BZip2, PNG, HarfBuzz and Brotli integrations are disabled rather than discovering
 host libraries during the Android cross build; its bundled gzip implementation

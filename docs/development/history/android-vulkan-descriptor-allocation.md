@@ -59,7 +59,7 @@ These files are not present in the cloud workspace:
 - `Tooie-3268685cdf31-Gameplay-Odin-20261014-213815-Logcat.txt`
 
 The supplied summary is stored on the user's PC in
-`C:\Users\Trent\Downloads\Tooie-3268685cdf31-Gameplay-Odin-20261014-213815-Codex-Evidence.txt`.
+`C:\Users\<WindowsUser>\Downloads\Tooie-3268685cdf31-Gameplay-Odin-20261014-213815-Codex-Evidence.txt`.
 It has not been read directly in this workspace. The process history is now
 explained, but direct rejection attribution and the specific Odin allocation
 operands remain unresolved. New allocation/rejection records include both PID

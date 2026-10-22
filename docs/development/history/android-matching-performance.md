@@ -198,7 +198,7 @@ unchanged. Full-game verification and the other release requirements remain open
 ## Step 78 follow-up
 
 The `a1338bf` artwork integration contains the exact `98f909c` rendering changes.
-Trent reports responsive input, less noticeable entry freezes and no shunts in
+Frostie reports responsive input, less noticeable entry freezes and no shunts in
 the area played, with NPC/enemy stretching and an awkward Banjo shadow remaining.
 The original PID survives the supplied three-minute gameplay window; the earlier
 launcher wait is excluded. This is not full-game or ten-minute acceptance.
@@ -208,6 +208,6 @@ archive provenance, the AUTO bone-identity ambiguity, its synthetic consumed-
 geometry control, the opt-in observation/replay proposal and limits. No semantic
 matching or shadow change is justified by the supplied stills/counters alone.
 Production matching order/output and queue progress remain unchanged. The
-[completion checklist](android-completion-requirements.md) preserves mandatory
+[completion checklist](../../android-completion-requirements.md) preserves mandatory
 Android Mods gameplay effects and the future ten-minute plus five-minute
 extension policy; those remain separate from this source-only diagnostic work.
