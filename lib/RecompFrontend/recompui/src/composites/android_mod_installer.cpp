@@ -2,6 +2,7 @@
 #include "ui_mod_installer.h"
 #include "android_mod_transaction.h"
 #include "librecomp/mods.hpp"
+#include "librecomp/zip_read.hpp"
 #include "recompiler/context.h"
 
 #include <algorithm>
@@ -32,6 +33,15 @@ std::string lower_extension(const std::filesystem::path& path) {
     std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char ch) { return std::tolower(ch); });
     return extension;
 }
+bool texture_mod_id(const std::string& id) {
+    // RTZ containers are registered for texture content only. Their author IDs
+    // need not be C identifiers, but still become one private config filename.
+    if (id.empty() || id.size() > 240 || id == "." || id == "..") return false;
+    return std::all_of(id.begin(), id.end(), [](unsigned char ch) {
+        return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+               (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '.' || ch == ' ';
+    });
+}
 std::string entry_name(mz_zip_archive* archive, mz_uint index) {
     mz_uint length = mz_zip_reader_get_filename(archive, index, nullptr, 0);
     if (length < 2 || length > 4096) throw std::runtime_error("An archive entry has an unsupported filename.");
@@ -57,7 +67,8 @@ void inspect_archive(recomp::mods::ZipModFileHandle& handle, bool bundle = false
         const std::string name = entry_name(archive, index);
         if (!names.insert(name).second) throw std::runtime_error("The archive contains duplicate entry names.");
         mz_zip_archive_file_stat stat{};
-        if (!mz_zip_reader_file_stat(archive, index, &stat) || stat.m_is_encrypted || !stat.m_is_supported)
+        if (!mz_zip_reader_file_stat(archive, index, &stat) || stat.m_is_encrypted || !recomp::mods::zip::supported(stat) ||
+            (bundle && stat.m_method == recomp::mods::zip::Zstandard))
             throw std::runtime_error("The archive contains an unreadable, encrypted or unsupported entry.");
         const unsigned kind = (stat.m_external_attr >> 16) & 0170000;
         if (kind != 0 && kind != 0100000 && kind != 0040000)
@@ -73,6 +84,11 @@ void inspect_archive(recomp::mods::ZipModFileHandle& handle, bool bundle = false
             throw std::runtime_error("The mod manifest or texture database is too large.");
         if (extension == ".so" || extension == ".dll" || extension == ".dylib" || name.find(".so.") != std::string::npos)
             throw std::runtime_error("Native-library mods are not supported by this Android importer. Use a compatible normal code mod or texture pack.");
+        if (stat.m_method == recomp::mods::zip::Zstandard && !stat.m_is_directory) {
+            bool readable = false;
+            handle.read_file(name, readable);
+            if (!readable) throw std::runtime_error("A Zstandard archive entry failed decoding, size validation or its checksum.");
+        }
     }
 }
 
@@ -80,6 +96,13 @@ ModInstaller::Installation validate_mod(const std::filesystem::path& filename, r
                                       const std::string& game_mod_id, std::unordered_set<std::string>& ids) {
     inspect_archive(handle);
     ModInstaller::Installation installation;
+    const bool texture_pack = filename.extension() == ".rtz";
+    if (texture_pack) {
+        bool readable = false;
+        auto database = handle.read_file("rt64.json", readable);
+        if (!readable) throw std::runtime_error("The texture pack has no readable rt64.json database.");
+        checked_json(database);
+    }
     bool present = false;
     std::vector<char> manifest_bytes = handle.read_file("mod.json", present);
     if (present) {
@@ -92,7 +115,8 @@ ModInstaller::Installation validate_mod(const std::filesystem::path& filename, r
         if (game_mod_id.empty() || std::find(manifest.mod_game_ids.begin(), manifest.mod_game_ids.end(), game_mod_id) == manifest.mod_game_ids.end())
             throw std::runtime_error(filename.string() + " targets a different game. Select a compatible Tooie mod.");
         if (!manifest.native_libraries.empty()) throw std::runtime_error("This mod requires a native library that has not been validated for Android ARM64.");
-        if (!N64Recomp::validate_mod_id(manifest.mod_id)) throw std::runtime_error("The mod manifest has an invalid mod ID.");
+        if (!(texture_pack ? texture_mod_id(manifest.mod_id) : N64Recomp::validate_mod_id(manifest.mod_id)))
+            throw std::runtime_error("The mod manifest has an invalid mod ID.");
         if (manifest.minimum_recomp_version > recomp::get_project_version())
             throw std::runtime_error(filename.string() + " requires a newer version of the game application.");
         installation.mod_id = manifest.mod_id;
@@ -100,15 +124,12 @@ ModInstaller::Installation validate_mod(const std::filesystem::path& filename, r
         installation.mod_version = manifest.version;
     } else {
         if (handle.file_exists("mod.json")) throw std::runtime_error("The mod manifest could not be read or failed its archive checksum.");
-        if (filename.extension() != ".rtz") throw std::runtime_error(filename.string() + " has no mod manifest.");
-        auto database = handle.read_file("rt64.json", present);
-        if (!present) throw std::runtime_error("The texture pack has no readable rt64.json database.");
-        checked_json(database);
+        if (!texture_pack) throw std::runtime_error(filename.string() + " has no mod manifest.");
         installation.mod_id = filename.stem().string();
         installation.display_name = installation.mod_id;
         installation.mod_version = recomp::Version{0, 0, 0, ""};
     }
-    if (installation.mod_id.empty() || !ids.insert(installation.mod_id).second)
+    if ((texture_pack && !texture_mod_id(installation.mod_id)) || installation.mod_id.empty() || !ids.insert(installation.mod_id).second)
         throw std::runtime_error("The selection contains an empty or duplicate mod ID.");
     if (recomp::mods::is_mod_deprecated(installation.mod_id, installation.mod_version))
         throw std::runtime_error("This mod version is deprecated and cannot be installed.");

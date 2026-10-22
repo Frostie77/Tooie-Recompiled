@@ -5,6 +5,9 @@ Uses the real runtime manifest, config and miniz consumers. It does not execute
 guest mods, render replacement textures, or run an Android document provider.
 """
 import argparse
+import ctypes
+import ctypes.util
+import hashlib
 import io
 import json
 import os
@@ -16,6 +19,55 @@ import subprocess
 import tempfile
 import warnings
 import zipfile
+
+
+def zstd_bytes(data):
+    library = ctypes.CDLL(ctypes.util.find_library("zstd") or "libzstd.so")
+    library.ZSTD_compressBound.argtypes = [ctypes.c_size_t]
+    library.ZSTD_compressBound.restype = ctypes.c_size_t
+    library.ZSTD_compress.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int]
+    library.ZSTD_compress.restype = ctypes.c_size_t
+    library.ZSTD_isError.argtypes = [ctypes.c_size_t]
+    bound = library.ZSTD_compressBound(len(data))
+    output = ctypes.create_string_buffer(bound)
+    size = library.ZSTD_compress(output, bound, data, len(data), 3)
+    if library.ZSTD_isError(size):
+        raise RuntimeError("Could not compress the native Zstandard fixture")
+    return output.raw[:size]
+
+
+def zstd_zip(entries, payloads=None):
+    """Small real mixed-method ZIPs; stdlib before Python 3.14 cannot write 93."""
+    import zlib
+    payloads = payloads or {}
+    body = bytearray(); central = bytearray()
+    for name, data, method in entries:
+        data = data.encode() if isinstance(data, str) else data
+        name_bytes = name.encode()
+        compressed = (zstd_bytes(data) if method == 93 else
+                      zlib.compress(data)[2:-4] if method == 8 else data)
+        compressed = payloads.get(name, compressed)
+        crc = zlib.crc32(data)
+        needed = 63 if method == 93 else 20
+        central += struct.pack("<IHHHHHHIIIHHHHHII", 0x02014b50, 20, needed, 0, method, 0, 0,
+                               crc, len(compressed), len(data), len(name_bytes), 0, 0, 0, 0, 0, len(body)) + name_bytes
+        body += struct.pack("<IHHHHHIIIHH", 0x04034b50, needed, 0, method, 0, 0,
+                            crc, len(compressed), len(data), len(name_bytes), 0) + name_bytes + compressed
+    return bytes(body + central + struct.pack("<IHHHHIIH", 0x06054b50, 0, 0, len(entries), len(entries), len(central), len(body), 0))
+
+
+def mutate_entry(data, name, mutate_central=None, mutate_local=None):
+    data = bytearray(data)
+    cursor = struct.unpack_from("<I", data, len(data) - 6)[0]
+    while data[cursor:cursor + 4] == b"PK\x01\x02":
+        name_length, extra, comment = struct.unpack_from("<HHH", data, cursor + 28)
+        if data[cursor + 46:cursor + 46 + name_length] == name.encode():
+            local = struct.unpack_from("<I", data, cursor + 42)[0]
+            if mutate_central: mutate_central(data, cursor)
+            if mutate_local: mutate_local(data, local)
+            return bytes(data)
+        cursor += 46 + name_length + extra + comment
+    raise AssertionError("Fixture entry not found: " + name)
 
 
 def zip_bytes(entries):
@@ -49,6 +101,7 @@ def fixtures(directory):
         "future.nrm": {"minimum_recomp_version": "9.0.0"},
         "deprecated.nrm": {"id": "deprecated_mod"},
         "bad_id.nrm": {"id": "../bad"},
+        "hyphen_code.nrm": {"id": "Example-Code"},
         "bad_config.nrm": {"config_schema": {"options": [{"id": "x", "name": "X", "type": "Bool", "default": "wrong type"}]}},
     }.items():
         (directory / filename).write_bytes(mod(**changes))
@@ -101,6 +154,43 @@ def fixtures(directory):
         for number in range(65537):
             archive.writestr(f"entry-{number}", b"")
 
+    zstd_manifest = json.dumps(manifest | {"id": "zstd_fixture"})
+    entries = [("mod.json", zstd_manifest, 8), ("rt64.json", '{"textures":[]}', 93), ("asset.dds", b"DDS fixture bytes", 93)]
+    mixed = zstd_zip(entries)
+    (directory / "zstd_mixed.rtz").write_bytes(mixed)
+    (directory / "zstd_manifest.rtz").write_bytes(zstd_zip([(name, data, 93) for name, data, _ in entries]))
+    (directory / "zstd_no_manifest.rtz").write_bytes(zstd_zip(entries[1:]))
+    (directory / "zstd_empty_asset.rtz").write_bytes(zstd_zip([*entries, ("empty.txt", b"", 93)]))
+    (directory / "zstd_bad_crc.rtz").write_bytes(mutate_entry(mixed, "asset.dds",
+        lambda data, offset: struct.pack_into("<I", data, offset + 16, 0)))
+    (directory / "zstd_truncated.rtz").write_bytes(zstd_zip(entries, {"asset.dds": zstd_bytes(b"DDS fixture bytes")[:-1]}))
+    (directory / "zstd_trailing.rtz").write_bytes(zstd_zip(entries, {"asset.dds": zstd_bytes(b"DDS fixture bytes") + b"trailing invalid data"}))
+    (directory / "zstd_multiframe.rtz").write_bytes(zstd_zip(entries, {"asset.dds": zstd_bytes(b"DDS fixture") + zstd_bytes(b" bytes")}))
+    (directory / "zstd_wrong_size.rtz").write_bytes(mutate_entry(mixed, "asset.dds",
+        lambda data, offset: struct.pack_into("<I", data, offset + 24, 18)))
+    (directory / "zstd_oversized.rtz").write_bytes(mutate_entry(mixed, "asset.dds",
+        lambda data, offset: struct.pack_into("<I", data, offset + 24, 256 * 1024 * 1024 + 1)))
+    (directory / "zstd_local_method.rtz").write_bytes(mutate_entry(mixed, "asset.dds", mutate_local=
+        lambda data, offset: struct.pack_into("<H", data, offset + 8, 8)))
+    (directory / "zstd_local_flags.rtz").write_bytes(mutate_entry(mixed, "asset.dds", mutate_local=
+        lambda data, offset: struct.pack_into("<H", data, offset + 6, 8)))
+    for name, flag in (("encrypted", 1), ("patch", 32), ("strong", 64)):
+        (directory / f"zstd_{name}.rtz").write_bytes(mutate_entry(mixed, "asset.dds",
+            lambda data, offset, flag=flag: struct.pack_into("<H", data, offset + 8, flag),
+            lambda data, offset, flag=flag: struct.pack_into("<H", data, offset + 6, flag)))
+    (directory / "zstd_unsupported.rtz").write_bytes(mutate_entry(mixed, "asset.dds",
+        lambda data, offset: struct.pack_into("<H", data, offset + 10, 99),
+        lambda data, offset: struct.pack_into("<H", data, offset + 8, 99)))
+    (directory / "zstd_bad_database.rtz").write_bytes(zstd_zip([entries[0], ("rt64.json", "invalid JSON", 93)]))
+    (directory / "zstd_missing_database.rtz").write_bytes(zstd_zip([entries[0], entries[2]]))
+    (directory / "zstd_bad_manifest.rtz").write_bytes(zstd_zip([("mod.json", zstd_manifest, 93), *entries[1:]], {"mod.json": b"not a Zstandard frame"}))
+    (directory / "zstd_hyphen.rtz").write_bytes(zstd_zip([("mod.json", json.dumps(manifest | {"id": "Example-Textures"}), 93), *entries[1:]]))
+    (directory / "hyphen_textures.rtz").write_bytes(zip_bytes([("mod.json", json.dumps(manifest | {"id": "Example-Textures"})), ("rt64.json", '{}')]))
+    for index, bad_id in enumerate(("../bad", "bad\\name", "C:bad", "", "..", "nul\0id")):
+        (directory / f"zstd_bad_id_{index}.rtz").write_bytes(zstd_zip([("mod.json", json.dumps(manifest | {"id": bad_id}), 93), *entries[1:]]))
+    (directory / "truncated.nrm").write_bytes(good[:-8])
+    (directory / "empty.nrm").write_bytes(zip_bytes([]))
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -109,11 +199,19 @@ def main():
     parser.add_argument("--android-jar", type=Path, help="Also compile the actual Activity and packaged SDL Java classes")
     parser.add_argument("--jni-include", type=Path, help="Directory containing jni.h and its platform include")
     parser.add_argument("--tested-base-root", type=Path, help="Pinned 4a0a309/5db2d7f source for exact previous-picker/installer failure controls")
+    parser.add_argument("--compression-base-root", type=Path, help="Exact a44bd5c source for independent pre-fix Zstandard failures")
+    parser.add_argument("--rt64-pack", type=Path, help="Optional external pinned BT Reloaded v0.1.1 RTZ; never downloaded or redistributed by this test")
+    parser.add_argument("--zstd-include", type=Path, help="Optional header directory when the host has only the Zstandard runtime")
+    parser.add_argument("--zstd-link", default="-lzstd", help="Host Zstandard linker argument (default: -lzstd)")
     parser.add_argument("--cxx", default=os.environ.get("CXX", "g++"))
     parser.add_argument("--cc", default=os.environ.get("CC", "gcc"))
     parser.add_argument("--no-sanitizers", action="store_true", help="Explicitly disable host ASan/UBSan")
     args = parser.parse_args()
     root = args.root.resolve()
+    pack = args.rt64_pack.resolve() if args.rt64_pack else None
+    if pack and (pack.stat().st_size != 37474752 or hashlib.sha256(pack.read_bytes()).hexdigest() !=
+                 "0f896281240ac22c4b1fa10e83757eb6d393fbbbe2121c81a2c38fbc960cdde9"):
+        raise RuntimeError("External texture-pack identity differs from the pinned author release")
     temporary = None
     if args.build_dir:
         args.build_dir.mkdir(parents=True, exist_ok=True)
@@ -151,7 +249,7 @@ def main():
     helpers = java_source / "io/github/banjotooierecompiled"
     tests = root / "tests/java/io/github/banjotooierecompiled"
     run([*compile_java, "--release", "17", "-d", build / "classes", helpers / "RomImporter.java", helpers / "ModImporter.java",
-         *[tests / name for name in ("RomImporterTest.java", "ModImporterTest.java", "BanjoTooieSDLActivity.java", "RomPickerJniTest.java")]], "java-host-compile")
+         *[tests / name for name in ("RomImporterTest.java", "ModImporterTest.java", "ModArchiveCopyTest.java", "BanjoTooieSDLActivity.java", "RomPickerJniTest.java")]], "java-host-compile")
     for name in ("RomImporterTest", "ModImporterTest"):
         run([java, "-ea", "-cp", build / "classes", "io.github.banjotooierecompiled." + name], name)
     jni = args.jni_include or java.parent.parent / "include"
@@ -178,6 +276,8 @@ def main():
                     runtime / "librecomp/include", runtime / "N64Recomp/include", runtime / "ultramodern/include",
                     runtime / "thirdparty", runtime / "thirdparty/concurrentqueue", runtime / "thirdparty/miniz"]
     include_flags = ["-I" + str(path) for path in include_dirs]
+    if args.zstd_include:
+        include_flags.append("-I" + str(args.zstd_include.resolve()))
     common = ["-O0", "-g1", "-fno-omit-frame-pointer", "-ffunction-sections", "-fdata-sections"]
     sanitizer = [] if args.no_sanitizers else ["-fsanitize=address,undefined"]
     machine_flags = ["-msse4.1"] if platform.machine().lower() in ("x86_64", "amd64") else []
@@ -220,10 +320,73 @@ def main():
         target = build / (name + ".o")
         run([args.cc, *posix_c_flags, *common, *sanitizer, *include_flags, "-c", runtime / "thirdparty/miniz" / name, "-o", target], name)
         objects.append(target)
-    run([args.cxx, *sanitizer, "-Wl,--gc-sections", "-pthread", *objects, "-o", build / "installer"], "installer-link")
+    run([args.cxx, *sanitizer, "-Wl,--gc-sections", "-pthread", *objects, args.zstd_link, "-o", build / "installer"], "installer-link")
     archive_fixtures = build / "archives"
     fixtures(archive_fixtures)
-    run([build / "installer", archive_fixtures, build / "installed/mods"], "installer-execution", environment)
+    run([java, "-ea", "-cp", build / "classes", "io.github.banjotooierecompiled.ModArchiveCopyTest",
+         pack or archive_fixtures / "zstd_mixed.rtz", build / "zstd-java-copy"], "zstd-java-copy")
+    run([build / "installer", archive_fixtures, build / "installed/mods", *([pack] if pack else [])], "installer-execution", environment)
+    run([build / "installer", archive_fixtures, build / "zstd-control/mods", "--zstd-control"], "zstd-control", environment)
+    run([build / "installer", archive_fixtures, build / "texture-id-control/mods", "--texture-id-control"], "texture-id-control", environment)
+
+    # The real RT64 ZIP filesystem must consume the same bytes as the mod reader.
+    texture_objects = []
+    texture_sources = [root / "tests/mod_texture_archive.cpp", root / "lib/rt64/src/common/rt64_filesystem_zip.cpp",
+                       root / "lib/rt64/src/common/rt64_mapped_file.cpp"]
+    for number, source in enumerate(texture_sources):
+        target = build / f"texture-archive-{number}.o"
+        # RT64 itself is C++17; the runtime consumer requires C++20 char8_t.
+        run([args.cxx, "-std=c++20" if number == 0 else "-std=c++17", "-DNDEBUG", *machine_flags, *common, *sanitizer,
+             *include_flags, "-I" + str(root / "lib/rt64/src/common"),
+             "-I" + str(root / "lib/rt64/src/contrib/hlslpp/include"), "-c", source, "-o", target], f"texture-archive-{number}")
+        texture_objects.append(target)
+    archive_objects = objects[:4] + objects[6:]
+    run([args.cxx, *sanitizer, "-Wl,--gc-sections", "-pthread", *archive_objects, *texture_objects,
+         args.zstd_link, "-o", build / "texture-archive"], "texture-archive-link")
+    for name in ("zstd_mixed.rtz", "zstd_manifest.rtz", "zstd_no_manifest.rtz", "zstd_empty_asset.rtz", "zstd_multiframe.rtz"):
+        run([build / "texture-archive", archive_fixtures / name], "texture-archive-" + name, environment)
+    if pack:
+        run([build / "texture-archive", pack], "texture-archive-external", environment)
+
+    if args.compression_base_root:
+        base = args.compression_base_root.resolve()
+        pinned = {
+            "android/app/src/main/java/io/github/banjotooierecompiled/ModImporter.java": "15eb5ac04c85bb3a09a851a832e156b005454aa5",
+            "lib/RecompFrontend/recompui/src/composites/android_mod_installer.cpp": "cbfff2cb470a543979c6d996a0a0ca396d27a06d",
+            "lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp": "42a3c5c99d01ee9911d21ec310d314a9643dea68",
+        }
+        for path, expected in pinned.items():
+            data = (base / path).read_bytes()
+            if hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest() != expected:
+                raise RuntimeError("Compression control source identity differs: " + path)
+        run([*compile_java, "--release", "17", "-d", build / "base-classes",
+             base / "android/app/src/main/java/io/github/banjotooierecompiled/ModImporter.java",
+             tests / "ModArchiveCopyTest.java"], "base-compression-java-compile")
+        failure = run([java, "-ea", "-cp", build / "base-classes", "io.github.banjotooierecompiled.ModArchiveCopyTest",
+                       pack or archive_fixtures / "zstd_mixed.rtz", build / "base-java-copy"], "base-compression-java", expected=1)
+        if "invalid CEN header (bad compression method" not in failure.stderr:
+            raise RuntimeError("The exact parent did not reproduce the reported CEN error")
+        old_installer = build / "base-compression-installer.o"
+        run([args.cxx, "-std=c++20", "-D__ANDROID__", *machine_flags, *common, *sanitizer, *include_flags,
+             "-c", base / "lib/RecompFrontend/recompui/src/composites/android_mod_installer.cpp",
+             "-o", old_installer], "base-compression-installer-build")
+        run([args.cxx, *sanitizer, "-Wl,--gc-sections", "-pthread", *archive_objects, old_installer, objects[5],
+             args.zstd_link, "-o", build / "base-compression-installer"], "base-compression-installer-link")
+        run([build / "base-compression-installer", archive_fixtures, build / "base-compression/mods", "--zstd-control"],
+            "base-compression-installer", environment, expected=2)
+        run([build / "base-compression-installer", archive_fixtures, build / "base-texture-id/mods", "--texture-id-control"],
+            "base-texture-id", environment, expected=2)
+        old_source = (base / "lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp").read_text()
+        old_prefix = build / "base-compression-manifest.cpp"
+        old_prefix.write_text(old_source[:old_source.index("\nbool parse_mod_config_storage(")])
+        old_manifest = build / "base-compression-manifest.o"
+        run([args.cxx, "-std=c++20", "-D__ANDROID__", *machine_flags, *common, *sanitizer, *include_flags,
+             "-c", old_prefix, "-o", old_manifest], "base-compression-reader-build")
+        run([args.cxx, *sanitizer, "-Wl,--gc-sections", "-pthread", old_manifest, *archive_objects[1:], *texture_objects,
+             args.zstd_link, "-o", build / "base-compression-reader"], "base-compression-reader-link")
+        run([build / "base-compression-reader", pack or archive_fixtures / "zstd_mixed.rtz"],
+            "base-compression-reader", environment, expected=2)
+        print("PASS: four exact-parent controls reproduce Java CEN rejection, native compression and texture-ID rejection, and missing Zstandard reads independently", flush=True)
     run([args.cxx, "-std=c++20", "-D__ANDROID__", *machine_flags, *common, *sanitizer, *include_flags,
          root / "tests/mod_texture_registration.cpp", "-o", build / "texture-registration"], "texture-registration-build")
     run([build / "texture-registration"], "texture-registration-execution", environment)
@@ -243,7 +406,6 @@ def main():
             "src/composites/ui_mod_installer.cpp": "ee1d89978b2a7ae96e6253d5d045984e36f96d35",
             "src/composites/ui_mod_installer.h": "bf317133566929dc7d72b54a84acbdd235fbe15c",
         }
-        import hashlib
         for path, expected_blob in expected_blobs.items():
             data = (base_frontend / path).read_bytes()
             actual_blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
@@ -290,7 +452,7 @@ public class ModRouteControl {
                      "-I" + str(base_frontend / "src/composites"), *include_flags, "-c", base_frontend / "src/composites/ui_mod_installer.cpp",
                      "-o", installer_object], "base-installer-build")
             executable = build / (label + "-installer-control")
-            run([args.cxx, *sanitizer, "-Wl,--gc-sections", "-pthread", *runtime_objects, installer_object, control, "-o", executable], label + "-control-link")
+            run([args.cxx, *sanitizer, "-Wl,--gc-sections", "-pthread", *runtime_objects, installer_object, control, args.zstd_link, "-o", executable], label + "-control-link")
             observed = run([executable, archive_fixtures, build / (label + "-control/mods")], label + "-installer-control", environment, expected=2 if old else 0)
             expected_observation = "accepted_wrong_game=1 wrote_outside_mod_directory=1" if old else "accepted_wrong_game=0 wrote_outside_mod_directory=0"
             if expected_observation not in observed.stdout:

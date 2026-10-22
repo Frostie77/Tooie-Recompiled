@@ -5,6 +5,7 @@
 #include "recompiler/context.h"
 #include "librecomp/files.hpp"
 #include "librecomp/mods.hpp"
+#include "librecomp/zip_read.hpp"
 
 recomp::mods::ZipModFileHandle::~ZipModFileHandle() {
     if (file_handle) {
@@ -59,14 +60,7 @@ std::vector<char> recomp::mods::ZipModFileHandle::read_file(const std::string& f
         return ret;
     }
 
-    mz_zip_archive_file_stat stat;
-    if (!mz_zip_reader_file_stat(archive.get(), file_index, &stat)) {
-        exists = false;
-        return ret;
-    }
-
-    ret.resize(stat.m_uncomp_size);
-    if (!mz_zip_reader_extract_to_mem(archive.get(), file_index, ret.data(), ret.size(), 0)) {
+    if (!zip::read(archive.get(), file_index, ret)) {
         exists = false;
         return {};
     }

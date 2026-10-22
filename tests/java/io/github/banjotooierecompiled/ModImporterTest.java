@@ -41,8 +41,13 @@ public final class ModImporterTest {
                 ModImporter.Result rejected = ModImporter.select(() -> { opened.set(true); return new ByteArrayInputStream(bytes); }, name, directory, () -> false);
                 require(rejected.status == 2 && rejected.file == null && rejected.error != null && !opened.get());
             }
-            for (byte[] invalid : new byte[][]{new byte[0], new byte[]{1, 2, 3}, java.util.Arrays.copyOf(bytes, bytes.length - 8)}) {
-                require(ModImporter.select(() -> new ByteArrayInputStream(invalid), "bad.nrm", directory, () -> false).status == 2);
+            require(ModImporter.select(() -> new ByteArrayInputStream(new byte[0]), "empty.nrm", directory, () -> false).status == 2);
+            // Copying does not interpret ZIP compression or establish validity.
+            // Corrupt/truncated archives are rejected by the native installer.
+            for (byte[] opaque : new byte[][]{new byte[]{1, 2, 3}, java.util.Arrays.copyOf(bytes, bytes.length - 8)}) {
+                ModImporter.Result copied = ModImporter.select(() -> new ByteArrayInputStream(opaque), "bad.nrm", directory, () -> false);
+                require(copied.status == 0 && java.util.Arrays.equals(opaque, Files.readAllBytes(copied.file.toPath())));
+                ModImporter.discard(copied.file, directory);
                 require(directory.list().length == 0);
             }
             require(ModImporter.select(() -> null, "bad.nrm", directory, () -> false).status == 2);

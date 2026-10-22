@@ -45,6 +45,8 @@
 
 #include "queued_audio.h"
 #include "mod_support.h"
+#include "mod_runtime.h"
+#include "aiming_controls.h"
 #include "launcher_layout.h"
 
 #include "recompui/recompui.h"
@@ -244,7 +246,8 @@ void initialize_config() {
     }
 
     recompui::config::GeneralTabOptions general_options{};
-    recompui::config::create_general_tab(general_options);
+    auto& general_config = recompui::config::create_general_tab(general_options);
+    tooie::input::add_aiming_option(general_config);
     recompui::config::create_graphics_tab();
     recompui::config::create_controls_tab();
     recompui::config::create_sound_tab();
@@ -598,6 +601,7 @@ static int tooie_recomp_main(int argc, char** argv) {
     std::fprintf(stderr, "[tooie] step register_game\n");
     tooie_android_debug_log("[tooie] step register_game"); std::fflush(stderr);
 
+    tooie::register_mod_events();
     recompui::register_ui_exports();
     recompui::register_launcher_init_callback(initialize_launcher_menu);
     std::fprintf(stderr, "[tooie] step ui_exports\n");

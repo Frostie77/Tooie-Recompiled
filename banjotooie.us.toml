@@ -806,3 +806,25 @@ tooie_demo_pacing(rdram, ctx, 3U);
 #endif
 """
 
+# Saved aiming preference, after Y reads only.
+# bsfirstp 0x80804904 is walking input and deliberately remains unchanged.
+[[patches.hook]]
+func = "func_808000B4_baeggaim"
+before_vram = 0x80800100
+text = "tooie_aiming_invert(rdram, ctx);"
+
+[[patches.hook]]
+func = "func_808002A4_bafpctrl"
+before_vram = 0x80800320
+text = "tooie_aiming_invert(rdram, ctx);"
+
+[[patches.hook]]
+func = "func_80804848_bsfirstp"
+before_vram = 0x8080491C
+text = "tooie_aiming_invert(rdram, ctx);"
+
+[[patches.hook]]
+func = "func_80804848_bsfirstp"
+before_vram = 0x808049D4
+text = "tooie_aiming_invert(rdram, ctx);"
+

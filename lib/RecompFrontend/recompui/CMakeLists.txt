@@ -119,6 +119,7 @@ if (WIN32)
 endif()
 
 target_link_libraries(recompui PUBLIC
+    librecomp
     RmlUi::Core
     RmlUi::Debugger
     lunasvg

@@ -22513,6 +22513,7 @@ L_8080490C:
     // 0x80804918: swc1        $f2, 0x28($sp)
     MEM_W(0X28, ctx->r29) = ctx->f2.u32l;
     after_7:
+    tooie_aiming_invert(rdram, ctx);
     // 0x8080491C: lwc1        $f2, 0x28($sp)
     ctx->f2.u32l = MEM_W(ctx->r29, 0X28);
     // 0x80804920: b           L_80804930
@@ -22662,6 +22663,7 @@ L_8080499C:
     // 0x808049D0: lw          $a0, 0x30($sp)
     ctx->r4 = MEM_W(ctx->r29, 0X30);
     after_17:
+    tooie_aiming_invert(rdram, ctx);
     // 0x808049D4: mfc1        $a1, $f0
     ctx->r5 = (int32_t)ctx->f0.u32l;
     // 0x808049D8: jal         0x800045FC
