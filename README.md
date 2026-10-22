@@ -24,10 +24,11 @@ A previously failing first-person entrance and its reported boss fight worked
 in a retained device test. These observations cover those paths, not the entire
 game.
 
-Remaining work includes intro/demo animation cadence and stutter, reported lines
-in the snowy demo, broader visual/audio and lifecycle coverage, sustained
-gameplay, and actual game-side mod acceptance. See the
-[completion requirements](docs/android-completion-requirements.md).
+The executable mod example, BT Reloaded UI texture pack and saved Aiming Invert
+preference have passed their focused Odin checks. Broader mod combinations,
+visual/audio and lifecycle coverage, sustained/full-game play, release signing
+and startup updates remain open. Intro/demo stutter and reported visual details
+remain tracked. See the [checked completion requirements](docs/android-completion-requirements.md).
 
 The latest launcher artwork has been built, installed and visually approved on
 Odin. That UI verification does not establish that the remaining gameplay or
@@ -78,16 +79,32 @@ The **Mods** menu and importer support compatible Tooie `.nrm` archives, RT64
 `.rtz` texture packs and supported `.zip` bundles. Importing an archive is not
 proof that its code or textures work correctly in the running game.
 
-Game-side effects, combinations, enable/disable, removal and persistence still
-need device acceptance. Banjo-Kazooie mods and desktop native-library extensions
-are not automatically compatible. See [Android mod support](docs/android-mod-support.md)
-for implemented paths and current limits.
+The executable example's GOLD/BLUE display, setting changes, restart persistence
+and disabled view have passed on Odin. BT Reloaded v0.1.1 RT64 imports with its
+Zstandard entries and visibly changes the UI; Frostie also confirmed its
+disabled comparison and saved state after restart. The capture and later manual
+checks are distinguished in [PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14).
+An in-app Remove button is not required; disabling a mod stops using it.
+
+Multiple real mods together and broader compatibility remain unverified.
+Banjo-Kazooie mods and desktop native-library extensions are not automatically
+compatible. See [Android mod support](docs/android-mod-support.md) for the
+supported formats, restart behavior and limits. The optional texture pack is
+obtained from its author and is not bundled with the game.
 
 The [Tooie Mod Check example](examples/mods/tooie_mod_check/README.md) supplies a
 ROM-free code mod and a saved colour setting for device acceptance. Its startup
-callback integration is covered by real loader/recompiler host tests; the badge
-still needs Android rendering and restart verification. It is also a small
-starting point for Tooie mod developers.
+callback integration is covered by real loader/recompiler host tests and the
+GOLD/BLUE Odin checks above. It is also a small starting point for Tooie mod
+developers.
+
+## Aiming controls
+
+**Settings → General → Aiming Invert** reverses vertical egg aiming and
+first-person looking. It defaults Off and persists across app restarts. Walking,
+horizontal input and the regular camera retain their behavior. Host controls
+and Frostie's focused Odin checks passed; see the
+[aiming implementation and scope](docs/android-aiming-invert-20261022.md).
 
 ## Builds and downloads
 

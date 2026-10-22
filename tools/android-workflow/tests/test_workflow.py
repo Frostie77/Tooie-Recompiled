@@ -42,7 +42,7 @@ class Workflow(unittest.TestCase):
         self.redirect.__exit__(None, None, None)
         self.temp.cleanup()
 
-    def evidence(self, directory=None, uncertain=False, original='31000'):
+    def evidence(self, directory=None, uncertain=False, original='31000', extra=None):
         directory = directory or self.args.downloads
         prefix = 'Tooie-' + self.profile['identity']['commit'][:12] + '-Task-Delivery-Timing-Odin-' + tooie.unique_id()
         archive = directory / (prefix + '-Evidence.zip')
@@ -60,6 +60,7 @@ class Workflow(unittest.TestCase):
                 'FullLog': b'old data\n' + delta}
             if uncertain:
                 values['Demo-01-PIDs-000-status'] = 'returncode=-999\nTIMED OUT: completion is unknown'
+            values.update(extra or {})
             for suffix, value in values.items():
                 bundle.writestr(prefix + '-' + suffix + '.txt', value)
         return archive
@@ -79,9 +80,73 @@ class Workflow(unittest.TestCase):
             return next(n.value for n in ast.parse(source).body if isinstance(n, ast.Assign)
                         and isinstance(n.targets[0], ast.Name) and n.targets[0].id == 'MARKER')
         self.assertNotEqual(ast.dump(marker(one)), ast.dump(marker(two)))
+        header = next(n.value.value for n in ast.parse(one).body if isinstance(n, ast.Assign)
+                      and isinstance(n.targets[0], ast.Name) and n.targets[0].id == 'REPORT_HEADER')
+        self.assertEqual(header, self.profile['report_header'])
         self.assertIn("'install', '-r'", one)
         self.assertIn('gradle --build-cache assembleDebug', script.read_text())
         self.assertNotIn('gradle clean', script.read_text())
+
+    def test_main_tree_provenance_and_corrupt_manifest_controls(self):
+        source = self.root / 'source-fixture'
+        source.mkdir()
+        environment = dict(os.environ, GIT_AUTHOR_NAME='Frostie', GIT_COMMITTER_NAME='Frostie',
+                           GIT_AUTHOR_EMAIL='fixture@example.invalid', GIT_COMMITTER_EMAIL='fixture@example.invalid')
+
+        def git(*args):
+            return subprocess.run(['git', '-C', str(source), *args], env=environment,
+                                  capture_output=True, text=True, check=True).stdout.strip()
+
+        git('init', '-b', 'main')
+        (source / 'approved-art.txt').write_text('unchanged artwork fixture\n')
+        git('add', '.')
+        git('commit', '-m', 'Approved artwork fixture')
+        branding = git('rev-parse', 'HEAD')
+        (source / 'upload.cpp').write_text('reviewed upload fixture\n')
+        git('add', '.')
+        git('commit', '-m', 'Reviewed main fixture')
+        engineering = git('rev-parse', 'HEAD')
+        tree = git('rev-parse', 'HEAD^{tree}')
+        commit = git('commit-tree', tree, '-p', engineering, '-p', branding, '-m', 'Provenance fixture')
+        git('reset', '--hard', commit)
+        mode, kind, sha, path = git('ls-tree', 'HEAD', '--', 'upload.cpp').split()
+        entry = {'path': path, 'mode': mode, 'type': kind, 'sha': sha}
+        profile = copy.deepcopy(self.profile)
+        profile['identity'] = {'commit': commit, 'tree': tree, 'parents': [engineering, branding],
+                               'engineering': engineering, 'branding': branding, 'branch': 'main'}
+        profile['source_manifest'] = {'mod_entries': [], 'engineering_entries': [entry]}
+
+        def verify(value):
+            builder = tooie.render_builder(value)
+            body = builder.split("<<'VERIFY_INTEGRATED_SOURCE'\n", 1)[1].split('\nVERIFY_INTEGRATED_SOURCE', 1)[0]
+            # Execute the actual tree/parent/delta/blob/cleanliness checks. The
+            # unchanged image hash/dimension checks are outside this fixture.
+            body = body.split("for root in ('assets'", 1)[0]
+            return subprocess.run([sys.executable, '-c', body, str(source)], env=environment,
+                                  capture_output=True, text=True)
+
+        self.assertEqual(verify(profile).returncode, 0)
+        for mutation, expected in [('unlisted', 'outside the reviewed disjoint parent deltas'),
+                                   ('overlap', 'source deltas overlap'),
+                                   ('blob', 'exact source blob/mode differs'),
+                                   ('parents', 'integration parent order differs')]:
+            bad = copy.deepcopy(profile)
+            if mutation == 'unlisted':
+                bad['source_manifest']['engineering_entries'] = []
+            elif mutation == 'overlap':
+                bad['source_manifest']['mod_entries'] = [entry]
+            elif mutation == 'blob':
+                bad['source_manifest']['engineering_entries'][0]['sha'] = '0' * 40
+            else:
+                bad['identity']['parents'].reverse()
+            with self.subTest(mutation=mutation):
+                result = verify(bad)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(expected, result.stderr)
+        (source / 'upload.cpp').write_text('changed tracked source\n')
+        dirty = verify(profile)
+        self.assertNotEqual(dirty.returncode, 0)
+        self.assertIn('tracked source differs before validation', dirty.stderr)
 
     def test_template_changes_and_unsupported_flags_rejected(self):
         changed = copy.deepcopy(self.profile)
@@ -199,14 +264,31 @@ class Workflow(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'bytes differ'):
             tooie.select_artifact(self.args, self.profile)
 
-    def test_demo_profile_retains_mods_and_production_wait_gate(self):
-        self.assertTrue(self.profile['demo_only'])
+    def test_mod_profile_retains_gameplay_and_production_wait_gates(self):
+        self.assertFalse(self.profile['demo_only'])
         engineering = self.profile['source_manifest']['engineering_entries']
         mods = self.profile['source_manifest']['mod_entries']
-        self.assertEqual(len(engineering), 111)
-        self.assertEqual(len(mods), 69)
+        self.assertEqual(len(engineering), 175)
+        self.assertEqual(mods, [])
+        entries = {x['path']: x for x in engineering}
+        self.assertEqual(entries['lib/rt64/src/render/rt64_transform_processor.cpp']['sha'],
+                         '7223ebab3e3d5892b784d34ec08dba0af3943cf2')
+        self.assertIn('tests/transform_upload.cpp', entries)
+        self.assertIn('tools/test_transform_upload.py', entries)
+        self.assertIn('src/mod_runtime.h', entries)
+        self.assertIn('examples/mods/tooie_mod_check/mod.c', entries)
+        self.assertIn('src/aiming_controls.cpp', entries)
+        self.assertIn('lib/N64ModernRuntime/librecomp/include/librecomp/zip_read.hpp', entries)
         self.assertFalse({x['path'] for x in engineering} & {x['path'] for x in mods})
         builder = tooie.render_builder(self.profile)
+        self.assertIn('python3 tools/test_mod_runtime.py', builder)
+        self.assertIn('python3 tools/test_aiming_controls.py', builder)
+        self.assertIn('--compression-base-root "$COMPRESSION_BASELINE"', builder)
+        self.assertIn('pkg-config --exists libzstd', builder)
+        self.assertIn('720 actual generated aiming/first-person cases', builder)
+        self.assertIn('Example mod SHA-256: $MOD_SHA', builder)
+        self.assertIn('python3 tools/test_transform_upload.py', builder)
+        self.assertIn('exact-parent fails the independent byte check and grown-source ASan control', builder)
         self.assertIn('bash tools/test_demo_pacing.sh', builder)
         self.assertIn('python3 tools/test_demo_render_cadence.py', builder)
         self.assertIn('python3 tools/test_match_candidate_storage.py', builder)
@@ -214,6 +296,22 @@ class Workflow(unittest.TestCase):
         self.assertIn('MATCH_OPTIONS=(--require-simd)', builder)
         self.assertIn('python3 tools/test_launcher_artwork.py', builder)
         self.assertIn('menu-recompiled.png', builder)
+
+    def test_texture_aiming_build_and_collector_require_the_new_features(self):
+        self.assertEqual(self.profile['identity']['commit'], 'dcba2d96d8155ba3d8c93460345eeb9c0d23ef8f')
+        builder = tooie.render_builder(self.profile)
+        artifact = {**self.profile['artifact'], 'sha256':'a'*64, 'build_id':'b'*40,
+                    'apk':str(self.root/'game.apk'), 'report':str(self.root/'report.txt')}
+        collector = tooie.render_collector(self.profile, artifact, self.args.downloads, self.root/'session')
+        for marker in ('Aiming Invert', 'aiming_invert', 'tooie_aiming_invert',
+                       'A Zstandard archive entry failed decoding, size validation or its checksum.',
+                       'The texture pack has no readable rt64.json database.'):
+            self.assertIn(repr(marker.encode()), builder)
+            self.assertIn(repr(marker.encode()), collector)
+        self.assertIn("'src/aiming_controls.cpp'", builder)
+        self.assertIn("'RecompiledFuncs/funcs_39.c'", builder)
+        self.assertIn('default OFF', self.profile['report_fields']['Aiming Invert'])
+        self.assertIn('no GPU rendering claim', self.profile['report_fields']['Texture host validation'])
         self.assertIn('actual ARM64 begin-frame source-rate command', builder)
         audit = builder.split("<<'VERIFY_GAMEPLAY_CONFIGURATION'\n", 1)[1].split('\nVERIFY_GAMEPLAY_CONFIGURATION', 1)[0]
         ast.parse(audit)
@@ -245,7 +343,7 @@ class Workflow(unittest.TestCase):
         with tooie.exclusive_lock(self.args.state, 'device'):
             pass
 
-    def test_handoff_preserves_original_zip_and_only_counts_original_pid(self):
+    def test_compact_upload_preserves_fresh_bytes_notes_and_original_archive(self):
         archive = self.evidence()
         before = archive.read_bytes()
         handoff, summary = tooie.package_evidence(archive, self.profile)
@@ -253,8 +351,17 @@ class Workflow(unittest.TestCase):
         self.assertEqual(len(summary['windows']), 1)
         self.assertEqual(summary['user_markers'][0]['description'], 'NPC stretches')
         with zipfile.ZipFile(handoff) as bundle:
-            self.assertEqual(bundle.read(archive.name), before)
+            prefix = tooie.archive_prefix(archive)
+            with zipfile.ZipFile(archive) as original:
+                self.assertEqual(bundle.read(prefix + '-NewLog.txt'), original.read(prefix + '-NewLog.txt'))
+                self.assertEqual(bundle.read(prefix + '-User-Markers.txt'), original.read(prefix + '-User-Markers.txt'))
+            self.assertNotIn(prefix + '-FullLog.txt', bundle.namelist())
+            self.assertNotIn(archive.name, bundle.namelist())
+            manifest = json.loads(bundle.read('share-manifest.json'))
+            self.assertEqual(manifest['original_archive_sha256'], tooie.sha256(archive))
             self.assertIsNone(bundle.testzip())
+        self.assertTrue(summary['compact_upload']['complete_delta_included'])
+        self.assertEqual(summary['upload_files'], [handoff.name])
         self.assertEqual(archive.read_bytes(), before)
 
     def test_no_missing_delta_or_unknown_pid_is_invented(self):
@@ -271,27 +378,97 @@ class Workflow(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'member path'):
                 tooie.summarize_archive(archive)
 
-    def test_large_handoff_keeps_all_upload_parts_and_rejects_corruption(self):
-        archive = self.evidence()
+    def test_accumulated_logs_stay_local_without_upload_parts_or_index(self):
+        archive = self.evidence(extra={'FullLog': os.urandom(1300000), 'Baseline': os.urandom(1300000)})
+        before = tooie.sha256(archive)
         prefix = tooie.archive_prefix(archive)
-        # Inflate the original without changing any derivable metadata.
-        with zipfile.ZipFile(archive, 'a') as bundle:
-            bundle.writestr(prefix + '-Extra.txt', os.urandom(1100000))
-        part = self.root / (prefix + '-Evidence-Part001.zip')
-        part.write_bytes(b'chunk-fixture')
-        # Evidence and its parts normally share a directory.
-        target = archive.with_name(part.name); part.rename(target)
-        index = archive.with_name(prefix + '-Upload-Index.txt')
-        index.write_text(json.dumps({'parts': [{'name': target.name,
-            'size_bytes': target.stat().st_size, 'sha256': tooie.sha256(target)}]}))
         with patch.object(tooie, 'UPLOAD_LIMIT', 1200000):
             handoff, result = tooie.package_evidence(archive, self.profile)
-            self.assertEqual(result['upload_files'], [target.name, index.name])
+            self.assertEqual(result['upload_files'], [handoff.name])
+            self.assertLess(handoff.stat().st_size, 1200000)
             with zipfile.ZipFile(handoff) as bundle:
-                self.assertNotIn(archive.name, bundle.namelist())
-            target.write_bytes(b'corrupted')
-            with self.assertRaisesRegex(RuntimeError, 'part differs'):
-                tooie.package_evidence(archive, self.profile)
+                manifest = json.loads(bundle.read('share-manifest.json'))
+                local = {s['name'] for s in manifest['sources'] if s['mode'] == 'local-only'}
+                self.assertEqual(local, {prefix + '-Baseline.txt', prefix + '-FullLog.txt'})
+                self.assertIn(prefix + '-NewLog.txt', bundle.namelist())
+        self.assertEqual(tooie.sha256(archive), before)
+        self.assertFalse(list(self.args.downloads.glob('*-Evidence-Part*.zip')))
+        self.assertFalse(list(self.args.downloads.glob('*-Upload-Index.txt')))
+
+    def test_oversized_fresh_log_has_named_hashed_byte_excerpts(self):
+        data = os.urandom(400000)
+        archive = self.evidence(extra={'NewLog': data})
+        prefix = tooie.archive_prefix(archive)
+        with patch.object(tooie, 'UPLOAD_LIMIT', 120000):
+            output, summary = tooie.package_evidence(archive, self.profile)
+        self.assertLessEqual(output.stat().st_size, 120000)
+        self.assertFalse(summary['compact_upload']['complete_delta_included'])
+        with zipfile.ZipFile(output) as bundle:
+            self.assertNotIn(prefix + '-NewLog.txt', bundle.namelist())
+            entry = next(s for s in json.loads(bundle.read('share-manifest.json'))['sources']
+                         if s['name'] == prefix + '-NewLog.txt')
+            self.assertEqual(entry['mode'], 'excerpt')
+            self.assertEqual(entry['sha256'], tooie.hashlib.sha256(data).hexdigest())
+            self.assertEqual(len(entry['stored_files']), 2)
+            for part in entry['stored_files']:
+                raw = bundle.read(part['name'])
+                self.assertEqual(raw, data[part['offset']:part['offset'] + part['length']])
+                self.assertEqual(tooie.hashlib.sha256(raw).hexdigest(), part['sha256'])
+
+    def test_size_budget_prefers_mod_and_marker_images_and_declares_omissions(self):
+        images = {'Mod-Check-Ready-blue.png': os.urandom(12000),
+                  'Screenshot-Marker-001.png': os.urandom(12000),
+                  'Screenshot-Gameplay-01-01.png': os.urandom(60000)}
+        archive = self.evidence()
+        prefix = tooie.archive_prefix(archive)
+        with zipfile.ZipFile(archive, 'a') as bundle:
+            for suffix, data in images.items(): bundle.writestr(prefix + '-' + suffix, data)
+        with patch.object(tooie, 'UPLOAD_LIMIT', 65000):
+            output, summary = tooie.package_evidence(archive, self.profile)
+        self.assertLessEqual(output.stat().st_size, 65000)
+        with zipfile.ZipFile(output) as bundle:
+            for suffix in list(images)[:2]:
+                self.assertEqual(bundle.read(prefix + '-' + suffix), images[suffix])
+            omitted = next(s for s in json.loads(bundle.read('share-manifest.json'))['sources']
+                           if s['name'].endswith('Screenshot-Gameplay-01-01.png'))
+            self.assertEqual(omitted['mode'], 'local-only')
+            self.assertIn('size budget', omitted['reason'])
+
+    def test_missing_delta_stays_missing_with_explicit_fulllog_fallback(self):
+        archive = self.evidence()
+        prefix = tooie.archive_prefix(archive)
+        with zipfile.ZipFile(archive) as bundle:
+            values = {n: bundle.read(n) for n in bundle.namelist() if not n.endswith('-NewLog.txt')}
+        with zipfile.ZipFile(archive, 'w') as bundle:
+            for n, data in values.items(): bundle.writestr(n, data)
+        output, summary = tooie.package_evidence(archive, self.profile)
+        self.assertNotIn('delta_sha256', summary)
+        self.assertFalse(summary['compact_upload']['complete_delta_included'])
+        with zipfile.ZipFile(output) as bundle:
+            self.assertNotIn(prefix + '-NewLog.txt', bundle.namelist())
+            self.assertEqual(bundle.read(prefix + '-FullLog.txt'), values[prefix + '-FullLog.txt'])
+
+    def test_package_latest_selects_raw_archive_without_any_device_operation(self):
+        first = self.evidence(); second = self.evidence()
+        os.utime(first, ns=(1, 1)); os.utime(second, ns=(2, 2))
+        misleading = second.with_name('Tooie-newest-Share-file.zip')
+        misleading.write_bytes(b'not a raw capture')
+        self.assertEqual(tooie.latest_evidence(self.args.downloads), second)
+        with patch.object(tooie, 'default_downloads', return_value=self.args.downloads), \
+             patch.object(tooie.subprocess, 'Popen', side_effect=AssertionError('No device/subprocess allowed')):
+            self.assertEqual(tooie.main(['--downloads', str(self.args.downloads), 'package', '--latest']), 0)
+        self.assertEqual(len(list(self.args.downloads.glob('*-Share-*.zip'))), 2)  # Includes the misleading fixture.
+
+    def test_corrupt_excluded_history_is_detected_before_share_export(self):
+        archive = self.evidence(extra={'Baseline': b'old baseline'})
+        with zipfile.ZipFile(archive) as bundle:
+            info = next(i for i in bundle.infolist() if i.filename.endswith('-Baseline.txt'))
+        raw = bytearray(archive.read_bytes())
+        raw[info.header_offset + 30 + len(info.filename.encode())] ^= 1
+        archive.write_bytes(raw)
+        with self.assertRaises(zipfile.BadZipFile):
+            tooie.package_evidence(archive, self.profile)
+        self.assertFalse(list(self.args.downloads.glob('*-Share-*.zip')))
 
     def fake_capture(self, codes, uncertain_at=None):
         calls = []
@@ -319,7 +496,7 @@ class Workflow(unittest.TestCase):
              patch.object(tooie.subprocess, 'Popen', side_effect=popen):
             self.assertEqual(tooie.capture(self.args, self.profile), 0)
         self.assertEqual(len(set(calls)), 2)
-        self.assertEqual(len(list(self.args.downloads.glob('*-Handoff-*.zip'))), 2)
+        self.assertEqual(len(list(self.args.downloads.glob('*-Share-*.zip'))), 2)
         prefixes = [(p / 'attempt.started/evidence-prefix.txt').read_text() for p in calls]
         self.assertEqual(len(set(prefixes)), 2)
 
@@ -404,6 +581,92 @@ class Workflow(unittest.TestCase):
             self.assertIn('Captured source: ' + self.profile['identity']['commit'], text)
             self.assertIn('Workflow profile at packaging: ' + 'f' * 40, text)
 
+
+    def test_mod_receipt_verifies_source_and_package_before_copy(self):
+        profile = copy.deepcopy(self.profile)
+        archive = self.root / profile['artifact']['mod']
+        report = self.root / profile['artifact']['mod_report']
+        apk_report = self.root / 'apk-report.txt'
+        with zipfile.ZipFile(archive, 'w') as z:
+            z.writestr('mod.json', json.dumps({'id':'tooie_mod_check','game_id':'bt'}))
+            z.writestr('mod_syms.bin', b'N64RSYMS-host-fixture')
+            z.writestr('mod_binary.bin', b'not executable: metadata validation fixture')
+        digest = tooie.sha256(archive)
+        value = {'source_commit':profile['identity']['commit'], 'archive_sha256':digest,
+                 'source_files':profile['mod_check']['source_files']}
+        report.write_text(json.dumps(value))
+        fields = profile['report_fields'] | {'Example mod SHA-256':digest}
+        apk_report.write_text(profile['report_header']+'\n'+'\n'.join(k+': '+v for k,v in fields.items()))
+        artifact = {'apk':str(self.root/'game.apk'), 'report':str(apk_report)}
+        result = tooie.mod_artifact(profile, artifact)
+        self.assertEqual(result, {'path':str(archive),'sha256':digest})
+        report.write_text(json.dumps(value | {'source_commit':'0'*40}))
+        with self.assertRaisesRegex(RuntimeError, 'source and APK build report'):
+            tooie.mod_artifact(profile, artifact)
+        report.write_text(json.dumps(value))
+        archive.write_bytes(b'changed after building')
+        with self.assertRaisesRegex(RuntimeError, 'source and APK build report'):
+            tooie.mod_artifact(profile, artifact)
+
+    def test_mod_phase_uses_same_terminal_and_explicit_gameplay(self):
+        args = tooie.parser().parse_args(['test','--mod-check','gold'])
+        self.assertEqual(args.mod_check,'gold')
+        artifact = {'apk':str(self.root/'game.apk'),'report':str(self.root/'report.txt'),
+                    'sha256':'a'*64,'build_id':'b'*40}
+        mod = {'path':str(self.root/'check.nrm'),'sha256':'c'*64}
+        text = tooie.render_collector(self.profile,artifact,self.args.downloads,self.root/'session',mod_check='gold',mod=mod)
+        namespace={'__name__':'fixture'};exec(text,namespace)
+        self.assertTrue(namespace['GAMEPLAY_ONLY'])
+        self.assertEqual(namespace['MOD_CHECK'],'gold')
+        self.assertEqual(namespace['MOD_FILE'],Path(mod['path']))
+        self.assertIn('session.nrm',namespace['MOD_REMOTE'])
+
+    def test_missing_removal_ui_stops_before_artifact_or_device_access(self):
+        args = tooie.parser().parse_args(['test', '--mod-check', 'removed'])
+        with patch.object(tooie, 'select_artifact', side_effect=AssertionError('No artifact/device work')), \
+             patch.object(tooie.subprocess, 'Popen', side_effect=AssertionError('No install/launch')):
+            with self.assertRaisesRegex(RuntimeError, 'no Remove option'):
+                tooie.capture(args, self.profile)
+        with self.assertRaisesRegex(RuntimeError, 'no Remove option'):
+            tooie.render_collector(self.profile, {}, self.args.downloads, self.root/'session', mod_check='removed')
+
+    def test_mod_setup_copies_only_gold_and_rejects_changed_bytes(self):
+        artifact = {'apk':str(self.root/'game.apk'),'report':str(self.root/'report.txt'),
+                    'sha256':'a'*64,'build_id':'b'*40}
+        path=self.root/'check.nrm';path.write_bytes(b'controlled copy fixture')
+        mod={'path':str(path),'sha256':tooie.sha256(path)}
+        text=tooie.render_collector(self.profile,artifact,self.args.downloads,self.root/'session',mod_check='gold',mod=mod)
+        namespace={'__name__':'fixture'};exec(text,namespace)
+        namespace['prefix']=self.root/'evidence'
+        calls=[]
+        def adb(*args,**kwargs):
+            calls.append(args)
+            return subprocess.CompletedProcess([],0,('' if args[0]=='push' else mod['sha256']+'  file').encode(),b'')
+        namespace['adb']=adb
+        namespace['command']=lambda *a,**k:subprocess.CompletedProcess([],0,b'C:\\Downloads\\check.nrm',b'')
+        namespace['mod_setup']()
+        self.assertEqual([c[0] for c in calls],['push','shell'])
+        for phase in ('blue','persist','disabled'):
+            calls.clear();namespace['MOD_CHECK']=phase;namespace['prefix']=self.root/('evidence-'+phase);namespace['mod_setup']()
+            self.assertEqual(calls,[])
+        calls.clear(); namespace['MOD_CHECK']='removed'; namespace['prefix']=self.root/'unsupported-removal'
+        with self.assertRaisesRegex(RuntimeError, 'no Remove option'):
+            namespace['mod_setup']()
+        self.assertEqual(calls, [])
+        self.assertFalse((self.root/'unsupported-removal-Mod-Check-Plan.txt').exists())
+        calls.clear();namespace['MOD_CHECK']='gold';path.write_bytes(b'changed')
+        with self.assertRaisesRegex(RuntimeError,'changed after workflow validation'):
+            namespace['mod_setup']()
+        self.assertEqual(calls,[])
+        path.write_bytes(b'controlled copy fixture')
+        namespace['prefix']=self.root/'copy-failed'
+        def failed_push(*args,**kwargs):
+            calls.append(args)
+            return subprocess.CompletedProcess([],1,b'',b'uncertain connection')
+        namespace['adb']=failed_push
+        with self.assertRaisesRegex(RuntimeError,'failed or was uncertain'):
+            namespace['mod_setup']()
+        self.assertEqual([c[0] for c in calls],['push'])
 
     def test_presentation_control_preserves_artifact_and_default_mode(self):
         artifact = {**self.profile['artifact'], 'sha256':'a'*64, 'build_id':'b'*40,

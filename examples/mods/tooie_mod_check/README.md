@@ -33,12 +33,15 @@ No ROM is required and no original game assets are included.
    **Tooie mod check: BLUE**.
 4. Restart again without editing settings: expect BLUE to persist.
 5. Disable the mod before starting a fresh app session: the label should vanish
-   and normal gameplay should remain available. Re-enable and remove it through
-   the mod menu in separate checks.
+   and normal gameplay should remain available. The current Mods page has no
+   Remove action; leaving the example disabled is sufficient.
 
-Code mods require an app restart to apply changes. Keep numbered observations
-and screenshots in the normal evidence capture. These steps are a test plan;
-host compilation does not establish an Odin pass.
+Code mods require an app restart to apply changes. These GOLD, BLUE, restart
+persistence and disabled phases passed on Odin on 22 October 2026; the evidence
+and tested APK identity are recorded in [PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14).
+For a future recorded test, keep numbered observations and screenshots in the
+same one-terminal evidence capture. Host compilation alone does not establish
+a device pass.
 
 ## Developer notes
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pinned Android build, repeatable Odin sessions and lossless evidence handoffs."""
+"""Pinned Android build, repeatable Odin sessions and one compact evidence upload."""
 from __future__ import annotations
 
 import argparse
@@ -17,8 +17,10 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import uuid
 import zipfile
+import zlib
 
 HERE = Path(__file__).resolve().parent
 REPO = 'https://github.com/Frostie77/Tooie-Recompiled.git'
@@ -127,7 +129,9 @@ def load_profile(path):
     require(set(profile['templates']) == {'build.sh', 'collector.py'}, 'Unexpected templates.')
     for name, digest in profile['templates'].items():
         require(sha256(HERE / 'templates' / name) == digest, 'Template digest differs: ' + name)
-    for key in ('apk', 'report'):
+    for key in ('apk', 'report', 'mod', 'mod_report'):
+        if key not in profile['artifact']:
+            continue
         require(Path(profile['artifact'][key]).name == profile['artifact'][key],
                 'Artifact names must be simple filenames.')
     return profile
@@ -210,7 +214,36 @@ def replace_assignments(source, values):
     return ''.join(lines)
 
 
-def render_collector(profile, artifact, downloads, session, presentation_hz=None, gameplay_only=False):
+def mod_artifact(profile, artifact):
+    names = profile['artifact']
+    require('mod' in names and 'mod_report' in names, 'This profile has no verified example mod. Build the mod-check profile first.')
+    path = Path(artifact['apk']).parent / names['mod']
+    report = path.parent / names['mod_report']
+    data = json.loads(report.read_text())
+    digest = sha256(path)
+    fields = report_fields(artifact['report'], profile)
+    require(data.get('source_commit') == profile['identity']['commit'] and
+            data.get('archive_sha256') == digest == fields.get('Example mod SHA-256'),
+            'Example mod does not match its source and APK build report.')
+    require(data.get('source_files') == profile['mod_check']['source_files'], 'Example mod source hashes differ.')
+    with zipfile.ZipFile(path) as archive:
+        require(archive.testzip() is None, 'Example mod ZIP CRC failed.')
+        manifest = json.loads(archive.read('mod.json'))
+        require(manifest.get('id') == 'tooie_mod_check' and manifest.get('game_id') == 'bt', 'Wrong example mod identity.')
+        require(archive.read('mod_syms.bin').startswith(b'N64RSYMS') and archive.read('mod_binary.bin'),
+                'Example mod has no executable payload.')
+    return {'path': str(path), 'sha256': digest}
+
+
+def validate_mod_phase(phase):
+    require(phase != 'removed',
+            'This APK has no Remove option in Mods. The removal test is retired; '
+            'use the on/off toggle. A Remove button is not required. No install or launch was started.')
+    require(phase in (None, '', 'gold', 'blue', 'persist', 'disabled'), 'Unsupported mod-check phase.')
+
+
+def render_collector(profile, artifact, downloads, session, presentation_hz=None, gameplay_only=False, mod_check=None, mod=None):
+    validate_mod_phase(mod_check)
     require(presentation_hz in (None, 60), 'Unsupported presentation comparison.')
     source = (HERE / 'templates/collector.py').read_text()
     identity = profile['identity']
@@ -222,14 +255,19 @@ def render_collector(profile, artifact, downloads, session, presentation_hz=None
         'WORDMARK_HASH': repr(profile['launcher_assets']['wordmark']),
         'LAUNCHER_LAYOUT_HASH': repr(profile['launcher_assets']['layout']),
         'APK': 'Path(' + repr(artifact['apk']) + ')', 'REPORT': 'Path(' + repr(artifact['report']) + ')',
+        'REPORT_HEADER': repr(profile['report_header']),
         'ADB': repr(default_adb() if profile['device']['adb'] == 'auto' else profile['device']['adb']),
         'SERIAL': repr(profile['device']['serial']),
         'READELF': "Path.home() / " + repr('Android/Sdk/ndk/' + profile['configuration']['ndk'] +
                                              '/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'),
         'MARKER': 'Path(' + repr(str(session / 'attempt.started')) + ')',
         'DEMO_ONLY': repr(profile.get('demo_only', False)),
-        'GAMEPLAY_ONLY': repr(bool(gameplay_only)),
+        'GAMEPLAY_ONLY': repr(bool(gameplay_only or mod_check)),
         'PRESENTATION_TEST_HZ': repr(presentation_hz or 0),
+        'MOD_CHECK': repr(mod_check or ''),
+        'MOD_FILE': 'Path(' + repr(mod['path'] if mod else '') + ')',
+        'MOD_HASH': repr(mod['sha256'] if mod else ''),
+        'MOD_REMOTE': repr('/sdcard/Download/Tooie-Mod-Check-' + identity['commit'][:12] + '-' + session.name + '.nrm' if mod_check == 'gold' else ''),
     }
     source = replace_assignments(source, replacements)
     node = next(n for n in ast.parse(source).body if isinstance(n, ast.FunctionDef) and n.name == 'expected_report')
@@ -434,59 +472,141 @@ def summarize_archive(archive):
 
 
 def package_evidence(archive, profile):
+    """Keep the complete capture locally; share exact fresh data within one ZIP."""
     archive = Path(archive).resolve()
     require(archive.is_file(), 'Evidence ZIP is missing.')
     summary = summarize_archive(archive)
     prefix = archive_prefix(archive)
-    output = archive.with_name(prefix + '-Handoff-' + unique_id() + '.zip')
-    uploads = []
-    if archive.stat().st_size <= UPLOAD_LIMIT - 1024 * 1024:
-        uploads = [archive]
-    else:
-        index = archive.with_name(prefix + '-Upload-Index.txt')
-        require(index.is_file(), 'Large evidence: keep the full ZIP; collector upload index is missing.')
-        manifest = json.loads(index.read_text())
-        uploads = []
-        for part in manifest['parts']:
-            require(Path(part['name']).name == part['name'], 'Unsafe upload-part name.')
-            path = archive.with_name(part['name'])
-            require(path.stat().st_size == part['size_bytes'] and sha256(path) == part['sha256'],
-                    'Upload part differs: ' + path.name)
-            require(path.stat().st_size <= UPLOAD_LIMIT, 'Upload part is too large.')
-            uploads.append(path)
-        require(uploads, 'No upload parts found.')
-        uploads.append(index)
-    summary['upload_files'] = [p.name for p in uploads]
-    text = ('Tooie Recompiled evidence handoff\n\n'
+    output = archive.with_name(prefix + '-Share-' + unique_id() + '.zip')
+    summary['upload_files'] = [output.name]
+    manifest = {'schema': 1, 'original_archive': archive.name,
+                'original_archive_bytes': summary['bytes'],
+                'original_archive_sha256': summary['sha256'],
+                'source_commit': summary['source_commit'],
+                'original_pid': summary['original_pid'], 'sources': [],
+                'scope': 'Exact included files or explicitly named byte excerpts. '
+                         'Full capture and omitted originals remain on the PC. '
+                         'This compact upload is not the complete raw archive.'}
+    local_only = {prefix + '-Baseline.txt', prefix + '-FullLog.txt'}
+    primary = {prefix + '-' + s + '.txt' for s in ('NewLog', 'Logcat', 'Logcat-Dump')}
+    with zipfile.ZipFile(archive) as source:
+        if prefix + '-NewLog.txt' not in source.namelist():
+            # An unreliable/missing delta stays missing. Retain complete or
+            # clearly excerpted FullLog as fallback evidence under its own name.
+            local_only.remove(prefix + '-FullLog.txt')
+            primary.add(prefix + '-FullLog.txt')
+    text = ('Tooie Recompiled compact evidence upload\n\n'
+            'UPLOAD THIS ZIP ONLY. No other parts, index or handoff are needed.\n'
             'Captured source: ' + str(summary['source_commit'] or 'unavailable; inspect original evidence') + '\n'
             'Workflow profile at packaging: ' + profile['identity']['commit'] + '\n'
             'Original PID: ' + str(summary['original_pid']) + '\n'
+            'Complete local archive: ' + archive.name + '\n'
+            'Baseline and accumulated FullLog normally stay local; FullLog can provide a missing-delta fallback.\n'
+            'Read share-manifest.json for every inclusion, omission and byte excerpt.\n'
+            'Summary counts describe the local capture; excerpts may contain fewer records.\n'
             'Rendering and pacing conclusions require the raw records and user observations.\n'
             'Markers record host receipt, which can follow the visible issue.\n'
             'An ADB timeout is an unknown result, not proof that the app crashed.\n'
             'Task IDs correlate records; nested stage maxima must not be added together.\n'
-            'No original/working-PC demo landmark baseline is supplied.\n\n'
-            'Runtime record counts: ' + json.dumps(summary['runtime_counts'], sort_keys=True) + '\n'
-            'Marker journal records: ' + str(len(summary['user_markers'])) + '\n\n'
-            'Share the handoff ZIP' + (' only; it contains the original evidence ZIP.\n' if uploads == [archive]
-                                      else ' AND every listed upload part/index:\n' + '\n'.join(p.name for p in uploads) + '\n'))
-    with zipfile.ZipFile(output, 'x', zipfile.ZIP_DEFLATED) as bundle:
-        bundle.writestr('README.txt', text)
-        bundle.writestr('summary.json', json.dumps(summary, indent=2, ensure_ascii=False) + '\n')
-        bundle.writestr('workflow-profile.json', json.dumps(profile, indent=2) + '\n')
-        if uploads == [archive]:
-            # Store the already-compressed ZIP verbatim and leave all original files intact.
-            bundle.write(archive, archive.name, compress_type=zipfile.ZIP_STORED)
-    require(output.stat().st_size <= UPLOAD_LIMIT, 'Handoff exceeds the upload limit; original evidence retained.')
-    print('Share this handoff:\n' + str(output), flush=True)
-    if uploads != [archive]:
-        print('Also share ALL these evidence parts and index:\n' + '\n'.join(str(p) for p in uploads), flush=True)
+            'No original/working-PC demo landmark baseline is supplied.\n')
+
+    def priority(info):
+        name = info.filename
+        if name in local_only:
+            return (9, name)
+        if name.endswith('.txt') and info.file_size <= 256 * 1024 and name not in primary:
+            return (0, name)
+        if name in primary:
+            return (1, name != prefix + '-NewLog.txt', name)
+        if name.endswith('.png'):
+            # Keep mod acceptance and numbered bug pictures before routine views.
+            return (2, 'Mod-Check-Ready-' not in name,
+                    'Screenshot-Marker-' not in name, name)
+        return (3, name)
+
+    # Reserve space for the source inventory, summary and ZIP directory. Measure
+    # compressed bytes with the same raw DEFLATE settings used by ZipFile.
+    reserve = min(1024 * 1024, UPLOAD_LIMIT // 4)
+    with tempfile.TemporaryDirectory(prefix='.tooie-share-', dir=archive.parent) as temporary:
+        staged = Path(temporary) / 'share.zip'
+        with zipfile.ZipFile(archive) as original, \
+             zipfile.ZipFile(staged, 'x', zipfile.ZIP_DEFLATED, compresslevel=6) as bundle:
+            require(all(n.startswith(prefix + '-') for n in original.namelist()),
+                    'Mixed capture member prefixes; original evidence retained.')
+            bundle.writestr('README.txt', text)
+            bundle.writestr('workflow-profile.json', json.dumps(profile, indent=2) + '\n')
+            remaining = UPLOAD_LIMIT - bundle.fp.tell() - reserve
+            for info in sorted(original.infolist(), key=priority):
+                digest = hashlib.sha256()
+                compressor = zlib.compressobj(6, zlib.DEFLATED, -15)
+                compressed = 0
+                with original.open(info) as stream:
+                    for data in iter(lambda: stream.read(1024 * 1024), b''):
+                        digest.update(data)
+                        if info.filename not in local_only:
+                            compressed += len(compressor.compress(data))
+                compressed += len(compressor.flush())
+                entry = {'name': info.filename, 'size_bytes': info.file_size,
+                         'sha256': digest.hexdigest(), 'mode': 'local-only', 'stored_files': []}
+                cost = compressed + 100 + 2 * len(info.filename.encode('utf-8'))
+                if info.filename in local_only:
+                    entry['reason'] = 'Accumulated private log/baseline; fresh delta is preferred.'
+                elif cost <= remaining:
+                    written = hashlib.sha256()
+                    with original.open(info) as source, bundle.open(info.filename, 'w') as target:
+                        for data in iter(lambda: source.read(1024 * 1024), b''):
+                            target.write(data)
+                            written.update(data)
+                    require(written.hexdigest() == entry['sha256'], 'Source changed during packaging.')
+                    remaining -= cost
+                    entry['mode'] = 'verbatim'
+                    entry['stored_files'].append({'name': info.filename, 'offset': 0,
+                        'length': info.file_size, 'sha256': entry['sha256']})
+                else:
+                    entry['reason'] = 'Single-upload size budget; original retained locally.'
+                    # Never label a partial log NewLog. Byte offsets and source
+                    # hashes make oversized start/end excerpts explicit.
+                    edge = min(128 * 1024, max(0, (remaining - 4096) // 3))
+                    if info.filename in primary and edge > 0:
+                        entry['mode'] = 'excerpt'
+                        for label, offset in [('Start', 0), ('End', max(edge, info.file_size - edge))]:
+                            with original.open(info) as source:
+                                source.seek(offset)
+                                data = source.read(edge)
+                            name = info.filename[:-4] + '-' + label + '-Excerpt.txt'
+                            bundle.writestr(name, data)
+                            remaining -= len(data) + 100 + 2 * len(name.encode('utf-8'))
+                            entry['stored_files'].append({'name': name, 'offset': offset,
+                                'length': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
+                manifest['sources'].append(entry)
+            summary['compact_upload'] = {
+                'complete_delta_included': any(e['name'] == prefix + '-NewLog.txt' and
+                    e['mode'] == 'verbatim' for e in manifest['sources']),
+                'verbatim_files': sum(e['mode'] == 'verbatim' for e in manifest['sources']),
+                'excerpted_files': sum(e['mode'] == 'excerpt' for e in manifest['sources']),
+                'local_only_files': sum(e['mode'] == 'local-only' for e in manifest['sources'])}
+            bundle.writestr('summary.json', json.dumps(summary, indent=2, ensure_ascii=False) + '\n')
+            bundle.writestr('share-manifest.json', json.dumps(manifest, indent=2) + '\n')
+        require(staged.stat().st_size <= UPLOAD_LIMIT,
+                'Compact metadata exceeds upload limit; all original evidence retained.')
+        with staged.open('rb') as source, output.open('xb') as target:
+            shutil.copyfileobj(source, target)
+    print('UPLOAD THIS ONE FILE:\n' + str(output), flush=True)
+    print('Full raw evidence stays on your PC. Any size-limited omissions/excerpts are listed inside.', flush=True)
     return output, summary
 
 
+def latest_evidence(downloads):
+    candidates = [p for p in downloads.glob('Tooie-*-Evidence.zip') if p.is_file()]
+    require(candidates, 'No original evidence ZIP found in Downloads.')
+    return max(candidates, key=lambda p: (p.stat().st_mtime_ns, p.name))
+
+
 def capture(args, profile):
+    validate_mod_phase(args.mod_check)
     require(sys.stdin.isatty(), 'Run test in one interactive Ubuntu terminal.')
     artifact = select_artifact(args, profile)
+    mod = mod_artifact(profile, artifact) if args.mod_check else None
     with exclusive_lock(args.state, 'device'):
         print('Each session performs a replacement install and launch, retaining app data.\n'
               'Keep using this terminal for prompts and numbered bug notes.\n'
@@ -495,11 +615,12 @@ def capture(args, profile):
             session = args.state / 'sessions' / unique_id()
             session.mkdir(parents=True)
             script = session / 'collector.py'
-            write_new(script, render_collector(profile, artifact, args.downloads, session, args.presentation_hz, args.gameplay_only))
+            write_new(script, render_collector(profile, artifact, args.downloads, session, args.presentation_hz, args.gameplay_only, args.mod_check, mod))
             json_new(session / 'session.json', {'session': session.name, 'number': number,
                      'requested_sessions': args.sessions, 'artifact': artifact,
                      'requested_presentation_hz': args.presentation_hz,
                      'gameplay_only': args.gameplay_only,
+                     'mod_check': args.mod_check,
                      'authorization': 'User invoked repeat-capable workflow. One install/launch per session. Saves retained.'})
             print('\nSESSION ' + str(number) + '/' + str(args.sessions) + ': ' + session.name, flush=True)
             process = subprocess.Popen([sys.executable, '-u', str(script)])
@@ -552,15 +673,18 @@ def parser():
     build_parser.add_argument('--rebuild', action='store_true', help='Build again into a new immutable export folder.')
     build_parser.add_argument('--fresh', action='store_true', help='Build with a new cache; existing caches are retained.')
     build_parser.add_argument('--artifact', type=Path)
-    test_parser = sub.add_parser('test', help='Install, launch, capture notes and automatically prepare a handoff.')
+    test_parser = sub.add_parser('test', help='Install, launch, capture notes and prepare one compact upload.')
     test_parser.add_argument('--sessions', type=int, default=1)
     test_parser.add_argument('--artifact', type=Path, help='Receipt from a new workflow build.')
     test_parser.add_argument('--presentation-hz', type=int, choices=[60],
                              help='Guide a manual 60 Hz output comparison before Start Game; no automatic setting change.')
     test_parser.add_argument('--gameplay-only', action='store_true',
                              help='Load an existing save and capture ten minutes after playing confirmation, without a timed demo window.')
-    package_parser = sub.add_parser('package', help='Prepare a handoff from an existing evidence ZIP; no device commands.')
-    package_parser.add_argument('evidence', type=Path)
+    test_parser.add_argument('--mod-check', choices=['gold', 'blue', 'persist', 'disabled', 'removed'],
+                             help='Guided code-mod check; gold copies the example. Removed is blocked: this APK has no removal UI.')
+    package_parser = sub.add_parser('package', help='Prepare one compact upload from existing evidence; no device commands.')
+    package_parser.add_argument('evidence', type=Path, nargs='?')
+    package_parser.add_argument('--latest', action='store_true', help='Package the newest original evidence ZIP in Downloads.')
     sub.add_parser('update', help='Explicitly fast-forward this isolated tooling checkout.')
     return result
 
@@ -581,7 +705,8 @@ def main(argv=None):
         require(1 <= args.sessions <= 10, 'Choose 1–10 separately recorded sessions.')
         return capture(args, profile)
     elif args.command == 'package':
-        package_evidence(args.evidence, profile)
+        require(bool(args.evidence) != args.latest, 'Choose an evidence path or --latest.')
+        package_evidence(latest_evidence(args.downloads) if args.latest else args.evidence, profile)
     return 0
 
 

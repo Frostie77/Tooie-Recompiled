@@ -64,21 +64,33 @@ and Odin acceptance must be assessed separately from local host passes.
 
 ## Odin and preview acceptance
 
-Use the maintained workflow in one Ubuntu terminal; keep Manual 60 and graphics
-settings fixed. Before starting the game, install and enable the example in
-Mods. Select Gold, start, capture the GOLD badge and normal controller response.
-On separate launches select Blue, verify BLUE persists without edits, disable,
-then remove the mod and verify the unmodified view returns. Code-mod changes
-require a fresh app session. Keep numbered notes/screenshots in the same capture.
+Updated 22 October 2026. The GOLD, BLUE, unchanged BLUE after restart/update and
+disabled phases passed on Odin using the verified `386d58e4946f` APK. These
+captures establish this example's executable loading, startup dispatch, visible
+RecompUI output and saved configuration. They do not establish arbitrary
+game-function hooks or actor-ready callbacks.
 
-Before advertising working mods in a preview, retain device evidence for this
-code path, settings, enable/disable/removal and an **actual Tooie texture
-replacement**. Verify a signed update preserves ROM, saves, settings and mods.
-General game-function hook compatibility, multiple real mod combinations, other
-Android GPUs and a full playthrough remain separate coverage items. The current
-Tooie overlay/syscall constraints are not removed by this startup event. BK mods
-and desktop native extensions are not Tooie/Android compatibility fixtures.
+The subsequent `dcba2d96d815` APK also imports the original BT Reloaded v0.1.1
+RT64 pack. Its UI replacement and positive aiming response were captured.
+Frostie then manually confirmed the texture-disabled comparison, Aiming Invert
+Off/On behavior, unchanged walking/regular camera and restart persistence,
+without another collector run. Those reports are accepted separately from the
+captured evidence. [PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14)
+retains the APK identities, hashes and scope of each result.
 
-The Android-only preview should state tested devices and known minor graphics
+An in-app Remove button is not required. The current Mods page exposes
+enable/disable and configuration; the earlier instruction to remove through
+that menu was incorrect and is retired. A code-mod change applies in a fresh
+app session. Keep Manual 60 and other graphics settings fixed during a
+comparison, using the one-terminal workflow for any future recorded checks.
+
+The requested example, UI-pack and aiming feature acceptance is complete.
+Multiple real mod combinations, general game-function hooks, other GPUs and
+full-game progression remain broader coverage items. A public preview still
+requires release signing/version identity, distribution/asset review, a verified
+candidate and release notes. Keep existing ROMs, saves, settings and mods through
+the intended update path.
+
+The Android-only preview must state tested hardware and known minor graphics
 issues. Automatic startup update checks remain a later completion requirement.
-The complete project is not declared finished by this milestone.
+See the [checked completion requirements](android-completion-requirements.md).

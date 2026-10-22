@@ -1,5 +1,56 @@
 # Tooie Recompiled Android workflow
 
+## Current milestone: real texture import and saved aiming preference
+
+The build is pinned to `dcba2d96d8155ba3d8c93460345eeb9c0d23ef8f`, exact tree
+`222a8ad6ea6975cd9b10b6987fd297ca056bd429`, with engineering parent
+`b95665529932c22750f1926b3180786f5aedda35` and the approved artwork parent.
+PR #14 reviews the runtime changes. This historical tooling distribution branch
+must not be merged wholesale into main.
+
+This revision fixes importing RT64 Zstandard/method-93 texture archives and adds
+**Aiming Invert** in **Settings → General**, default Off. On reverses joystick
+vertical egg/first-person aiming; normal walking, horizontal aim and the regular
+camera stay unchanged. The old installed `386d58e4946f` APK lacks both changes.
+No new hardware pass is claimed until the new APK has been tested.
+
+Update and build in Ubuntu, one command at a time. The host archive tests now
+also require `libzstd-dev`; the builder checks this before creating its build
+folder. If it reports that prerequisite missing, install it in Ubuntu with
+`sudo apt install libzstd-dev`, then rerun the build. Clang/LLD, zip and the
+previous JDK/SDK/SDL prerequisites remain required. The build checks all 175
+reviewed source blobs, actual ARM64 compiler commands, preserved safeguards,
+exact native packaging, approved artwork and the new feature markers.
+
+For the first focused device test use `~/projects/tooie-tools/tooie test --gameplay-only`.
+At the launcher, before typing `ready`, use **Mods → Install Mods** to select
+the original `bt-reloaded-v0.1.1-rt64.rtz` already in Odin Downloads. Its known
+SHA-256 is `0f896281240ac22c4b1fa10e83757eb6d393fbbbe2121c81a2c38fbc960cdde9`.
+Do not rename, unpack or recompress it. Enable the pack and compare supported
+pause-menu text/icons; the author describes this release as **UI only**.
+Keep Tooie Mod Check disabled and retain Manual 60 and the existing graphics.
+
+Check Aiming Invert Off/On while aiming eggs. Confirm horizontal direction,
+then leave aiming and check walking and the normal camera. Close the settings
+tab to save. Add numbered notes describing the selected state and observed
+response. A later separately recorded launch checks persistence without editing
+the setting and compares the texture pack disabled. No new texture-specific
+command or automatic controller input is introduced.
+
+Use the same terminal for `ready`, `playing`, numbered notes and `save`.
+The timer starts only after `playing`; a focused check can finish with `save`.
+Notes, attempted screenshots and fresh logs go in the same compact Share ZIP.
+The full raw evidence stays on the PC. A successful import alone is not a
+rendering or aiming pass.
+
+The earlier executable-example GOLD, BLUE, persistence and disabled phases
+passed on Odin. They remain available with `--mod-check` when needed; they are
+not required to repeat merely for this texture/aiming check. The build still
+exports the verified example `.nrm` and report alongside its APK. The obsolete
+`--mod-check removed` phase is rejected before artifact or device access. An
+in-app Remove button is not required. Automatic startup update checks and full
+gameplay acceptance remain separate project goals.
+
 Use one Ubuntu terminal. Keep source and compiler outputs in the Linux file
 system; finished APKs and upload bundles go to Windows Downloads.
 
@@ -35,6 +86,30 @@ differs. After all builder checks pass, the runner creates an artifact receipt
 and atomically records the latest verified artifact for that exact source/profile.
 The default `test` selects that receipt and rechecks the report and APK bytes.
 Before the first successful build, testing this revision is refused.
+
+## Previous tested baseline: transform upload correction
+
+The previous tested source was `7a158a50b5b2e9936f99dc2488665a9459fd6559`, with the exact tree of main
+after PR #12 (`26d41b13a8350182a0018578fbcbb150eee7470c`). Its runtime differs from the
+tested d168 APK in one transform-upload history predicate. The round BT icon,
+approved launcher and all other game/renderer sources and shaders are identical.
+The integration adds provenance parents without changing that main tree.
+
+Run `tooie build` first. This profile has no prebuilt artifact receipt and cannot
+fall back to d168. The builder reruns the new eight-case ASan/UBSan staging test,
+exact-parent overread/byte controls and retained host/packaging checks. GitHub
+Android CI already passed the same runtime source tree with observers OFF; this
+PC build retains the timing observer for comparison and the established local
+signing identity. A CI debug APK must not replace the existing app by uninstalling it.
+
+Then use `tooie test --gameplay-only` in one Ubuntu terminal. Keep Manual 60 and
+the other graphics settings unchanged. This is a source-correctness fix, not a
+confirmed cure for climbing poses, ground/shadow artifacts or lower frame output.
+Prior d168 first-person entry/play passed. No device operation occurs during build.
+
+The long-running updater and build branches are distribution/provenance branches.
+Do not open or merge those entire branches into main; use the small reviewed
+pull requests. Updating this wrapper is a fast-forward and preserves its history.
 
 ## Bug pictures and optional output-rate comparison
 
@@ -115,13 +190,29 @@ completion, not proof of app death. There are no blind retries of an uncertain
 install or launch. Fix the connection, then invoke a separate test session.
 The same session cannot be replayed, and simultaneous device tests are locked.
 
-The runner automatically prepares a `Handoff-...zip` after the collector saves
-its evidence. For ordinary captures it contains the original ZIP unchanged,
-the version profile and a derived summary. For large captures it contains the
-summary and lists all independently bounded evidence parts and their index;
-share every listed file. Original raw logs, byte deltas and archives remain.
-The `package` command can prepare a handoff from an existing original evidence
-ZIP without any ADB command.
+After each test the terminal prints **UPLOAD THIS ONE FILE** and a
+`Tooie-...-Share-...zip` path. Upload only that file. It contains the summary,
+profile, notes, status/error records, fresh logs and screenshots. There are no
+automatic evidence parts, external upload index or separate handoff ZIP.
+
+The complete `...-Evidence.zip` and individual raw files remain on the PC.
+The compact upload normally omits the accumulated FullLog and its baseline,
+which repeat previous sessions; the exact fresh NewLog is included when it fits.
+If an unusually large capture reaches 30 MiB, the internal manifest identifies
+every omitted screenshot/file and any explicitly named, hashed byte excerpts.
+Partial logs are never named NewLog. A missing delta stays missing; FullLog can
+provide separately identified fallback evidence. No original is deleted or
+changed, and summary counts are attributed to the local full capture.
+
+To repackage the most recent existing test without another install or launch:
+
+```bash
+~/projects/tooie-tools/tooie package --latest
+```
+
+An explicit `package /path/to/Tooie-...-Evidence.zip` also works for older tests.
+Both forms only read local evidence; they issue no ADB command. Existing parts
+from older workflow versions can stay on the PC and need not be uploaded again.
 
 ## Current version and maintenance
 
@@ -175,7 +266,7 @@ python3 tools/android-workflow/tests/test_workflow.py
 
 Device commands are stubbed in these tests. They exercise rejected artifacts,
 install/launch limits within one session, repeat-session isolation, uncertainty,
-live terminal notes, original-PID filtering, exact deltas and lossless uploads.
+live terminal notes, original-PID filtering, exact deltas, intact local archives and bounded compact uploads.
 Temporary local Git repositories test source-cache reuse and refusal of dirty
 tracked inputs. These checks do not build an Android APK or establish Odin
 rendering, demo cadence, mod execution or performance.

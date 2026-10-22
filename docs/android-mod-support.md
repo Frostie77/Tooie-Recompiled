@@ -1,13 +1,25 @@
 # Android mod import and texture registration
 
-See [Executable code-mod preparation](android-code-mod-preview-20261022.md) for
-the startup event, ROM-free example and next device acceptance checks.
+Updated 22 October 2026. Focused Odin acceptance has passed for the executable
+Tooie Mod Check example (GOLD/BLUE, saved selection, restart and disabling) and
+the original BT Reloaded v0.1.1 RT64 UI texture pack. Frostie also accepted the
+texture-disabled comparison, Aiming Invert Off/On behavior and restart
+persistence manually after the captured texture/aiming session.
 
-This implements the picker and startup gaps from the
-[baseline audit](android-mod-support-audit.md). Parent `4a0a30912b4e54a31d00f64ed91f5bc8b2adcc37`
-already includes the round BT icon, Tooie-Recompiled Android name and TOOIE
-menu; the underlying engineering base is `5db2d7f`. Actual code-mod execution
-and rendered texture replacements still require Odin verification.
+[PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14), now merged,
+records exact source/APK identities and separates captured from manual results.
+See [code-mod preparation](android-code-mod-preview-20261022.md),
+[Zstandard texture import](android-zstd-texture-import-20261022.md) and the
+[completion checklist](android-completion-requirements.md) for current scope.
+
+The Mods interface provides import, enable/disable and configuration. An in-app
+Remove control is not required. General mod compatibility and combinations
+remain broader coverage items.
+
+The implementation and original host-validation record below describe the
+initial import work based on `4a0a30912b4e54a31d00f64ed91f5bc8b2adcc37` /
+`5db2d7f`; the later Zstandard and executable-runtime checks are documented in
+the links above.
 
 ## Implemented paths
 
@@ -112,22 +124,28 @@ that tree. When integrating into a checkout that restores RecompFrontend as a
 submodule, also regenerate its dependency patch as required by `AGENTS.md`;
 do not let a dependency refresh discard these changes.
 
-## Required Odin follow-up
+## Remaining broader acceptance
 
-1. Build/verify a fresh normal APK, including the new native unit, `ModImporter`
-   and `nativeModFileDialogResult` JNI export; preserve branding and Vulkan flags.
-2. Install a known compatible Tooie code mod and texture pack through Downloads
-   before Start Game, and verify their intended game/texture output.
-3. Test toggle/config/order, restart, disabling to baseline and replacement
-   cancellation. Cancel the picker, try failed providers/wrong-game archives,
-   and leave/return to the Activity.
-4. Check ROM import, saves and controls, longer modded/unmodified play and a
-   same-identity APK update retaining mods/settings.
+- [x] Known compatible code-example import, executable UI effect, setting changes,
+  restart persistence and disabling were recorded on Odin.
+- [x] Actual RT64 UI replacement was recorded; Frostie accepted the disabled
+  comparison and normal-restart persistence manually afterward.
+- [x] The reviewed Android APK includes the native importer, Java delivery and
+  all three JNI exports; full ARM64/Java/package CI passed.
+- [ ] Multiple compatible real mods together, multi-mod bundle selection,
+  dependencies/order and invalid/incompatible/conflicting imports on Odin.
+- [ ] Broader Activity interruptions, save/load, long modded/unmodified play and
+  the final signed public-release upgrade path preserving user data.
 
-No APK build or Odin operation is included. Cloud app-linking prerequisites
-remain unresolved. This work does not establish a correction for the temple
-crash, stretching, shadows/jigsaw glitches or demo pacing. Vulkan safeguards
-and five-second timeouts are unchanged.
+These remaining items track full completion and do not withdraw the focused
+preview checks already accepted. Disabling an installed mod is supported;
+deleting its original Downloads archive alone does not remove the private
+installed copy. There is no required in-app removal test.
+
+The original component validation did not build an APK or operate Odin.
+Subsequent full CI and device evidence are identified above. Mod import does
+not establish a correction for unrelated rendering, shadow/jigsaw or demo
+cadence issues. Vulkan safeguards and five-second timeouts remain intact.
 
 Platform references: [Android document access](https://developer.android.com/training/data-storage/shared/documents-files)
 and [provider filenames](https://developer.android.com/privacy-and-security/risks/untrustworthy-contentprovider-provided-filename).

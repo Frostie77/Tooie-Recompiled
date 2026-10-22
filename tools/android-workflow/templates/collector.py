@@ -20,6 +20,7 @@ BUILD_ID = '7da65931e98aa0e45eda5c237c2ba9e8662d67d1'
 DOWNLOADS = Path.home() / 'Downloads'
 APK = DOWNLOADS / 'Tooie-3a8ef82eafc0-Task-Delivery-Timing-Debug.apk'
 REPORT = DOWNLOADS / 'Tooie-3a8ef82eafc0-Task-Delivery-Timing-Debug-build-report.txt'
+REPORT_HEADER = 'Tooie Recompiled Android verified task-delivery-timing build report'
 ADB = os.environ.get('TOOIE_ADB', 'adb')
 READELF = Path.home() / 'Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'
 SERIAL = '7907333f'
@@ -35,12 +36,13 @@ OBSERVE_SECONDS = 20
 DEMO_SECONDS = 300
 DEMO_ONLY = False
 GAMEPLAY_ONLY = False
+MOD_CHECK = ''
+MOD_FILE = Path('')
+MOD_HASH = ''
+MOD_REMOTE = ''
 PRESENTATION_TEST_HZ = 0
 GAMEPLAY_SECONDS = 600
 EXTENSION_SECONDS = 300
-MAX_UPLOAD_BYTES = 30 * 1024 * 1024
-PART_RAW_BYTES = 20 * 1024 * 1024
-CHUNK_BYTES = 8 * 1024 * 1024
 original_pid = None
 launch_existing_pids = ()
 finish_requested = False
@@ -594,7 +596,7 @@ def main():
             digest.update(chunk)
     require(digest.hexdigest() == HASH, 'APK SHA-256 mismatch.')
     report = REPORT.read_bytes()
-    require(report.decode().splitlines()[0] == 'Tooie Recompiled Android verified task-delivery-timing build report', 'Unexpected build report header.')
+    require(report.decode().splitlines()[0] == REPORT_HEADER, 'Unexpected build report header.')
     fields = {}
     for line in report.decode().splitlines():
         key, sep, value = line.partition(': ')
@@ -653,6 +655,9 @@ def main():
             require(marker in native, f'Missing progress/matching diagnostic: {marker!r}')
 
         for marker in (
+            b'Aiming Invert', b'aiming_invert', b'tooie_aiming_invert',
+            b'A Zstandard archive entry failed decoding, size validation or its checksum.',
+            b'The texture pack has no readable rt64.json database.',
             b'Android mod picker: opening document selection', b'openModPicker',
             b'Could not register texture-pack support.', b'rt64.json',
             b'The ZIP bundle contains no .nrm mods or .rtz texture packs.',
@@ -746,7 +751,7 @@ def main():
             symbol = 'Java_io_github_banjotooierecompiled_BanjoTooieSDLActivity_' + suffix
             require(any(len(parts := line.split()) >= 8 and parts[-1] == symbol and
                         parts[-2] != 'UND' for line in symbols.splitlines()), f'Missing defined JNI export: {symbol}')
-    print('PASS: exact Step 119 APK hash/report, task-delivery/display-list/full-sync window gaps and independent timing ON, geometry/correction capture OFF, hierarchy/mods/artwork retained, ZIP, ARM64 Build ID, DEX and all three JNI exports.', flush=True)
+    print('PASS: exact texture-import/aiming APK hash/report, saved Aiming Invert and Zstandard importer, retained timing/hierarchy/mods/artwork, ZIP, ARM64 Build ID, DEX and all three JNI exports.', flush=True)
     apk_windows = text(command(['wslpath', '-w', APK]))
     require(text(adb('get-state')) == 'device', 'Expected Odin is unavailable.')
     require(text(adb('get-serialno')) == SERIAL, 'Device serial mismatch.')
@@ -852,6 +857,34 @@ def presentation_setup():
     print('60 Hz OUTPUT COMPARISON: On Odin, open launcher Settings > Graphics. Set Framerate to Manual, then set the number below it to 60. Return to the launcher before typing ready. Leave resolution, antialiasing, sound and all other settings as they are. This changes the output frame target, not the gameplay clock. The workflow does not change settings for you.', flush=True)
 
 
+def mod_setup():
+    if not MOD_CHECK:
+        return
+    require(MOD_CHECK in ('gold', 'blue', 'persist', 'disabled'),
+            'Unsupported mod-check phase: this APK has no Remove option in Mods.')
+    require(MOD_FILE.is_file() and hashlib.sha256(MOD_FILE.read_bytes()).hexdigest() == MOD_HASH,
+            'Example mod changed after workflow validation; no file transfer.')
+    save('Mod-Check-Plan', json.dumps({'phase': MOD_CHECK, 'host_file': str(MOD_FILE),
+        'sha256': MOD_HASH, 'remote_file': MOD_REMOTE if MOD_CHECK == 'gold' else None,
+        'expected_badge': 'GOLD' if MOD_CHECK == 'gold' else 'BLUE' if MOD_CHECK in ('blue', 'persist') else 'absent',
+        'scope': 'User observes actual badge and controls. Plans and process presence do not establish a pass.'}, indent=2) + '\n')
+    if MOD_CHECK == 'gold':
+        windows_path = text(command(['wslpath', '-w', MOD_FILE]))
+        print('Copying the verified example mod into Odin Downloads...', flush=True)
+        result = adb('push', windows_path, MOD_REMOTE, name='Mod-Example-Push', strict=False, timeout=30)
+        require(result.returncode == 0, 'Example mod copy failed or was uncertain. No retry.')
+        checksum = text(adb('shell', '-T', 'sha256sum ' + shlex.quote(MOD_REMOTE), name='Mod-Example-Device-SHA256'))
+        require(checksum.split() and checksum.split()[0].lower() == MOD_HASH, 'Device example mod hash differs.')
+        print('On Odin: Mods > Install Mods > Downloads. Select ' + Path(MOD_REMOTE).name +
+              '. Enable Tooie Mod Check and set Badge colour to Gold. Return to the launcher, then type ready here. Do not press Start Game yet.', flush=True)
+    elif MOD_CHECK == 'blue':
+        print('On Odin: open Mods > Tooie Mod Check. Keep it enabled and set Badge colour to Blue. Return to the launcher, then type ready here.', flush=True)
+    elif MOD_CHECK == 'persist':
+        print('Leave all mod settings untouched. This launch checks that BLUE persisted. Type ready here from the launcher.', flush=True)
+    elif MOD_CHECK == 'disabled':
+        print('On Odin: open Mods and disable Tooie Mod Check. Return to the launcher, then type ready here. The badge should be absent after Start Game.', flush=True)
+
+
 def maybe_start_game(offset):
     global original_pid
     original_pid = original_launch_pid(offset)
@@ -860,7 +893,8 @@ def maybe_start_game(offset):
     screenshot('Screenshot-Launcher')
 
     presentation_setup()
-    print('Launcher capture finished. Check launcher response and enabled Start Game. NOW type ready here in Ubuntu. Do not press Start Game yet. Type stop if the launcher is unavailable. No mod-picker or ROM-import test is required.', flush=True)
+    mod_setup()
+    print(('Complete the mod step above, then type ready here in Ubuntu. Do not press Start Game yet. Type stop if unavailable.' if MOD_CHECK else 'Launcher capture finished. Check launcher response and enabled Start Game. NOW type ready here in Ubuntu. Do not press Start Game yet. Type stop if the launcher is unavailable. No mod-picker or ROM-import test is required.'), flush=True)
     answers = []
     while True:
         answer = prompt('Launcher assessment (ready / stop): ')
@@ -943,6 +977,9 @@ def capture_gameplay():
         save('Timed-Gameplay-Skipped', 'User selected stop before the timed playable-area window.\n')
         return
     clock('Gameplay-Ready-Device-Time')
+    if MOD_CHECK:
+        screenshot('Mod-Check-Ready-' + MOD_CHECK)
+        print('Check the expected badge and normal controller movement. Type 1 plus what you see, then Enter. You may type save once this mod check is complete; notes and screenshots go in this SAME ZIP.', flush=True)
     segment = 1
     while True:
         label = f'Gameplay-{segment:02d}'
@@ -968,7 +1005,7 @@ def capture_gameplay():
         segment += 1
     clock('After-Gameplay-Window-Device-Time')
     print('Timed capture finished. Leave the app as it is while evidence is saved.', flush=True)
-    save('User-Gameplay-Observation', prompt('Briefly describe gameplay areas/actions, input delay, freezes, stretching and sound, or any closure (or press Enter): ') + '\n')
+    save('User-Gameplay-Observation', prompt('Describe the expected badge, saved colour, controls, mod import/removal errors or closure (or press Enter): ' if MOD_CHECK else 'Briefly describe gameplay areas/actions, input delay, freezes, stretching and sound, or any closure (or press Enter): ') + '\n')
 
 def collect():
     delta = None
@@ -1098,76 +1135,20 @@ def collect():
     save('Evidence', summary)
     print('Evidence saved for original PID ' + str(original_pid) + '; runtime counts: ' + str(counts), flush=True)
     bundles, index = archive_evidence()
-    print('CAPTURE COMPLETE. Demo-cadence APK; replay-wait correction requires hardware verification; no intentional probe exit. Observer cost is included. Process presence, frame counts and screenshots alone do not establish correct speed or gameplay.', flush=True)
-    print('Saved ' + ('raw evidence ZIP:' if len(bundles) == 1 else 'independent evidence ZIP parts AND the upload index:') + '\n' + '\n'.join(str(p) for p in bundles), flush=True)
-    if index is not None:
-        print(index, flush=True)
+    print('CAPTURE COMPLETE. Gameplay diagnostic APK; visual corrections require hardware verification; no intentional probe exit. Observer cost is included. Process presence, frame counts and screenshots alone do not establish correct speed or gameplay.', flush=True)
+    print('Full raw archive saved locally. The workflow will print the ONE file to upload.', flush=True)
     print('Capture is saved. You may close the app normally. For another separately recorded session, use the workflow test command again.', flush=True)
 
 def archive_evidence():
-    # Retain every raw file. If the complete ZIP exceeds the per-upload limit,
-    # also emit independent, bounded ZIPs with byte offsets and hashes. No log
-    # truncation, device files, or reassembly-dependent split-ZIP format is used.
+    # Keep one complete local archive. The workflow makes a single compact
+    # upload from this sealed snapshot; no automatic parts or separate index.
     sources = [p for p in sorted(DOWNLOADS.glob(prefix.name + '-*'))
                if p.is_file() and p.suffix in ('.txt', '.png')]
     bundle = Path(str(prefix) + '-Evidence.zip')
     with zipfile.ZipFile(bundle, 'x', zipfile.ZIP_DEFLATED) as archive:
         for path in sources:
             archive.write(path, path.name)
-    if bundle.stat().st_size <= MAX_UPLOAD_BYTES:
-        return [bundle], None
-    groups = [[]]
-    group_bytes = 0
-    manifest = {'complete_local_zip': bundle.name, 'upload_limit_bytes': MAX_UPLOAD_BYTES,
-                'scope': 'Upload every listed independent ZIP plus this index. Chunk entries are exact raw byte ranges, with zero-based offsets. Original files and full ZIP remain locally intact.',
-                'sources': [], 'parts': []}
-    for path in sources:
-        size = path.stat().st_size
-        source = {'name': path.name, 'size_bytes': size, 'chunks': []}
-        digest = hashlib.sha256()
-        with path.open('rb') as stream:
-            offset = chunk_number = 0
-            while True:
-                data = stream.read(CHUNK_BYTES)
-                if not data and (size or chunk_number):
-                    break
-                digest.update(data)
-                if groups[-1] and group_bytes + len(data) > PART_RAW_BYTES:
-                    groups.append([])
-                    group_bytes = 0
-                member = path.name if size <= CHUNK_BYTES else path.name + f'.chunk{chunk_number:04d}'
-                entry = {'member': member, 'source_offset': offset, 'length': len(data),
-                         'sha256': hashlib.sha256(data).hexdigest(), 'part_number': len(groups)}
-                groups[-1].append((path, entry))
-                source['chunks'].append(entry)
-                group_bytes += len(data)
-                offset += len(data)
-                chunk_number += 1
-                if not data:
-                    break
-        source['sha256'] = digest.hexdigest()
-        manifest['sources'].append(source)
-    bundles = []
-    for number, group in enumerate(groups, 1):
-        part = Path(str(prefix) + f'-Evidence-Part{number:03d}.zip')
-        with zipfile.ZipFile(part, 'x', zipfile.ZIP_DEFLATED) as archive:
-            for path, entry in group:
-                with path.open('rb') as stream:
-                    stream.seek(entry['source_offset'])
-                    data = stream.read(entry['length'])
-                require(len(data) == entry['length'] and hashlib.sha256(data).hexdigest() == entry['sha256'], 'A retained source changed while packaging; all raw files/full ZIP retained.')
-                archive.writestr(entry['member'], data)
-        require(part.stat().st_size <= MAX_UPLOAD_BYTES, 'An upload part exceeds its size bound; all raw files/full ZIP retained.')
-        digest = hashlib.sha256()
-        with part.open('rb') as stream:
-            for data in iter(lambda: stream.read(1024 * 1024), b''):
-                digest.update(data)
-        manifest['parts'].append({'part_number': number, 'name': part.name,
-                                  'size_bytes': part.stat().st_size, 'sha256': digest.hexdigest()})
-        bundles.append(part)
-    save('Upload-Index', json.dumps(manifest, indent=2) + '\n')
-    print('The full ZIP exceeds 30 MiB. It is retained locally; upload the smaller parts below instead.', flush=True)
-    return bundles, Path(str(prefix) + '-Upload-Index.txt')
+    return [bundle], None
 
 def run():
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
