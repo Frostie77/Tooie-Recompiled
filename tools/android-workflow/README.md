@@ -1,5 +1,49 @@
 # Tooie Recompiled Android workflow
 
+## Current milestone: executable mod check
+
+The new build is pinned to `386d58e4946fed5f02164924cd76d26a47ef43d6`, with the
+exact code-mod feature tree `f18df588e1edfc2b282020ca0dfacb8e309eaadf` and the
+approved launcher/icon retained. The feature is reviewed separately in PR #14;
+this tooling branch is not a runtime branch to merge wholesale into main.
+
+Build as usual in Ubuntu. The build exports both the APK and a verified
+`Tooie-386d58e4946f-Mod-Check.nrm`, with separate build reports/checksums. It runs
+the real archive/config/mod/JIT/event tests and exact-parent failure controls.
+Clang with MIPS support, LLD and zip are required; the established NDK linker is
+used when a host LLD is unavailable. No ROM or original assets are in the mod.
+
+For the first device phase, run:
+
+```sh
+~/projects/tooie-tools/tooie test --mod-check gold
+```
+
+The command verifies the mod against the APK build report and source hashes,
+then copies it into Odin's Download folder under a unique name and verifies its
+device SHA-256. In the SAME Ubuntu terminal it tells you which file to select
+through **Mods > Install Mods**, to enable **Tooie Mod Check** and choose Gold.
+Type `ready` only after returning to the launcher; press Start Game only when
+instructed, load your existing save, then type `playing` when Banjo can move.
+Expect a GOLD badge and normal controls. Add a numbered note. You may type `save`
+after completing this focused check; there is no requirement to fill ten
+minutes simply to observe a startup badge.
+
+The later, separately recorded phases use `--mod-check blue`, `persist`,
+`disabled`, then `removed`. Each performs one replacement install/launch while
+retaining app data. Only Gold copies a file. Blue asks for the colour change;
+Persist asks you to leave it untouched; Disabled and Removed ask for those menu
+actions. Their plans, screenshots, observations and normal logs stay in the same
+evidence ZIP for each session. A plan or successful file copy is not a mod pass.
+No second terminal, camera, automatic controller input or global graphics
+setting change is used. Normal gameplay captures still start their ten-minute
+timer only after `playing` and support extensions.
+
+Actual Odin badge rendering, restart behaviour and a real Tooie texture
+replacement are still required before claiming working mods for an Android
+preview. Keep Manual 60 and the existing graphics settings. Automatic startup
+update checks are not implemented by this work.
+
 Use one Ubuntu terminal. Keep source and compiler outputs in the Linux file
 system; finished APKs and upload bundles go to Windows Downloads.
 
@@ -36,9 +80,9 @@ and atomically records the latest verified artifact for that exact source/profil
 The default `test` selects that receipt and rechecks the report and APK bytes.
 Before the first successful build, testing this revision is refused.
 
-## Current build: transform upload correction
+## Previous tested baseline: transform upload correction
 
-The pinned source is `7a158a50b5b2e9936f99dc2488665a9459fd6559`, with the exact tree of main
+The previous tested source was `7a158a50b5b2e9936f99dc2488665a9459fd6559`, with the exact tree of main
 after PR #12 (`26d41b13a8350182a0018578fbcbb150eee7470c`). Its runtime differs from the
 tested d168 APK in one transform-upload history predicate. The round BT icon,
 approved launcher and all other game/renderer sources and shaders are identical.

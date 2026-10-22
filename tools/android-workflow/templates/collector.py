@@ -36,6 +36,10 @@ OBSERVE_SECONDS = 20
 DEMO_SECONDS = 300
 DEMO_ONLY = False
 GAMEPLAY_ONLY = False
+MOD_CHECK = ''
+MOD_FILE = Path('')
+MOD_HASH = ''
+MOD_REMOTE = ''
 PRESENTATION_TEST_HZ = 0
 GAMEPLAY_SECONDS = 600
 EXTENSION_SECONDS = 300
@@ -853,6 +857,35 @@ def presentation_setup():
     print('60 Hz OUTPUT COMPARISON: On Odin, open launcher Settings > Graphics. Set Framerate to Manual, then set the number below it to 60. Return to the launcher before typing ready. Leave resolution, antialiasing, sound and all other settings as they are. This changes the output frame target, not the gameplay clock. The workflow does not change settings for you.', flush=True)
 
 
+def mod_setup():
+    if not MOD_CHECK:
+        return
+    require(MOD_CHECK in ('gold', 'blue', 'persist', 'disabled', 'removed'), 'Unknown mod-check phase.')
+    require(MOD_FILE.is_file() and hashlib.sha256(MOD_FILE.read_bytes()).hexdigest() == MOD_HASH,
+            'Example mod changed after workflow validation; no file transfer.')
+    save('Mod-Check-Plan', json.dumps({'phase': MOD_CHECK, 'host_file': str(MOD_FILE),
+        'sha256': MOD_HASH, 'remote_file': MOD_REMOTE if MOD_CHECK == 'gold' else None,
+        'expected_badge': 'GOLD' if MOD_CHECK == 'gold' else 'BLUE' if MOD_CHECK in ('blue', 'persist') else 'absent',
+        'scope': 'User observes actual badge and controls. Plans and process presence do not establish a pass.'}, indent=2) + '\n')
+    if MOD_CHECK == 'gold':
+        windows_path = text(command(['wslpath', '-w', MOD_FILE]))
+        print('Copying the verified example mod into Odin Downloads...', flush=True)
+        result = adb('push', windows_path, MOD_REMOTE, name='Mod-Example-Push', strict=False, timeout=30)
+        require(result.returncode == 0, 'Example mod copy failed or was uncertain. No retry.')
+        checksum = text(adb('shell', '-T', 'sha256sum ' + shlex.quote(MOD_REMOTE), name='Mod-Example-Device-SHA256'))
+        require(checksum.split() and checksum.split()[0].lower() == MOD_HASH, 'Device example mod hash differs.')
+        print('On Odin: Mods > Install Mods > Downloads. Select ' + Path(MOD_REMOTE).name +
+              '. Enable Tooie Mod Check and set Badge colour to Gold. Return to the launcher, then type ready here. Do not press Start Game yet.', flush=True)
+    elif MOD_CHECK == 'blue':
+        print('On Odin: open Mods > Tooie Mod Check. Keep it enabled and set Badge colour to Blue. Return to the launcher, then type ready here.', flush=True)
+    elif MOD_CHECK == 'persist':
+        print('Leave all mod settings untouched. This launch checks that BLUE persisted. Type ready here from the launcher.', flush=True)
+    elif MOD_CHECK == 'disabled':
+        print('On Odin: open Mods and disable Tooie Mod Check. Return to the launcher, then type ready here. The badge should be absent after Start Game.', flush=True)
+    else:
+        print('On Odin: open Mods and remove Tooie Mod Check through its menu. Leave other mods alone. Return to the launcher, then type ready here. The badge should be absent.', flush=True)
+
+
 def maybe_start_game(offset):
     global original_pid
     original_pid = original_launch_pid(offset)
@@ -861,7 +894,8 @@ def maybe_start_game(offset):
     screenshot('Screenshot-Launcher')
 
     presentation_setup()
-    print('Launcher capture finished. Check launcher response and enabled Start Game. NOW type ready here in Ubuntu. Do not press Start Game yet. Type stop if the launcher is unavailable. No mod-picker or ROM-import test is required.', flush=True)
+    mod_setup()
+    print(('Complete the mod step above, then type ready here in Ubuntu. Do not press Start Game yet. Type stop if unavailable.' if MOD_CHECK else 'Launcher capture finished. Check launcher response and enabled Start Game. NOW type ready here in Ubuntu. Do not press Start Game yet. Type stop if the launcher is unavailable. No mod-picker or ROM-import test is required.'), flush=True)
     answers = []
     while True:
         answer = prompt('Launcher assessment (ready / stop): ')
@@ -944,6 +978,9 @@ def capture_gameplay():
         save('Timed-Gameplay-Skipped', 'User selected stop before the timed playable-area window.\n')
         return
     clock('Gameplay-Ready-Device-Time')
+    if MOD_CHECK:
+        screenshot('Mod-Check-Ready-' + MOD_CHECK)
+        print('Check the expected badge and normal controller movement. Type 1 plus what you see, then Enter. You may type save once this mod check is complete; notes and screenshots go in this SAME ZIP.', flush=True)
     segment = 1
     while True:
         label = f'Gameplay-{segment:02d}'
@@ -969,7 +1006,7 @@ def capture_gameplay():
         segment += 1
     clock('After-Gameplay-Window-Device-Time')
     print('Timed capture finished. Leave the app as it is while evidence is saved.', flush=True)
-    save('User-Gameplay-Observation', prompt('Briefly describe gameplay areas/actions, input delay, freezes, stretching and sound, or any closure (or press Enter): ') + '\n')
+    save('User-Gameplay-Observation', prompt('Describe the expected badge, saved colour, controls, mod import/removal errors or closure (or press Enter): ' if MOD_CHECK else 'Briefly describe gameplay areas/actions, input delay, freezes, stretching and sound, or any closure (or press Enter): ') + '\n')
 
 def collect():
     delta = None
