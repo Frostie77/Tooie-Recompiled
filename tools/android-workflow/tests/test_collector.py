@@ -403,26 +403,19 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
     scenario('gameplay-only-loading-stop', 1, 1, 0, 0)
     scenario('gameplay-only-launcher-stop', 1, 1, 0, 0)
 
-    # Independent upload-size and lossless reconstruction test, including a
-    # multi-chunk binary log, empty file and image. Limits scaled only in test.
-    m = module(); m.DOWNLOADS = area; m.prefix = area / 'split'
-    m.MAX_UPLOAD_BYTES = 32000; m.PART_RAW_BYTES = 20000; m.CHUNK_BYTES = 8000
+    # Full evidence remains one local archive even when larger than the sharing
+    # limit. The driver, tested separately, creates the compact upload.
+    m = module(); m.DOWNLOADS = area; m.prefix = area / 'single-local'
     originals = {'Raw.txt': os.urandom(71003), 'Empty.txt': b'', 'Image.png': os.urandom(11001)}
     for suffix, data in originals.items(): Path(str(m.prefix) + '-' + suffix).write_bytes(data)
     with contextlib.redirect_stdout(io.StringIO()): parts, index = m.archive_evidence()
-    manifest = json.loads(index.read_text())
-    assert len(parts) > 1 and all(p.stat().st_size <= 32000 for p in parts)
-    for item in manifest['sources']:
-        reconstructed = b''
-        for chunk in item['chunks']:
-            assert chunk['source_offset'] == len(reconstructed)
-            with zipfile.ZipFile(parts[chunk['part_number'] - 1]) as archive:
-                data = archive.read(chunk['member'])
-            assert len(data) == chunk['length'] and hashlib.sha256(data).hexdigest() == chunk['sha256']
-            reconstructed += data
-        suffix = item['name'].removeprefix('split-')
-        assert reconstructed == originals[suffix]
-        assert hashlib.sha256(reconstructed).hexdigest() == item['sha256']
+    assert len(parts) == 1 and index is None
+    with zipfile.ZipFile(parts[0]) as archive:
+        assert archive.testzip() is None
+        for suffix, data in originals.items():
+            assert archive.read('single-local-' + suffix) == data
+    assert not list(area.glob('single-local-Evidence-Part*.zip'))
+    assert not list(area.glob('single-local-Upload-Index.txt'))
     checks += 1
 
 print(f'PASS: {checks} simulated exact report/APK/task/DEX/JNI guards, one-install/launch, demo/gameplay windows, timeout/unknown state, marker selection, original-PID task extraction, exact delta and lossless archives.')
