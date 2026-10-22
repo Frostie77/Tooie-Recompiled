@@ -7,12 +7,10 @@ import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.util.Locale;
 import java.util.function.BooleanSupplier;
-import java.util.zip.ZipFile;
 
 /** Copies one selected archive into request-owned storage; never extracts it. */
 final class ModImporter {
     static final long MAX_BYTES = 1024L * 1024 * 1024;
-    static final int MAX_ENTRIES = 65536;
     interface Source { InputStream open() throws IOException; }
     static final class Result {
         final int status; // selected=0, cancelled=1, error=2, matching the JNI protocol.
@@ -90,11 +88,10 @@ final class ModImporter {
                 output.getFD().sync();
             }
             checkCancelled(cancelled);
-            // Checks the ZIP directory, including truncated/provider-corrupted downloads.
-            // Native installation separately validates entries, manifests and the target game.
-            try (ZipFile zip = new ZipFile(partial)) {
-                if (zip.size() == 0 || zip.size() > MAX_ENTRIES) throw new IOException("The mod archive has an unsupported number of entries.");
-            }
+            // This layer only copies provider bytes. java.util.zip rejects valid
+            // RT64 Zstandard (method 93) archives even when nothing is extracted.
+            // The native installer validates the directory, entries, checksums,
+            // manifests and target game before committing any installed files.
             checkCancelled(cancelled);
             if (!partial.renameTo(destination)) throw new IOException("Could not finalize the private mod copy. Check free storage and retry.");
             complete = true;

@@ -28,8 +28,19 @@ static recompui::ModInstaller::Result prepare(const Path& path) {
     return result;
 }
 int main(int argc, char** argv) {
-    CHECK(argc == 3);
+    CHECK(argc == 3 || argc == 4);
     Path fixtures = argv[1]; mods = argv[2]; std::filesystem::create_directories(mods);
+    if (argc == 4 && (std::string(argv[3]) == "--zstd-control" || std::string(argv[3]) == "--texture-id-control")) {
+        auto result = prepare(fixtures / (std::string(argv[3]) == "--zstd-control" ? "zstd_mixed.rtz" : "hyphen_textures.rtz"));
+        if (!result.error_messages.empty() || result.pending_installations.size() != 1) {
+            std::cerr << "Zstandard import rejected: " << (result.error_messages.empty() ? "no installation" : result.error_messages.front()) << '\n';
+            return 2;
+        }
+        std::vector<std::string> errors;
+        recompui::ModInstaller::cancel_mod_installation(result, errors);
+        std::cout << "PASS: actual installer accepts " << argv[3] << '\n';
+        return 0;
+    }
     {
         auto result = prepare(fixtures / "normal.nrm");
         CHECK(result.error_messages.empty() && result.pending_installations.size() == 1);
@@ -57,7 +68,11 @@ int main(int argc, char** argv) {
         "invalid.nrm", "wrong_game.nrm", "native.nrm", "future.nrm", "deprecated.nrm", "bad_id.nrm", "bad_config.nrm", "bad_manifest.nrm", "bad_json.nrm",
         "oversized_manifest.nrm", "oversized_database.rtz", "oversized_entry.nrm", "deep.nrm", "missing.nrm", "invalid_texture.rtz",
         "traversal.nrm", "symlink.nrm", "duplicate.nrm", "expanded_limit.nrm", "entry_limit.nrm",
-        "traversal_bundle.zip", "collision_bundle.zip", "duplicate_id_bundle.zip", "native_bundle.zip", "empty_bundle.zip", "corrupt_bundle.zip"
+        "traversal_bundle.zip", "collision_bundle.zip", "duplicate_id_bundle.zip", "native_bundle.zip", "empty_bundle.zip", "corrupt_bundle.zip",
+        "truncated.nrm", "empty.nrm", "zstd_bad_crc.rtz", "zstd_truncated.rtz", "zstd_wrong_size.rtz", "zstd_trailing.rtz",
+        "zstd_local_method.rtz", "zstd_local_flags.rtz", "zstd_encrypted.rtz", "zstd_patch.rtz", "zstd_strong.rtz",
+        "zstd_unsupported.rtz", "zstd_bad_database.rtz", "zstd_missing_database.rtz", "zstd_bad_manifest.rtz", "zstd_oversized.rtz",
+        "hyphen_code.nrm", "zstd_bad_id_0.rtz", "zstd_bad_id_1.rtz", "zstd_bad_id_2.rtz", "zstd_bad_id_3.rtz", "zstd_bad_id_4.rtz", "zstd_bad_id_5.rtz"
     };
     for (const auto& name : rejected) {
         CHECK(std::filesystem::is_regular_file(fixtures / name));
@@ -75,6 +90,23 @@ int main(int argc, char** argv) {
         CHECK(result.error_messages.empty() && result.pending_installations.size() == 1);
         recompui::ModInstaller::finish_mod_installation(result, errors);
         CHECK(errors.empty() && read(mods / "textures.rtz") == read(fixtures / "textures.rtz"));
+    }
+    for (const auto* name : {"zstd_mixed.rtz", "zstd_manifest.rtz", "zstd_no_manifest.rtz", "zstd_empty_asset.rtz", "zstd_hyphen.rtz", "zstd_multiframe.rtz", "hyphen_textures.rtz"}) {
+        auto result = prepare(fixtures / name); std::vector<std::string> errors;
+        for (const auto& error : result.error_messages) std::cerr << name << ": " << error << '\n';
+        CHECK(result.error_messages.empty() && result.pending_installations.size() == 1);
+        recompui::ModInstaller::finish_mod_installation(result, errors);
+        CHECK(errors.empty() && read(mods / name) == read(fixtures / name));
+    }
+    if (argc == 4) {
+        Path source = argv[3];
+        auto result = prepare(source); std::vector<std::string> errors;
+        for (const auto& error : result.error_messages) std::cerr << source.filename() << ": " << error << '\n';
+        CHECK(result.error_messages.empty() && result.pending_installations.size() == 1);
+        CHECK(result.pending_installations.front().mod_id == "BT-Reloaded");
+        recompui::ModInstaller::finish_mod_installation(result, errors);
+        CHECK(errors.empty() && read(mods / source.filename()) == read(source));
+        std::cout << "PASS: verified external BT Reloaded RTZ installs without changing its bytes\n";
     }
     {
         auto result = prepare(fixtures / "bundle.zip"); std::vector<std::string> errors;

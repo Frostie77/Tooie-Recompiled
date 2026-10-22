@@ -1,0 +1,33 @@
+{
+  "base": "2b8efaee6c605422c7962be5e3a8b070640ee7af",
+  "functions": {
+    "func_808000B4_baeggaim": {
+      "file": "RecompiledFuncs/funcs_39.c",
+      "sha256": "ae7b007ff83643aeb9ff6dbd4099572feeb07e44721910dd5bf95bafbc5e435e"
+    },
+    "func_808002A4_bafpctrl": {
+      "file": "RecompiledFuncs/funcs_39.c",
+      "sha256": "fb89286cf8cad3fe3e0d5abceb69143553c00a0293aad68f3be103c6844f991e"
+    },
+    "func_80800008_baeggaim": {
+      "file": "RecompiledFuncs/funcs_39.c",
+      "sha256": "2a6e72e2d6f578e39be4ac6982e72369168bdb3bb6ac951e8a612a2c02dc0555"
+    },
+    "func_80804848_bsfirstp": {
+      "file": "RecompiledFuncs/funcs_44.c",
+      "sha256": "2d0067b06fce6c43e5806566d8d58322f6c4c0539c004199447504a8f00c4410"
+    },
+    "func_808045FC_bsfirstp": {
+      "file": "RecompiledFuncs/funcs_44.c",
+      "sha256": "9af359284f9b2f2144e8e782a2221d22cb78fbf0553b4b92fc017388f5db62dd"
+    },
+    "func_8009EF28": {
+      "file": "RecompiledFuncs/funcs_23.c",
+      "sha256": "3c386e9d4b8dea887242d4aa3efb5c177412e6b15d018b05050ae821826f312d"
+    },
+    "func_8009EF34": {
+      "file": "RecompiledFuncs/funcs_23.c",
+      "sha256": "2fa43e6ae0b05437a98e6045d63b46ef61d7a5eebfd87c5e546e6c043a35eced"
+    }
+  }
+}

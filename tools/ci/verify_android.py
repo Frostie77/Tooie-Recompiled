@@ -26,7 +26,7 @@ def check_configuration(source, work, ndk):
     require(re.search(r"^ANDROID_ABI:(?:STRING|UNINITIALIZED)=arm64-v8a$", cache, re.M), "wrong target ABI")
     commands = json.loads((work / "native/compile_commands.json").read_text())
     targets = [source / p for p in (
-        "src/main.cpp", "src/recomp_api.cpp",
+        "src/main.cpp", "src/recomp_api.cpp", "src/aiming_controls.cpp",
         "lib/rt64/src/contrib/plume/plume_vulkan.cpp",
         "lib/rt64/src/hle/rt64_present_queue.cpp",
         "lib/rt64/src/render/rt64_transform_processor.cpp")]
@@ -94,6 +94,9 @@ def check_apk(source, work, ndk):
             libraries[name] = {"sha256": hashlib.sha256(data).hexdigest(),
                                "build_id": build_id(toolbin / "llvm-readelf", packed)}
         main = (verify / "libmain.so").read_bytes()
+        require(b"recomp_on_init" in main, "code-mod startup event registration is missing")
+        require(b"Aiming Invert" in main and b"aiming_invert" in main, "saved aiming preference is missing")
+        require(b"tooie_aiming_invert" in main, "guest aiming input bridge is missing")
         require(version.encode() in main, "native CI version stamp is missing")
         symbols = subprocess.check_output([str(toolbin / "llvm-nm"), "-D", "--defined-only", str(verify / "libmain.so")], text=True)
         for suffix in ("nativeFileDialogResult", "nativeModFileDialogResult", "nativePresentationLifecycle"):

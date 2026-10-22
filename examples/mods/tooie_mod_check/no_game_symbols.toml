@@ -1,0 +1,3 @@
+# This example calls host APIs only. It needs no ROM or game symbols.
+# Game-function mods require a verified Tooie symbol map; do not substitute BK.
+section = []

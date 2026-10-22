@@ -54,6 +54,7 @@ extern "C" {
 #include "actor_pose_guest.h"
 #include "guest_lookup.h"
 #include "demo_pacing_guest.h"
+#include "mod_runtime.h"
 
 extern "C" void tooie_demo_pacing(uint8_t* rdram, recomp_context* ctx, uint32_t event) {
     tooie::demo::event(rdram, ctx, event);
@@ -1902,10 +1903,8 @@ extern "C" void tooie_boot_register_core1(uint8_t* rdram,
 // `get_function`.
 extern "C" void tooie_boot_register_core2(uint8_t* rdram,
                                          recomp_context* ctx) {
-    (void)rdram;
-    (void)ctx;
-
     load_overlays(kCore2RomStart, kCore2Vram, kCore2Size);
+    tooie::dispatch_mod_init(rdram, ctx);
 }
 
 extern "C" void tooie_overlay_read_relocation_key(uint8_t* rdram,

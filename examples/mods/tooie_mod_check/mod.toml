@@ -1,0 +1,27 @@
+[manifest]
+id = "tooie_mod_check"
+version = "1.0.0"
+display_name = "Tooie Mod Check"
+description = "Displays a small GOLD or BLUE badge after Tooie's cores load. This demonstrates executable code mods and a saved mod setting without changing game logic, saves or controls. Restart the app after changing this code mod."
+short_description = "A visible code-mod and settings check."
+authors = ["Frostie"]
+game_id = "bt"
+minimum_recomp_version = "0.1.0"
+dependencies = []
+optional_dependencies = []
+native_libraries = []
+
+[inputs]
+elf_path = "build/mod.elf"
+mod_filename = "tooie_mod_check"
+func_reference_syms_file = "no_game_symbols.toml"
+data_reference_syms_files = []
+additional_files = ["README.md", "LICENSE"]
+
+[[manifest.config_options]]
+id = "badge_colour"
+name = "Badge colour"
+description = "The badge uses this colour on the next app launch."
+type = "Enum"
+options = ["Gold", "Blue"]
+default = "Gold"

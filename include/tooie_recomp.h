@@ -67,6 +67,9 @@ void tooie_yield_pending_sound(uint8_t* rdram, recomp_context* ctx);
 // Clears the runtime's RDP freeze bit when Tooie signals the frame barrier.
 void tooie_clear_dp_freeze(uint8_t* rdram, recomp_context* ctx);
 
+// Invert only an aiming consumer's returned vertical stick sample.
+void tooie_aiming_invert(uint8_t* rdram, recomp_context* ctx);
+
 // Apply accepted replay spans to the existing guest retrace wait.
 void tooie_demo_pacing(uint8_t* rdram, recomp_context* ctx, uint32_t event);
 

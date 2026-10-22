@@ -65,3 +65,9 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/../N64Recomp ${CMAKE_CURRENT_BINARY_DIR}/
 
 target_link_libraries(librecomp PRIVATE ultramodern N64Recomp LiveRecomp)
 target_link_libraries(librecomp PUBLIC miniz)
+if(TARGET libzstd_static)
+    target_link_libraries(librecomp PUBLIC libzstd_static)
+else()
+    find_package(zstd CONFIG REQUIRED)
+    target_link_libraries(librecomp PUBLIC zstd::libzstd_static)
+endif()
