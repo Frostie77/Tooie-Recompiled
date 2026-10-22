@@ -235,7 +235,15 @@ def mod_artifact(profile, artifact):
     return {'path': str(path), 'sha256': digest}
 
 
+def validate_mod_phase(phase):
+    require(phase != 'removed',
+            'This APK has no Remove option in Mods. The removal test is retired; '
+            'use the on/off toggle. A Remove button is not required. No install or launch was started.')
+    require(phase in (None, '', 'gold', 'blue', 'persist', 'disabled'), 'Unsupported mod-check phase.')
+
+
 def render_collector(profile, artifact, downloads, session, presentation_hz=None, gameplay_only=False, mod_check=None, mod=None):
+    validate_mod_phase(mod_check)
     require(presentation_hz in (None, 60), 'Unsupported presentation comparison.')
     source = (HERE / 'templates/collector.py').read_text()
     identity = profile['identity']
@@ -595,6 +603,7 @@ def latest_evidence(downloads):
 
 
 def capture(args, profile):
+    validate_mod_phase(args.mod_check)
     require(sys.stdin.isatty(), 'Run test in one interactive Ubuntu terminal.')
     artifact = select_artifact(args, profile)
     mod = mod_artifact(profile, artifact) if args.mod_check else None
@@ -672,7 +681,7 @@ def parser():
     test_parser.add_argument('--gameplay-only', action='store_true',
                              help='Load an existing save and capture ten minutes after playing confirmation, without a timed demo window.')
     test_parser.add_argument('--mod-check', choices=['gold', 'blue', 'persist', 'disabled', 'removed'],
-                             help='Guided code-mod check in this terminal; gold copies the verified example into Odin Downloads.')
+                             help='Guided code-mod check; gold copies the example. Removed is blocked: this APK has no removal UI.')
     package_parser = sub.add_parser('package', help='Prepare one compact upload from existing evidence; no device commands.')
     package_parser.add_argument('evidence', type=Path, nargs='?')
     package_parser.add_argument('--latest', action='store_true', help='Package the newest original evidence ZIP in Downloads.')

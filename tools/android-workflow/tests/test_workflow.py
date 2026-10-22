@@ -599,6 +599,15 @@ class Workflow(unittest.TestCase):
         self.assertEqual(namespace['MOD_FILE'],Path(mod['path']))
         self.assertIn('session.nrm',namespace['MOD_REMOTE'])
 
+    def test_missing_removal_ui_stops_before_artifact_or_device_access(self):
+        args = tooie.parser().parse_args(['test', '--mod-check', 'removed'])
+        with patch.object(tooie, 'select_artifact', side_effect=AssertionError('No artifact/device work')), \
+             patch.object(tooie.subprocess, 'Popen', side_effect=AssertionError('No install/launch')):
+            with self.assertRaisesRegex(RuntimeError, 'no Remove option'):
+                tooie.capture(args, self.profile)
+        with self.assertRaisesRegex(RuntimeError, 'no Remove option'):
+            tooie.render_collector(self.profile, {}, self.args.downloads, self.root/'session', mod_check='removed')
+
     def test_mod_setup_copies_only_gold_and_rejects_changed_bytes(self):
         artifact = {'apk':str(self.root/'game.apk'),'report':str(self.root/'report.txt'),
                     'sha256':'a'*64,'build_id':'b'*40}
@@ -615,9 +624,14 @@ class Workflow(unittest.TestCase):
         namespace['command']=lambda *a,**k:subprocess.CompletedProcess([],0,b'C:\\Downloads\\check.nrm',b'')
         namespace['mod_setup']()
         self.assertEqual([c[0] for c in calls],['push','shell'])
-        for phase in ('blue','persist','disabled','removed'):
+        for phase in ('blue','persist','disabled'):
             calls.clear();namespace['MOD_CHECK']=phase;namespace['prefix']=self.root/('evidence-'+phase);namespace['mod_setup']()
             self.assertEqual(calls,[])
+        calls.clear(); namespace['MOD_CHECK']='removed'; namespace['prefix']=self.root/'unsupported-removal'
+        with self.assertRaisesRegex(RuntimeError, 'no Remove option'):
+            namespace['mod_setup']()
+        self.assertEqual(calls, [])
+        self.assertFalse((self.root/'unsupported-removal-Mod-Check-Plan.txt').exists())
         calls.clear();namespace['MOD_CHECK']='gold';path.write_bytes(b'changed')
         with self.assertRaisesRegex(RuntimeError,'changed after workflow validation'):
             namespace['mod_setup']()
