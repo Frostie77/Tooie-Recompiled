@@ -263,19 +263,23 @@ class Workflow(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'bytes differ'):
             tooie.select_artifact(self.args, self.profile)
 
-    def test_demo_profile_retains_mods_and_production_wait_gate(self):
-        self.assertTrue(self.profile['demo_only'])
+    def test_mod_profile_retains_gameplay_and_production_wait_gates(self):
+        self.assertFalse(self.profile['demo_only'])
         engineering = self.profile['source_manifest']['engineering_entries']
         mods = self.profile['source_manifest']['mod_entries']
-        self.assertEqual(len(engineering), 137)
+        self.assertEqual(len(engineering), 155)
         self.assertEqual(mods, [])
         entries = {x['path']: x for x in engineering}
         self.assertEqual(entries['lib/rt64/src/render/rt64_transform_processor.cpp']['sha'],
                          '7223ebab3e3d5892b784d34ec08dba0af3943cf2')
         self.assertIn('tests/transform_upload.cpp', entries)
         self.assertIn('tools/test_transform_upload.py', entries)
+        self.assertIn('src/mod_runtime.h', entries)
+        self.assertIn('examples/mods/tooie_mod_check/mod.c', entries)
         self.assertFalse({x['path'] for x in engineering} & {x['path'] for x in mods})
         builder = tooie.render_builder(self.profile)
+        self.assertIn('python3 tools/test_mod_runtime.py', builder)
+        self.assertIn('Example mod SHA-256: $MOD_SHA', builder)
         self.assertIn('python3 tools/test_transform_upload.py', builder)
         self.assertIn('exact-parent fails the independent byte check and grown-source ASan control', builder)
         self.assertIn('bash tools/test_demo_pacing.sh', builder)
@@ -475,6 +479,78 @@ class Workflow(unittest.TestCase):
             self.assertIn('Captured source: ' + self.profile['identity']['commit'], text)
             self.assertIn('Workflow profile at packaging: ' + 'f' * 40, text)
 
+
+    def test_mod_receipt_verifies_source_and_package_before_copy(self):
+        profile = copy.deepcopy(self.profile)
+        archive = self.root / profile['artifact']['mod']
+        report = self.root / profile['artifact']['mod_report']
+        apk_report = self.root / 'apk-report.txt'
+        with zipfile.ZipFile(archive, 'w') as z:
+            z.writestr('mod.json', json.dumps({'id':'tooie_mod_check','game_id':'bt'}))
+            z.writestr('mod_syms.bin', b'N64RSYMS-host-fixture')
+            z.writestr('mod_binary.bin', b'not executable: metadata validation fixture')
+        digest = tooie.sha256(archive)
+        value = {'source_commit':profile['identity']['commit'], 'archive_sha256':digest,
+                 'source_files':profile['mod_check']['source_files']}
+        report.write_text(json.dumps(value))
+        fields = profile['report_fields'] | {'Example mod SHA-256':digest}
+        apk_report.write_text(profile['report_header']+'\n'+'\n'.join(k+': '+v for k,v in fields.items()))
+        artifact = {'apk':str(self.root/'game.apk'), 'report':str(apk_report)}
+        result = tooie.mod_artifact(profile, artifact)
+        self.assertEqual(result, {'path':str(archive),'sha256':digest})
+        report.write_text(json.dumps(value | {'source_commit':'0'*40}))
+        with self.assertRaisesRegex(RuntimeError, 'source and APK build report'):
+            tooie.mod_artifact(profile, artifact)
+        report.write_text(json.dumps(value))
+        archive.write_bytes(b'changed after building')
+        with self.assertRaisesRegex(RuntimeError, 'source and APK build report'):
+            tooie.mod_artifact(profile, artifact)
+
+    def test_mod_phase_uses_same_terminal_and_explicit_gameplay(self):
+        args = tooie.parser().parse_args(['test','--mod-check','gold'])
+        self.assertEqual(args.mod_check,'gold')
+        artifact = {'apk':str(self.root/'game.apk'),'report':str(self.root/'report.txt'),
+                    'sha256':'a'*64,'build_id':'b'*40}
+        mod = {'path':str(self.root/'check.nrm'),'sha256':'c'*64}
+        text = tooie.render_collector(self.profile,artifact,self.args.downloads,self.root/'session',mod_check='gold',mod=mod)
+        namespace={'__name__':'fixture'};exec(text,namespace)
+        self.assertTrue(namespace['GAMEPLAY_ONLY'])
+        self.assertEqual(namespace['MOD_CHECK'],'gold')
+        self.assertEqual(namespace['MOD_FILE'],Path(mod['path']))
+        self.assertIn('session.nrm',namespace['MOD_REMOTE'])
+
+    def test_mod_setup_copies_only_gold_and_rejects_changed_bytes(self):
+        artifact = {'apk':str(self.root/'game.apk'),'report':str(self.root/'report.txt'),
+                    'sha256':'a'*64,'build_id':'b'*40}
+        path=self.root/'check.nrm';path.write_bytes(b'controlled copy fixture')
+        mod={'path':str(path),'sha256':tooie.sha256(path)}
+        text=tooie.render_collector(self.profile,artifact,self.args.downloads,self.root/'session',mod_check='gold',mod=mod)
+        namespace={'__name__':'fixture'};exec(text,namespace)
+        namespace['prefix']=self.root/'evidence'
+        calls=[]
+        def adb(*args,**kwargs):
+            calls.append(args)
+            return subprocess.CompletedProcess([],0,('' if args[0]=='push' else mod['sha256']+'  file').encode(),b'')
+        namespace['adb']=adb
+        namespace['command']=lambda *a,**k:subprocess.CompletedProcess([],0,b'C:\\Downloads\\check.nrm',b'')
+        namespace['mod_setup']()
+        self.assertEqual([c[0] for c in calls],['push','shell'])
+        for phase in ('blue','persist','disabled','removed'):
+            calls.clear();namespace['MOD_CHECK']=phase;namespace['prefix']=self.root/('evidence-'+phase);namespace['mod_setup']()
+            self.assertEqual(calls,[])
+        calls.clear();namespace['MOD_CHECK']='gold';path.write_bytes(b'changed')
+        with self.assertRaisesRegex(RuntimeError,'changed after workflow validation'):
+            namespace['mod_setup']()
+        self.assertEqual(calls,[])
+        path.write_bytes(b'controlled copy fixture')
+        namespace['prefix']=self.root/'copy-failed'
+        def failed_push(*args,**kwargs):
+            calls.append(args)
+            return subprocess.CompletedProcess([],1,b'',b'uncertain connection')
+        namespace['adb']=failed_push
+        with self.assertRaisesRegex(RuntimeError,'failed or was uncertain'):
+            namespace['mod_setup']()
+        self.assertEqual([c[0] for c in calls],['push'])
 
     def test_presentation_control_preserves_artifact_and_default_mode(self):
         artifact = {**self.profile['artifact'], 'sha256':'a'*64, 'build_id':'b'*40,

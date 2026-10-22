@@ -127,7 +127,9 @@ def load_profile(path):
     require(set(profile['templates']) == {'build.sh', 'collector.py'}, 'Unexpected templates.')
     for name, digest in profile['templates'].items():
         require(sha256(HERE / 'templates' / name) == digest, 'Template digest differs: ' + name)
-    for key in ('apk', 'report'):
+    for key in ('apk', 'report', 'mod', 'mod_report'):
+        if key not in profile['artifact']:
+            continue
         require(Path(profile['artifact'][key]).name == profile['artifact'][key],
                 'Artifact names must be simple filenames.')
     return profile
@@ -210,7 +212,28 @@ def replace_assignments(source, values):
     return ''.join(lines)
 
 
-def render_collector(profile, artifact, downloads, session, presentation_hz=None, gameplay_only=False):
+def mod_artifact(profile, artifact):
+    names = profile['artifact']
+    require('mod' in names and 'mod_report' in names, 'This profile has no verified example mod. Build the mod-check profile first.')
+    path = Path(artifact['apk']).parent / names['mod']
+    report = path.parent / names['mod_report']
+    data = json.loads(report.read_text())
+    digest = sha256(path)
+    fields = report_fields(artifact['report'], profile)
+    require(data.get('source_commit') == profile['identity']['commit'] and
+            data.get('archive_sha256') == digest == fields.get('Example mod SHA-256'),
+            'Example mod does not match its source and APK build report.')
+    require(data.get('source_files') == profile['mod_check']['source_files'], 'Example mod source hashes differ.')
+    with zipfile.ZipFile(path) as archive:
+        require(archive.testzip() is None, 'Example mod ZIP CRC failed.')
+        manifest = json.loads(archive.read('mod.json'))
+        require(manifest.get('id') == 'tooie_mod_check' and manifest.get('game_id') == 'bt', 'Wrong example mod identity.')
+        require(archive.read('mod_syms.bin').startswith(b'N64RSYMS') and archive.read('mod_binary.bin'),
+                'Example mod has no executable payload.')
+    return {'path': str(path), 'sha256': digest}
+
+
+def render_collector(profile, artifact, downloads, session, presentation_hz=None, gameplay_only=False, mod_check=None, mod=None):
     require(presentation_hz in (None, 60), 'Unsupported presentation comparison.')
     source = (HERE / 'templates/collector.py').read_text()
     identity = profile['identity']
@@ -229,8 +252,12 @@ def render_collector(profile, artifact, downloads, session, presentation_hz=None
                                              '/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'),
         'MARKER': 'Path(' + repr(str(session / 'attempt.started')) + ')',
         'DEMO_ONLY': repr(profile.get('demo_only', False)),
-        'GAMEPLAY_ONLY': repr(bool(gameplay_only)),
+        'GAMEPLAY_ONLY': repr(bool(gameplay_only or mod_check)),
         'PRESENTATION_TEST_HZ': repr(presentation_hz or 0),
+        'MOD_CHECK': repr(mod_check or ''),
+        'MOD_FILE': 'Path(' + repr(mod['path'] if mod else '') + ')',
+        'MOD_HASH': repr(mod['sha256'] if mod else ''),
+        'MOD_REMOTE': repr('/sdcard/Download/Tooie-Mod-Check-' + identity['commit'][:12] + '-' + session.name + '.nrm' if mod_check == 'gold' else ''),
     }
     source = replace_assignments(source, replacements)
     node = next(n for n in ast.parse(source).body if isinstance(n, ast.FunctionDef) and n.name == 'expected_report')
@@ -488,6 +515,7 @@ def package_evidence(archive, profile):
 def capture(args, profile):
     require(sys.stdin.isatty(), 'Run test in one interactive Ubuntu terminal.')
     artifact = select_artifact(args, profile)
+    mod = mod_artifact(profile, artifact) if args.mod_check else None
     with exclusive_lock(args.state, 'device'):
         print('Each session performs a replacement install and launch, retaining app data.\n'
               'Keep using this terminal for prompts and numbered bug notes.\n'
@@ -496,11 +524,12 @@ def capture(args, profile):
             session = args.state / 'sessions' / unique_id()
             session.mkdir(parents=True)
             script = session / 'collector.py'
-            write_new(script, render_collector(profile, artifact, args.downloads, session, args.presentation_hz, args.gameplay_only))
+            write_new(script, render_collector(profile, artifact, args.downloads, session, args.presentation_hz, args.gameplay_only, args.mod_check, mod))
             json_new(session / 'session.json', {'session': session.name, 'number': number,
                      'requested_sessions': args.sessions, 'artifact': artifact,
                      'requested_presentation_hz': args.presentation_hz,
                      'gameplay_only': args.gameplay_only,
+                     'mod_check': args.mod_check,
                      'authorization': 'User invoked repeat-capable workflow. One install/launch per session. Saves retained.'})
             print('\nSESSION ' + str(number) + '/' + str(args.sessions) + ': ' + session.name, flush=True)
             process = subprocess.Popen([sys.executable, '-u', str(script)])
@@ -560,6 +589,8 @@ def parser():
                              help='Guide a manual 60 Hz output comparison before Start Game; no automatic setting change.')
     test_parser.add_argument('--gameplay-only', action='store_true',
                              help='Load an existing save and capture ten minutes after playing confirmation, without a timed demo window.')
+    test_parser.add_argument('--mod-check', choices=['gold', 'blue', 'persist', 'disabled', 'removed'],
+                             help='Guided code-mod check in this terminal; gold copies the verified example into Odin Downloads.')
     package_parser = sub.add_parser('package', help='Prepare a handoff from an existing evidence ZIP; no device commands.')
     package_parser.add_argument('evidence', type=Path)
     sub.add_parser('update', help='Explicitly fast-forward this isolated tooling checkout.')

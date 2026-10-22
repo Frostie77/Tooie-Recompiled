@@ -27,14 +27,21 @@ if [[ $# -ne 0 ]]; then
   exit 2
 fi
 REQUESTED='@@COMMIT@@'
+MOD_CLANG="${MOD_CLANG:-$(command -v clang || command -v clang-18 || true)}"
+MOD_LINKER="${MOD_LINKER:-$(command -v ld.lld || command -v ld.lld-18 || true)}"
+[[ -n "$MOD_LINKER" ]] || MOD_LINKER="$SDK/toolchains/llvm/prebuilt/linux-x86_64/bin/ld.lld"
+[[ -n "$MOD_CLANG" && -x "$MOD_LINKER" ]] || {
+  echo 'STOP: code-mod host checks require Clang and LLD. In Ubuntu install clang-18 lld-18, then rerun the build.' >&2; exit 1;
+}
+command -v zip >/dev/null || { echo 'STOP: install the Ubuntu zip package for the code-mod example.' >&2; exit 1; }
 EXPECTED_PARENT='@@ENGINEERING@@ @@BRANDING@@'
 
 for command in git cmake ninja gradle rsync unzip sha256sum cmp awk grep rg flock file python3 ar sed tail mktemp cp mkdir pkg-config ln; do
   command -v "$command" >/dev/null 2>&1 || { echo "STOP: missing command: $command" >&2; exit 1; }
 done
 command -v "${CXX:-clang++}" >/dev/null 2>&1 || { echo 'STOP: host C++ compiler missing' >&2; exit 1; }
-OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Transform-Upload-Gameplay-Timing-Debug.apk"
-REPORT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Transform-Upload-Gameplay-Timing-Debug-build-report.txt"
+OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Mod-Check-Gameplay-Timing-Debug.apk"
+REPORT="$WINDOWS_DOWNLOADS/Tooie-${REQUESTED:0:12}-Mod-Check-Gameplay-Timing-Debug-build-report.txt"
 if [[ -e "$OUTPUT" || -e "$REPORT" ]]; then
   echo 'STOP: this gameplay APK or report already exists; existing results are preserved.' >&2
   exit 1
@@ -598,6 +605,20 @@ if grep -Eq '^SKIP:|^FAIL|Traceback|RuntimeError|WARNING in native method|runtim
   echo 'STOP: mod suite includes a skip/failure or sanitizer/JNI warning.' >&2; exit 1
 fi
 grep '^PASS:' "$LOGS/mod-support.log"
+
+echo 'Building and executing the real Tooie code-mod example through the production loader and live recompiler.'
+MOD_EXAMPLE="$RUN_ROOT/mod-example"
+if ! (cd "$SRC" && CXX="$AUDIO_CXX" CC="$CLOCK_CC" python3 tools/test_mod_runtime.py \
+  --build-dir "$RUN_ROOT/mod-runtime" --mod-output "$MOD_EXAMPLE" \
+  --clang "$MOD_CLANG" --linker "$MOD_LINKER") > "$LOGS/mod-runtime.log" 2>&1; then
+  echo 'STOP: executable code-mod checks failed.' >&2; tail -100 "$LOGS/mod-runtime.log"; exit 1
+fi
+for marker in \
+  'PASS: real code loading, MIPS execution, config imports, state restoration and disabled control' \
+  'PASS: exact parent core2 consumer fails execution assertion; current consumer dispatches after core mapping'; do
+  grep -Fq "$marker" "$LOGS/mod-runtime.log" || { echo "STOP: missing executable mod result: $marker" >&2; exit 1; }
+done
+grep '^PASS:' "$LOGS/mod-runtime.log"
 
 echo 'Checking generated actor lifetime/array ownership and the exact-parent failing control; host compilation may take a few minutes.'
 if ! (cd "$SRC" && CXX="$AUDIO_CXX" CC="$CLOCK_CC" \
@@ -1580,6 +1601,7 @@ for marker in (b'actor-source', b'actor-draw', b'actor_applied=', b'player_appli
         raise SystemExit('STOP: packaged actor ownership/hierarchy component missing: '+marker.decode())
 
 for marker in (
+    b'recomp_on_init',
     b'Android mod picker: opening document selection', b'openModPicker',
     b'Could not register texture-pack support.', b'rt64.json',
     b'The ZIP bundle contains no .nrm mods or .rtz texture packs.',
@@ -1874,8 +1896,8 @@ PACKAGED_SDL_BUILD_ID="${PACKAGED_SDL_BUILD_ID:-unavailable}"
 
 printf '\n=== 7/7 EXPORT IMMUTABLE APK AND BUILD REPORT ===\n'
 SHORT_SHA="${FULL_SHA:0:12}"
-OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Transform-Upload-Gameplay-Timing-Debug.apk"
-REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Transform-Upload-Gameplay-Timing-Debug-build-report.txt"
+OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Mod-Check-Gameplay-Timing-Debug.apk"
+REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Mod-Check-Gameplay-Timing-Debug-build-report.txt"
 if [[ -e "$OUTPUT" || -e "$REPORT" ]]; then
   echo 'STOP: output APK or report already exists; nothing will be overwritten.' >&2
   exit 1
@@ -1888,19 +1910,30 @@ with Path(sys.argv[1]).open('rb') as src, Path(sys.argv[2]).open('xb') as dst:
 EXPORT_GAMEPLAY_APK
 cmp -s "$APK" "$OUTPUT" || { echo 'STOP: APK copy verification failed' >&2; exit 1; }
 APK_SHA=$(sha256sum "$OUTPUT" | awk '{print $1}')
+MOD_OUTPUT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Mod-Check.nrm"
+MOD_REPORT="$WINDOWS_DOWNLOADS/Tooie-${SHORT_SHA}-Mod-Check-build-report.json"
+python3 - "$MOD_EXAMPLE" "$MOD_OUTPUT" "$MOD_REPORT" <<'EXPORT_CODE_MOD'
+from pathlib import Path
+import shutil,sys
+source=Path(sys.argv[1])
+for name,destination in [('tooie_mod_check.nrm',sys.argv[2]),('tooie_mod_check-build-report.json',sys.argv[3])]:
+    with (source/name).open('rb') as src,Path(destination).open('xb') as dst:shutil.copyfileobj(src,dst)
+EXPORT_CODE_MOD
+cmp -s "$MOD_OUTPUT" "$MOD_EXAMPLE/tooie_mod_check.nrm" || { echo 'STOP: example export differs.' >&2; exit 1; }
+MOD_SHA=$(sha256sum "$MOD_OUTPUT" | awk '{print $1}')
 
 (set -o noclobber; cat > "$REPORT" <<EOF
-Tooie Recompiled Android verified transform-upload gameplay build report
+Tooie Recompiled Android verified code-mod gameplay build report
 Source commit: $FULL_SHA
 Source branch: $BRANCH
 Source parent: $ACTUAL_PARENT
-Source tree: 8e0c9fdd7d310518a2a878a9f99e8fe712cc0da0
-Engineering revision: 26d41b13a8350182a0018578fbcbb150eee7470c
+Source tree: f18df588e1edfc2b282020ca0dfacb8e309eaadf
+Engineering revision: a44bd5c36222c2c0f6a73e9a77718359f4d88e87
 Player implementation: b679975a352bf2f63b650f78845a2bf1eb5f8d9c
 Mod/branding tested source: 82a6641c228d71756222bc0da96b0f159e51abd4
 Approved icon/name source: e1fcf938dcc24bb9865b743f900d107a9de26d9d
 Approved title source: d54c70c4eae603b6b66dffd26909dea1889fbd6d
-Integration: exact main tree after PR #12; 137 reviewed engineering/main entries and zero additional branding entries; approved assets unchanged
+Integration: exact code-mod feature tree based on reviewed main; 155 engineering/main entries and zero additional branding entries; approved assets unchanged
 App name: Tooie Recompiled (compiled application/activity labels verified)
 Branding: approved round BT/Jiggy icon, legacy/round/foreground visible RGBA and adaptive references verified in final APK
 Branding audit: $LOGS/packaged-branding-verification.json
@@ -1910,7 +1943,9 @@ Launcher artwork: exact approved Jiggy background/red TOOIE- and separate blue -
 Launcher host checks: $LOGS/launcher-artwork.log
 Menu asset SHA-256: 3c125d58ad008e837f3c7dc335133d03bb9aae19086ffbde90d8a71daa52c707 (both source copies and exact APK member)
 Icon master SHA-256: 4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784
-Build mode: TRANSFORM UPLOAD GAMEPLAY TIMING DIAGNOSTIC DEBUG
+Build mode: CODE MOD GAMEPLAY TIMING DIAGNOSTIC DEBUG
+Code-mod startup: recomp_on_init after core2 mapping; mod/heap/stack setup precedes callback; actor/world initialization not promised
+Code-mod host validation: production archive, manifest, symbols, live compiler, config import, saved colour/enabled state, dispatcher and exact-parent rejection/no-dispatch controls; UI imports record ABI calls, no Odin rendering claim
 Native CMake build type: Release
 Android packaging variant: Debug (existing isolated Gradle workflow; no release/key configuration changes)
 Descriptor allocation probe: OFF
@@ -1945,6 +1980,9 @@ ARM64 API level: 24
 ELF Build ID: $PACKAGED_BUILD_ID
 APK SHA-256: $APK_SHA
 APK: $OUTPUT
+Example mod: $MOD_OUTPUT
+Example mod SHA-256: $MOD_SHA
+Example mod report: $MOD_REPORT
 Logs: $LOGS
 Native packaging verification: $LOGS/native-packaging-verification.json
 Mod host results: $LOGS/mod-support.log (Java/SDK/JVM/JNI, POSIX miniz prototypes, production manifest/config/archive/rollback/registration and exact-base controls rerun)
@@ -1956,7 +1994,7 @@ Lookup fatal handling: primary guest-fatal before detail records; strict failure
 Lookup host results: $LOGS/guest-lookup.log (38 controls including three exact-cb896c3 provenance failures; constructed tables/RAM, not the Odin trigger)
 Lookup compiler audit: $BUILD/lookup-provenance-profile.json (ten actual Android environments, seven contextual generated LOOKUP_FUNC routes)
 Full lookup stderr trace: not enabled by this builder; opt-in host regression control is separate
-First-person transition: corrections retained; entrance and play confirmed on prior d168ed6 hardware run; this transform-upload APK remains untested on Odin
+First-person transition: corrections retained; entrance and kickball play succeeded in the 7a158 gameplay capture; this code-mod build needs its own Odin verification
 First-person consumer: exact complete normalized function SHA-256 997edfb876fe4a765e4dce7d7ede0bbbdcf9cbbe55bbb610c4bfec3f6fcb2412
 First-person host results: $LOGS/jump-table-analysis.log; $LOGS/first-person-dispatch.log; $LOGS/first-person-table.log (20 generator controls; 513 Android + 513 desktop consumer/reference scenarios, parent and mutation failures; controlled peripheral callees, not gameplay)
 Four-consumer source profile: $LOGS/bsfirstp-source-profile.json (four complete function hashes, ordered ROM targets, scoped 306-function audit)
@@ -2005,19 +2043,20 @@ Candidate storage: reusable contiguous ordered pair unions; compaction before gr
 Candidate storage validation: 303 full-matcher frames byte-identical to exact d403031 parent in required scalar and independent SIMD host gates; wrong-order/dedup controls; hardware benefit unverified
 Transform upload policy: per-workload history mapping; unmatched workloads upload current matrices for both world-transform buffers
 Transform upload validation: 8 host ASan/UBSan staging cases plus exact-99c7296 parent and mutation controls; no GPU output or Odin claim
-Runtime delta from tested d168 APK: only rt64_transform_processor.cpp history predicate; game/renderer code, shaders and artwork otherwise byte-identical
+Runtime delta from tested d168 APK: retained transform-upload correction plus code-mod startup event registration/dispatch; game instructions, timing, shaders and artwork unchanged
 Transform upload host results: $LOGS/transform-upload.log (CPU staging/source selection only; complete processor and real GPU output require separate checks)
 EOF
 )
-printf '\nSUCCESS: VERIFIED TOOIE RECOMPILED TRANSFORM-UPLOAD GAMEPLAY APK READY (NOT INSTALLED)\n'
+printf '\nSUCCESS: VERIFIED TOOIE RECOMPILED CODE-MOD GAMEPLAY APK READY (NOT INSTALLED)\n'
 printf 'Commit: %s\n' "$FULL_SHA"
 printf 'APK: %s\n' "$OUTPUT"
 printf 'Build ID: %s\n' "$PACKAGED_BUILD_ID"
 printf 'SHA-256: %s\n' "$APK_SHA"
 printf 'Report: %s\n' "$REPORT"
+printf 'Example mod: %s\n' "$MOD_OUTPUT"
 echo 'Task delivery/display-list, full-sync window gaps and independent guest-clock/frame-sync/input timing ON; geometry/correction capture and allocation probe OFF; player/actor hierarchy ON; clear selectors undefined.'
 echo 'Mod support, selected round BT icon, Tooie Recompiled name and red TOOIE / blue RECOMPILED title verified.'
-echo 'The prior d168 first-person entrance and play passed; this transform-upload APK still requires its own Odin verification.'
+echo 'Prior 7a158 first-person/kickball gameplay succeeded; code-mod badge, settings and texture replacement need Odin verification.'
 echo 'Current-matrix upload correction passed eight staging cases and exact-parent/mutation controls; climbing appearance and ground/shadow artifacts are not confirmed fixed.'
 echo 'Replay wait correction passed host controls; Odin appearance and ordinary-title motion remain unverified. Observer overhead is included; global VI rate and safeguards are unchanged.'
 echo 'No ADB commands were used. Odin unchanged.'
