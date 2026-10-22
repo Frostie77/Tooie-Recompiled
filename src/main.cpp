@@ -46,6 +46,7 @@
 #include "queued_audio.h"
 #include "mod_support.h"
 #include "mod_runtime.h"
+#include "aiming_controls.h"
 #include "launcher_layout.h"
 
 #include "recompui/recompui.h"
@@ -245,7 +246,8 @@ void initialize_config() {
     }
 
     recompui::config::GeneralTabOptions general_options{};
-    recompui::config::create_general_tab(general_options);
+    auto& general_config = recompui::config::create_general_tab(general_options);
+    tooie::input::add_aiming_option(general_config);
     recompui::config::create_graphics_tab();
     recompui::config::create_controls_tab();
     recompui::config::create_sound_tab();

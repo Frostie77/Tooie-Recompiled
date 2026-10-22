@@ -57,6 +57,11 @@ rejected. Executable `.nrm` IDs retain the existing C-identifier rules. The
 author's ID and archive bytes are preserved.
 
 The app reuses the pinned static Zstandard target already built for RT64.
+The frontend explicitly links librecomp so that its archive consumer receives
+that target's exported include path and linkage. The first CI run passed host
+regressions but exposed the missing frontend dependency during ARM64
+compilation (`zstd.h` not found); this dependency correction addresses that
+specific failure. A subsequent full build is still a separate gate.
 Standalone runtime CMake consumers and the host mod-runtime fixture use the
 system Zstandard CMake package. Android CI installs `libzstd-dev` for host
 checks. There is no new downloaded app library or Java compression dependency.
@@ -103,7 +108,8 @@ then show the expected disabled comparison with graphics settings retained.
 The pack's author lists current coverage as UI only.
 
 The previously recorded GOLD/BLUE/persistence/disabled executable-example
-checks belong to the earlier source tree. Aiming Invert remains a separate
-unimplemented requirement for the next build. No timing, rendering, controller
-mapping, save handling, Vulkan policy or five-second runtime guard is changed.
+checks belong to the earlier source tree. The next build also includes the
+[saved Aiming Invert preference](android-aiming-invert-20261022.md); its hardware
+acceptance is pending. The archive correction changes no timing, rendering,
+controller mapping, save handling, Vulkan policy or five-second runtime guard.
 No release or full-game compatibility claim follows from archive acceptance.

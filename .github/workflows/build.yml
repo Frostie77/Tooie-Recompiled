@@ -78,6 +78,7 @@ jobs:
           mkdir -p .ci-android/logs
           {
             python3 tools/test_transform_upload.py
+            python3 tools/test_aiming_controls.py
             bash tools/test_audio_runtime.sh
             bash tools/test_android_surface_lifecycle.sh
             bash tools/test_android_rom_picker.sh

@@ -7622,6 +7622,7 @@ RECOMP_FUNC void func_808000B4_baeggaim(uint8_t* rdram, recomp_context* ctx) {
     // 0x808000FC: swc1        $f10, 0x24($sp)
     MEM_W(0X24, ctx->r29) = ctx->f10.u32l;
     after_2:
+    tooie_aiming_invert(rdram, ctx);
     // 0x80800100: lui         $at, 0x42AB
     ctx->r1 = S32(0X42AB << 16);
     // 0x80800104: mtc1        $at, $f2
@@ -17724,6 +17725,7 @@ RECOMP_FUNC void func_808002A4_bafpctrl(uint8_t* rdram, recomp_context* ctx) {
     // 0x8080031C: swc1        $f6, 0x2C($sp)
     MEM_W(0X2C, ctx->r29) = ctx->f6.u32l;
     after_7:
+    tooie_aiming_invert(rdram, ctx);
     // 0x80800320: lwc1        $f8, 0x2C($sp)
     ctx->f8.u32l = MEM_W(ctx->r29, 0X2C);
     // 0x80800324: lwc1        $f16, 0x30($sp)
