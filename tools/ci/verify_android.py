@@ -94,6 +94,7 @@ def check_apk(source, work, ndk):
             libraries[name] = {"sha256": hashlib.sha256(data).hexdigest(),
                                "build_id": build_id(toolbin / "llvm-readelf", packed)}
         main = (verify / "libmain.so").read_bytes()
+        require(b"recomp_on_init" in main, "code-mod startup event registration is missing")
         require(version.encode() in main, "native CI version stamp is missing")
         symbols = subprocess.check_output([str(toolbin / "llvm-nm"), "-D", "--defined-only", str(verify / "libmain.so")], text=True)
         for suffix in ("nativeFileDialogResult", "nativeModFileDialogResult", "nativePresentationLifecycle"):

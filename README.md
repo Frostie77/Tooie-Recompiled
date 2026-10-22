@@ -83,6 +83,12 @@ need device acceptance. Banjo-Kazooie mods and desktop native-library extensions
 are not automatically compatible. See [Android mod support](docs/android-mod-support.md)
 for implemented paths and current limits.
 
+The [Tooie Mod Check example](examples/mods/tooie_mod_check/README.md) supplies a
+ROM-free code mod and a saved colour setting for device acceptance. Its startup
+callback integration is covered by real loader/recompiler host tests; the badge
+still needs Android rendering and restart verification. It is also a small
+starting point for Tooie mod developers.
+
 ## Builds and downloads
 
 Published builds for this project are intended to be **Android APKs only**.

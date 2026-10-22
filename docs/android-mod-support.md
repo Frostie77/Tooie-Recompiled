@@ -1,5 +1,8 @@
 # Android mod import and texture registration
 
+See [Executable code-mod preparation](android-code-mod-preview-20261022.md) for
+the startup event, ROM-free example and next device acceptance checks.
+
 This implements the picker and startup gaps from the
 [baseline audit](android-mod-support-audit.md). Parent `4a0a30912b4e54a31d00f64ed91f5bc8b2adcc37`
 already includes the round BT icon, Tooie-Recompiled Android name and TOOIE
