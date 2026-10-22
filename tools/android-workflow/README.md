@@ -29,19 +29,25 @@ Expect a GOLD badge and normal controls. Add a numbered note. You may type `save
 after completing this focused check; there is no requirement to fill ten
 minutes simply to observe a startup badge.
 
-The later, separately recorded phases use `--mod-check blue`, `persist`,
-`disabled`, then `removed`. Each performs one replacement install/launch while
+The later, separately recorded phases use `--mod-check blue`, `persist`, then
+`disabled`. Each performs one replacement install/launch while
 retaining app data. Only Gold copies a file. Blue asks for the colour change;
-Persist asks you to leave it untouched; Disabled and Removed ask for those menu
-actions. Their plans, screenshots, observations and normal logs stay in the same
+Persist asks you to leave it untouched; Disabled asks for the off toggle.
+Their plans, screenshots, observations and normal logs stay in the same
 evidence ZIP for each session. A plan or successful file copy is not a mod pass.
 No second terminal, camera, automatic controller input or global graphics
 setting change is used. Normal gameplay captures still start their ten-minute
 timer only after `playing` and support extensions.
 
-GOLD execution, BLUE selection and BLUE persistence across a recorded fresh
-launch have passed on Odin. Disabling/removal and a real Tooie texture
-replacement still need device acceptance before claiming the preview scope. Keep Manual 60 and the existing graphics settings. Automatic startup
+GOLD execution, BLUE selection, BLUE persistence across a fresh launch and the
+disabled view have passed on Odin. Source and user review confirmed that this
+APK has **no Remove option** in Mods. The previous removal instructions were
+incorrect: `--mod-check removed` now stops before artifact/device access.
+Keep the example off; deleting its Downloads copy does not remove its private
+installed copy. Frostie confirmed that an in-app Remove button is not required:
+enable/disable is the supported menu workflow and the removal test is retired.
+A real Tooie texture replacement remains a preview acceptance item.
+Keep Manual 60 and the existing graphics settings. Automatic startup
 update checks are not implemented by this work.
 
 Use one Ubuntu terminal. Keep source and compiler outputs in the Linux file

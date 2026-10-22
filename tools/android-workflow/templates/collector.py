@@ -857,7 +857,8 @@ def presentation_setup():
 def mod_setup():
     if not MOD_CHECK:
         return
-    require(MOD_CHECK in ('gold', 'blue', 'persist', 'disabled', 'removed'), 'Unknown mod-check phase.')
+    require(MOD_CHECK in ('gold', 'blue', 'persist', 'disabled'),
+            'Unsupported mod-check phase: this APK has no Remove option in Mods.')
     require(MOD_FILE.is_file() and hashlib.sha256(MOD_FILE.read_bytes()).hexdigest() == MOD_HASH,
             'Example mod changed after workflow validation; no file transfer.')
     save('Mod-Check-Plan', json.dumps({'phase': MOD_CHECK, 'host_file': str(MOD_FILE),
@@ -879,8 +880,6 @@ def mod_setup():
         print('Leave all mod settings untouched. This launch checks that BLUE persisted. Type ready here from the launcher.', flush=True)
     elif MOD_CHECK == 'disabled':
         print('On Odin: open Mods and disable Tooie Mod Check. Return to the launcher, then type ready here. The badge should be absent after Start Game.', flush=True)
-    else:
-        print('On Odin: open Mods and remove Tooie Mod Check through its menu. Leave other mods alone. Return to the launcher, then type ready here. The badge should be absent.', flush=True)
 
 
 def maybe_start_game(offset):
