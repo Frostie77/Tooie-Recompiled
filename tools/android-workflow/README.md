@@ -1,54 +1,55 @@
 # Tooie Recompiled Android workflow
 
-## Current milestone: executable mod check
+## Current milestone: real texture import and saved aiming preference
 
-The new build is pinned to `386d58e4946fed5f02164924cd76d26a47ef43d6`, with the
-exact code-mod feature tree `f18df588e1edfc2b282020ca0dfacb8e309eaadf` and the
-approved launcher/icon retained. The feature is reviewed separately in PR #14;
-this tooling branch is not a runtime branch to merge wholesale into main.
+The build is pinned to `dcba2d96d8155ba3d8c93460345eeb9c0d23ef8f`, exact tree
+`222a8ad6ea6975cd9b10b6987fd297ca056bd429`, with engineering parent
+`b95665529932c22750f1926b3180786f5aedda35` and the approved artwork parent.
+PR #14 reviews the runtime changes. This historical tooling distribution branch
+must not be merged wholesale into main.
 
-Build as usual in Ubuntu. The build exports both the APK and a verified
-`Tooie-386d58e4946f-Mod-Check.nrm`, with separate build reports/checksums. It runs
-the real archive/config/mod/JIT/event tests and exact-parent failure controls.
-Clang with MIPS support, LLD and zip are required; the established NDK linker is
-used when a host LLD is unavailable. No ROM or original assets are in the mod.
+This revision fixes importing RT64 Zstandard/method-93 texture archives and adds
+**Aiming Invert** in **Settings → General**, default Off. On reverses joystick
+vertical egg/first-person aiming; normal walking, horizontal aim and the regular
+camera stay unchanged. The old installed `386d58e4946f` APK lacks both changes.
+No new hardware pass is claimed until the new APK has been tested.
 
-For the first device phase, run:
+Update and build in Ubuntu, one command at a time. The host archive tests now
+also require `libzstd-dev`; the builder checks this before creating its build
+folder. If it reports that prerequisite missing, install it in Ubuntu with
+`sudo apt install libzstd-dev`, then rerun the build. Clang/LLD, zip and the
+previous JDK/SDK/SDL prerequisites remain required. The build checks all 175
+reviewed source blobs, actual ARM64 compiler commands, preserved safeguards,
+exact native packaging, approved artwork and the new feature markers.
 
-```sh
-~/projects/tooie-tools/tooie test --mod-check gold
-```
+For the first focused device test use `~/projects/tooie-tools/tooie test --gameplay-only`.
+At the launcher, before typing `ready`, use **Mods → Install Mods** to select
+the original `bt-reloaded-v0.1.1-rt64.rtz` already in Odin Downloads. Its known
+SHA-256 is `0f896281240ac22c4b1fa10e83757eb6d393fbbbe2121c81a2c38fbc960cdde9`.
+Do not rename, unpack or recompress it. Enable the pack and compare supported
+pause-menu text/icons; the author describes this release as **UI only**.
+Keep Tooie Mod Check disabled and retain Manual 60 and the existing graphics.
 
-The command verifies the mod against the APK build report and source hashes,
-then copies it into Odin's Download folder under a unique name and verifies its
-device SHA-256. In the SAME Ubuntu terminal it tells you which file to select
-through **Mods > Install Mods**, to enable **Tooie Mod Check** and choose Gold.
-Type `ready` only after returning to the launcher; press Start Game only when
-instructed, load your existing save, then type `playing` when Banjo can move.
-Expect a GOLD badge and normal controls. Add a numbered note. You may type `save`
-after completing this focused check; there is no requirement to fill ten
-minutes simply to observe a startup badge.
+Check Aiming Invert Off/On while aiming eggs. Confirm horizontal direction,
+then leave aiming and check walking and the normal camera. Close the settings
+tab to save. Add numbered notes describing the selected state and observed
+response. A later separately recorded launch checks persistence without editing
+the setting and compares the texture pack disabled. No new texture-specific
+command or automatic controller input is introduced.
 
-The later, separately recorded phases use `--mod-check blue`, `persist`, then
-`disabled`. Each performs one replacement install/launch while
-retaining app data. Only Gold copies a file. Blue asks for the colour change;
-Persist asks you to leave it untouched; Disabled asks for the off toggle.
-Their plans, screenshots, observations and normal logs stay in the same
-evidence ZIP for each session. A plan or successful file copy is not a mod pass.
-No second terminal, camera, automatic controller input or global graphics
-setting change is used. Normal gameplay captures still start their ten-minute
-timer only after `playing` and support extensions.
+Use the same terminal for `ready`, `playing`, numbered notes and `save`.
+The timer starts only after `playing`; a focused check can finish with `save`.
+Notes, attempted screenshots and fresh logs go in the same compact Share ZIP.
+The full raw evidence stays on the PC. A successful import alone is not a
+rendering or aiming pass.
 
-GOLD execution, BLUE selection, BLUE persistence across a fresh launch and the
-disabled view have passed on Odin. Source and user review confirmed that this
-APK has **no Remove option** in Mods. The previous removal instructions were
-incorrect: `--mod-check removed` now stops before artifact/device access.
-Keep the example off; deleting its Downloads copy does not remove its private
-installed copy. Frostie confirmed that an in-app Remove button is not required:
-enable/disable is the supported menu workflow and the removal test is retired.
-A real Tooie texture replacement remains a preview acceptance item.
-Keep Manual 60 and the existing graphics settings. Automatic startup
-update checks are not implemented by this work.
+The earlier executable-example GOLD, BLUE, persistence and disabled phases
+passed on Odin. They remain available with `--mod-check` when needed; they are
+not required to repeat merely for this texture/aiming check. The build still
+exports the verified example `.nrm` and report alongside its APK. The obsolete
+`--mod-check removed` phase is rejected before artifact or device access. An
+in-app Remove button is not required. Automatic startup update checks and full
+gameplay acceptance remain separate project goals.
 
 Use one Ubuntu terminal. Keep source and compiler outputs in the Linux file
 system; finished APKs and upload bundles go to Windows Downloads.

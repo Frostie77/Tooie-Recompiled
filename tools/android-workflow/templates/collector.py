@@ -655,6 +655,9 @@ def main():
             require(marker in native, f'Missing progress/matching diagnostic: {marker!r}')
 
         for marker in (
+            b'Aiming Invert', b'aiming_invert', b'tooie_aiming_invert',
+            b'A Zstandard archive entry failed decoding, size validation or its checksum.',
+            b'The texture pack has no readable rt64.json database.',
             b'Android mod picker: opening document selection', b'openModPicker',
             b'Could not register texture-pack support.', b'rt64.json',
             b'The ZIP bundle contains no .nrm mods or .rtz texture packs.',
@@ -748,7 +751,7 @@ def main():
             symbol = 'Java_io_github_banjotooierecompiled_BanjoTooieSDLActivity_' + suffix
             require(any(len(parts := line.split()) >= 8 and parts[-1] == symbol and
                         parts[-2] != 'UND' for line in symbols.splitlines()), f'Missing defined JNI export: {symbol}')
-    print('PASS: exact reviewed gameplay APK hash/report, task-delivery/display-list/full-sync window gaps and independent timing ON, geometry/correction capture OFF, hierarchy/mods/artwork retained, ZIP, ARM64 Build ID, DEX and all three JNI exports.', flush=True)
+    print('PASS: exact texture-import/aiming APK hash/report, saved Aiming Invert and Zstandard importer, retained timing/hierarchy/mods/artwork, ZIP, ARM64 Build ID, DEX and all three JNI exports.', flush=True)
     apk_windows = text(command(['wslpath', '-w', APK]))
     require(text(adb('get-state')) == 'device', 'Expected Odin is unavailable.')
     require(text(adb('get-serialno')) == SERIAL, 'Device serial mismatch.')
