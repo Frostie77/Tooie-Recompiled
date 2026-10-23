@@ -8,6 +8,18 @@ The build is pinned to `dcba2d96d8155ba3d8c93460345eeb9c0d23ef8f`, exact tree
 PR #14 reviews the runtime changes. This historical tooling distribution branch
 must not be merged wholesale into main.
 
+New local builds are labelled **Tooie Recompiled Debug**. A single resource
+overlay is added only in the isolated packaging project; the pinned game/native
+and Java sources, application ID, signing key selection and icons stay unchanged.
+Compiled application/activity labels are checked in the final APK. A new profile
+receipt prevents reusing the earlier APK under the new label. Update alone does
+not change the installed Odin app; the next user-invoked build/test applies it.
+
+Frostie chose a separate **Tooie Recompiled** release app in
+[PR #19](https://github.com/Frostie77/Tooie-Recompiled/pull/19). It has its own
+ROM import, saves, settings and mods. This workflow continues targeting the
+established debug app for playthroughs and evidence gathering.
+
 This revision fixes importing RT64 Zstandard/method-93 texture archives and adds
 **Aiming Invert** in **Settings → General**, default Off. On reverses joystick
 vertical egg/first-person aiming; normal walking, horizontal aim and the regular
@@ -89,7 +101,8 @@ ADB client's exit code. The full TAR and per-file hash checks still apply;
 size errors report byte counts without printing private contents. A timeout,
 changed file or unsupported archive record stops
 without exporting a verified backup. This is not an atomic snapshot or a
-tested restore. Keep the current app and its data until migration is verified.
+tested restore. Keep the current debug app and its data; a separate release
+installation does not transfer them.
 
 It prints one **PRIVATE** ZIP under
 `~/.local/share/tooie-recompiled/private-backups/`, with private directory/file

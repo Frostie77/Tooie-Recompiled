@@ -92,6 +92,40 @@ class Workflow(unittest.TestCase):
         self.assertIn('gradle --build-cache assembleDebug', script.read_text())
         self.assertNotIn('gradle clean', script.read_text())
 
+    def test_debug_label_overlay_preserves_existing_package_and_inputs(self):
+        builder = tooie.render_builder(self.profile)
+        package = self.root / 'package'
+        main = package / 'app/src/main'
+        (main / 'res/values').mkdir(parents=True)
+        manifest = main / 'AndroidManifest.xml'
+        manifest.write_text('''<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<application android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round">
+<activity android:name="io.github.banjotooierecompiled.BanjoTooieSDLActivity" android:label="@string/app_name"/>
+</application></manifest>''')
+        gradle = package / 'app/build.gradle'
+        gradle.write_text("namespace 'io.github.banjotooierecompiled'\napplicationId 'io.github.banjotooierecompiled'\n")
+        (main / 'res/values/strings.xml').write_text('<resources><string name="app_name">Tooie Recompiled</string></resources>')
+        (main / 'libmain.so').write_bytes(b'unchanged native fixture')
+        before = {p: p.read_bytes() for p in package.rglob('*') if p.is_file()}
+        overlay = builder.split("<<'SET_DEBUG_APP_LABEL'\n", 1)[1].split('\nSET_DEBUG_APP_LABEL', 1)[0]
+        subprocess.run([sys.executable, '-c', overlay, str(package)], check=True)
+        after = {p: p.read_bytes() for p in package.rglob('*') if p.is_file()}
+        label = package / 'app/src/debug/res/values/strings.xml'
+        self.assertEqual(set(after) - set(before), {label})
+        self.assertEqual({p: after[p] for p in before}, before)
+        check = builder.split("<<'VERIFY_GAMEPLAY_PACKAGE_IDENTITY'\n", 1)[1].split('\nVERIFY_GAMEPLAY_PACKAGE_IDENTITY', 1)[0]
+        def verify():
+            return subprocess.run([sys.executable, '-c', check, str(manifest), str(gradle)], capture_output=True, text=True)
+        self.assertEqual(verify().returncode, 0)
+        for resource in ('<resources/>', '<resources><string name="app_name">Tooie Recompiled</string></resources>',
+                         '<resources><string name="app_name">Tooie Recompiled Debug</string><string name="app_name">duplicate</string></resources>'):
+            label.write_text(resource)
+            result = verify()
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('debug packaging label missing or ambiguous', result.stderr)
+        old = dict(self.profile, name='texture-aiming-gameplay')
+        self.assertNotEqual(tooie.default_receipt(self.args, old), tooie.default_receipt(self.args, self.profile))
+
     def test_main_tree_provenance_and_corrupt_manifest_controls(self):
         source = self.root / 'source-fixture'
         source.mkdir()

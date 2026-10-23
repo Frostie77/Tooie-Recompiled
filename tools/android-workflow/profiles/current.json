@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "name": "texture-aiming-gameplay",
+  "name": "texture-aiming-gameplay-debug-app",
   "label": "Texture-Aiming-Gameplay",
   "identity": {
     "commit": "dcba2d96d8155ba3d8c93460345eeb9c0d23ef8f",
@@ -1077,7 +1077,7 @@
     "Approved icon/name source": "e1fcf938dcc24bb9865b743f900d107a9de26d9d",
     "Approved title source": "d54c70c4eae603b6b66dffd26909dea1889fbd6d",
     "Integration": "exact reviewed texture-import/aiming feature tree; 175 engineering/main entries and zero additional branding entries; approved assets unchanged",
-    "App name": "Tooie Recompiled (compiled application/activity labels verified)",
+    "App name": "Tooie Recompiled Debug (compiled application/activity labels verified)",
     "Branding": "approved round BT/Jiggy icon, legacy/round/foreground visible RGBA and adaptive references verified in final APK",
     "Menu asset SHA-256": "3c125d58ad008e837f3c7dc335133d03bb9aae19086ffbde90d8a71daa52c707 (both source copies and exact APK member)",
     "Icon master SHA-256": "4b6db92f4ad3280c10131b5cec745508b19257a93ab1b2615279813ebca06784",
@@ -1144,7 +1144,8 @@
     "Aiming Invert": "Settings > General; default OFF; saved vertical egg/first-person aiming only; walking, horizontal aim and regular camera unchanged",
     "Aiming host validation": "720 complete generated-consumer cases; Config/file persistence, RAM/ABI preservation and missing-hook/walking/horizontal/load-callback controls; no Odin controller claim",
     "Texture archive support": "native validated Zstandard method 93; Java opaque private copy; unchanged stored/Deflate and executable-ID guards; bounded size/CRC and safe texture IDs",
-    "Texture host validation": "194 production installer checks and 49 rejection fixtures; real JVM/JNI, 65 transactions, runtime/RT64 byte agreement and four exact-a44bd5c failing controls; no GPU rendering claim"
+    "Texture host validation": "194 production installer checks and 49 rejection fixtures; real JVM/JNI, 65 transactions, runtime/RT64 byte agreement and four exact-a44bd5c failing controls; no GPU rendering claim",
+    "Packaging overlay": "debug app_name resource only; native/Java source, application ID and icons unchanged"
   },
   "artifact": {
     "apk": "Tooie-dcba2d96d815-Texture-Aiming-Gameplay-Timing-Debug.apk",
@@ -1170,8 +1171,8 @@
     "descriptor_probe": false
   },
   "templates": {
-    "build.sh": "c775cae75aefcce998e3fd89007baba0ce56ab68d75f50866ffaf096c67e6b2e",
-    "collector.py": "4f7c6bc37422dc95913e5693c55fdf2c9b00288fe754d9721f86592d35ca5841"
+    "build.sh": "f07c14cb8c675ee3dc57ca2835d34985917fffaf5090587115e1aedc2417b461",
+    "collector.py": "1e1a997878a5b03e9aa97cc0dceeed036083314f594ffb1d6f13685091a16366"
   },
   "demo_only": false,
   "launcher_assets": {

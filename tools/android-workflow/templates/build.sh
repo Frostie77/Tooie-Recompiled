@@ -1400,6 +1400,18 @@ printf 'ARM64 compilation passed. ELF Build ID: %s\n' "$SOURCE_BUILD_ID"
 printf '\n=== 5/7 ASSEMBLE APK IN SEPARATE ANDROID PROJECT ===\n'
 mkdir -p "$PACKAGE"
 rsync -a --delete --exclude='build/' --exclude='.gradle/' "$SRC/android/" "$PACKAGE/"
+# Packaging-only overlay: retain the proven native/Java source and app identity.
+python3 - "$PACKAGE" <<'SET_DEBUG_APP_LABEL'
+from pathlib import Path
+import sys
+
+label = Path(sys.argv[1]) / 'app/src/debug/res/values/strings.xml'
+label.parent.mkdir(parents=True, exist_ok=True)
+label.write_text('<?xml version="1.0" encoding="utf-8"?>\n'
+                 '<resources>\n'
+                 '    <string name="app_name">Tooie Recompiled Debug</string>\n'
+                 '</resources>\n', encoding='utf-8')
+SET_DEBUG_APP_LABEL
 JNI="$PACKAGE/app/src/main/jniLibs/arm64-v8a"
 mkdir -p "$JNI"
 cp "$CACHE/android/libSDL2.so" "$JNI/libSDL2.so"
@@ -1437,12 +1449,16 @@ resources = path.parent / 'res/values/strings.xml'
 names = [element.text for element in ET.parse(resources).getroot().findall('string') if element.get('name') == 'app_name']
 if names != ['Tooie Recompiled']:
     raise SystemExit('STOP: approved Tooie Recompiled app name missing or ambiguous.')
+debug_resources = path.parent.parent / 'debug/res/values/strings.xml'
+debug_names = [element.text for element in ET.parse(debug_resources).getroot().findall('string') if element.get('name') == 'app_name']
+if debug_names != ['Tooie Recompiled Debug']:
+    raise SystemExit('STOP: debug packaging label missing or ambiguous.')
 if app.get(android + 'icon') != '@mipmap/ic_launcher' or app.get(android + 'roundIcon') != '@mipmap/ic_launcher_round':
     raise SystemExit('STOP: approved normal/round icon references missing.')
 for element in (app, activities[0]):
     if element.get(android + 'label') != '@string/app_name':
         raise SystemExit('STOP: unexpected app/activity label resource.')
-print('PASS: Tooie Recompiled app/activity labels, round icon references and established Android package/activity identity.')
+print('PASS: Tooie Recompiled Debug app/activity labels, round icon references and established Android package/activity identity.')
 VERIFY_GAMEPLAY_PACKAGE_IDENTITY
 if ! (cd "$PACKAGE" && gradle --build-cache assembleDebug) > "$LOGS/gradle.log" 2>&1; then
   echo 'STOP: APK packaging failed.' >&2
@@ -1735,6 +1751,7 @@ import hashlib, json, re, struct, subprocess, sys, zipfile, zlib
 apk, aapt2, source, logs = map(Path, sys.argv[1:])
 expected_package = 'io.github.banjotooierecompiled'
 expected_activity = expected_package + '.BanjoTooieSDLActivity'
+expected_label = 'Tooie Recompiled Debug'
 
 def require(condition, message):
     if not condition:
@@ -1839,9 +1856,9 @@ def png_pixels(data):
 badging = dump('badging', 'badging', str(apk))
 package = re.findall(r"^package: name='([^']+)'", badging, re.M)
 require(package == [expected_package], 'unexpected application ID.')
-require(re.findall(r"^application-label:'([^']+)'", badging, re.M) == ['Tooie Recompiled'], 'application label differs.')
+require(re.findall(r"^application-label:'([^']+)'", badging, re.M) == [expected_label], 'application label differs.')
 launchers = re.findall(r"^launchable-activity: name='([^']+)'\s+label='([^']*)'", badging, re.M)
-require(launchers == [(expected_activity, 'Tooie Recompiled')], 'launcher activity or its resolved label differs.')
+require(launchers == [(expected_activity, expected_label)], 'launcher activity or its resolved label differs.')
 require("minSdkVersion:'24'" in badging and "targetSdkVersion:'35'" in badging, 'SDK levels differ.')
 resources = dump('resources', 'resources', str(apk))
 table, ids, current = {}, {}, None
@@ -1856,7 +1873,7 @@ for line in resources.splitlines():
         if match: table[current].append((match[1], match[2]))
 for name in ('string/app_name', 'color/ic_launcher_background', 'mipmap/ic_launcher', 'mipmap/ic_launcher_round', 'mipmap/ic_launcher_foreground'):
     require(name in table, 'missing compiled resource: ' + name)
-require(table['string/app_name'] and all(value == '"Tooie Recompiled"' for _, value in table['string/app_name']), 'compiled label values differ.')
+require(table['string/app_name'] and all(value == '"' + expected_label + '"' for _, value in table['string/app_name']), 'compiled label values differ.')
 require(table['color/ic_launcher_background'] == [('', '#ff000536')], 'adaptive background color differs.')
 nodes = xml_nodes(dump('manifest', 'xmltree', str(apk), '--file', 'AndroidManifest.xml'))
 applications = [node for node in nodes if node['tag'] == 'application']
@@ -1906,7 +1923,7 @@ with zipfile.ZipFile(apk) as archive:
         require(seen_xml == (set() if resource == 'ic_launcher_foreground' else {'anydpi-v26','anydpi-v33'}), 'adaptive icon versions missing.')
 require(len(records) == 15, 'expected fifteen PNG resource comparisons.')
 logs.joinpath('packaged-branding-verification.json').write_text(json.dumps({
-    'package':expected_package,'activity':expected_activity,'label':'Tooie Recompiled',
+    'package':expected_package,'activity':expected_activity,'label':expected_label,
     'adaptive_background':'#000536','icon_pngs':records,
     'comparison':'exact visible RGBA and dimensions; RGB under alpha=0 normalized',
 }, indent=2)+'\n')
@@ -1961,7 +1978,8 @@ Mod/branding tested source: 82a6641c228d71756222bc0da96b0f159e51abd4
 Approved icon/name source: e1fcf938dcc24bb9865b743f900d107a9de26d9d
 Approved title source: d54c70c4eae603b6b66dffd26909dea1889fbd6d
 Integration: exact reviewed texture-import/aiming feature tree; 175 engineering/main entries and zero additional branding entries; approved assets unchanged
-App name: Tooie Recompiled (compiled application/activity labels verified)
+App name: Tooie Recompiled Debug (compiled application/activity labels verified)
+Packaging overlay: debug app_name resource only; native/Java source, application ID and icons unchanged
 Branding: approved round BT/Jiggy icon, legacy/round/foreground visible RGBA and adaptive references verified in final APK
 Branding audit: $LOGS/packaged-branding-verification.json
 Wordmark asset SHA-256: e76b97de0c685566db2505e85d42052a520c8f31237cbfdbfe405a1706295269 (both source copies and exact APK member)
