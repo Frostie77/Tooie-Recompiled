@@ -47,7 +47,7 @@ fallback and barrier selectors remain undefined. No rendering or timing policy
 is edited by this workflow.
 
 The job runs existing host audio/window, surface lifecycle, ROM/Mods Java/JNI,
-mod archive/transaction, six clear recording modes and descriptor rejection
+mod archive/transaction, startup update Java/JNI/metadata, six clear recording modes and descriptor rejection
 checks. These checks do not execute on an Android GPU. The complete local
 investigation suite remains separate.
 
@@ -56,7 +56,8 @@ integrity, both packaged native libraries against the exact built or NDK
 `--strip-unneeded` output, matching ELF Build IDs, all three JNI exports,
 the native CI version stamp, DEX presence, every packaged asset and launcher
 icon's pixels. Android tools verify the signature, package identity, label,
-launch activity and SDK profile. A failed check prevents the APK artifact step.
+launch activity and SDK profile. Update checks also verify the packaged Internet
+permission and Java/native bridge entry points. A failed check prevents the APK artifact step.
 
 The report identifies the checked-out commit. On a pull request, this is GitHub's
 temporary merge commit, so the result also exercises integration with the base.
@@ -80,18 +81,39 @@ artifact.
 
 A local release key and public certificate have been created and privately
 backed up. Release and debug are separate apps with independent data; no
-development-key migration is planned. Distribution/asset review, separate-app
-candidate device validation and startup update detection remain open. No signing secret is
-required by this job. CI success does not verify gameplay, demo cadence or Odin
-performance.
+development-key migration is planned. Public v1.0.0 (code 3) successfully updated
+the installed Odin release candidate with saves/settings retained. Distribution
+review and broader device coverage remain open. Startup detection is implemented
+for the next release and still needs Odin acceptance. No signing secret is
+required by this job. CI success does not verify gameplay, demo cadence or Odin performance.
 
 For an unsigned candidate, manually run **Android APK** with `prepare_candidate`
-enabled and explicit version name/code (`1.0.0` / `3` for the approved first
-release). Code `3` is higher than the installed preview candidate's code `2`.
+enabled and explicit version name/code. The first public release was `1.0.0` /
+`3`; future releases need a higher code and their selected version name.
 The native and Android names agree. A separate unsigned
 artifact includes checksums and local signing helpers; the normal debug artifact
 remains available. No private key is sent to CI. Follow the
 [candidate/signing guide](docs/development/release.md) before using its output.
+
+## Startup update checks
+
+See the [update guide](docs/development/update-plan.md) for the stable-feed
+contract and publishing steps. Checks open a GitHub release page; the app does
+not contain an APK installer. A verified signed release is prepared for the
+feed with `tools/release/prepare_update.py` and committed after publication.
+
+The focused host suite can run independently:
+
+```bash
+python3 tools/test_update_metadata.py
+python3 tools/test_android_updates.py \
+  --android-jar "$ANDROID_HOME/platforms/android-36/android.jar" \
+  --jni-include "$JAVA_HOME/include"
+```
+
+Android supplies `org.json`. The host test downloads a SHA-256-pinned JSON jar
+for execution; `--json-jar` can provide that same dependency offline. No new
+library is bundled into the app. These checks are separate from device acceptance.
 
 ## Reproducing the build on a Linux development host
 

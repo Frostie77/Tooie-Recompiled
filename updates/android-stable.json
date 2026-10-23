@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "channel": "stable",
+  "package": "io.github.banjotooierecompiled.release",
+  "version_name": "1.0.0",
+  "version_code": 3,
+  "release_tag": "v1.0.0",
+  "source_commit": "49dab086f10c9e65d5e7f7ea91b08e0e7ef093ab",
+  "abis": ["arm64-v8a"],
+  "min_sdk": 24,
+  "apk_asset": "Tooie-Recompiled-v1.0.0-Android-arm64.apk",
+  "apk_sha256": "4654bab296b50e1e38200853dd4166fa2465b3e49e40ac3334d9d9e30de3de8e",
+  "apk_size": 13984629,
+  "certificate_sha256": "129f612a7b1b35c120fd84b7d49923da882b626a248f8d55470f7dfd8ce8d0e1"
+}

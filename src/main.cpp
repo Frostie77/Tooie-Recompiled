@@ -47,6 +47,7 @@
 #include "mod_support.h"
 #include "mod_runtime.h"
 #include "aiming_controls.h"
+#include "android_updates.h"
 #include "launcher_layout.h"
 
 #include "recompui/recompui.h"
@@ -252,6 +253,7 @@ void initialize_config() {
     recompui::config::create_controls_tab();
     recompui::config::create_sound_tab();
     recompui::config::create_mods_tab();
+    tooie::updates::register_options(recompui::config::get_general_config());
     recompui::config::finalize();
 }
 
@@ -474,6 +476,7 @@ void initialize_launcher_menu(recompui::LauncherMenu* menu) {
         background->set_overflow(recompui::Overflow::Hidden);
         recompui::get_current_context().create_element<LauncherArtwork>(background, menu);
     }
+    tooie::updates::launcher_created();
 }
 
 static int tooie_recomp_main(int argc, char** argv) {
@@ -599,6 +602,7 @@ static int tooie_recomp_main(int argc, char** argv) {
     tooie::register_mod_events();
     recompui::register_ui_exports();
     recompui::register_launcher_init_callback(initialize_launcher_menu);
+    recompui::register_launcher_update_callback(tooie::updates::launcher_updated);
     std::fprintf(stderr, "[tooie] step ui_exports\n");
     tooie_android_debug_log("[tooie] step ui_exports"); std::fflush(stderr);
 

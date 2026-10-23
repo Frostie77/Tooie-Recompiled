@@ -92,12 +92,15 @@ jobs:
           set -o pipefail
           mkdir -p .ci-android/logs
           {
+            python3 tools/ci/test_verify_android.py
             python3 tools/android-workflow/tests/test_workflow.py
             python3 tools/android-workflow/tests/test_terminal.py
             python3 tools/android-workflow/tests/test_collector.py
             python3 tools/test_transform_upload.py
             python3 tools/test_aiming_controls.py
             python3 tools/test_android_release.py
+            python3 tools/test_update_metadata.py
+            python3 tools/test_android_updates.py --android-jar "$ANDROID_HOME/platforms/android-36/android.jar" --jni-include "$JAVA_HOME/include"
             bash tools/test_audio_runtime.sh
             bash tools/test_android_surface_lifecycle.sh
             bash tools/test_android_rom_picker.sh

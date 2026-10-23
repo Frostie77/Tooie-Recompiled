@@ -19,6 +19,23 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def check_update_java(package):
+    """Check the update entry points in the APK's executable DEX files."""
+    names = package.namelist()
+    require("classes.dex" in names, "APK primary classes.dex is missing")
+    # D8 can split a debug APK into several DEX files even below the method
+    # limit. Only root-level classes.dex/classesN.dex are app bytecode; an
+    # asset, backup or nested file must not satisfy a missing-code check.
+    dex_files = {name: package.read(name) for name in names
+                 if re.fullmatch(r"classes(?:[2-9]|[1-9][0-9]+)?\.dex", name)}
+    locations = {}
+    for marker in (b"UpdateClient", b"UpdateManifest", b"AndroidUpdates", b"getUpdateState", b"requestUpdateCheck", b"openUpdateRelease"):
+        matches = [name for name, dex in dex_files.items() if marker in dex]
+        require(matches, "Android update Java class/entry point is missing: " + marker.decode())
+        locations[marker.decode()] = matches
+    print("PASS: Android update Java markers by DEX: " + json.dumps(locations, sort_keys=True))
+
+
 def check_configuration(source, work, ndk):
     cache = (work / "native/CMakeCache.txt").read_text()
     require("TOOIE_ANDROID_RUNTIME:BOOL=ON" in cache, "Android library target is disabled")
@@ -97,6 +114,9 @@ def check_apk(source, work, ndk):
         require(b"recomp_on_init" in main, "code-mod startup event registration is missing")
         require(b"Aiming Invert" in main and b"aiming_invert" in main, "saved aiming preference is missing")
         require(b"tooie_aiming_invert" in main, "guest aiming input bridge is missing")
+        for marker in (b"automatic_update_checks", b"getUpdateState", b"requestUpdateCheck", b"canShowUpdateNotice", b"openUpdateRelease"):
+            require(marker in main, "Android update UI/JNI bridge is missing: " + marker.decode())
+        check_update_java(package)
         require(version.encode() in main, "native CI version stamp is missing")
         symbols = subprocess.check_output([str(toolbin / "llvm-nm"), "-D", "--defined-only", str(verify / "libmain.so")], text=True)
         for suffix in ("nativeFileDialogResult", "nativeModFileDialogResult", "nativePresentationLifecycle"):
@@ -123,6 +143,8 @@ def check_apk(source, work, ndk):
     require("launchable-activity: name='io.github.banjotooierecompiled.BanjoTooieSDLActivity'" in badging,
             "launch activity differs")
     require("sdkVersion:'24'" in badging and "targetSdkVersion:'35'" in badging, "Android API profile differs")
+    require("uses-permission: name='android.permission.INTERNET'" in badging, "Android update network permission is missing")
+    require("android.permission.REQUEST_INSTALL_PACKAGES" not in badging, "Release-page checks must not request package-install permission")
     revision = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
     output = work / "artifacts"
     output.mkdir(exist_ok=True)

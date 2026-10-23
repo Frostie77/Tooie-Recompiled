@@ -68,7 +68,9 @@ See [setup and ROM requirements](docs/getting-started.md) for details.
 
 ## Planned features
 
-- Automatic startup checks for published Android updates.
+- Startup update notices and **Settings → Updates** are implemented for the next
+  release; published v1.0.0 needs a manual update to gain the checker.
+- Optional in-app APK download and installation.
 - Broader device, mod-combination and full-game validation.
 
 The [completion checklist](docs/android-completion-requirements.md) tracks
@@ -88,7 +90,10 @@ formats do not make Banjo-Kazooie mods or desktop native extensions compatible.
 
 ### Does the game update itself?
 
-Automatic update detection is planned and is not implemented yet.
+Published v1.0.0 uses manual GitHub downloads. The next release adds background
+startup checks and **Settings → Updates**, with an automatic-check toggle and
+**Check for Updates**. **View Release** opens the matching GitHub release;
+download the APK from Assets and install it as an update to keep your progress.
 
 ## Known issues
 
