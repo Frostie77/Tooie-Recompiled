@@ -123,9 +123,9 @@ static std::unique_ptr<RenderDescriptorSet> makeSet(VulkanDevice &d,RenderDescri
  RenderDescriptorRange range(type,7,count,nullptr); RenderDescriptorSetDesc desc; desc.descriptorRanges=&range;desc.descriptorRangesCount=1;
  desc.lastRangeIsBoundless=actual!=0;desc.boundlessRangeSize=actual;return d.createDescriptorSet(desc);
 }
-static void qualify(VulkanDevice &d) {
+static void qualify(VulkanDevice &d, const char *name="Adreno (TM) 740") {
  d.physicalDeviceProperties.vendorID=0x5143;
- std::strcpy(d.physicalDeviceProperties.deviceName,"Adreno (TM) 740");
+ std::strcpy(d.physicalDeviceProperties.deviceName,name);
  d.driverProperties.sType=VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
  d.driverProperties.driverID=VK_DRIVER_ID_QUALCOMM_PROPRIETARY;
 }
@@ -171,6 +171,8 @@ int main(int argc,char **argv) {
   if(reason=="reserved-allocation-failed") {qualify(device);failAllocate=true;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
   if(reason=="reserved-retirement-underflow") {qualify(device);auto reserved=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);device.liveUpdateAfterBindSlots=0;reserved.reset();REQUIRE(false);}
   if(reason=="reserved-variable-outside") {qualify(device);declaredAccounting=true;auto t=image(device);auto reserved=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);reserved->setTexture(1,t.get(),RenderTextureLayout::SHADER_READ);REQUIRE(false);}
+  if(reason=="650-variable-outside") {qualify(device,"Adreno (TM) 650");declaredAccounting=true;auto t=image(device);auto reserved=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);reserved->setTexture(1,t.get(),RenderTextureLayout::SHADER_READ);REQUIRE(false);}
+  if(reason=="650-overlap-limit") {qualify(device,"Adreno (TM) 650");device.descriptorIndexingProperties.maxUpdateAfterBindDescriptorsInAllPools=16383;auto old=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,2);REQUIRE(false);}
   if(reason=="pool-capacity-control") {shortPool=true;makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);REQUIRE(false);}
   auto set=makeSet(device,RenderDescriptorRangeType::FORMATTED_BUFFER);
   Buffer buffer(device);auto view=buffer.createBufferFormattedView(RenderFormat::R8_UINT);
@@ -254,7 +256,7 @@ int main(int argc,char **argv) {
   // and unavailable properties keep the exact requested capacity.
   const auto originalDevice=device.physicalDeviceProperties;
   const auto originalDriver=device.driverProperties;
-  for(unsigned test=0;test<6;++test) {
+  for(unsigned test=0;test<12;++test) {
    qualify(device);
    if(test==0) device.physicalDeviceProperties.vendorID=0x1002;
    if(test==1) std::strcpy(device.physicalDeviceProperties.deviceName,"Adreno (TM) 730");
@@ -262,9 +264,39 @@ int main(int argc,char **argv) {
    if(test==3) device.driverProperties.sType=VK_STRUCTURE_TYPE_MAX_ENUM;
    if(test==4) std::strcpy(device.physicalDeviceProperties.deviceName,"Adreno (TM) 740 extra");
    if(test==5) std::strcpy(device.physicalDeviceProperties.deviceName,"Adreno 740");
+   if(test>=6) qualify(device,"Adreno (TM) 650");
+   if(test==7) std::strcpy(device.physicalDeviceProperties.deviceName,"Adreno 650");
+   if(test==8) device.physicalDeviceProperties.vendorID=0x1002;
+   if(test==9) device.driverProperties.driverID=VK_DRIVER_ID_MESA_TURNIP;
+   if(test==10) device.driverProperties.sType=VK_STRUCTURE_TYPE_MAX_ENUM;
+   if(test==11) std::strcpy(device.physicalDeviceProperties.deviceName,"Adreno (TM) 650 extra");
    auto selected=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);
    auto *v=static_cast<VulkanDescriptorSet *>(selected.get());
-   REQUIRE(v->allocatedCounts[0]==1 && pools.at(v->descriptorPool).capacity.at(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)==(test==5?8192u:1u));
+   REQUIRE(v->allocatedCounts[0]==1 && pools.at(v->descriptorPool).capacity.at(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)==((test==5||test==6||test==7)?8192u:1u));
+  }
+  // Issue #26 hypothesis: the 650 might need the same reservation as the 740.
+  // Exercise production construction against that simulated driver rule;
+  // this is not a claim about an actual Retroid driver or crash cause.
+  declaredAccounting=true;
+  for(const char *name:{"Adreno (TM) 650","Adreno 650"}) {
+   qualify(device,name);
+   REQUIRE(std::strcmp(androidDescriptorPoolQualification(device.physicalDeviceProperties,device.driverProperties),"adreno-650-proprietary-declared-bound")==0);
+   const auto beforeSlots=device.liveUpdateAfterBindSlots;
+   {
+    auto initial=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,1);
+    auto *v=static_cast<VulkanDescriptorSet *>(initial.get());
+    REQUIRE(v->allocatedCounts[0]==1 && sets.at(v->vk).second==1);
+    REQUIRE(pools.at(v->descriptorPool).capacity.at(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)==8192);
+    REQUIRE(device.liveUpdateAfterBindSlots==beforeSlots+8192);
+    auto texture=image(device);initial->setTexture(0,texture.get(),RenderTextureLayout::SHADER_READ);
+    auto replacement=makeSet(device,RenderDescriptorRangeType::TEXTURE,8192,2);
+    auto *next=static_cast<VulkanDescriptorSet *>(replacement.get());
+    REQUIRE(next->allocatedCounts[0]==2 && sets.at(next->vk).second==2);
+    REQUIRE(device.liveUpdateAfterBindSlots==beforeSlots+16384);
+    auto fixed=makeSet(device,RenderDescriptorRangeType::TEXTURE,8);
+    REQUIRE(static_cast<VulkanDescriptorSet *>(fixed.get())->reservedUpdateAfterBindSlots==0);
+   }
+   REQUIRE(device.liveUpdateAfterBindSlots==beforeSlots);
   }
   qualify(device);declaredAccounting=true;
   uint64_t previousSlots=device.liveUpdateAfterBindSlots;
