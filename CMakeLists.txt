@@ -105,6 +105,8 @@ set(SOURCES
     ${CMAKE_SOURCE_DIR}/src/main.cpp
     ${CMAKE_SOURCE_DIR}/src/recomp_api.cpp
     ${CMAKE_SOURCE_DIR}/src/aiming_controls.cpp
+    ${CMAKE_SOURCE_DIR}/src/android_updates.cpp
+    ${CMAKE_SOURCE_DIR}/src/android_updates_jni.cpp
     ${CMAKE_SOURCE_DIR}/src/register_overlays.cpp
     ${CMAKE_SOURCE_DIR}/src/rom_decompression.cpp
     ${CMAKE_SOURCE_DIR}/rsp/n_aspMain.cpp

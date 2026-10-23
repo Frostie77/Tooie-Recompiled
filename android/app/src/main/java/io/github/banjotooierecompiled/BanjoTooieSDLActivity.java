@@ -36,12 +36,14 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     private static final String TAG = "BanjoTooieSDL";
     private static final int ROM_PICKER_REQUEST = 0x544F;
     private static final int MOD_PICKER_REQUEST = 0x544D;
-    private long pendingRomRequest;
-    private long pendingModRequest;
+    private static final int UPDATE_RELEASE_REQUEST = 0x5455;
+    private volatile long pendingRomRequest;
+    private volatile long pendingModRequest;
     private boolean romImportInProgress;
     private boolean modImportInProgress;
-    private boolean romPickerDestroyed;
-    private boolean presentationResumed;
+    private volatile boolean romPickerDestroyed;
+    private volatile boolean presentationResumed;
+    private volatile boolean updateWindowFocused;
     private final WindowSnapshotLog windowSnapshotLog = new WindowSnapshotLog();
     private final ViewTreeObserver.OnGlobalLayoutListener windowLayoutObserver = () -> traceWindow("layout");
 
@@ -144,7 +146,35 @@ public class BanjoTooieSDLActivity extends SDLActivity {
         Log.i(TAG, "Program path: " + programDir.getAbsolutePath());
         Log.i(TAG, "Data path: " + dataDir.getAbsolutePath());
 
+        AndroidUpdates.get(this);
         applyImmersiveFullscreen();
+    }
+
+    /** SDL JNI callers only enqueue background work; no network runs on the UI/render threads. */
+    public void requestUpdateCheck(boolean automatic) {
+        if (!romPickerDestroyed) AndroidUpdates.get(this).check(automatic, true);
+    }
+
+    public String getUpdateState() { return AndroidUpdates.get(this).snapshotJson(); }
+
+    public boolean canShowUpdateNotice() {
+        return !romPickerDestroyed && presentationResumed && updateWindowFocused && pendingRomRequest == 0 && pendingModRequest == 0;
+    }
+
+    public void openUpdateRelease() {
+        runOnUiThread(() -> {
+            UpdateClient.Snapshot result = AndroidUpdates.get(this).snapshot();
+            if (romPickerDestroyed || isFinishing() || isDestroyed() || !"available".equals(result.state) ||
+                    !result.releaseUrl.startsWith(UpdateManifest.RELEASES + "tag/v")) return;
+            presentationLifecycle(1); // Same external-Activity quiescence as the document picker.
+            try {
+                startActivityForResult(new Intent(Intent.ACTION_VIEW, Uri.parse(result.releaseUrl)), UPDATE_RELEASE_REQUEST);
+            } catch (ActivityNotFoundException | SecurityException failure) {
+                if (presentationResumed) presentationLifecycle(2);
+                android.widget.Toast.makeText(this, "Android could not open the release page. Please enable a browser and try again.",
+                    android.widget.Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     /** Called through SDL JNI on the native UI thread; Activity work stays on main. */
@@ -255,6 +285,11 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == UPDATE_RELEASE_REQUEST) {
+            if (presentationResumed) presentationLifecycle(2);
+            applyImmersiveFullscreen();
+            return;
+        }
         if (requestCode == MOD_PICKER_REQUEST) {
             receiveModResult(resultCode, data);
             return;
@@ -332,6 +367,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
+        updateWindowFocused = hasFocus;
         if (!hasFocus) presentationLifecycle(3);
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) presentationLifecycle(4);

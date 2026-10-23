@@ -30,8 +30,9 @@ distinction and exact artifact identities. Neither result is a full playthrough.
 
 Continue post-release playtesting through the established Debug app. Track the
 deferred Jiggy-challenge lines, dialogue shift and intro/demo stutter. Startup
-update detection, save export/import, multi-mod combinations and broader
-gameplay/lifecycle/device coverage remain open. Extend update acceptance to the
+checks are implemented for the next release and need Odin acceptance; see the
+[update guide](update-plan.md). Save export/import, multi-mod combinations and
+broader gameplay/lifecycle/device coverage remain open. Extend update acceptance to the
 separately unconfirmed menu appearance, ROM reuse, installed mods and a further
 close/reopen cycle; the public-download saves/settings update check has passed.
 

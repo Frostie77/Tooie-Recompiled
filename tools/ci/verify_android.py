@@ -97,6 +97,11 @@ def check_apk(source, work, ndk):
         require(b"recomp_on_init" in main, "code-mod startup event registration is missing")
         require(b"Aiming Invert" in main and b"aiming_invert" in main, "saved aiming preference is missing")
         require(b"tooie_aiming_invert" in main, "guest aiming input bridge is missing")
+        for marker in (b"automatic_update_checks", b"getUpdateState", b"requestUpdateCheck", b"canShowUpdateNotice", b"openUpdateRelease"):
+            require(marker in main, "Android update UI/JNI bridge is missing: " + marker.decode())
+        dex = package.read("classes.dex")
+        for marker in (b"UpdateClient", b"UpdateManifest", b"AndroidUpdates", b"getUpdateState", b"requestUpdateCheck", b"openUpdateRelease"):
+            require(marker in dex, "Android update Java class/entry point is missing: " + marker.decode())
         require(version.encode() in main, "native CI version stamp is missing")
         symbols = subprocess.check_output([str(toolbin / "llvm-nm"), "-D", "--defined-only", str(verify / "libmain.so")], text=True)
         for suffix in ("nativeFileDialogResult", "nativeModFileDialogResult", "nativePresentationLifecycle"):
@@ -123,6 +128,8 @@ def check_apk(source, work, ndk):
     require("launchable-activity: name='io.github.banjotooierecompiled.BanjoTooieSDLActivity'" in badging,
             "launch activity differs")
     require("sdkVersion:'24'" in badging and "targetSdkVersion:'35'" in badging, "Android API profile differs")
+    require("uses-permission: name='android.permission.INTERNET'" in badging, "Android update network permission is missing")
+    require("android.permission.REQUEST_INSTALL_PACKAGES" not in badging, "Release-page checks must not request package-install permission")
     revision = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
     output = work / "artifacts"
     output.mkdir(exist_ok=True)

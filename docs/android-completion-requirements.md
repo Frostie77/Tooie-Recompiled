@@ -79,9 +79,11 @@ These passes cover the named fixtures and routes, not every mod, scene or device
   checklist. Distribution review remains a separate open item.
 - [x] Obtain Frostie's explicit publication approval for the first Android
   release as **1.0.0**. Final project-completion sign-off remains separate.
-- [ ] Implement automatic startup detection of newer published Android releases,
-  with correct version comparison, offline/error handling, user choice and a
-  data-preserving upgrade path.
+- [ ] Complete Odin acceptance of startup update detection, the Updates tab,
+  automatic-check preference, Later and browser return. The implementation and
+  host checks cover version codes, stable release identity, offline/error
+  handling, user choice and a release-page upgrade path; see the
+  [update guide](development/update-plan.md). Published v1.0.0 predates the checker.
 - [ ] Obtain final sign-off against the complete project scope.
 
 The mod interface supports import, enable/disable and supplied configuration. 
