@@ -358,3 +358,8 @@ The release app is non-debuggable, so this capture does not read its private
 native debug log or saves. Functional user observations and Logcat do not replace
 Debug instrumentation for detailed performance attribution. The installed
 candidate's known font difference is tracked separately by PR #21.
+
+Logcat compatibility is checked by executing one bounded UID-filtered read on
+the device through `adb shell -n -T logcat`. The observer does not require UID
+filtering to appear in host or vendor help text. A failed or timed-out device
+probe is retained and stops verification; no unfiltered app-log fallback is used.

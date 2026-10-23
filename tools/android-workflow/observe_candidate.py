@@ -82,9 +82,12 @@ class Capture:
         pids = self.read('Initial-PIDs', ['shell', '-n', '-T', 'pidof', PACKAGE], allowed=(0, 1))
         if not pids or not all(word.isdigit() for word in pids.split()):
             raise RuntimeError('Release app is not confirmed running. Open Tooie Recompiled and leave it at the launcher.')
-        help_text = self.read('Logcat-Help', ['logcat', '--help'])
-        if '--uid' not in help_text:
-            raise RuntimeError('This Logcat does not advertise UID filtering; no unfiltered app-log fallback.')
+        # Ask the device to execute the actual bounded read. Host adb help and
+        # vendor help text need not enumerate the device's accepted options.
+        probe = self.read('Logcat-UID-Probe', ['shell', '-n', '-T', 'logcat',
+                          '--uid=' + next(iter(uids)), '-b', 'all', '-d', '-t', '1', '-v', 'epoch'])
+        if re.match(r'(?is)^\s*(?:usage\b|android debug bridge\b|adb:|logcat:)', probe):
+            raise RuntimeError('Device Logcat returned help/error text instead of a verified UID-filtered read.')
         before = time.time()
         device = self.read('Start-Device-Time', ['shell', '-n', '-T', 'date', '+%s'])
         after = time.time()
@@ -262,8 +265,10 @@ def observe(adb, serial, downloads, work):
         print('Checking the already installed release APK. Keep its launcher open.', flush=True)
         uid = capture.identity()
         capture.event('capture-start', 'Exact installed signed release verified; UID=' + uid)
-        capture.stream('App-Logcat', ['logcat', '--uid=' + uid, '-b', 'all', '-v', 'epoch', '-T', '1'])
-        capture.stream('Crash-Buffer', ['logcat', '-b', 'crash', '-v', 'epoch', '-T', '1'])
+        capture.stream('App-Logcat', ['shell', '-n', '-T', 'logcat', '--uid=' + uid,
+                                    '-b', 'all', '-v', 'epoch', '-T', '1'])
+        capture.stream('Crash-Buffer', ['shell', '-n', '-T', 'logcat', '-b', 'crash',
+                                      '-v', 'epoch', '-T', '1'])
         capture.interact()
     except (OSError, RuntimeError, KeyboardInterrupt) as error:
         failure = str(error) or 'Interrupted from terminal.'

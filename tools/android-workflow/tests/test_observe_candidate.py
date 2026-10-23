@@ -33,7 +33,8 @@ class Observer(unittest.TestCase):
                    'APK-Path': 'package:/data/app/~~abc/pkg-def/base.apk',
                    'Installed-APK-Hash': module.APK_SHA256 + '  /data/app/~~abc/pkg-def/base.apk',
                    'Package': 'Package [' + module.PACKAGE + '] userId=10042 versionCode=2',
-                   'Initial-PIDs': '12345', 'Logcat-Help': 'logcat --uid=UID',
+                   'Initial-PIDs': '12345', 'Logcat-Help': 'Usage: logcat (UID option omitted from help)',
+                   'Logcat-UID-Probe': '',
                    'Start-Device-Time': '1792760000'}
         replies.update(changes or {})
         calls = []
@@ -53,6 +54,28 @@ class Observer(unittest.TestCase):
             self.assertIn(verb, expected)
         self.assertIn(module.PACKAGE, calls[2])
 
+    def test_unadvertised_but_accepted_uid_uses_actual_device_read(self):
+        uid, calls = self.identity({'Logcat-Help': 'Usage: logcat (no UID advertised)'})
+        self.assertEqual(uid, '10042')
+        self.assertNotIn(['logcat', '--help'], calls)
+        self.assertIn(['shell', '-n', '-T', 'logcat', '--uid=10042',
+                       '-b', 'all', '-d', '-t', '1', '-v', 'epoch'], calls)
+
+    def test_probe_rejects_returned_help_even_if_process_exit_is_zero(self):
+        for text in ('Usage: logcat', 'Android Debug Bridge version 1.0.41', 'logcat: unknown option --uid'):
+            with self.subTest(text=text), self.assertRaises(RuntimeError):
+                self.identity({'Logcat-UID-Probe': text})
+
+    def test_failed_uid_device_probe_is_not_retried(self):
+        result = subprocess.CompletedProcess([], 1, b'', b'unknown option --uid')
+        args = ['shell', '-n', '-T', 'logcat', '--uid=10042', '-d', '-t', '1']
+        with patch.object(module.subprocess, 'run', return_value=result) as run:
+            with self.assertRaises(RuntimeError):
+                self.capture.read('Logcat-UID-Probe', args)
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(json.loads((self.root / 'Logcat-UID-Probe-status.json').read_text())['returncode'], 1)
+        self.assertIn(b'unknown option', (self.root / 'Logcat-UID-Probe-stderr.txt').read_bytes())
+
     def test_actual_cli_routes_without_a_debug_artifact_or_installer(self):
         with patch.object(tooie, 'load_profile', return_value={'device': {'serial': '7907333f'}}), \
              patch.object(tooie, 'default_adb', return_value='fixture-adb'), \
@@ -69,7 +92,7 @@ class Observer(unittest.TestCase):
         controls = [{'Installed-APK-Hash': '0' * 64}, {'Package': 'userId=10042 versionCode=3'},
                     {'APK-Path': 'package:/data/app/a/base.apk;touch x'},
                     {'APK-Path': 'package:/data/app/a/base.apk\npackage:/data/app/b/base.apk'},
-                    {'Initial-PIDs': ''}, {'Package': 'versionCode=2'}, {'Logcat-Help': 'no filter'}]
+                    {'Initial-PIDs': ''}, {'Package': 'versionCode=2'}]
         for change in controls:
             with self.subTest(change=change), self.assertRaises(RuntimeError):
                 self.identity(change)
