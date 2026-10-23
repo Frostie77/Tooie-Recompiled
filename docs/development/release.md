@@ -45,6 +45,11 @@ checking the rebuilt menu on Odin. The installed release candidate has version
 code 2, so any replacement candidate for that app must use a higher code and
 the same release signing identity.
 
+The [24 October candidate check](release-candidate-check-20261024.md) records
+ROM selection, Aiming Invert, the UI texture mod and the visited first-person
+area working as reported by Frostie. Save/restart persistence and the rebuilt
+font remain device checks; the two marked minor visual issues are deferred.
+
 ## Version and signing
 
 Frostie selected separate release and debug apps:
@@ -109,7 +114,9 @@ and [versioning](https://developer.android.com/studio/publish/versioning).
 After the candidate workflow has been reviewed and merged, open **Actions →
 Android APK → Run workflow**, select the reviewed source branch, enable
 `prepare_candidate`, and set the candidate version name/code. The provisional
-first-preview values are `0.1.0-preview.1` / `2`; this does not approve publication.
+first-preview candidate used `0.1.0-preview.1` / `2` and is now installed.
+For its font-corrected replacement, use `0.1.0-preview.1` / `3` and verify the
+same-key update path; this does not approve publication.
 The native stamp and Android version use the same supplied name.
 
 The separate **Tooie-Android-Unsigned-Candidate** artifact contains an unsigned,

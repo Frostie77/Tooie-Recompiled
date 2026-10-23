@@ -1,6 +1,6 @@
 # Tooie Recompiled completion checklist
 
-Updated: 23 October 2026.
+Updated: 24 October 2026.
 
 The goal is a reliable native **Android ARM64** release for the AYN Odin 2 Portal,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
@@ -21,6 +21,9 @@ Checked boxes describe the tested scope; the project is not fully complete.
 - [x] One-terminal testing with numbered notes and one compact evidence ZIP.
 - [x] Established Odin app updated to **Tooie Recompiled Debug**; installed APK
   hash matched the verified build and the brief launcher/gameplay check passed.
+- [x] Separate signed release candidate: ROM selection, controllable gameplay,
+  Aiming Invert, the UI texture mod and the visited first-person area passed
+  Frostie's functional check; see the [24 October record](development/release-candidate-check-20261024.md).
 - [x] Protected release key created, public RSA-4096 certificate recorded and
   both signing keys privately backed up. Existing debug app data was backed up
   and checked against device hashes; restoration remains untested.
@@ -72,15 +75,24 @@ An in-app **Remove Mod** button is not required. The accepted interface supports
 import, enable/disable and supplied configuration. Broad mod compatibility
 remains a coverage item.
 
+## Minor issues deferred beyond the first preview
+
+Frostie accepted the Jiggy-challenge screen lines (marker 1) and the brief shunt
+when dialogue animation starts (marker 2) as follow-up work after the first
+release. Keep them in known issues; do not claim they were corrected by the font
+change. The rebuilt menu still needs its device check.
+
 ## First Android preview milestone
 
 The requested example-mod, texture-pack, Aiming Invert, persistence and branding
 checks have passed on the named debug builds. The first preview still requires:
 
-- [ ] Verify the actual protected-key-signed release APK, version, checksum and
-  exact source/build report; a debug APK or CI signing fixture is not acceptance.
-- [ ] Install the release alongside the established Debug app and verify labels,
-  independent data and fresh ROM/controller/graphics/audio setup on Odin.
+- [x] Verify the installed protected-key-signed release candidate against its
+  exact APK/source/version report: `af97304f201a`, version `0.1.0-preview.1`,
+  code `2`. This check applies to that candidate; replacements need verification.
+- [ ] Finish release/Debug coexistence acceptance: confirm data independence,
+  fresh defaults and the rebuilt launcher menu. The separate release is installed;
+  ROM selection, played controls, Aiming Invert and the UI mod were reported working.
 - [ ] Write a release-app save, close/relaunch and resume it; check persistence
   of settings and representative installed mods.
 - [ ] Test a same-key, higher-version release-to-release update that preserves
@@ -100,10 +112,16 @@ pending. Candidate tools support unsigned exports and local signing with the
 recorded release certificate; the private key stays on the PC.
 
 The separate release candidate from `af97304f201af98a2c735b671d0413792673273b`
-was locally signed, verified and installed alongside Debug. Release acceptance
-stopped at the launcher font difference; fresh setup, gameplay, persistence and
-release-to-release upgrades have not passed their required checks. Publication
-is pending Frostie's explicit approval. See [release preparation](development/release.md).
+was locally signed, verified and installed alongside Debug. The 24 October
+capture contains 20 minutes 17 seconds after gameplay confirmation. Frostie
+reported Debug-like behavior apart from the launcher font; ROM selection,
+Aiming Invert and the UI texture mod worked. Marker 3 confirms the visited
+first-person area worked. No restart/resume marker was recorded, so release
+save/settings/mod persistence and an update preserving them remain open.
+The supplied app-log excerpts omit a middle section; this is a functional
+acceptance record, not complete fault-free or measured thermal/performance
+coverage. See the [evidence limits](development/release-candidate-check-20261024.md).
+Publication is pending Frostie's explicit approval.
 
 ## Evidence and testing detail
 
