@@ -1,7 +1,10 @@
-# Android preview release preparation
+# Android 1.0.0 release preparation
 
-The first public Android preview is still in preparation. Passing the package
-checks below does not publish a release or replace device acceptance.
+Frostie approved publication of the first Android release as **1.0.0** on
+24 October 2026. The selected Android version code is **3**, above the installed
+preview candidate's code `2`. Approval is recorded; the signed artifact, font
+redistribution terms and final update/menu checks are still pending. Passing
+package checks does not publish a release or replace those checks.
 
 ## Bundled notices
 
@@ -47,8 +50,10 @@ the same release signing identity.
 
 The [24 October candidate check](release-candidate-check-20261024.md) records
 ROM selection, Aiming Invert, the UI texture mod and the visited first-person
-area working as reported by Frostie. Save/restart persistence and the rebuilt
-font remain device checks; the two marked minor visual issues are deferred.
+area working as reported by Frostie. In a later manual follow-up, Frostie
+confirmed the release save, settings and mods survived closing/reopening.
+The rebuilt font and preservation across an APK update remain device checks;
+the two marked minor visual issues are deferred.
 
 ## Version and signing
 
@@ -115,8 +120,9 @@ After the candidate workflow has been reviewed and merged, open **Actions →
 Android APK → Run workflow**, select the reviewed source branch, enable
 `prepare_candidate`, and set the candidate version name/code. The provisional
 first-preview candidate used `0.1.0-preview.1` / `2` and is now installed.
-For its font-corrected replacement, use `0.1.0-preview.1` / `3` and verify the
-same-key update path; this does not approve publication.
+For its font-corrected replacement, use **`1.0.0` / `3`** and verify the same-key
+update path. These are also the manual workflow defaults. Keep the existing
+protected release key; do not generate a new key or replace the Debug app.
 The native stamp and Android version use the same supplied name.
 
 The separate **Tooie-Android-Unsigned-Candidate** artifact contains an unsigned,
@@ -125,10 +131,12 @@ and local signing helpers. Export verifies the release manifest and exact native
 libraries/assets against the already verified debug build. The ordinary debug
 artifact and Ubuntu playtesting workflow remain available.
 
-Extract the candidate artifact on the PC, open Ubuntu in that directory, and run:
+Extract the candidate artifact on the PC and open Ubuntu in that directory.
+For the update from the installed code-2 release candidate, run the helper with
+the previous verified signed APK's absolute path:
 
 ```bash
-python3 sign_candidate.py --new-install
+python3 sign_candidate.py --previous-apk /absolute/path/to/previous-signed-candidate.apk
 ```
 
 The helper uses the local `tooie-release.p12` and SDK Build Tools 36.0.0 defaults;
@@ -138,7 +146,8 @@ including DEX/resources/manifest, before creating a new `signed-candidate` direc
 It preserves the original unsigned artifact and never overwrites an existing
 output. A verification failure leaves no exported signed result.
 
-`--new-install` prepares the separate release app. It does not import the debug
+For a first installation instead, `--new-install` prepares the separate release
+app. It does not import the debug
 app's private data. For a future same-key release update, use
 `--previous-apk` instead; a different signer or non-increasing version code stops
 before the signing prompt. Neither route installs an APK or publishes anything.
@@ -171,9 +180,12 @@ wrong key and valid signature on an altered DEX are rejected. Fixture keys and
 signed test packages are discarded.
 The fixture is not a production release identity or an uploaded release asset.
 
-Keep [distribution review, device coverage and publication approval](../android-completion-requirements.md)
-open until each has its own evidence. This preparation does not implement the
-future startup updater.
+Keep [distribution review and device coverage](../android-completion-requirements.md)
+open until each has its own evidence. Frostie's publication approval is recorded
+separately from the package-verification reports: their `publication_approved`
+field remains false because those tools do not grant publication permission.
+This preparation does not implement the future startup updater.
 
-The [preview notes draft](preview-notes.md) remains pending the exact candidate,
-device checks, distribution review and Frostie's publication approval.
+The [1.0.0 release notes draft](preview-notes.md) remains pending the exact signed
+candidate, final menu/update checks and distribution review. Do not create an
+empty public release or upload the unsigned/CI-debug artifact as the release APK.

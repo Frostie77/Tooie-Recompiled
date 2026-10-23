@@ -86,8 +86,9 @@ required by this job. CI success does not verify gameplay, demo cadence or Odin
 performance.
 
 For an unsigned candidate, manually run **Android APK** with `prepare_candidate`
-enabled and explicit version name/code (provisional first preview:
-`0.1.0-preview.1` / `2`). The native and Android names agree. A separate unsigned
+enabled and explicit version name/code (`1.0.0` / `3` for the approved first
+release). Code `3` is higher than the installed preview candidate's code `2`.
+The native and Android names agree. A separate unsigned
 artifact includes checksums and local signing helpers; the normal debug artifact
 remains available. No private key is sent to CI. Follow the
 [candidate/signing guide](docs/development/release.md) before using its output.

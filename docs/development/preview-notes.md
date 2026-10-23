@@ -1,29 +1,58 @@
-# Android preview notes — draft
+# Tooie Recompiled 1.0.0 — release notes draft
 
-Proposed version: **0.1.0-preview.1** (Android version code **2**).
-Exact source, signed APK checksum and candidate device results are pending.
-Frostie has not approved publication.
+Version **1.0.0**, Android version code **3**. Frostie approved publication on
+24 October 2026. The exact signed APK/checksum, corrected-menu/update acceptance
+and distribution review remain pending; no release has been published.
 
 Tooie Recompiled is a native **Android ARM64** port. Windows and Linux are build
 hosts; desktop game packages are not included. Supply your own supported USA ROM.
+No ROM or third-party mod/texture pack is included.
 
-The preview includes controller play, ROM import, graphics/audio settings,
-executable mods, RT64 texture packs, saved Aiming Invert, and the approved
-Tooie Recompiled launcher artwork and round BT icon.
+## Included
 
-Earlier debug builds were checked on the **AYN Odin 2 Portal / Adreno 740**:
-selected gameplay, the tested first-person entrance and reported boss fight,
-Tooie Mod Check, BT Reloaded UI textures and aiming/persistence checks. Those
-checks do not establish acceptance of a new signed candidate or a full playthrough.
+- Controller gameplay, ROM import and graphics/audio settings.
+- Code-mod import, enable/disable and supported mod configuration.
+- RT64 texture-pack import, including the tested BT Reloaded UI replacements.
+- Saved **Aiming Invert** without changing ordinary camera controls.
+- The approved Tooie Recompiled artwork and round BT icon.
+- The exact working Debug launcher-menu font and typography restored by PR #21.
 
-Known limits include minor scene/jigsaw graphics details, remaining intro/demo
-cadence/stutter, broader lifecycle/mod compatibility and full-adventure coverage.
-Automatic startup update detection is planned and is not included.
+## Tested scope
 
-The release installs alongside the existing debug app, using its own ROM import,
-saves, settings and mods. Existing debug progress stays in the debug app; no
-automatic transfer is included. Future debug builds are labelled
-**Tooie Recompiled Debug**.
+On the **AYN Odin 2 Portal / Android 13 / Adreno 740**, the baseline signed
+preview candidate passed Frostie's functional check of ROM selection,
+controllable gameplay, Aiming Invert, UI texture replacement and the visited
+first-person area. The capture includes 20 minutes 17 seconds after gameplay
+confirmation. A later manual follow-up confirmed save/settings/mod retention
+after closing/reopening. Earlier Debug checks covered the reported boss fight
+and Tooie Mod Check.
 
-Signing-key backups are complete. Distribution review, separate-app candidate
-testing and final release notes remain required before Frostie approves publication.
+Those results do not establish a full playthrough or acceptance of the new
+font-corrected 1.0.0 APK. Check its launcher and same-key update before publishing.
+
+## Known limits
+
+- Minor lines during the Jiggy challenge and a brief dialogue-animation shunt
+  are accepted follow-up issues.
+- Intro/automatic-demo cadence and stutter remain under investigation.
+- Full-adventure, broader device/controller, lifecycle and mod-compatibility
+  coverage remain incomplete.
+- Automatic startup update detection and user-controlled save export/import
+  are planned; they are not included in 1.0.0.
+
+## Installation and updates
+
+The release installs alongside **Tooie Recompiled Debug**, with independent ROM,
+save, settings and mod data. Existing Debug progress stays in Debug; no automatic
+transfer is included. Keep Debug for ongoing diagnostics and playtesting.
+
+The 1.0.0 candidate uses the established protected release signer and a higher
+version code than the installed code-2 preview. Use an in-place update of the
+release app and verify retained data; do not uninstall or reset it.
+
+## Publication record still to complete
+
+Record the exact source commit/tag, protected-key-signed APK SHA-256, final
+menu/update result and resolved font/artwork/dependency terms. Publish the signed
+Android APK and checksum with the matching source tag; unsigned or runner-key
+Debug artifacts are not the public release.

@@ -71,7 +71,7 @@ package)
 candidate)
   revision=$(git -C "$source_root" rev-parse HEAD)
   version=$(cat "$work/logs/version.txt")
-  code=${TOOIE_RELEASE_VERSION_CODE:-2}
+  code=${TOOIE_RELEASE_VERSION_CODE:-3}
   gradle --no-daemon --console=plain --stacktrace -p "$work/package" \
     "-PtooieVersionCode=$code" "-PtooieVersionName=$version" assembleRelease
   python3 "$source_root/tools/release/prepare_unsigned.py" \

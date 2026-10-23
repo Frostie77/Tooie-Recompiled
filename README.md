@@ -4,7 +4,7 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 [N64Recomp](https://github.com/N64Recomp/N64Recomp) and
 [RT64](https://github.com/rt64/rt64).
 
-**The first public Android preview is in preparation.** Development APKs are
+**Version 1.0.0 for Android is in preparation.** Development APKs are
 being tested on the AYN Odin 2 Portal. Public builds will appear in
 [Releases](https://github.com/Frostie77/Tooie-Recompiled/releases).
 
