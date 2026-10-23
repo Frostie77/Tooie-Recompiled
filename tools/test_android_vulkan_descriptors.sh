@@ -30,17 +30,24 @@ while IFS='|' read -r mode reason; do
  elif [ "$mode" = "declared-accounting-old-plan" ]; then
   grep -q 'policy=actual-count .*reservedUAB=1' "$test_dir/banjotooi-debug.log"
   grep -q 'Descriptor rejected: reason=descriptor-set-allocation-failed result=-1000069000' "$test_dir/failure.log"
- elif [ "$mode" = "reserved-variable-outside" ]; then
+ elif [ "$mode" = "reserved-variable-outside" ] || [ "$mode" = "650-variable-outside" ]; then
   grep -q 'policy=declared-bound .*reservedUAB=8192' "$test_dir/banjotooi-debug.log"
   grep -q 'declared=8192 requested=1 .*reservedType=8192' "$test_dir/banjotooi-debug.log"
   grep -q 'Descriptor pool capacity: .*type=2 capacity=8192' "$test_dir/banjotooi-debug.log"
   grep -q 'Descriptor allocation begin: .*variable=1 variableCount=1' "$test_dir/banjotooi-debug.log"
+  if [ "$mode" = "650-variable-outside" ]; then
+   grep -q 'qualification=adreno-650-proprietary-declared-bound' "$test_dir/banjotooi-debug.log"
+  fi
+ elif [ "$mode" = "650-overlap-limit" ]; then
+  grep -q 'qualification=adreno-650-proprietary-declared-bound .*reservedUAB=8192 liveUAB=8192 limitUAB=16383 error=descriptor-pool-update-after-bind-limit' "$test_dir/banjotooi-debug.log"
  elif [ "$mode" = "reserved-allocation-failed" ]; then
   grep -q 'Descriptor rejected: reason=descriptor-set-allocation-failed result=-1000069000 .* set=0 ' "$test_dir/failure.log"
  elif [ "$mode" = "allocation-failed" ]; then
   grep -q 'Descriptor rejected: reason=descriptor-set-allocation-failed .* set=0 ' "$test_dir/failure.log"
  fi
 done <<'CASES'
+650-variable-outside|descriptor-array-element-not-allocated
+650-overlap-limit|descriptor-pool-update-after-bind-limit
 invalid-range|invalid-descriptor-range-type-or-count
 layout-failed|descriptor-layout-creation-failed
 pool-failed|descriptor-pool-creation-failed
@@ -101,4 +108,4 @@ APP_FOLDER_PATH="$test_dir" "$test_dir/record" probe-exhaustion-control >"$test_
 test "$(grep -c 'phase=allocate-return .*result=-1000069000' "$test_dir/probe.log")" -eq 5
 test "$(grep -c 'phase=retired' "$test_dir/probe.log")" -eq 5
 grep -q 'PASS: probe preserves exhausted-pool failure' "$test_dir/probe.log"
-printf '%s\n' 'PASS: 55 invalid descriptor cases stop before unsafe Vulkan calls, with exact reasons'
+printf '%s\n' 'PASS: 57 invalid descriptor cases stop before unsafe Vulkan calls, with exact reasons'
