@@ -82,7 +82,12 @@ Cache, shared/external storage and the PC's signing keys are outside this scope.
 
 The command requires unambiguous process absence, checks device file hashes
 before and after copying, verifies every copied regular file, and reads back
-the saved archive. A timeout, changed file or unsupported archive record stops
+the saved archive. Binary copying uses `adb exec-out`, with a known-byte test
+through the same PC output route before reading private file contents. A
+per-copy completion marker checks the remote TAR status independently of the
+ADB client's exit code. The full TAR and per-file hash checks still apply;
+size errors report byte counts without printing private contents. A timeout,
+changed file or unsupported archive record stops
 without exporting a verified backup. This is not an atomic snapshot or a
 tested restore. Keep the current app and its data until migration is verified.
 

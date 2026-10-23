@@ -9,6 +9,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import tarfile
@@ -768,8 +769,12 @@ class PrivateBackup(unittest.TestCase):
             code = 0
         elif command[:2] == ['shell', '-T'] and command[2].startswith('run-as ') and 'for d in ' in command[2]:
             value, code = ('\n'.join(self.selected) + '\n').encode(), 0
-        elif command == ['shell', '-T', 'run-as ' + self.device['package'] + ' tar -cf - ' + ' '.join(self.selected)]:
-            kwargs['stdout'].write(self.payload)
+        elif command == self.module.app_exec(self.device['package'], self.module.BINARY_PROBE_SCRIPT):
+            kwargs['stdout'].write(self.module.BINARY_PROBE)
+            value, code = None, 0
+        elif command[:5] == ['exec-out', 'run-as', self.device['package'], 'sh', '-c'] and command[-1].startswith('tar -cf - '):
+            nonce = re.search(r'TOOIE_PRIVATE_TAR_EXIT_([A-Za-z0-9]+):', command[-1])[1]
+            kwargs['stdout'].write(self.payload + b'\nTOOIE_PRIVATE_TAR_EXIT_' + nonce.encode() + b':0\n')
             value, code = None, 0
         else:
             self.fail('Unexpected operation: ' + repr(command))
@@ -823,7 +828,7 @@ class PrivateBackup(unittest.TestCase):
                          for name, content in self.data.items()).encode()
         script = self.root / 'synthetic-adb'
         script.write_text('#!' + sys.executable + '\n'
-            'import pathlib,sys\n'
+            'import pathlib,re,sys\n'
             'a=sys.argv[1:]\n'
             'assert a[:2] == ["-s", "fixture-odin"]\n'
             'c=a[2:]\n'
@@ -833,7 +838,10 @@ class PrivateBackup(unittest.TestCase):
             'elif c[-1].startswith("pidof "): sys.exit(1)\n'
             'elif "for d in " in c[-1]: b=b"files\\nshared_prefs\\n"\n'
             'elif "sha256sum" in c[-1]: b=' + repr(hashes) + '\n'
-            'elif " tar -cf - " in c[-1]: b=pathlib.Path(' + repr(str(tar)) + ').read_bytes()\n'
+            'elif c[-1].startswith("printf "): b=bytes((0,1,10,13,26,127,128,255))\n'
+            'elif c[-1].startswith("tar -cf - "):\n'
+            ' n=re.search(r"TOOIE_PRIVATE_TAR_EXIT_([A-Za-z0-9]+):",c[-1])[1]\n'
+            ' b=pathlib.Path(' + repr(str(tar)) + ').read_bytes()+b"\\nTOOIE_PRIVATE_TAR_EXIT_"+n.encode()+b":0\\n"\n'
             'else: raise AssertionError(c)\n'
             'sys.stdout.buffer.write(b)\n')
         script.chmod(0o700)
@@ -865,7 +873,7 @@ class PrivateBackup(unittest.TestCase):
         self.assertFalse(list(self.directory.iterdir()))
 
     def test_pid_and_transfer_timeouts_are_unknown_without_retry(self):
-        for stage in ('pidof ', ' tar -cf - '):
+        for stage in ('pidof ', 'tar -cf - '):
             with self.subTest(stage=stage):
                 failures = []
                 def fake(args, **kwargs):
@@ -880,7 +888,7 @@ class PrivateBackup(unittest.TestCase):
 
     def test_remote_transfer_error_is_not_a_backup(self):
         def fake(args, **kwargs):
-            if ' tar -cf - ' in args[-1]:
+            if 'tar -cf - ' in args[-1]:
                 kwargs['stdout'].write(self.payload)
                 return subprocess.CompletedProcess(args, 1, None, b'private read failed')
             return self.fake_adb(args, **kwargs)
@@ -957,6 +965,79 @@ class PrivateBackup(unittest.TestCase):
         self.assertEqual(backup.call_args.args[2], home / '.local/share/tooie-recompiled/private-backups')
         self.assertTrue((self.root / 'tools/workflow/device.lock').exists())
         artifact.assert_not_called()
+
+    def test_binary_probe_rejects_text_conversion_before_hashes_or_copy(self):
+        def fake(args, **kwargs):
+            if args[3:] == self.module.app_exec(self.device['package'], self.module.BINARY_PROBE_SCRIPT):
+                kwargs['stdout'].write(self.module.BINARY_PROBE.replace(b'\n', b'\r\n'))
+                return subprocess.CompletedProcess(args, 0, None, b'')
+            return self.fake_adb(args, **kwargs)
+        with patch.object(subprocess, 'run', side_effect=fake), self.assertRaisesRegex(RuntimeError, 'binary transport check differs'):
+            self.module.create_backup('fixture-adb', self.device, self.directory)
+        self.assertEqual(self.hash_calls, 0)
+        self.assertFalse(list(self.directory.iterdir()))
+
+    def test_real_probe_script_outputs_binary_bytes(self):
+        result = subprocess.run(['/bin/sh', '-c', self.module.BINARY_PROBE_SCRIPT],
+                                stdin=subprocess.DEVNULL, capture_output=True, timeout=10, check=True)
+        self.assertEqual(result.stdout, self.module.BINARY_PROBE)
+        self.assertEqual(result.stderr, b'')
+
+    def test_raw_copy_rejects_missing_wrong_failed_or_followed_completion_records(self):
+        for failure in ('missing', 'wrong', 'nonzero', 'followed'):
+            with self.subTest(failure=failure):
+                def fake(args, **kwargs):
+                    if args[-1].startswith('tar -cf - '):
+                        nonce = re.search(r'TOOIE_PRIVATE_TAR_EXIT_([A-Za-z0-9]+):', args[-1])[1]
+                        token = nonce if failure != 'wrong' else 'anothercopy'
+                        footer = b'\nTOOIE_PRIVATE_TAR_EXIT_' + token.encode() + (b':1\n' if failure == 'nonzero' else b':0\n')
+                        if failure == 'missing':
+                            footer = b''
+                        elif failure == 'followed':
+                            footer += b'extra bytes'
+                        kwargs['stdout'].write(self.payload + footer)
+                        # The client can report success even for remote exit 1.
+                        return subprocess.CompletedProcess(args, 0, None, b'')
+                    return self.fake_adb(args, **kwargs)
+                with patch.object(subprocess, 'run', side_effect=fake), self.assertRaisesRegex(RuntimeError, 'completion record|Android TAR command failed'):
+                    self.module.create_backup('fixture-adb', self.device, self.directory)
+                self.assertFalse(list(self.directory.iterdir()))
+
+    def test_real_shell_tar_and_explicit_remote_failure(self):
+        source = self.root / 'app-data'
+        source.mkdir()
+        for name, data in self.data.items():
+            path = source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        for selected, succeeds in ((self.selected, True), (['missing-directory'], False)):
+            with self.subTest(selected=selected):
+                command = self.module.tar_command(self.device['package'], selected, 'fixture123')[-1]
+                result = subprocess.run(['/bin/sh', '-c', command], cwd=source,
+                                        stdin=subprocess.DEVNULL, capture_output=True, timeout=10)
+                path = self.root / 'actual-shell.tar'
+                path.write_bytes(result.stdout)
+                if succeeds:
+                    self.assertEqual(result.returncode, 0)
+                    self.module.finish_tar(path, 'fixture123')
+                    actual = self.module.inspect_tar(path, self.selected)
+                    self.assertEqual({n: v['sha256'] for n, v in actual.items()},
+                                     {n: hashlib.sha256(v).hexdigest() for n, v in self.data.items()})
+                else:
+                    self.assertNotEqual(result.returncode, 0)
+                    with self.assertRaisesRegex(RuntimeError, 'Android TAR command failed'):
+                        self.module.finish_tar(path, 'fixture123')
+
+    def test_size_rejections_print_metadata_only(self):
+        path = self.root / 'size-check.tar'
+        for data, error in ((b'', 'bytes=0'), (self.payload + b'\r\n', 'remainder=2')):
+            path.write_bytes(data)
+            with self.assertRaisesRegex(RuntimeError, error):
+                self.module.inspect_tar(path, self.selected)
+        with path.open('wb') as stream:
+            stream.truncate(self.module.MAX_BYTES + 512)
+        with self.assertRaisesRegex(RuntimeError, '8 GiB limit'):
+            self.module.inspect_tar(path, self.selected)
 
 
 if __name__ == '__main__':

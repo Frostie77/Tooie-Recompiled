@@ -21,6 +21,8 @@ MODEL = 'Odin2 Portal'
 ROOTS = ('files', 'shared_prefs', 'databases', 'no_backup')
 MAX_BYTES = 8 * 1024 ** 3
 MAX_MEMBERS = 100000
+BINARY_PROBE = bytes((0, 1, 10, 13, 26, 127, 128, 255))
+BINARY_PROBE_SCRIPT = r"printf '\000\001\012\015\032\177\200\377'"
 
 
 def require(ok, message):
@@ -64,6 +66,33 @@ def app_shell(package, script):
     return ['shell', '-T', 'run-as ' + package + ' sh -c ' + shlex.quote(script)]
 
 
+def app_exec(package, script):
+    # adb exec-out escapes each argument and uses its binary stdout path.
+    return ['exec-out', 'run-as', package, 'sh', '-c', script]
+
+
+def tar_command(package, selected, nonce):
+    script = ('tar -cf - ' + ' '.join(selected) + '; tooie_tar_rc=$?; '
+              'printf "\\nTOOIE_PRIVATE_TAR_EXIT_' + nonce + ':%s\\n" "$tooie_tar_rc"; '
+              'exit "$tooie_tar_rc"')
+    return app_exec(package, script)
+
+
+def finish_tar(path, nonce):
+    # exec-out does not propagate the remote exit code. Require the exact
+    # per-copy completion record as well as the later TAR/hash checks.
+    size = path.stat().st_size
+    with path.open('r+b') as stream:
+        stream.seek(max(0, size - 256))
+        tail = stream.read()
+        match = re.search(rb'\nTOOIE_PRIVATE_TAR_EXIT_' + nonce.encode('ascii') +
+                          rb':([0-9]{1,3})\n\Z', tail)
+        require(match is not None,
+                'Private copy completion record missing or invalid (received bytes=' + str(size) + ').')
+        require(int(match[1]) == 0, 'Android TAR command failed (exit=' + match[1].decode() + ').')
+        stream.truncate(size - len(tail) + match.start())
+
+
 def roots(adb, serial, package):
     script = ('for d in ' + ' '.join(ROOTS) + '; do '
               'if [ -d "$d" ] && [ ! -L "$d" ]; then printf "%s\\n" "$d"; '
@@ -103,8 +132,11 @@ def inventory(adb, serial, package, selected):
 
 
 def inspect_tar(path, selected):
-    require(1024 <= path.stat().st_size <= MAX_BYTES and path.stat().st_size % 512 == 0,
-            'Incomplete or oversized app-data TAR.')
+    size = path.stat().st_size
+    require(size >= 1024, 'Incomplete app-data TAR (bytes=' + str(size) + ', minimum=1024).')
+    require(size <= MAX_BYTES, 'App-data TAR exceeds the 8 GiB limit (bytes=' + str(size) + ').')
+    require(size % 512 == 0, 'Misaligned app-data TAR (bytes=' + str(size) +
+            ', remainder=' + str(size % 512) + '); binary copy rejected.')
     files, seen, end, total = {}, set(), 0, 0
     with tarfile.open(path, mode='r:') as archive:
         for item in archive:
@@ -158,15 +190,22 @@ def create_backup(adb, device, directory):
     require(re.fullmatch(rb'[0-9]{2,3}', sdk) and int(sdk) >= 24, 'Unexpected Android API level.')
     stopped(adb, serial, package)
     selected = roots(adb, serial, package)
+    with tempfile.TemporaryFile(dir=directory) as probe:
+        read(adb, serial, app_exec(package, BINARY_PROBE_SCRIPT), 'Binary transport check', output=probe)
+        probe.seek(0)
+        require(probe.read() == BINARY_PROBE,
+                'ADB binary transport check differs; private app data was not copied.')
     print('Reading private app-data hashes. Keep the app closed; Odin is unchanged.', flush=True)
     before = inventory(adb, serial, package, selected)
     stopped(adb, serial, package)
     with tempfile.TemporaryDirectory(prefix='.private-copy-', dir=directory) as work:
         tar_path = Path(work) / 'app-data.tar'
+        nonce = uuid.uuid4().hex
         print('Copying private app data, then checking every file. This can take a few minutes.', flush=True)
         with tar_path.open('xb') as stream:
-            read(adb, serial, ['shell', '-T', 'run-as ' + package + ' tar -cf - ' + ' '.join(selected)],
+            read(adb, serial, tar_command(package, selected, nonce),
                  'Private app-data copy', output=stream, timeout=300)
+        finish_tar(tar_path, nonce)
         stopped(adb, serial, package)
         try:
             files = inspect_tar(tar_path, selected)
