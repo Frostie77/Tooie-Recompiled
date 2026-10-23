@@ -25,6 +25,14 @@ signing/versioning, verify the intended update path preserves user data,
 then package an identified candidate and release notes. Startup update detection,
 multi-mod combinations and broader gameplay/lifecycle coverage remain open.
 
+Frostie has created the local release keystore and supplied its public certificate
+metadata. The public fingerprint and the different accepted development signer
+are recorded in `tools/release/signing-identities.json`; no private key/password
+is in the repository. Key backup and development-to-release migration remain
+unverified. Keep the current debug installation and app data. Manual unsigned
+candidate exports and the local signer are described in the release guide;
+their output is not publication approval.
+
 See [release preparation](release.md) for restored font notices, upstream's
 RecompFrontend GPL grant, explicit Android version inputs and the read-only
 candidate verifier. The approved Comic Neue Bold menu font and its original OFL

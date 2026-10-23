@@ -1,6 +1,6 @@
 # Tooie Recompiled completion checklist
 
-Updated: 22 October 2026.
+Updated: 23 October 2026.
 
 The goal is a reliable native **Android ARM64** release for the AYN Odin 2 Portal,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
@@ -19,6 +19,8 @@ Checked boxes describe the tested scope; the project is not fully complete.
 - [x] Saved **Aiming Invert**, including Off/On comparisons and the ordinary
   camera, walking and horizontal input retaining their behavior.
 - [x] One-terminal testing with numbered notes and one compact evidence ZIP.
+- [x] Local release keystore created; Frostie's public RSA-4096 certificate
+  metadata recorded. Backup, APK signing and upgrade verification remain open.
 
 The texture/aiming capture and later manual restart/Off checks are recorded
 separately in [PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14).
@@ -60,6 +62,13 @@ checks have passed. Before the first preview, complete release signing/versionin
 distribution review, candidate verification and release notes, then approve and
 publish. The preview does not declare full-game completion or include the planned
 startup updater.
+
+Release packaging/font preparation passed [PR #17](https://github.com/Frostie77/Tooie-Recompiled/pull/17).
+The approved Comic Neue Bold button font includes its original OFL. Candidate
+tools support unsigned exports and local signing with the recorded release
+certificate; the private key stays on the PC. A different development signer
+still requires a verified migration path. Publication is pending Frostie's
+explicit approval. See [release preparation](development/release.md).
 
 ## Evidence and testing detail
 
