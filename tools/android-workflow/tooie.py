@@ -23,6 +23,7 @@ import zipfile
 import zlib
 
 import private_backup
+import observe_candidate
 
 HERE = Path(__file__).resolve().parent
 REPO = 'https://github.com/Frostie77/Tooie-Recompiled.git'
@@ -690,6 +691,7 @@ def parser():
     package_parser = sub.add_parser('package', help='Prepare one compact upload from existing evidence; no device commands.')
     package_parser.add_argument('evidence', type=Path, nargs='?')
     package_parser.add_argument('--latest', action='store_true', help='Package the newest original evidence ZIP in Downloads.')
+    sub.add_parser('observe-candidate', help='Capture the already running signed release candidate; no install, launch or app changes.')
     sub.add_parser('backup-debug-data', help='Privately back up a closed debuggable app; read-only on Odin, never an evidence upload.')
     sub.add_parser('update', help='Explicitly fast-forward this isolated tooling checkout.')
     return result
@@ -713,6 +715,10 @@ def main(argv=None):
     elif args.command == 'package':
         require(bool(args.evidence) != args.latest, 'Choose an evidence path or --latest.')
         package_evidence(latest_evidence(args.downloads) if args.latest else args.evidence, profile)
+    elif args.command == 'observe-candidate':
+        with exclusive_lock(args.state, 'device'):
+            return observe_candidate.observe(default_adb(), profile['device']['serial'],
+                                             args.downloads, args.state)
     elif args.command == 'backup-debug-data':
         with exclusive_lock(args.state, 'device'):
             private_backup.create_backup(default_adb(), profile['device'],

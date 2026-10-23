@@ -329,3 +329,32 @@ that process, it requires the same unique PID and the exact game Activity in
 the foreground after an unambiguous launch. Ambiguous responses, raced/multiple
 PIDs or failed/unknown checks stop the session without a blind retry. Stop
 reasons and PID attribution remain in the evidence ZIP.
+
+## Observe the installed release candidate
+
+`tooie observe-candidate` attaches to the already running **Tooie Recompiled**
+release app. It performs read-only device queries and starts host-side Logcat
+readers. It does not install, launch, stop or reset either app. Keep the release
+launcher open before running it; the normal `tooie test` command still tests the
+established Debug package.
+
+This observer is pinned to the locally signed candidate from source
+`af97304f201af98a2c735b671d0413792673273b`, version code 2, APK SHA-256
+`b02849bb4cd85fb6c3a70c373a5c302f81c1a13bb24aa16e81494746471c52e7`.
+A different installed APK stops verification rather than selecting a substitute.
+
+In the same terminal, use numbered notes (1–10 plus text), `playing` to start
+15 gameplay minutes, `restart` before manually closing/reopening the release
+app, `resumed` afterward, and `save` to finish the capture. Save progress inside
+the game separately. `continue` adds five minutes. Do not type `done`.
+
+One Share ZIP contains identity/status reads, the release UID's Logcat, scoped
+crash-buffer records, clock calibration and all terminal notes. Raw files stay
+under the local workflow's `candidate-captures` directory. Files over 8 MiB are
+explicitly excerpted in the Share ZIP; raw Logcat streams have a recorded 64 MiB
+retention limit. Timeouts are unknown read results, not evidence of a crash.
+
+The release app is non-debuggable, so this capture does not read its private
+native debug log or saves. Functional user observations and Logcat do not replace
+Debug instrumentation for detailed performance attribution. The installed
+candidate's known font difference is tracked separately by PR #21.
