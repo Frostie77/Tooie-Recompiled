@@ -4,9 +4,7 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 [N64Recomp](https://github.com/N64Recomp/N64Recomp) and
 [RT64](https://github.com/rt64/rt64).
 
-**Version 1.0.0 for Android is in preparation.** Development APKs are
-being tested on the AYN Odin 2 Portal. Public builds will appear in
-[Releases](https://github.com/Frostie77/Tooie-Recompiled/releases).
+## [First release — v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.0)
 
 **You must supply your own supported Banjo-Tooie (USA) ROM. No ROM is included.**
 
@@ -62,7 +60,7 @@ input and the regular camera retain their behavior.
 
 ## Getting started
 
-1. Install a compatible Android APK when available.
+1. Install the Android APK from the release's **Assets**.
 2. Open **Tooie Recompiled**, choose **Select ROM** and select the supported ROM.
 3. Choose **Start Game**. Configure any mods before starting the game.
 

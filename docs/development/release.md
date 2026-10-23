@@ -1,12 +1,12 @@
-# Android 1.0.0 release preparation
+# Android v1.0.0 release and signing
 
-Frostie approved publication of the first Android release as **1.0.0** on
-24 October 2026. The selected Android version code is **3**, above the installed
-preview candidate's code `2`. Approval is recorded; the signed artifact and
-font redistribution terms are still pending. Frostie selected the public
-GitHub download as the update/menu acceptance test, after publication. Leave
-the installed candidate untouched until that download is available. Package
-verification does not establish that the on-device update preserves data.
+Frostie approved and published the first Android release,
+[v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.0),
+on **24 October 2026 (AEDT)**. Its Android version code is **3** and its public
+APK and checksum match the verified signed upload. Frostie downloaded that asset
+on Odin, updated the existing code-`2` candidate and confirmed the app worked
+with all saves and settings retained. This is a manual device result without a
+fresh capture. Distribution review remains open.
 
 ## Bundled notices
 
@@ -25,7 +25,7 @@ original SIL OFL text.
 | Noto Emoji 1.05 uh | Embedded OFL notice; [upstream licence](https://github.com/googlefonts/noto-emoji/blob/main/LICENSE), blob `d09d3d0e09169f6747754e6b25faf5ba5ef6402d`. |
 | PromptFont | Embedded OFL notice; [upstream licence](https://github.com/Shinmera/promptfont/blob/master/LICENSE.txt), blob `ede0e0975f045c772371d08af297bdbf6f2c319e`. Copyright/attribution retained separately in the notice index. |
 | RecompFrontend | Upstream added GPLv3 in [commit `2ddbfc8`](https://github.com/N64Recomp/RecompFrontend/commit/2ddbfc8adcfe9ba26520441f14488861fdcefef7), resolving [licence question #44](https://github.com/N64Recomp/RecompFrontend/issues/44). Its verbatim `COPYING`, blob `f288702d2fa16d3cdf0035b15a9fcbc552cd88e7`, is retained under the vendored tree; no frontend code is updated. |
-| Suplexmentary Comic NC 1.000 | Exact Debug font, blob `65b1e6fe4f800389760d2c20a6eaa76c8a4babd1`. Embedded copyright is retained. Font-specific redistribution permission remains an open public-release requirement. |
+| Suplexmentary Comic NC 1.000 | Exact Debug font, blob `65b1e6fe4f800389760d2c20a6eaa76c8a4babd1`. Embedded copyright is retained. Font-specific redistribution terms remain unverified. |
 | Artwork, icons and other dependencies | Complete the exact release inventory, provenance and applicable notices. Design approval and public availability are separate from redistribution terms. Do not infer that all assets inherit the code licence. |
 
 The restored font is 118,452 bytes, SHA-256
@@ -43,19 +43,22 @@ URL. Its technical preview/printing embedding flag is not an app distribution
 grant. The [author's current website](https://tilde.club/~harvettfox96/) identifies
 Jayvee Enaguas and applies CC BY 4.0 to its website contents, but does not list
 this font. Do not extend that website footer or another font's licence to the
-bundled TTF. Obtain font-specific redistribution terms before public release.
+bundled TTF. Font-specific redistribution terms remain unverified; publication
+does not establish a licence grant.
 
-Source/font equality establishes the restored inputs; it does not replace
-checking the rebuilt menu on Odin. The installed release candidate has version
-code 2, so any replacement candidate for that app must use a higher code and
-the same release signing identity.
+Source/font equality establishes the restored inputs. Frostie's published-APK
+update report confirms the app worked with retained saves and settings; it does
+not separately describe the restored font's appearance. Future updates must use
+a version code higher than `3` and the same release signing identity.
 
 The [24 October candidate check](release-candidate-check-20261024.md) records
 ROM selection, Aiming Invert, the UI texture mod and the visited first-person
 area working as reported by Frostie. In a later manual follow-up, Frostie
 confirmed the release save, settings and mods survived closing/reopening.
-The rebuilt font and preservation across an APK update remain device checks;
-the two marked minor visual issues are deferred.
+The later public-download update passed for saves and settings. Exact font
+appearance, installed mods after the APK update and a further close/reopen
+cycle were not separately confirmed. The two marked minor visual issues remain
+deferred.
 
 ## Version and signing
 
@@ -118,23 +121,20 @@ and [versioning](https://developer.android.com/studio/publish/versioning).
 
 ## Candidate verification
 
-After the candidate workflow has been reviewed and merged, open **Actions →
-Android APK → Run workflow**, select the reviewed source branch, enable
-`prepare_candidate`, and set the candidate version name/code. The provisional
-first-preview candidate used `0.1.0-preview.1` / `2` and is now installed.
-For its font-corrected replacement, use **`1.0.0` / `3`** and verify the same-key
-update path. These are also the manual workflow defaults. Keep the existing
-protected release key; do not generate a new key or replace the Debug app.
-The native stamp and Android version use the same supplied name.
+For future candidates, open **Actions → Android APK → Run workflow**, select
+the reviewed source branch, enable `prepare_candidate`, and set the candidate
+version name/code. The first preview used `0.1.0-preview.1` / `2`; the published
+font-corrected release uses **`1.0.0` / `3`**. Future releases need a version
+code greater than `3`; do not reuse the 1.0.0 workflow defaults for a new release.
+Keep the existing protected release key and the separate Debug app. The native
+stamp and Android version use the same supplied name.
 
-For the chosen acceptance sequence, first publish the verified protected-key-
-signed 1.0.0 APK on GitHub. Frostie will download that exact asset directly on
-Odin and install it as an update over the existing release candidate. Then check
-the restored menu, imported ROM, save progress, settings and installed mods,
-and close/reopen to confirm persistence. Do not install a separate pre-release
-test APK or change the current installation beforehand. The Debug app remains
-separate. Record this result only after the actual GitHub-download update;
-keep it pending in the release notes until then.
+Frostie selected the public GitHub download as the acceptance update. That
+sequence is complete for installation, launch and retained saves/settings:
+Frostie downloaded the published asset on Odin and updated the existing release
+candidate. Exact restored-menu appearance, imported ROM reuse, installed mods
+and a further close/reopen check remain separate coverage items. The Debug app
+remains separate for ongoing diagnostics and playtesting.
 
 The separate **Tooie-Android-Unsigned-Candidate** artifact contains an unsigned,
 non-debuggable ARM64 APK, build report, checksums, public identities, GPL text
@@ -197,7 +197,7 @@ separately from the package-verification reports: their `publication_approved`
 field remains false because those tools do not grant publication permission.
 This preparation does not implement the future startup updater.
 
-The [1.0.0 release notes draft](preview-notes.md) remains pending the exact signed
-candidate and distribution review. Publish the update/menu check as pending;
-record Frostie's result after the GitHub-download test. Do not create an empty
-public release or upload the unsigned/CI-debug artifact as the release APK.
+The [v1.0.0 release record](preview-notes.md) identifies the published signed APK,
+checksums and Frostie's actual GitHub-download update result. Distribution review
+remains open. Future public releases must contain the verified protected-key-
+signed APK; unsigned candidates and CI Debug artifacts are not release APKs.

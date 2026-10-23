@@ -1,10 +1,11 @@
-# Tooie Recompiled 1.0.0 — release notes draft
+# Tooie Recompiled v1.0.0 — release record
 
-Version **1.0.0**, Android version code **3**. Frostie approved publication on
-24 October 2026. The protected-key-signed APK has now been uploaded and its
-bytes verified against the local signing report. Distribution review remains
-open; no release has been published. Corrected-menu/update acceptance will
-use the public GitHub download after publication, as selected by Frostie.
+Version **1.0.0**, Android version code **3**, was
+[published on GitHub](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.0)
+on **24 October 2026 (AEDT)** with Frostie's approval. The public APK and
+checksum asset match the verified signed upload. Frostie downloaded the release
+on Odin, updated the existing candidate, and confirmed the app worked with all
+settings and saves retained. Distribution review remains open.
 
 Tooie Recompiled is a native **Android ARM64** port. Windows and Linux are build
 hosts; desktop game packages are not included. Supply your own supported USA ROM.
@@ -29,9 +30,11 @@ confirmation. A later manual follow-up confirmed save/settings/mod retention
 after closing/reopening. Earlier Debug checks covered the reported boss fight
 and Tooie Mod Check.
 
-Those results do not establish a full playthrough or acceptance of the new
-font-corrected 1.0.0 APK. The GitHub-download update/menu check remains pending
-until Frostie installs the published APK over the existing release candidate.
+After publication, Frostie confirmed the GitHub-download update to v1.0.0
+worked on Odin and preserved all saves and settings. This is a separate manual
+functional result without a new capture. Exact restored-font appearance,
+post-update installed-mod retention and a further close/reopen cycle were not
+separately reported. These checks do not establish a full playthrough.
 
 ## Known limits
 
@@ -49,15 +52,16 @@ The release installs alongside **Tooie Recompiled Debug**, with independent ROM,
 save, settings and mod data. Existing Debug progress stays in Debug; no automatic
 transfer is included. Keep Debug for ongoing diagnostics and playtesting.
 
-The 1.0.0 candidate uses the established protected release signer and a higher
-version code than the installed code-2 preview. Use an in-place update of the
-release app and verify retained data; do not uninstall or reset it.
+The published 1.0.0 APK uses the established protected release signer and version
+code `3`. It successfully updated Frostie's installed code-`2` preview with
+saves and settings retained. Future releases must keep the release package and
+signer and increase the version code; update in place to preserve app data.
 
 ## Verified signed artifact
 
 | Item | Recorded value |
 |---|---|
-| Intended GitHub tag | `v1.0.0` |
+| GitHub tag | `v1.0.0` |
 | Exact APK source commit | `49dab086f10c9e65d5e7f7ea91b08e0e7ef093ab` |
 | Public APK filename | `Tooie-Recompiled-v1.0.0-Android-arm64.apk` |
 | APK size | 13,984,629 bytes |
@@ -78,27 +82,26 @@ These signing/payload results are from that local verification report; they
 were not independently rerun against SDK tools in the upload-review session.
 Package metadata compatibility does not prove on-device data preservation.
 
-## Publication steps still open
+## Publication and device acceptance
 
-Resolve the font/artwork/dependency distribution review recorded in
-[release preparation](release.md). Do not mark it complete on the strength of
-the package checks. Frostie's publication approval is already recorded and is
-separate from the signing helper's fixed `publication_approved: false` field.
+The public [v1.0.0 release](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.0)
+contains the exact signed Android APK and `SHA256SUMS`. GitHub's asset metadata
+matches the recorded APK size and hash; the checksum file's own SHA-256 is
+`6fc1a22faa62924c68b2a3a9f33e65df1aba6824615edcc9f1d382b5a802de25`.
+The release source remains the exact APK commit above. Subsequent documentation
+commits do not change it. No signing helper, private key or password is a release
+asset.
 
-Publish the exact signed Android APK and its `SHA256SUMS`, with
-`v1.0.0` targeting the exact APK source commit above. Subsequent documentation
-commits do not change the APK's source. The unsigned artifact, CI Debug APK,
-signing helper, private keys and passwords are not release assets.
+Frostie's 24 October manual report confirms the public-download code-`2` to
+code-`3` update on Odin worked and retained all saves and settings. The
+[functional record](release-candidate-check-20261024.md#published-release-and-odin-update)
+distinguishes this result from the earlier captured session and restart check.
+Debug remains the separate app for ongoing playtesting.
 
-Leave the GitHub-download update/menu check explicitly pending at publication.
-Frostie will download the APK from the release's Assets on Odin, update the
-existing release candidate in place, then check the restored launcher font,
-imported ROM, save progress, settings and mods, including closing/reopening.
-The installed candidate remains unchanged until then; Debug stays available
-for ongoing playtesting.
+The README now announces **First release — v1.0.0** and links to the release
+page. The APK is obtained from the release's Assets.
 
-Once the release is published, replace the README's preparation notice with
-the linked heading
-`## [First release — v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.0)`.
-Keep the APK download in the release's Assets rather than linking it directly
-from the README.
+Font/artwork/dependency distribution review remains recorded in
+[release and signing](release.md); publication and device success do not mark it
+complete. Frostie's publication approval is separate from the signing helper's
+fixed `publication_approved: false` field.

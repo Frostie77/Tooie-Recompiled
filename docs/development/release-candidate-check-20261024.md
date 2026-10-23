@@ -74,19 +74,37 @@ They do not by themselves establish an audible defect; Frostie did not report
 a new audio problem. No detailed thermal, memory or stage-timing conclusion is
 drawn from this functional check.
 
-## Remaining release checks
+## Published release and Odin update
 
-Leave the installed release candidate untouched. After publication, Frostie
-will download the protected-key-signed GitHub asset directly on Odin and update
-that candidate, checking its menu, ROM, progress, settings and mods, then closing/
-reopening. Record that result after the test; no intermediate candidate install
-is selected. The approved target is `1.0.0`, Android code `3`. The menu-font
-fix passed Android CI at `e5a0c86a938bafdae759f3257ed8ae789e00a770`
+[Tooie Recompiled v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.0)
+was published on **24 October 2026 (AEDT)**. The public APK and checksum asset
+match the verified signed upload:
+
+| Item | Published value |
+|---|---|
+| Source | `49dab086f10c9e65d5e7f7ea91b08e0e7ef093ab` |
+| Version | `1.0.0`, Android code `3` |
+| APK | `Tooie-Recompiled-v1.0.0-Android-arm64.apk` |
+| APK size | 13,984,629 bytes |
+| APK SHA-256 | `4654bab296b50e1e38200853dd4166fa2465b3e49e40ac3334d9d9e30de3de8e` |
+| SHA256SUMS SHA-256 | `6fc1a22faa62924c68b2a3a9f33e65df1aba6824615edcc9f1d382b5a802de25` |
+
+Frostie confirmed downloading the public release on Odin, updating the installed
+release candidate, and the updated app working with **all settings and saves
+retained**. Record this as a manual functional pass for the code-`2` to code-`3`
+release update on the **AYN Odin 2 Portal**. No fresh capture accompanied this
+confirmation; the package checks and the on-device report are separate evidence.
+
+The report does not separately confirm the restored font's appearance,
+installed mods after the APK update, or a further close/reopen cycle. The earlier
+candidate restart/mod check above remains its own result. Full-adventure and
+broader device coverage remain open.
+
+The menu-font fix passed Android CI at
+`e5a0c86a938bafdae759f3257ed8ae789e00a770`
 ([run](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/39965072209))
-and was merged as `145a563112666dcc38a0a58b5cd66deaee841a24`; the corrected
-menu has not yet been checked on Odin.
+and was merged as `145a563112666dcc38a0a58b5cd66deaee841a24`.
 
-Frostie approved publication as **1.0.0** on 24 October 2026. Font-specific
-redistribution permission, the remaining distribution review, exact signed
-artifact and final release notes remain open. Approval is not a claim that
-those checks have passed.
+Publication approval and the successful update do not establish distribution
+terms. The outstanding font/artwork/dependency review remains recorded in
+[release and signing](release.md).
