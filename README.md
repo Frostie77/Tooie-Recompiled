@@ -4,7 +4,7 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 [N64Recomp](https://github.com/N64Recomp/N64Recomp) and
 [RT64](https://github.com/rt64/rt64).
 
-## [First release — v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.0)
+## First release — v1.0.0
 
 **You must supply your own supported Banjo-Tooie (USA) ROM. No ROM is included.**
 
