@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Release package rejection controls and optional real SDK/Gradle fixture."""
 import argparse
-import importlib.util
 import json
 import os
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
 import warnings
@@ -13,9 +13,10 @@ import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
-spec = importlib.util.spec_from_file_location("release_apk", Path(__file__).parent / "release/verify_apk.py")
-release = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(release)
+sys.path.insert(0, str(Path(__file__).parent / "release"))
+import verify_apk as release
+import prepare_unsigned as preparation
+import sign_candidate as signing
 VERSION = "0.1.0-preview.1"
 CERT = "12" * 32
 COMMIT = "ab" * 20
@@ -202,6 +203,115 @@ class ReleaseChecks(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "ambiguous"):
                 release.apk_identity(self.candidate, self.root)
 
+    def test_every_unsigned_payload_member_is_bound(self):
+        self.build_report["artifact_kind"] = "unsigned-release-candidate"
+        self.write_report()
+        for name in ("classes.dex", "resources.arsc", "AndroidManifest.xml"):
+            zip_apk(self.candidate, {name: b"altered"})
+            with self.assertRaisesRegex(ValueError, "unsigned payload differs"):
+                self.verify()
+        zip_apk(self.candidate, {"res/unexpected.bin": b"added"})
+        with self.assertRaisesRegex(ValueError, "payload inventory"):
+            self.verify()
+        zip_apk(self.candidate, {"META-INF/CERT.RSA": b"signature", "META-INF/MANIFEST.MF": b"signature"})
+        self.assertTrue(self.verify()["all_unsigned_payload_matches"])
+
+    def prepare(self, **kwargs):
+        with patch.object(preparation, "require_unsigned"), patch.object(release, "run_tool", side_effect=self.sdk):
+            return preparation.prepare(self.candidate, self.built, self.report, self.root,
+                                       kwargs.get("commit", COMMIT), kwargs.get("code", 2),
+                                       kwargs.get("output", self.root / "export"))
+
+    def test_unsigned_export_is_bound_to_verified_inputs(self):
+        result = self.prepare()
+        output = self.root / "export"
+        self.assertEqual((output / result["apk"]).read_bytes(), self.candidate.read_bytes())
+        self.assertEqual(result["artifact_kind"], "unsigned-release-candidate")
+        self.assertFalse(result["publication_approved"])
+        self.assertFalse(any(p.suffix in (".p12", ".jks", ".keystore") for p in output.iterdir()))
+        for line in (output / "SHA256SUMS").read_text().splitlines():
+            expected, name = line.split("  ", 1)
+            self.assertEqual(release.digest((output / name).read_bytes()), expected)
+        with self.assertRaisesRegex(ValueError, "already exists"):
+            self.prepare()
+
+    def test_unsigned_export_rejects_wrong_provenance_and_manifest(self):
+        with self.assertRaisesRegex(ValueError, "different source"):
+            self.prepare(commit="cd" * 20)
+        for value in (0, True, 2_100_000_001):
+            with self.assertRaisesRegex(ValueError, "Android range"):
+                self.prepare(code=value)
+        self.badging_extra = "application-debuggable\n"
+        with self.assertRaisesRegex(ValueError, "debuggable"):
+            self.prepare()
+        self.badging_extra = ""
+        self.build_report["sha256"] = "00" * 32
+        self.write_report()
+        with self.assertRaisesRegex(ValueError, "APK hash"):
+            self.prepare()
+        self.assertFalse((self.root / "export").exists())
+
+    def test_unsigned_sdk_failure_is_not_assumed_to_mean_unsigned(self):
+        for code, text in ((0, "verified"), (1, "unrelated error")):
+            with patch.object(preparation.subprocess, "run", return_value=subprocess.CompletedProcess([], code, "", text)):
+                with self.assertRaisesRegex(ValueError, "Expected an unsigned"):
+                    preparation.require_unsigned(self.candidate, self.root)
+        with patch.object(preparation.subprocess, "run", side_effect=subprocess.TimeoutExpired("apksigner", 45)):
+            with self.assertRaisesRegex(ValueError, "timed out; no retry"):
+                preparation.require_unsigned(self.candidate, self.root)
+
+    def local_sign_inputs(self):
+        report = self.prepare()
+        key = self.root / "fixture.p12"
+        key.write_bytes(b"fixture placeholder; no actual private key")
+        identities = self.root / "identities.json"
+        identities.write_text(json.dumps({"schema": 1, "release": {"alias": "fixture", "certificate_sha256": CERT}}))
+        return report, key, identities
+
+    def test_local_signing_rejects_mutated_input_or_incompatible_update_before_prompt(self):
+        report, key, identities = self.local_sign_inputs()
+        exported = self.root / "export"
+        apk = exported / report["apk"]
+        original = apk.read_bytes()
+        apk.write_bytes(original + b"altered")
+        with patch.object(signing.subprocess, "run") as process:
+            with self.assertRaisesRegex(ValueError, "candidate hash"):
+                signing.sign(exported, self.root, key, identities, self.root / "signed")
+            process.assert_not_called()
+        apk.write_bytes(original)
+        self.cert = "34" * 32
+        with patch.object(release, "run_tool", side_effect=self.sdk), patch.object(signing.subprocess, "run") as process:
+            with self.assertRaisesRegex(ValueError, "do not uninstall or reset"):
+                signing.sign(exported, self.root, key, identities, self.root / "signed", self.previous)
+            process.assert_not_called()
+
+    def test_local_signer_publishes_only_a_verified_result_to_a_new_directory(self):
+        report, key, identities = self.local_sign_inputs()
+        original = (self.root / "export" / report["apk"]).read_bytes()
+        def fixture_sign(args, **kwargs):
+            Path(args[args.index("--out") + 1]).write_bytes(Path(args[-1]).read_bytes())
+            return subprocess.CompletedProcess(args, 0)
+        with patch.object(release, "run_tool", side_effect=self.sdk), patch.object(signing.subprocess, "run", side_effect=fixture_sign):
+            result = signing.sign(self.root / "export", self.root, key, identities, self.root / "signed")
+            self.assertTrue(result["all_unsigned_payload_matches"])
+            self.assertFalse(result["install_performed"])
+            self.assertFalse(result["publication_approved"])
+            self.assertEqual((self.root / "export" / report["apk"]).read_bytes(), original)
+            with self.assertRaisesRegex(ValueError, "already exists"):
+                signing.sign(self.root / "export", self.root, key, identities, self.root / "signed")
+        self.assertEqual(len(list((self.root / "signed").glob("*.apk"))), 1)
+
+    def test_wrong_actual_signer_leaves_no_exported_result(self):
+        _, key, identities = self.local_sign_inputs()
+        def fixture_sign(args, **kwargs):
+            Path(args[args.index("--out") + 1]).write_bytes(Path(args[-1]).read_bytes())
+            return subprocess.CompletedProcess(args, 0)
+        self.cert = "34" * 32
+        with patch.object(release, "run_tool", side_effect=self.sdk), patch.object(signing.subprocess, "run", side_effect=fixture_sign):
+            with self.assertRaisesRegex(ValueError, "Unexpected release signing"):
+                signing.sign(self.root / "export", self.root, key, identities, self.root / "signed")
+        self.assertFalse((self.root / "signed").exists())
+
 
 def integration(work, tools):
     """Use actual Gradle, keytool, aapt and apksigner on the built Android app."""
@@ -224,6 +334,11 @@ def integration(work, tools):
     require(unsigned.is_file(), "Gradle did not produce the unsigned release fixture")
     with tempfile.TemporaryDirectory(prefix="tooie-signing-fixture-") as temp:
         root = Path(temp)
+        prepared = root / "prepared"
+        unsigned_report = preparation.prepare(unsigned, built, build_report, tools,
+                                              report["source_commit"], 2, prepared)
+        reference = prepared / unsigned_report["apk"]
+        reference_report = prepared / "build-report.json"
         env = {**os.environ, "TOOIE_RELEASE_TEST_PASSWORD": "ephemeral-ci-fixture"}
         key = root / "fixture.jks"
         subprocess.run(["keytool", "-genkeypair", "-keystore", str(key), "-alias", "fixture",
@@ -238,22 +353,55 @@ def integration(work, tools):
                             "--ks-pass", "env:TOOIE_RELEASE_TEST_PASSWORD", "--key-pass", "env:TOOIE_RELEASE_TEST_PASSWORD",
                             "--out", str(destination), str(source)], check=True, env=env)
         identity = release.apk_identity(candidate, tools)
-        result = release.verify(candidate, built, build_report, tools, version, 2,
+        result = release.verify(candidate, reference, reference_report, tools, version, 2,
                                 identity["certificate_sha256"], report["source_commit"], previous)
         require(result["previous_apk"]["direct_update_metadata_compatible"], "Same-key upgrade fixture failed")
+        require(result["all_unsigned_payload_matches"], "Complete unsigned payload fixture failed")
+        fixture_identities = root / "fixture-identities.json"
+        fixture_identities.write_text(json.dumps({"schema": 1, "release": {
+            "alias": "fixture", "certificate_sha256": identity["certificate_sha256"]}}))
+        helper = subprocess.run([sys.executable, str(prepared / "sign_candidate.py"),
+                                 "--candidate-dir", str(prepared), "--build-tools", str(tools),
+                                 "--keystore", str(key), "--identities", str(fixture_identities),
+                                 "--output", str(root / "helper-signed"), "--new-install"],
+                                input=env["TOOIE_RELEASE_TEST_PASSWORD"] + "\n",
+                                capture_output=True, text=True, timeout=120)
+        require(helper.returncode == 0, "Bundled local signer fixture failed: " +
+                (helper.stdout + helper.stderr)[-4000:].replace(env["TOOIE_RELEASE_TEST_PASSWORD"], "[fixture-password]"))
+        require(env["TOOIE_RELEASE_TEST_PASSWORD"] not in helper.stdout + helper.stderr,
+                "Local signer echoed its fixture password")
+        checked = json.loads((root / "helper-signed/verification.json").read_text())
+        require(checked["all_unsigned_payload_matches"] and not checked["install_performed"] and
+                not checked["publication_approved"], "Bundled local signer report has the wrong scope")
         for test_apk, old, message in ((unsigned, previous, "apksigner rejected"),
                                        (debuggable, previous, "Candidate is debuggable"),
                                        (candidate, built, "different signing certificate")):
             try:
-                release.verify(test_apk, built, build_report, tools, version, 2,
+                release.verify(test_apk, reference, reference_report, tools, version, 2,
                                identity["certificate_sha256"], report["source_commit"], old)
             except ValueError as error:
                 require(message in str(error), "Wrong real-SDK rejection: " + str(error))
             else:
                 raise ValueError("Missing real-SDK rejection: " + message)
+        altered, altered_signed = root / "altered.apk", root / "altered-signed.apk"
+        with zipfile.ZipFile(reference) as src, zipfile.ZipFile(altered, "w") as dst:
+            for entry in src.infolist():
+                data = src.read(entry.filename)
+                dst.writestr(entry, data + b"altered" if entry.filename == "classes.dex" else data)
+        subprocess.run([str(tools / "apksigner"), "sign", "--ks", str(key), "--ks-key-alias", "fixture",
+                        "--ks-pass", "env:TOOIE_RELEASE_TEST_PASSWORD", "--key-pass", "env:TOOIE_RELEASE_TEST_PASSWORD",
+                        "--out", str(altered_signed), str(altered)], check=True, env=env)
+        try:
+            release.verify(altered_signed, reference, reference_report, tools, version, 2,
+                           identity["certificate_sha256"], report["source_commit"])
+        except ValueError as error:
+            require("unsigned payload differs: classes.dex" in str(error), "Wrong signed-DEX rejection: " + str(error))
+        else:
+            raise ValueError("A valid new signature masked altered DEX contents")
         # The fixture is temporary, never exported with APK artifacts or logs.
-    print("PASS: real AGP release variant, local temporary signing, manifest/version/native/assets checks, "
-          "same-key update metadata and unsigned/debug/wrong-key controls; no device or production key used")
+    print("PASS: real AGP release variant, unsigned export and bundled local signer, manifest/version/native/assets "
+          "and complete unsigned payload checks, same-key update metadata and unsigned/debug/wrong-key/re-signed-DEX "
+          "controls; no device or production key used")
 
 
 if __name__ == "__main__":

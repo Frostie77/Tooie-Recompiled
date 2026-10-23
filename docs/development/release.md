@@ -41,18 +41,60 @@ stamp that same name. With it unset, the existing CI stamp is retained.
 `assembleRelease` produces an unsigned, non-debuggable APK. Sign it locally
 with a durable protected release key, keep an offline backup, and record its
 public certificate SHA-256. Never commit/upload the keystore or passwords.
-The current GitHub build still exports its development APK only.
+Normal GitHub builds still export the development APK. A manual candidate
+request can additionally export an unsigned release APK and local signing tools.
+
+Frostie created a local RSA-4096 release key on 23 October 2026. Its public
+certificate SHA-256 is
+`129f612a7b1b35c120fd84b7d49923da882b626a248f8d55470f7dfd8ce8d0e1`.
+The certificate identifies `CN=Frostie, O=Tooie Recompiled` and expires in 2056.
+Only public certificate identifiers are recorded in
+[`signing-identities.json`](../../tools/release/signing-identities.json).
+The private key and password stay on Frostie's PC. Confirm a private backup
+outside the WSL installation before relying on this key for publication.
 
 Frostie's existing Odin installation uses the established development signing
 identity. A new release key does not automatically update it. Compare the
 previous accepted APK before any replacement; a different certificate requires
 a separately verified migration/signing-lineage plan. Do not uninstall or reset
-data to work around the mismatch. No migration is implemented by this change.
+data to work around the mismatch. The accepted development APK's certificate is
+`548bdb3c2702e830f61695c6d701da9c021a48af4b72566209fba0b518be2836`.
+No migration is implemented by these candidate tools.
 
 Android's primary references: [app signing](https://developer.android.com/studio/publish/app-signing)
 and [versioning](https://developer.android.com/studio/publish/versioning).
 
 ## Candidate verification
+
+After the candidate workflow has been reviewed and merged, open **Actions →
+Android APK → Run workflow**, select the reviewed source branch, enable
+`prepare_candidate`, and set the candidate version name/code. The provisional
+first-preview values are `0.1.0-preview.1` / `2`; this does not approve publication.
+The native stamp and Android version use the same supplied name.
+
+The separate **Tooie-Android-Unsigned-Candidate** artifact contains an unsigned,
+non-debuggable ARM64 APK, build report, checksums, public identities, GPL text
+and local signing helpers. Export verifies the release manifest and exact native
+libraries/assets against the already verified debug build. The ordinary debug
+artifact and Ubuntu playtesting workflow remain available.
+
+Extract the candidate artifact on the PC, open Ubuntu in that directory, and run:
+
+```bash
+python3 sign_candidate.py --new-install
+```
+
+The helper uses the local `tooie-release.p12` and SDK Build Tools 36.0.0 defaults;
+`--help` lists path overrides. Enter the key password only at the local SDK prompt.
+It checks the pinned release certificate and every unsigned APK payload member,
+including DEX/resources/manifest, before creating a new `signed-candidate` directory.
+It preserves the original unsigned artifact and never overwrites an existing
+output. A failure leaves no exported signed result.
+
+`--new-install` describes fresh-install metadata only. It does not make this APK
+an update for Frostie's debug installation. For a future same-key update, use
+`--previous-apk` instead; a different signer or non-increasing version code stops
+before the signing prompt. Neither route installs an APK or publishes anything.
 
 `tools/release/verify_apk.py` reads a signed candidate, its verified build APK
 and JSON report, the complete source commit, expected Android/native version,
@@ -60,6 +102,9 @@ and the expected public signing-certificate fingerprint. It checks the actual
 SDK signature result, release manifest, package/label/activity/API profile,
 ARM64 libraries, exact native bytes/hashes and bundled asset inventory/bytes.
 It rejects unsigned/debug packages, ROMs, signing material and mismatched inputs.
+With an `unsigned-release-candidate` reference report it also binds every
+non-signature ZIP member to the original unsigned artifact. Legacy debug-build
+reference reports retain their narrower native/asset comparison scope.
 
 Use `--previous-apk` for a proposed update. Matching signer/package and an
 increased version code establish direct-update metadata compatibility only;
@@ -71,10 +116,14 @@ Run `python3 tools/release/verify_apk.py --help` for required arguments. Reports
 are created at a new `--output` path and never overwrite an existing report.
 The tool performs no device, install, signing, network or publishing operation.
 
-CI exercises the real AGP release variant and verifier using a temporary
-two-day fixture certificate, then discards that key and signed test packages.
+CI exercises the real AGP release variant, unsigned export, bundled local signer
+and verifier using a temporary two-day fixture certificate, then discards that
+key and signed test packages. A valid signature on an altered DEX is rejected.
 The fixture is not a production release identity or an uploaded release asset.
 
 Keep [distribution review, device coverage and publication approval](../android-completion-requirements.md)
 open until each has its own evidence. This preparation does not implement the
 future startup updater.
+
+The [preview notes draft](preview-notes.md) remains pending the exact candidate,
+device checks, distribution review and Frostie's publication approval.

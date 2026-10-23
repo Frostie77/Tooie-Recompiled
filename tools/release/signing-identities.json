@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "release": {
+    "alias": "tooie-release",
+    "certificate_sha256": "129f612a7b1b35c120fd84b7d49923da882b626a248f8d55470f7dfd8ce8d0e1",
+    "subject": "CN=Frostie, O=Tooie Recompiled",
+    "observed_on": "2026-10-23"
+  },
+  "development": {
+    "certificate_sha256": "548bdb3c2702e830f61695c6d701da9c021a48af4b72566209fba0b518be2836",
+    "observed_apk": "Tooie-dcba2d96d815-Texture-Aiming-Gameplay-Timing-Debug.apk"
+  },
+  "development_to_release_migration_verified": false
+}

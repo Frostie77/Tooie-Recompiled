@@ -75,10 +75,18 @@ the signing identity matches; keep using the established local builder for
 Frostie's existing Odin installation. Do not uninstall or reset data to try a CI
 artifact.
 
-A stable protected release signing identity, distribution/asset review, device
-validation and startup update detection are separate work. No signing secret is
+A local release key and public certificate have been created; key backup,
+development-key migration, distribution/asset review, candidate device validation
+and startup update detection remain separate work. No signing secret is
 required by this job. CI success does not verify gameplay, demo cadence or Odin
 performance.
+
+For an unsigned candidate, manually run **Android APK** with `prepare_candidate`
+enabled and explicit version name/code (provisional first preview:
+`0.1.0-preview.1` / `2`). The native and Android names agree. A separate unsigned
+artifact includes checksums and local signing helpers; the normal debug artifact
+remains available. No private key is sent to CI. Follow the
+[candidate/signing guide](docs/development/release.md) before using its output.
 
 ## Reproducing the build on a Linux development host
 

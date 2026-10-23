@@ -10,7 +10,7 @@ ndk="$sdk/ndk/$ndk_version"
 toolchain="$ndk/build/cmake/android.toolchain.cmake"
 [[ -f "$toolchain" ]] || { echo "Missing NDK $ndk_version: $toolchain" >&2; exit 1; }
 mkdir -p "$work/logs"
-exec > >(tee "$work/logs/${1:?Expected prepare, native or package}.log") 2>&1
+exec > >(tee "$work/logs/${1:?Expected prepare, native, package or candidate}.log") 2>&1
 export CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:-2}
 sdl="$work/prefixes/sdl"
 freetype="$work/prefixes/freetype"
@@ -68,5 +68,18 @@ package)
   gradle --no-daemon --console=plain --stacktrace -p "$package" assembleDebug
   python3 "$source_root/tools/ci/verify_android.py" apk "$source_root" "$work" "$ndk"
   ;;
-*) echo 'Usage: build_android.sh prepare|native|package' >&2; exit 2 ;;
+candidate)
+  revision=$(git -C "$source_root" rev-parse HEAD)
+  version=$(cat "$work/logs/version.txt")
+  code=${TOOIE_RELEASE_VERSION_CODE:-2}
+  gradle --no-daemon --console=plain --stacktrace -p "$work/package" \
+    "-PtooieVersionCode=$code" "-PtooieVersionName=$version" assembleRelease
+  python3 "$source_root/tools/release/prepare_unsigned.py" \
+    --unsigned-apk "$work/package/app/build/outputs/apk/release/app-release-unsigned.apk" \
+    --built-apk "$work/artifacts/Tooie-Recompiled-Android-arm64-${revision:0:12}-Debug.apk" \
+    --build-report "$work/artifacts/build-report.json" \
+    --build-tools "$sdk/build-tools/36.0.0" --source-commit "$revision" \
+    --version-code "$code" --output "$work/candidate"
+  ;;
+*) echo 'Usage: build_android.sh prepare|native|package|candidate' >&2; exit 2 ;;
 esac

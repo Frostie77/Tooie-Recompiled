@@ -48,6 +48,15 @@ def one(pattern, text, label, flags=0):
     return matches[0]
 
 
+def manifest_identity(apk, tools):
+    badging = run_tool(tools / "aapt", "dump", "badging", apk)
+    package_line = one(r"^package: (.+)$", badging, "package identity", re.M)
+    package = one(r"(?:^|\s)name='([^']+)'", package_line, "package name")
+    code = one(r"(?:^|\s)versionCode='([0-9]+)'", package_line, "version code")
+    name = one(r"(?:^|\s)versionName='([^']+)'", package_line, "version name")
+    return {"package": package, "version_code": int(code), "version_name": name, "badging": badging}
+
+
 def apk_identity(apk, tools):
     signature = run_tool(tools / "apksigner", "verify", "--verbose", "--print-certs", apk)
     signer_count = one(r"^Number of signers: (\d+)\s*$", signature, "signer count", re.M)
@@ -55,16 +64,33 @@ def apk_identity(apk, tools):
     certificate = fingerprint(one(r"^Signer #1 certificate SHA-256 digest: ([0-9a-fA-F:]+)\s*$",
                                   signature, "signing certificate", re.M))
     signer_dn = one(r"^Signer #1 certificate DN: (.+)$", signature, "certificate name", re.M)
-    badging = run_tool(tools / "aapt", "dump", "badging", apk)
-    package_line = one(r"^package: (.+)$", badging, "package identity", re.M)
-    package = one(r"(?:^|\s)name='([^']+)'", package_line, "package name")
-    code = one(r"(?:^|\s)versionCode='([0-9]+)'", package_line, "version code")
-    name = one(r"(?:^|\s)versionName='([^']+)'", package_line, "version name")
-    return {"package": package, "version_code": int(code), "version_name": name,
-            "certificate_sha256": certificate,
+    return {**manifest_identity(apk, tools), "certificate_sha256": certificate,
             "debug_certificate": bool(re.search(r"(?:^|,)\s*CN\s*=\s*Android Debug\s*(?:,|$)",
-                                                  signer_dn, re.I)),
-            "badging": badging}
+                                                  signer_dn, re.I))}
+
+
+def check_release_manifest(identity, apk, tools, expected_version, expected_code):
+    require(identity["package"] == PACKAGE, "Android package identity differs")
+    require(identity["version_name"] == expected_version and identity["version_code"] == expected_code,
+            "Candidate Android version differs")
+    badging = identity["badging"]
+    require(one(r"^application-label:'([^']*)'", badging, "application label", re.M) == "Tooie Recompiled",
+            "Android application label differs")
+    require(one(r"^launchable-activity: name='([^']+)'", badging, "launch activity", re.M) == ACTIVITY,
+            "Android launch activity differs")
+    require("sdkVersion:'24'" in badging and "targetSdkVersion:'35'" in badging, "Android API profile differs")
+    require(not re.search(r"^application-debuggable\b", badging, re.M), "Candidate is debuggable")
+    xml = run_tool(tools / "aapt", "dump", "xmltree", apk, "AndroidManifest.xml")
+    for attribute in ("debuggable", "testOnly"):
+        values = re.findall(r"A: android:" + attribute + r"(?:\([^)]*\))?=\(type 0x12\)(0x[0-9a-fA-F]+)", xml)
+        require(len(values) <= 1 and all(int(value, 16) == 0 for value in values),
+                f"Candidate has {attribute} enabled")
+        mentions = len(re.findall(r"A: android:" + attribute + r"(?:\(|=)", xml))
+        require(mentions == len(values), f"Unrecognised {attribute} manifest encoding")
+
+
+def is_signature_entry(name):
+    return bool(re.fullmatch(r"META-INF/(?:MANIFEST\.MF|[^/]+\.(?:SF|RSA|DSA|EC))", name, re.I))
 
 
 def archive(apk):
@@ -109,6 +135,15 @@ def check_payload(candidate, built, report, native_version):
                 "Candidate asset inventory differs from the verified build")
         for name in expected_assets:
             require(candidate_zip.read(name) == built_zip.read(name), f"Candidate asset differs: {name}")
+        if report.get("artifact_kind") == "unsigned-release-candidate":
+            def payload(package):
+                return {item.filename for item in package.infolist()
+                        if not item.is_dir() and not is_signature_entry(item.filename)}
+            expected = payload(built_zip)
+            require(payload(candidate_zip) == expected, "Candidate unsigned payload inventory differs")
+            for name in expected:
+                require(candidate_zip.read(name) == built_zip.read(name),
+                        f"Candidate unsigned payload differs: {name}")
 
 
 def verify(candidate, built, build_report, tools, expected_version, expected_code,
@@ -136,25 +171,9 @@ def verify(candidate, built, build_report, tools, expected_version, expected_cod
         candidate_copy, built_copy = copies["candidate.apk"], copies["built.apk"]
         require(digest(built_copy.read_bytes()) == report["sha256"], "Verified build APK hash differs")
         identity = apk_identity(candidate_copy, tools)
-        require(identity["package"] == PACKAGE, "Android package identity differs")
-        require(identity["version_name"] == expected_version and identity["version_code"] == expected_code,
-                "Candidate Android version differs")
         require(identity["certificate_sha256"] == expected_certificate, "Unexpected release signing certificate")
         require(not identity["debug_certificate"], "A debug certificate is not a protected release signing identity")
-        badging = identity["badging"]
-        require(one(r"^application-label:'([^']*)'", badging, "application label", re.M) == "Tooie Recompiled",
-                "Android application label differs")
-        require(one(r"^launchable-activity: name='([^']+)'", badging, "launch activity", re.M) == ACTIVITY,
-                "Android launch activity differs")
-        require("sdkVersion:'24'" in badging and "targetSdkVersion:'35'" in badging, "Android API profile differs")
-        require(not re.search(r"^application-debuggable\b", badging, re.M), "Candidate is debuggable")
-        xml = run_tool(tools / "aapt", "dump", "xmltree", candidate_copy, "AndroidManifest.xml")
-        for attribute in ("debuggable", "testOnly"):
-            values = re.findall(r"A: android:" + attribute + r"(?:\([^)]*\))?=\(type 0x12\)(0x[0-9a-fA-F]+)", xml)
-            require(len(values) <= 1 and all(int(value, 16) == 0 for value in values),
-                    f"Candidate has {attribute} enabled")
-            mentions = len(re.findall(r"A: android:" + attribute + r"(?:\(|=)", xml))
-            require(mentions == len(values), f"Unrecognised {attribute} manifest encoding")
+        check_release_manifest(identity, candidate_copy, tools, expected_version, expected_code)
         check_payload(candidate_copy, built_copy, report, expected_version)
         previous_result = None
         if previous is not None:
@@ -171,6 +190,7 @@ def verify(candidate, built, build_report, tools, expected_version, expected_cod
                 "version_name": expected_version, "version_code": expected_code,
                 "certificate_sha256": expected_certificate, "package": PACKAGE,
                 "native_libraries_and_assets_match_verified_build": True,
+                "all_unsigned_payload_matches": report.get("artifact_kind") == "unsigned-release-candidate",
                 "previous_apk": previous_result, "install_performed": False,
                 "device_data_preservation_tested": False, "distribution_terms_reviewed": False,
                 "scope": "package checks only; not publication approval or a gameplay/upgrade test"}

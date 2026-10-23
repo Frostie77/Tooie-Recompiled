@@ -6,6 +6,19 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      prepare_candidate:
+        description: 'Export an UNSIGNED preview candidate (no installation or publication)'
+        type: boolean
+        default: false
+      version_name:
+        description: 'Candidate Android/native version'
+        type: string
+        default: '0.1.0-preview.1'
+      version_code:
+        description: 'Candidate Android version code'
+        type: string
+        default: '2'
 
 permissions:
   contents: read
@@ -26,6 +39,8 @@ jobs:
       ANDROID_NDK_VERSION: 28.2.13676358
       CMAKE_BUILD_PARALLEL_LEVEL: 2
       TOOIE_CI_ROOT: ${{ github.workspace }}/.ci-android
+      TOOIE_RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.prepare_candidate && inputs.version_name || '' }}
+      TOOIE_RELEASE_VERSION_CODE: ${{ github.event_name == 'workflow_dispatch' && inputs.prepare_candidate && inputs.version_code || '2' }}
     steps:
       - name: Check out the source snapshot
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -111,6 +126,19 @@ jobs:
         with:
           name: Tooie-Recompiled-Android-arm64-${{ github.sha }}-${{ github.run_attempt }}
           path: .ci-android/artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Prepare the requested unsigned candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.prepare_candidate
+        run: bash tools/ci/build_android.sh candidate
+
+      - name: Upload unsigned candidate and local signing helpers
+        if: github.event_name == 'workflow_dispatch' && inputs.prepare_candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Tooie-Android-Unsigned-Candidate-${{ github.sha }}-${{ github.run_attempt }}
+          path: .ci-android/candidate/*
           if-no-files-found: error
           retention-days: 14
 
