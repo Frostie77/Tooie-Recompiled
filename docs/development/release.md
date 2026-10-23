@@ -89,7 +89,7 @@ The helper uses the local `tooie-release.p12` and SDK Build Tools 36.0.0 default
 It checks the pinned release certificate and every unsigned APK payload member,
 including DEX/resources/manifest, before creating a new `signed-candidate` directory.
 It preserves the original unsigned artifact and never overwrites an existing
-output. A failure leaves no exported signed result.
+output. A verification failure leaves no exported signed result.
 
 `--new-install` describes fresh-install metadata only. It does not make this APK
 an update for Frostie's debug installation. For a future same-key update, use

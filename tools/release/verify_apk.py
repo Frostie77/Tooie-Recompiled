@@ -102,8 +102,8 @@ def archive(apk):
         require(len(names) == len(set(names)), "Duplicate APK entries")
         require(sum(entry.file_size for entry in entries) <= 1_073_741_824,
                 "APK expands beyond the inspection limit")
-        require(not any(name.lower().endswith((".z64", ".n64", ".v64", ".exe", ".jks",
-                                               ".keystore", ".key", ".pem")) for name in names),
+        require(not any(name.lower().endswith((".z64", ".n64", ".v64", ".exe", ".jks", ".p12", ".pfx",
+                                               ".pk8", ".keystore", ".key", ".pem")) for name in names),
                 "APK contains an unexpected ROM, desktop binary or signing material")
         require({"classes.dex", "AndroidManifest.xml", "resources.arsc"} <= set(names),
                 "Incomplete APK")

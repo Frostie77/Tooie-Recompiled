@@ -179,7 +179,8 @@ class ReleaseChecks(unittest.TestCase):
                 self.verify()
 
     def test_rom_credentials_and_duplicate_entries_are_rejected(self):
-        for name in ("assets/game.z64", "assets/release.jks", "assets/private.key"):
+        for name in ("assets/game.z64", "assets/release.jks", "assets/private.key", "assets/release.p12",
+                     "assets/release.pfx", "assets/private.pk8"):
             zip_apk(self.candidate, {name: b"unexpected"})
             with self.assertRaisesRegex(ValueError, "signing material"):
                 self.verify()
