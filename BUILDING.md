@@ -62,8 +62,11 @@ The report identifies the checked-out commit. On a pull request, this is GitHub'
 temporary merge commit, so the result also exercises integration with the base.
 
 CI also builds the actual non-debuggable release variant with explicit version
-inputs and exercises signature/update-metadata checks using a temporary test
-certificate. That key and the signed test packages are discarded; the uploaded
+inputs. Debug retains `io.github.banjotooierecompiled` and is labelled
+**Tooie Recompiled Debug**; release uses `io.github.banjotooierecompiled.release`
+and **Tooie Recompiled**. CI verifies both identities and exercises
+signature/update-metadata checks using temporary test certificates. Those keys
+and the signed test packages are discarded; the uploaded
 APK remains the normal development artifact. See [release preparation](docs/development/release.md).
 
 ## Signing and release status
@@ -75,9 +78,10 @@ the signing identity matches; keep using the established local builder for
 Frostie's existing Odin installation. Do not uninstall or reset data to try a CI
 artifact.
 
-A local release key and public certificate have been created; key backup,
-development-key migration, distribution/asset review, candidate device validation
-and startup update detection remain separate work. No signing secret is
+A local release key and public certificate have been created and privately
+backed up. Release and debug are separate apps with independent data; no
+development-key migration is planned. Distribution/asset review, separate-app
+candidate device validation and startup update detection remain open. No signing secret is
 required by this job. CI success does not verify gameplay, demo cadence or Odin
 performance.
 

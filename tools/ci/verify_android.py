@@ -119,8 +119,9 @@ def check_apk(source, work, ndk):
     subprocess.run([str(tools / "apksigner"), "verify", "--verbose", str(apk)], check=True)
     badging = subprocess.check_output([str(tools / "aapt"), "dump", "badging", str(apk)], text=True)
     require("package: name='io.github.banjotooierecompiled'" in badging, "Android package identity differs")
-    require("application-label:'Tooie Recompiled'" in badging, "Android application label differs")
-    require("io.github.banjotooierecompiled.BanjoTooieSDLActivity" in badging, "launch activity differs")
+    require("application-label:'Tooie Recompiled Debug'" in badging, "Android debug application label differs")
+    require("launchable-activity: name='io.github.banjotooierecompiled.BanjoTooieSDLActivity'" in badging,
+            "launch activity differs")
     require("sdkVersion:'24'" in badging and "targetSdkVersion:'35'" in badging, "Android API profile differs")
     revision = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
     output = work / "artifacts"
@@ -128,6 +129,8 @@ def check_apk(source, work, ndk):
     filename = "Tooie-Recompiled-Android-arm64-" + revision[:12] + "-Debug.apk"
     shutil.copyfile(apk, output / filename)
     report = {"source_commit": revision, "native_version": version,
+              "package": "io.github.banjotooierecompiled", "application_label": "Tooie Recompiled Debug",
+              "installation_strategy": "separate-apps",
               "apk": filename, "sha256": hashlib.sha256(apk.read_bytes()).hexdigest(),
               "ndk": ndk.name, "libraries": libraries, "signing": "CI debug key; not a release/update signing identity",
               "device_tested": False}

@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -55,6 +56,8 @@ class ReleaseChecks(unittest.TestCase):
             zip_apk(path)
         self.report = self.root / "build-report.json"
         self.build_report = {"source_commit": COMMIT, "native_version": VERSION,
+                             "package": release.DEVELOPMENT_PACKAGE,
+                             "application_label": "Tooie Recompiled Debug",
                              "sha256": release.digest(self.built.read_bytes()),
                              "libraries": {name: {"sha256": release.digest(elf(b"sdl" if name == "libSDL2.so" else b""))}
                                            for name in release.LIBRARIES}}
@@ -95,6 +98,11 @@ class ReleaseChecks(unittest.TestCase):
         self.assertFalse(report["device_data_preservation_tested"])
         self.assertFalse(report["distribution_terms_reviewed"])
         self.assertFalse(report["install_performed"])
+        self.assertEqual(report["package"], "io.github.banjotooierecompiled.release")
+        self.assertEqual(report["development_package"], "io.github.banjotooierecompiled")
+        self.assertEqual(report["activity"], "io.github.banjotooierecompiled.BanjoTooieSDLActivity")
+        self.assertEqual(report["installation_strategy"], "separate-apps")
+        self.assertFalse(report["shared_app_data"])
         self.assertIsNone(self.verify(previous=False)["previous_apk"])
 
     def test_unsigned_rejected(self):
@@ -141,12 +149,14 @@ class ReleaseChecks(unittest.TestCase):
             self.verify()
 
     def test_package_label_activity_and_version_mismatches(self):
-        self.package = "wrong.package"
-        with self.assertRaisesRegex(ValueError, "package identity"):
-            self.verify()
+        for package in ("wrong.package", release.DEVELOPMENT_PACKAGE):
+            self.package = package
+            with self.assertRaisesRegex(ValueError, "package identity"):
+                self.verify()
         self.package = release.PACKAGE
         original = self.sdk
         for before, after in (("Tooie Recompiled", "Wrong label"), (release.ACTIVITY, "Wrong.Activity"),
+                              (release.ACTIVITY, release.PACKAGE + ".BanjoTooieSDLActivity"),
                               ("versionCode='2'", "versionCode='3'"), ("sdkVersion:'24'", "sdkVersion:'23'")):
             with patch.object(release, "run_tool", side_effect=lambda tool, *args: original(tool, *args).replace(before, after)):
                 with self.assertRaises(ValueError):
@@ -228,6 +238,10 @@ class ReleaseChecks(unittest.TestCase):
         output = self.root / "export"
         self.assertEqual((output / result["apk"]).read_bytes(), self.candidate.read_bytes())
         self.assertEqual(result["artifact_kind"], "unsigned-release-candidate")
+        self.assertEqual(result["package"], release.PACKAGE)
+        self.assertEqual(result["application_label"], "Tooie Recompiled")
+        self.assertEqual(result["development_package"], release.DEVELOPMENT_PACKAGE)
+        self.assertFalse(result["shared_app_data"])
         self.assertFalse(result["publication_approved"])
         self.assertFalse(any(p.suffix in (".p12", ".jks", ".keystore") for p in output.iterdir()))
         for line in (output / "SHA256SUMS").read_text().splitlines():
@@ -286,6 +300,23 @@ class ReleaseChecks(unittest.TestCase):
                 signing.sign(exported, self.root, key, identities, self.root / "signed", self.previous)
             process.assert_not_called()
 
+    def test_older_same_package_report_stops_before_signing_prompt(self):
+        report, key, identities = self.local_sign_inputs()
+        report["package"] = release.DEVELOPMENT_PACKAGE
+        (self.root / "export/build-report.json").write_text(json.dumps(report))
+        with patch.object(signing.subprocess, "run") as process:
+            with self.assertRaisesRegex(ValueError, "rebuild older same-package"):
+                signing.sign(self.root / "export", self.root, key, identities, self.root / "signed")
+            process.assert_not_called()
+
+    def test_actual_legacy_package_stops_before_signing_prompt(self):
+        _, key, identities = self.local_sign_inputs()
+        self.package = release.DEVELOPMENT_PACKAGE
+        with patch.object(release, "run_tool", side_effect=self.sdk), patch.object(signing.subprocess, "run") as process:
+            with self.assertRaisesRegex(ValueError, "package identity"):
+                signing.sign(self.root / "export", self.root, key, identities, self.root / "signed")
+            process.assert_not_called()
+
     def test_local_signer_publishes_only_a_verified_result_to_a_new_directory(self):
         report, key, identities = self.local_sign_inputs()
         original = (self.root / "export" / report["apk"]).read_bytes()
@@ -327,14 +358,32 @@ def integration(work, tools):
                                   option, "help"], capture_output=True, text=True, timeout=120)
         release.require(control.returncode != 0 and reason in control.stdout + control.stderr,
                         "Gradle accepted an invalid release version or failed for a different reason")
-    subprocess.run(["gradle", "--no-daemon", "--console=plain", "-p", str(package),
-                    "-PtooieVersionCode=2", "-PtooieVersionName=" + version,
-                    "assembleRelease", "assembleDebug"], check=True)
     unsigned = package / "app/build/outputs/apk/release/app-release-unsigned.apk"
     require = release.require
-    require(unsigned.is_file(), "Gradle did not produce the unsigned release fixture")
+    debug_identity = release.manifest_identity(built, tools)
+    require(debug_identity["package"] == release.DEVELOPMENT_PACKAGE and
+            release.one(r"^application-label:'([^']*)'", debug_identity["badging"], "debug label", re.M)
+            == "Tooie Recompiled Debug", "Established development package/label differs")
     with tempfile.TemporaryDirectory(prefix="tooie-signing-fixture-") as temp:
         root = Path(temp)
+        # A previous release must be the same release app, not a re-signed debug
+        # APK. Build both version codes with the real Android manifest merger.
+        subprocess.run(["gradle", "--no-daemon", "--console=plain", "-p", str(package),
+                        "-PtooieVersionCode=1", "-PtooieVersionName=" + version, "assembleRelease"], check=True)
+        previous_unsigned = root / "previous-unsigned.apk"
+        previous_unsigned.write_bytes(unsigned.read_bytes())
+        subprocess.run(["gradle", "--no-daemon", "--console=plain", "-p", str(package),
+                        "-PtooieVersionCode=2", "-PtooieVersionName=" + version,
+                        "assembleRelease", "assembleDebug"], check=True)
+        require(unsigned.is_file(), "Gradle did not produce the unsigned release fixture")
+        debug_variant = package / "app/build/outputs/apk/debug/app-debug.apk"
+        debug = release.manifest_identity(debug_variant, tools)
+        require(debug["package"] == release.DEVELOPMENT_PACKAGE and
+                release.one(r"^application-label:'([^']*)'", debug["badging"], "debug label", re.M)
+                == "Tooie Recompiled Debug" and
+                release.one(r"^launchable-activity: name='([^']+)'", debug["badging"], "debug activity", re.M)
+                == release.ACTIVITY and "application-debuggable" in debug["badging"],
+                "Real AGP debug package, label, activity or debuggable flag differs")
         prepared = root / "prepared"
         unsigned_report = preparation.prepare(unsigned, built, build_report, tools,
                                               report["source_commit"], 2, prepared)
@@ -348,8 +397,7 @@ def integration(work, tools):
                         "-storepass:env", "TOOIE_RELEASE_TEST_PASSWORD",
                         "-keypass:env", "TOOIE_RELEASE_TEST_PASSWORD"], check=True, env=env)
         candidate, previous, debuggable = root / "candidate.apk", root / "previous.apk", root / "debuggable.apk"
-        debug_variant = package / "app/build/outputs/apk/debug/app-debug.apk"
-        for source, destination in ((unsigned, candidate), (built, previous), (debug_variant, debuggable)):
+        for source, destination in ((unsigned, candidate), (previous_unsigned, previous), (debug_variant, debuggable)):
             subprocess.run([str(tools / "apksigner"), "sign", "--ks", str(key), "--ks-key-alias", "fixture",
                             "--ks-pass", "env:TOOIE_RELEASE_TEST_PASSWORD", "--key-pass", "env:TOOIE_RELEASE_TEST_PASSWORD",
                             "--out", str(destination), str(source)], check=True, env=env)
@@ -373,10 +421,22 @@ def integration(work, tools):
                 "Local signer echoed its fixture password")
         checked = json.loads((root / "helper-signed/verification.json").read_text())
         require(checked["all_unsigned_payload_matches"] and not checked["install_performed"] and
-                not checked["publication_approved"], "Bundled local signer report has the wrong scope")
+                not checked["publication_approved"] and checked["installation_strategy"] == "separate-apps" and
+                checked["package"] == release.PACKAGE and not checked["shared_app_data"],
+                "Bundled local signer report has the wrong scope or app identity")
+        wrong_key, wrong_previous = root / "wrong-key.jks", root / "wrong-previous.apk"
+        subprocess.run(["keytool", "-genkeypair", "-keystore", str(wrong_key), "-alias", "fixture",
+                        "-keyalg", "RSA", "-keysize", "2048", "-validity", "2",
+                        "-dname", "CN=Wrong CI Signing Fixture",
+                        "-storepass:env", "TOOIE_RELEASE_TEST_PASSWORD",
+                        "-keypass:env", "TOOIE_RELEASE_TEST_PASSWORD"], check=True, env=env)
+        subprocess.run([str(tools / "apksigner"), "sign", "--ks", str(wrong_key), "--ks-key-alias", "fixture",
+                        "--ks-pass", "env:TOOIE_RELEASE_TEST_PASSWORD", "--key-pass", "env:TOOIE_RELEASE_TEST_PASSWORD",
+                        "--out", str(wrong_previous), str(previous_unsigned)], check=True, env=env)
         for test_apk, old, message in ((unsigned, previous, "apksigner rejected"),
-                                       (debuggable, previous, "Candidate is debuggable"),
-                                       (candidate, built, "different signing certificate")):
+                                       (debuggable, previous, "Android package identity differs"),
+                                       (candidate, built, "Previous APK uses a different package"),
+                                       (candidate, wrong_previous, "different signing certificate")):
             try:
                 release.verify(test_apk, reference, reference_report, tools, version, 2,
                                identity["certificate_sha256"], report["source_commit"], old)
@@ -400,7 +460,8 @@ def integration(work, tools):
         else:
             raise ValueError("A valid new signature masked altered DEX contents")
         # The fixture is temporary, never exported with APK artifacts or logs.
-    print("PASS: real AGP release variant, unsigned export and bundled local signer, manifest/version/native/assets "
+    print("PASS: real AGP separate debug/release packages and labels, unchanged activity namespace, "
+          "unsigned export and bundled local signer, manifest/version/native/assets "
           "and complete unsigned payload checks, same-key update metadata and unsigned/debug/wrong-key/re-signed-DEX "
           "controls; no device or production key used")
 

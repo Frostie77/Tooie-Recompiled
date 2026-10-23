@@ -19,8 +19,9 @@ Checked boxes describe the tested scope; the project is not fully complete.
 - [x] Saved **Aiming Invert**, including Off/On comparisons and the ordinary
   camera, walking and horizontal input retaining their behavior.
 - [x] One-terminal testing with numbered notes and one compact evidence ZIP.
-- [x] Local release keystore created; Frostie's public RSA-4096 certificate
-  metadata recorded. Backup, APK signing and upgrade verification remain open.
+- [x] Protected release key created, public RSA-4096 certificate recorded and
+  both signing keys privately backed up. Existing debug app data was backed up
+  and checked against device hashes; restoration remains untested.
 
 The texture/aiming capture and later manual restart/Off checks are recorded
 separately in [PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14).
@@ -66,8 +67,11 @@ startup updater.
 Release packaging/font preparation passed [PR #17](https://github.com/Frostie77/Tooie-Recompiled/pull/17).
 The approved Comic Neue Bold button font includes its original OFL. Candidate
 tools support unsigned exports and local signing with the recorded release
-certificate; the private key stays on the PC. A different development signer
-still requires a verified migration path. Publication is pending Frostie's
+certificate; the private key stays on the PC. Frostie selected separate debug
+and release apps, each with its own data. Local signing passed for the earlier
+shared-ID candidate; it must be rebuilt with the separate release ID before
+device acceptance. Future release-to-release upgrades still need verification.
+Publication is pending Frostie's
 explicit approval. See [release preparation](development/release.md).
 
 ## Evidence and testing detail
