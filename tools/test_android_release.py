@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent / "release"))
 import verify_apk as release
 import prepare_unsigned as preparation
 import sign_candidate as signing
-VERSION = "0.1.0-preview.1"
+VERSION = "1.0.0"
 CERT = "12" * 32
 COMMIT = "ab" * 20
 

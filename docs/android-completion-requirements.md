@@ -6,6 +6,13 @@ The goal is a reliable native **Android ARM64** release for the AYN Odin 2 Porta
 followed by a complete Banjo-Tooie playthrough and broader coverage.
 Checked boxes describe the tested scope; the project is not fully complete.
 
+Frostie approved the first public Android release as **1.0.0** on 24 October
+2026. Android version code **3** is selected. The signed artifact and distribution
+review remain pending. Frostie selected the public GitHub download for the
+update/menu check after publication: leave the installed candidate untouched,
+then update it from that asset and check retained data. This result remains
+pending until the actual device test.
+
 ## Accepted checks
 
 - [x] Android-only public scope and verified APK build/packaging checks.
@@ -24,6 +31,8 @@ Checked boxes describe the tested scope; the project is not fully complete.
 - [x] Separate signed release candidate: ROM selection, controllable gameplay,
   Aiming Invert, the UI texture mod and the visited first-person area passed
   Frostie's functional check; see the [24 October record](development/release-candidate-check-20261024.md).
+- [x] Release-app save, settings and mods retained after closing/reopening,
+  confirmed by Frostie in a manual follow-up without a fresh capture.
 - [x] Protected release key created, public RSA-4096 certificate recorded and
   both signing keys privately backed up. Existing debug app data was backed up
   and checked against device hashes; restoration remains untested.
@@ -65,7 +74,9 @@ These passes cover the named fixtures and routes, not every mod, scene or device
 - [ ] Resolve font/artwork/dependency distribution terms and required notices.
   No ROM or unapproved third-party pack is to be bundled.
 - [ ] Prepare a verified signed APK, checksum, release notes and tested-hardware/
-  known-issue information; obtain Frostie's approval and publish.
+  known-issue information, then publish after the remaining release checks.
+- [x] Obtain Frostie's explicit publication approval for the first Android
+  release as **1.0.0**. Final project-completion sign-off remains separate.
 - [ ] Implement automatic startup detection of newer published Android releases,
   with correct version comparison, offline/error handling, user choice and a
   data-preserving upgrade path.
@@ -75,17 +86,19 @@ An in-app **Remove Mod** button is not required. The accepted interface supports
 import, enable/disable and supplied configuration. Broad mod compatibility
 remains a coverage item.
 
-## Minor issues deferred beyond the first preview
+## Minor issues deferred beyond the first release
 
 Frostie accepted the Jiggy-challenge screen lines (marker 1) and the brief shunt
 when dialogue animation starts (marker 2) as follow-up work after the first
 release. Keep them in known issues; do not claim they were corrected by the font
 change. The rebuilt menu still needs its device check.
 
-## First Android preview milestone
+## First Android release milestone
 
 The requested example-mod, texture-pack, Aiming Invert, persistence and branding
-checks have passed on the named debug builds. The first preview still requires:
+checks have passed on the named debug builds. The checklist below includes the
+post-publication GitHub-download test selected by Frostie; that test is not a
+requirement for another candidate installation before publishing 1.0.0:
 
 - [x] Verify the installed protected-key-signed release candidate against its
   exact APK/source/version report: `af97304f201a`, version `0.1.0-preview.1`,
@@ -93,16 +106,21 @@ checks have passed on the named debug builds. The first preview still requires:
 - [ ] Finish release/Debug coexistence acceptance: confirm data independence,
   fresh defaults and the rebuilt launcher menu. The separate release is installed;
   ROM selection, played controls, Aiming Invert and the UI mod were reported working.
-- [ ] Write a release-app save, close/relaunch and resume it; check persistence
-  of settings and representative installed mods.
-- [ ] Test a same-key, higher-version release-to-release update that preserves
-  the imported ROM, saves, settings and mods on device.
+- [x] Write a release-app save, close/relaunch and resume it; check persistence
+  of settings and representative installed mods. Frostie confirmed this manually
+  after the captured session; it is not an APK-update test.
+- [ ] After publication, download the verified signed 1.0.0 APK from GitHub
+  directly on Odin and update the existing release candidate. Check the restored
+  menu, imported ROM, saves, settings and mods, then close/reopen. Keep this
+  pending until observed; do not alter the installed candidate beforehand.
 - [ ] Complete distribution/notices review and release notes with tested hardware
-  and known limits, then obtain Frostie's explicit approval before publication.
+  and known limits.
+- [x] Obtain Frostie's explicit publication approval for **1.0.0**; the planned
+  Android version code is **3**.
 
 Full-adventure and broader-device coverage, longer-session acceptance, save
 export/import and the planned startup updater remain full-completion milestones.
-The preview does not declare the project complete.
+Version 1.0.0 does not declare the full project scope complete.
 
 Release packaging and notice preparation passed [PR #17](https://github.com/Frostie77/Tooie-Recompiled/pull/17).
 After opening the separate release candidate, Frostie selected the Debug menu's
@@ -116,12 +134,16 @@ was locally signed, verified and installed alongside Debug. The 24 October
 capture contains 20 minutes 17 seconds after gameplay confirmation. Frostie
 reported Debug-like behavior apart from the launcher font; ROM selection,
 Aiming Invert and the UI texture mod worked. Marker 3 confirms the visited
-first-person area worked. No restart/resume marker was recorded, so release
-save/settings/mod persistence and an update preserving them remain open.
+first-person area worked. No restart/resume marker was recorded in that capture;
+Frostie subsequently confirmed release save/settings/mod persistence after
+closing/reopening. This manual follow-up does not establish preservation across
+an APK update, which remains open.
 The supplied app-log excerpts omit a middle section; this is a functional
 acceptance record, not complete fault-free or measured thermal/performance
 coverage. See the [evidence limits](development/release-candidate-check-20261024.md).
-Publication is pending Frostie's explicit approval.
+Frostie's explicit approval is recorded. Publication awaits the final verified
+artifact and distribution review. The menu/update check will use the public
+GitHub download after publication, as selected by Frostie.
 
 ## Evidence and testing detail
 
