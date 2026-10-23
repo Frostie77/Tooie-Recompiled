@@ -1,0 +1,44 @@
+Tooie Recompiled: bundled font notices
+
+These notices cover the listed fonts only. They do not license the game,
+launcher artwork, interface icons or linked libraries. The project's GPL text
+and each dependency's notices remain separate. No font file was modified.
+
+LatoLatin (Regular, Bold, Italic, BoldItalic)
+  Author: Lukasz Dziedzic, with Adam Twardoch and Botio Nikoltchev.
+  The bundled Regular font identifies itself as version 2.015 (2015-08-06):
+  Copyright (c) 2011-2015 by tyPoland Lukasz Dziedzic
+  (http://www.typoland.com/) with Reserved Font Name "Lato".
+  Licensed under the SIL Open Font License, Version 1.1.
+  Original family license: licenses/Lato-OFL.txt
+  Sources: https://www.latofonts.com/
+           https://github.com/latofonts/lato-source/blob/master/LICENSE.txt
+
+Noto Emoji
+  Bundled font: version 1.05 uh; Monotype Design Team.
+  Embedded notice: Copyright 2013 Google Inc. All Rights Reserved.
+  Embedded license explicitly states SIL Open Font License 1.1.
+  Original upstream license: licenses/NotoEmoji-OFL.txt
+  Source: https://github.com/googlefonts/noto-emoji/blob/main/LICENSE
+
+PromptFont
+  PromptFont by Yukari "Shinmera" Hafner, available at
+  https://shinmera.com/promptfont
+  Embedded notices: Copyright 2018-2023, Yukari Hafner
+                    Copyright 2011-2016, Severin Meyer
+  Based on Xolonium by Severin Meyer. SIL Open Font License 1.1.
+  Original upstream license: licenses/PromptFont-OFL.txt
+  Source: https://github.com/Shinmera/promptfont/blob/master/LICENSE.txt
+  Included trademarks remain the property of their respective owners.
+
+Suplexmentary Comic NC
+  Jayvee D. Enaguas. Bundled version 1.000 (2010 initial release).
+  Embedded notice: Copyright (c) 2009, 2010 NipCen a.k.a. SMWCNC.
+  All rights reserved.
+  The author's DaFont listing marks the font "100% Free", but this snapshot
+  contains no separate redistribution grant. Terms remain to be confirmed;
+  this notice does not grant permission or relicense the font as GPL/OFL.
+  Author listing: https://www.dafont.com/suplexmentary-comic-nc.font
+
+Notice sources and the remaining distribution review are documented in
+docs/development/release.md in the source repository.

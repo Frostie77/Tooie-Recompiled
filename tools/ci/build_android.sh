@@ -40,7 +40,10 @@ native)
   run=${GITHUB_RUN_NUMBER:-0}
   attempt=${GITHUB_RUN_ATTEMPT:-1}
   [[ "$run" =~ ^[0-9]+$ && "$attempt" =~ ^[0-9]+$ ]] || exit 1
-  export BT_VERSION="0.1.0-ci.$run.$attempt+g${revision:0:12}"
+  export BT_VERSION="${TOOIE_RELEASE_VERSION:-0.1.0-ci.$run.$attempt+g${revision:0:12}}"
+  [[ "$BT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]] || {
+    echo 'Invalid TOOIE_RELEASE_VERSION; expected a semantic version.' >&2; exit 1;
+  }
   printf '%s\n' "$BT_VERSION" > "$work/logs/version.txt"
   flags='-DTOOIE_ANDROID_TIMING_TRACE=0 -DTOOIE_ANDROID_GEOMETRY_TRACE=0 -DTOOIE_ANDROID_CORRECTION_TRACE=0 -DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=0'
   cmake -S "$source_root" -B "$work/native" "${common[@]}" \
