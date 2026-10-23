@@ -22,11 +22,15 @@ changing generated code, runtime behavior or dependencies.
 
 ## Release work
 
+The [release preparation guide](release.md) records notice sources, version
+inputs, signing continuity and the candidate package verifier.
+
 The [completion checklist](../android-completion-requirements.md) is the current
 status reference. Release preparation still includes signing/version identity,
 upgrade continuity, candidate verification and distribution review.
-The menu font `Suplexmentary Comic NC.ttf` has no accompanying license in this
-snapshot; its terms and other shipped asset notices remain to be resolved.
+Lato, Noto Emoji, PromptFont and the approved Comic Neue Bold menu font include
+their original licence notices. The remaining shipped-asset/dependency inventory
+still needs review.
 
 GitHub CI produces development APKs with runner debug signing. Keep the
 established signing identity for existing Odin updates; public-release signing

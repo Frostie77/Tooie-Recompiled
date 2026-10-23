@@ -1,6 +1,6 @@
 # Engineering handoff
 
-Updated: 22 October 2026.
+Updated: 23 October 2026.
 
 Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).
@@ -24,6 +24,13 @@ Prepare the first Android preview: resolve distribution terms and release
 signing/versioning, verify the intended update path preserves user data,
 then package an identified candidate and release notes. Startup update detection,
 multi-mod combinations and broader gameplay/lifecycle coverage remain open.
+
+See [release preparation](release.md) for restored font notices, upstream's
+RecompFrontend GPL grant, explicit Android version inputs and the read-only
+candidate verifier. The approved Comic Neue Bold menu font and its original OFL
+replace the old font in both asset trees. The remaining asset/dependency
+inventory and release-key migration remain open. CI signing fixtures
+are temporary test identities, not release credentials.
 
 Known minor graphics details and intro/demo cadence/stutter remain tracked.
 The old first-person failure is resolved on the tested route; historical crash

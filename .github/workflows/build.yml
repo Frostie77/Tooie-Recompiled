@@ -82,6 +82,7 @@ jobs:
             python3 tools/android-workflow/tests/test_collector.py
             python3 tools/test_transform_upload.py
             python3 tools/test_aiming_controls.py
+            python3 tools/test_android_release.py
             bash tools/test_audio_runtime.sh
             bash tools/test_android_surface_lifecycle.sh
             bash tools/test_android_rom_picker.sh
@@ -98,6 +99,12 @@ jobs:
 
       - name: Assemble and verify the APK
         run: bash tools/ci/build_android.sh package
+
+      - name: Check release packaging with an ephemeral test certificate
+        run: |
+          python3 tools/test_android_release.py \
+            --integration-work .ci-android \
+            --build-tools "$ANDROID_HOME/build-tools/36.0.0"
 
       - name: Upload verified Android APK and build report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

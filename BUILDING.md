@@ -61,6 +61,11 @@ launch activity and SDK profile. A failed check prevents the APK artifact step.
 The report identifies the checked-out commit. On a pull request, this is GitHub's
 temporary merge commit, so the result also exercises integration with the base.
 
+CI also builds the actual non-debuggable release variant with explicit version
+inputs and exercises signature/update-metadata checks using a temporary test
+certificate. That key and the signed test packages are discarded; the uploaded
+APK remains the normal development artifact. See [release preparation](docs/development/release.md).
+
 ## Signing and release status
 
 This is a **CI debug artifact**, signed with the fresh runner's debug key. It is
