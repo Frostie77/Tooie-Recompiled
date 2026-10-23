@@ -5,10 +5,14 @@ checks below does not publish a release or replace device acceptance.
 
 ## Bundled notices
 
-The launcher buttons use Frostie's approved Comic Neue Bold replacement.
-`assets/THIRD_PARTY_NOTICES.txt` and its matching Android asset copy identify
-the bundled fonts, embedded copyright notices and upstream licence sources.
-Lato, Noto Emoji, PromptFont and Comic Neue include their original SIL OFL text.
+The launcher buttons use the exact Suplexmentary Comic NC font from the accepted
+Debug build. Frostie selected that appearance after opening the Comic Neue
+release candidate. The approved title, wallpaper, icon and other interface fonts
+are unchanged.
+
+`assets/THIRD_PARTY_NOTICES.txt` and its matching Android asset copy identify the
+bundled fonts and known sources. Lato, Noto Emoji and PromptFont retain their
+original SIL OFL text.
 
 | Item | Verified source or remaining work |
 |---|---|
@@ -16,16 +20,30 @@ Lato, Noto Emoji, PromptFont and Comic Neue include their original SIL OFL text.
 | Noto Emoji 1.05 uh | Embedded OFL notice; [upstream licence](https://github.com/googlefonts/noto-emoji/blob/main/LICENSE), blob `d09d3d0e09169f6747754e6b25faf5ba5ef6402d`. |
 | PromptFont | Embedded OFL notice; [upstream licence](https://github.com/Shinmera/promptfont/blob/master/LICENSE.txt), blob `ede0e0975f045c772371d08af297bdbf6f2c319e`. Copyright/attribution retained separately in the notice index. |
 | RecompFrontend | Upstream added GPLv3 in [commit `2ddbfc8`](https://github.com/N64Recomp/RecompFrontend/commit/2ddbfc8adcfe9ba26520441f14488861fdcefef7), resolving [licence question #44](https://github.com/N64Recomp/RecompFrontend/issues/44). Its verbatim `COPYING`, blob `f288702d2fa16d3cdf0035b15a9fcbc552cd88e7`, is retained under the vendored tree; no frontend code is updated. |
-| Comic Neue Bold 2.003 | Unmodified [Google Fonts family](https://github.com/google/fonts/tree/main/ofl/comicneue), font blob `378eb2004a5bdb5ff06e97fc709ec4f1fc205d80`; [original OFL](https://github.com/google/fonts/blob/main/ofl/comicneue/OFL.txt), blob `1a1fefa43bba6bb1b5a2530d780b3fa0d122cb43`. Both asset trees retain the font and licence verbatim. |
+| Suplexmentary Comic NC 1.000 | Exact Debug font, blob `65b1e6fe4f800389760d2c20a6eaa76c8a4babd1`. Embedded copyright is retained. Font-specific redistribution permission remains an open public-release requirement. |
 | Artwork, icons and other dependencies | Complete the exact release inventory, provenance and applicable notices. Design approval and public availability are separate from redistribution terms. Do not infer that all assets inherit the code licence. |
 
-Comic Neue Bold replaces the previously bundled Suplexmentary Comic NC font;
-the old font is no longer shipped or registered. The replacement is 55,716 bytes,
-SHA-256 `3e7e5fccfd7e0788f317b43312151c1bd5cf058c9697a8d83eac3939050bd61e`.
-Its embedded family is `Comic Neue`; launcher labels explicitly request weight
-`700`. Other interface fonts, approved title/background artwork and icons are
-unchanged. The font selection is visually approved from a rendered preview;
-the packaged launcher still needs its normal device check.
+The restored font is 118,452 bytes, SHA-256
+`3b849afe7f85e52a588ba47e5d51ab6200cef0f180263f0e9ee17f0002b6ce9b`.
+Both asset copies are byte-identical to the working Debug source
+`dcba2d96d8155ba3d8c93460345eeb9c0d23ef8f`. The launcher requests its embedded
+family, `Suplexmentary Comic NC`, with the same typography as that build:
+56dp font size and line height, 4dp letter spacing and the existing LabelLG
+weight. Comic Neue and its now-unused licence copies are removed.
+
+The [author's DaFont listing](https://www.dafont.com/suplexmentary-comic-nc.font)
+labels the font “100% Free”, but supplies no font-specific licence text. The font
+itself has an “All rights reserved” notice and no name-table licence or licence
+URL. Its technical preview/printing embedding flag is not an app distribution
+grant. The [author's current website](https://tilde.club/~harvettfox96/) identifies
+Jayvee Enaguas and applies CC BY 4.0 to its website contents, but does not list
+this font. Do not extend that website footer or another font's licence to the
+bundled TTF. Obtain font-specific redistribution terms before public release.
+
+Source/font equality establishes the restored inputs; it does not replace
+checking the rebuilt menu on Odin. The installed release candidate has version
+code 2, so any replacement candidate for that app must use a higher code and
+the same release signing identity.
 
 ## Version and signing
 

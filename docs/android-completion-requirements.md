@@ -92,14 +92,18 @@ Full-adventure and broader-device coverage, longer-session acceptance, save
 export/import and the planned startup updater remain full-completion milestones.
 The preview does not declare the project complete.
 
-Release packaging/font preparation passed [PR #17](https://github.com/Frostie77/Tooie-Recompiled/pull/17).
-The approved Comic Neue Bold button font includes its original OFL. Candidate
-tools support unsigned exports and local signing with the recorded release
-certificate; the private key stays on the PC. Frostie selected separate debug
-and release apps, each with its own data. Local signing passed for the earlier
-shared-ID candidate; it must be rebuilt with the separate release ID before
-device acceptance. Future release-to-release upgrades still need verification.
-Publication is pending Frostie's explicit approval. See [release preparation](development/release.md).
+Release packaging and notice preparation passed [PR #17](https://github.com/Frostie77/Tooie-Recompiled/pull/17).
+After opening the separate release candidate, Frostie selected the Debug menu's
+Suplexmentary Comic NC appearance. Its exact font and styling are restored;
+font-specific redistribution permission and a rebuilt Odin menu check remain
+pending. Candidate tools support unsigned exports and local signing with the
+recorded release certificate; the private key stays on the PC.
+
+The separate release candidate from `af97304f201af98a2c735b671d0413792673273b`
+was locally signed, verified and installed alongside Debug. Release acceptance
+stopped at the launcher font difference; fresh setup, gameplay, persistence and
+release-to-release upgrades have not passed their required checks. Publication
+is pending Frostie's explicit approval. See [release preparation](development/release.md).
 
 ## Evidence and testing detail
 

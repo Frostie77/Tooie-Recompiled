@@ -35,10 +35,11 @@ their output is not publication approval.
 
 See [release preparation](release.md) for restored font notices, upstream's
 RecompFrontend GPL grant, explicit Android version inputs and the read-only
-candidate verifier. The approved Comic Neue Bold menu font and its original OFL
-replace the old font in both asset trees. The remaining asset/dependency
-inventory and release-key migration remain open. CI signing fixtures
-are temporary test identities, not release credentials.
+candidate verifier. Frostie selected the Debug launcher font after opening the
+Comic Neue candidate. Both asset trees now use the exact Debug Suplexmentary
+Comic NC file and typography. Font-specific redistribution permission and the
+remaining asset/dependency inventory are still open public-release requirements.
+CI signing fixtures are temporary test identities, not release credentials.
 
 Known minor graphics details and intro/demo cadence/stutter remain tracked.
 The old first-person failure is resolved on the tested route; historical crash
