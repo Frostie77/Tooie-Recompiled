@@ -7,9 +7,11 @@ followed by a complete Banjo-Tooie playthrough and broader coverage.
 Checked boxes describe the tested scope; the project is not fully complete.
 
 Frostie approved the first public Android release as **1.0.0** on 24 October
-2026. Android version code **3** is selected. The signed artifact, final update/
-menu checks and distribution review remain pending; approval alone does not
-establish those results.
+2026. Android version code **3** is selected. The signed artifact and distribution
+review remain pending. Frostie selected the public GitHub download for the
+update/menu check after publication: leave the installed candidate untouched,
+then update it from that asset and check retained data. This result remains
+pending until the actual device test.
 
 ## Accepted checks
 
@@ -94,7 +96,9 @@ change. The rebuilt menu still needs its device check.
 ## First Android release milestone
 
 The requested example-mod, texture-pack, Aiming Invert, persistence and branding
-checks have passed on the named debug builds. First-release acceptance is:
+checks have passed on the named debug builds. The checklist below includes the
+post-publication GitHub-download test selected by Frostie; that test is not a
+requirement for another candidate installation before publishing 1.0.0:
 
 - [x] Verify the installed protected-key-signed release candidate against its
   exact APK/source/version report: `af97304f201a`, version `0.1.0-preview.1`,
@@ -105,8 +109,10 @@ checks have passed on the named debug builds. First-release acceptance is:
 - [x] Write a release-app save, close/relaunch and resume it; check persistence
   of settings and representative installed mods. Frostie confirmed this manually
   after the captured session; it is not an APK-update test.
-- [ ] Test a same-key, higher-version release-to-release update that preserves
-  the imported ROM, saves, settings and mods on device.
+- [ ] After publication, download the verified signed 1.0.0 APK from GitHub
+  directly on Odin and update the existing release candidate. Check the restored
+  menu, imported ROM, saves, settings and mods, then close/reopen. Keep this
+  pending until observed; do not alter the installed candidate beforehand.
 - [ ] Complete distribution/notices review and release notes with tested hardware
   and known limits.
 - [x] Obtain Frostie's explicit publication approval for **1.0.0**; the planned
@@ -136,7 +142,8 @@ The supplied app-log excerpts omit a middle section; this is a functional
 acceptance record, not complete fault-free or measured thermal/performance
 coverage. See the [evidence limits](development/release-candidate-check-20261024.md).
 Frostie's explicit approval is recorded. Publication awaits the final verified
-artifact, menu/update check and distribution review.
+artifact and distribution review. The menu/update check will use the public
+GitHub download after publication, as selected by Frostie.
 
 ## Evidence and testing detail
 

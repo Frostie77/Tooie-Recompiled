@@ -1,8 +1,9 @@
 # Tooie Recompiled 1.0.0 — release notes draft
 
 Version **1.0.0**, Android version code **3**. Frostie approved publication on
-24 October 2026. The exact signed APK/checksum, corrected-menu/update acceptance
-and distribution review remain pending; no release has been published.
+24 October 2026. The exact signed APK/checksum and distribution review remain
+pending; no release has been published. Corrected-menu/update acceptance will
+use the public GitHub download after publication, as selected by Frostie.
 
 Tooie Recompiled is a native **Android ARM64** port. Windows and Linux are build
 hosts; desktop game packages are not included. Supply your own supported USA ROM.
@@ -28,7 +29,8 @@ after closing/reopening. Earlier Debug checks covered the reported boss fight
 and Tooie Mod Check.
 
 Those results do not establish a full playthrough or acceptance of the new
-font-corrected 1.0.0 APK. Check its launcher and same-key update before publishing.
+font-corrected 1.0.0 APK. The GitHub-download update/menu check remains pending
+until Frostie installs the published APK over the existing release candidate.
 
 ## Known limits
 
@@ -52,7 +54,8 @@ release app and verify retained data; do not uninstall or reset it.
 
 ## Publication record still to complete
 
-Record the exact source commit/tag, protected-key-signed APK SHA-256, final
-menu/update result and resolved font/artwork/dependency terms. Publish the signed
-Android APK and checksum with the matching source tag; unsigned or runner-key
-Debug artifacts are not the public release.
+Record the exact source commit/tag, protected-key-signed APK SHA-256 and resolved
+font/artwork/dependency terms. Publish the signed Android APK and checksum with
+the matching source tag; unsigned or runner-key Debug artifacts are not the
+public release. Leave the GitHub-download update/menu check explicitly pending
+at publication, then add the observed result after Frostie's test.

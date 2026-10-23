@@ -76,8 +76,11 @@ drawn from this functional check.
 
 ## Remaining release checks
 
-Test a same-key, higher-code replacement that preserves the ROM, progress,
-settings and mods. The approved target is `1.0.0`, Android code `3`. The menu-font
+Leave the installed release candidate untouched. After publication, Frostie
+will download the protected-key-signed GitHub asset directly on Odin and update
+that candidate, checking its menu, ROM, progress, settings and mods, then closing/
+reopening. Record that result after the test; no intermediate candidate install
+is selected. The approved target is `1.0.0`, Android code `3`. The menu-font
 fix passed Android CI at `e5a0c86a938bafdae759f3257ed8ae789e00a770`
 ([run](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/39965072209))
 and was merged as `145a563112666dcc38a0a58b5cd66deaee841a24`; the corrected

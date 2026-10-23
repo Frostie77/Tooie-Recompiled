@@ -2,9 +2,11 @@
 
 Frostie approved publication of the first Android release as **1.0.0** on
 24 October 2026. The selected Android version code is **3**, above the installed
-preview candidate's code `2`. Approval is recorded; the signed artifact, font
-redistribution terms and final update/menu checks are still pending. Passing
-package checks does not publish a release or replace those checks.
+preview candidate's code `2`. Approval is recorded; the signed artifact and
+font redistribution terms are still pending. Frostie selected the public
+GitHub download as the update/menu acceptance test, after publication. Leave
+the installed candidate untouched until that download is available. Package
+verification does not establish that the on-device update preserves data.
 
 ## Bundled notices
 
@@ -125,6 +127,15 @@ update path. These are also the manual workflow defaults. Keep the existing
 protected release key; do not generate a new key or replace the Debug app.
 The native stamp and Android version use the same supplied name.
 
+For the chosen acceptance sequence, first publish the verified protected-key-
+signed 1.0.0 APK on GitHub. Frostie will download that exact asset directly on
+Odin and install it as an update over the existing release candidate. Then check
+the restored menu, imported ROM, save progress, settings and installed mods,
+and close/reopen to confirm persistence. Do not install a separate pre-release
+test APK or change the current installation beforehand. The Debug app remains
+separate. Record this result only after the actual GitHub-download update;
+keep it pending in the release notes until then.
+
 The separate **Tooie-Android-Unsigned-Candidate** artifact contains an unsigned,
 non-debuggable ARM64 APK, build report, checksums, public identities, GPL text
 and local signing helpers. Export verifies the release manifest and exact native
@@ -187,5 +198,6 @@ field remains false because those tools do not grant publication permission.
 This preparation does not implement the future startup updater.
 
 The [1.0.0 release notes draft](preview-notes.md) remains pending the exact signed
-candidate, final menu/update checks and distribution review. Do not create an
-empty public release or upload the unsigned/CI-debug artifact as the release APK.
+candidate and distribution review. Publish the update/menu check as pending;
+record Frostie's result after the GitHub-download test. Do not create an empty
+public release or upload the unsigned/CI-debug artifact as the release APK.
