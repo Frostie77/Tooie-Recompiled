@@ -28,9 +28,9 @@ inputs, signing continuity and the candidate package verifier.
 The [completion checklist](../android-completion-requirements.md) is the current
 status reference. Release preparation still includes signing/version identity,
 upgrade continuity, candidate verification and distribution review.
-Lato, Noto Emoji and PromptFont include their licence notices. The menu font
-`Suplexmentary Comic NC.ttf` still has no specific redistribution grant in this
-snapshot; its terms and the remaining shipped-asset inventory need resolution.
+Lato, Noto Emoji, PromptFont and the approved Comic Neue Bold menu font include
+their original licence notices. The remaining shipped-asset/dependency inventory
+still needs review.
 
 GitHub CI produces development APKs with runner debug signing. Keep the
 established signing identity for existing Odin updates; public-release signing

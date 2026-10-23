@@ -5,10 +5,10 @@ checks below does not publish a release or replace device acceptance.
 
 ## Bundled notices
 
-The existing font bytes and approved launcher artwork are preserved.
+The launcher buttons use Frostie's approved Comic Neue Bold replacement.
 `assets/THIRD_PARTY_NOTICES.txt` and its matching Android asset copy identify
 the bundled fonts, embedded copyright notices and upstream licence sources.
-Lato, Noto Emoji and PromptFont now include their original SIL OFL text.
+Lato, Noto Emoji, PromptFont and Comic Neue include their original SIL OFL text.
 
 | Item | Verified source or remaining work |
 |---|---|
@@ -16,12 +16,16 @@ Lato, Noto Emoji and PromptFont now include their original SIL OFL text.
 | Noto Emoji 1.05 uh | Embedded OFL notice; [upstream licence](https://github.com/googlefonts/noto-emoji/blob/main/LICENSE), blob `d09d3d0e09169f6747754e6b25faf5ba5ef6402d`. |
 | PromptFont | Embedded OFL notice; [upstream licence](https://github.com/Shinmera/promptfont/blob/master/LICENSE.txt), blob `ede0e0975f045c772371d08af297bdbf6f2c319e`. Copyright/attribution retained separately in the notice index. |
 | RecompFrontend | Upstream added GPLv3 in [commit `2ddbfc8`](https://github.com/N64Recomp/RecompFrontend/commit/2ddbfc8adcfe9ba26520441f14488861fdcefef7), resolving [licence question #44](https://github.com/N64Recomp/RecompFrontend/issues/44). Its verbatim `COPYING`, blob `f288702d2fa16d3cdf0035b15a9fcbc552cd88e7`, is retained under the vendored tree; no frontend code is updated. |
-| Suplexmentary Comic NC | Bundled name table has no licence-description/URL fields. The [author's listing](https://www.dafont.com/suplexmentary-comic-nc.font) says “100% Free”, without a specific redistribution grant. Confirm terms or approve a replacement before distribution sign-off. |
+| Comic Neue Bold 2.003 | Unmodified [Google Fonts family](https://github.com/google/fonts/tree/main/ofl/comicneue), font blob `378eb2004a5bdb5ff06e97fc709ec4f1fc205d80`; [original OFL](https://github.com/google/fonts/blob/main/ofl/comicneue/OFL.txt), blob `1a1fefa43bba6bb1b5a2530d780b3fa0d122cb43`. Both asset trees retain the font and licence verbatim. |
 | Artwork, icons and other dependencies | Complete the exact release inventory, provenance and applicable notices. Design approval and public availability are separate from redistribution terms. Do not infer that all assets inherit the code licence. |
 
-The inspected menu font is 118,452 bytes, SHA-256
-`3b849afe7f85e52a588ba47e5d51ab6200cef0f180263f0e9ee17f0002b6ce9b`.
-Its “NC” suffix is not treated as proof of a non-commercial licence.
+Comic Neue Bold replaces the previously bundled Suplexmentary Comic NC font;
+the old font is no longer shipped or registered. The replacement is 55,716 bytes,
+SHA-256 `3e7e5fccfd7e0788f317b43312151c1bd5cf058c9697a8d83eac3939050bd61e`.
+Its embedded family is `Comic Neue`; launcher labels explicitly request weight
+`700`. Other interface fonts, approved title/background artwork and icons are
+unchanged. The font selection is visually approved from a rendered preview;
+the packaged launcher still needs its normal device check.
 
 ## Version and signing
 

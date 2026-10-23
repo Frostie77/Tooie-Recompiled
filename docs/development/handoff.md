@@ -27,8 +27,9 @@ multi-mod combinations and broader gameplay/lifecycle coverage remain open.
 
 See [release preparation](release.md) for restored font notices, upstream's
 RecompFrontend GPL grant, explicit Android version inputs and the read-only
-candidate verifier. Menu-font redistribution terms, the rest of the asset/
-dependency inventory and release-key migration remain open. CI signing fixtures
+candidate verifier. The approved Comic Neue Bold menu font and its original OFL
+replace the old font in both asset trees. The remaining asset/dependency
+inventory and release-key migration remain open. CI signing fixtures
 are temporary test identities, not release credentials.
 
 Known minor graphics details and intro/demo cadence/stutter remain tracked.
