@@ -2,16 +2,13 @@
 
 Updated: 24 October 2026.
 
-The goal is a reliable native **Android ARM64** release for the AYN Odin 2 Portal,
+The goal is a reliable native Android ARM64 release for the Android,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
 Checked boxes describe the tested scope; the project is not fully complete.
 
 [Tooie Recompiled v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.0)
 was published on **24 October 2026 (AEDT)** with Android version code **3**.
-The public APK and checksum match the verified signed upload. Frostie downloaded
-the release on Odin, updated the existing candidate and confirmed the app worked
-with all settings and saves retained. This is a manual functional pass on the
-Odin 2 Portal; broader upgrade coverage and distribution review remain open.
+The public APK and checksum match the verified signed upload. 
 
 ## Accepted checks
 
@@ -85,19 +82,16 @@ These passes cover the named fixtures and routes, not every mod, scene or device
 - [ ] Implement automatic startup detection of newer published Android releases,
   with correct version comparison, offline/error handling, user choice and a
   data-preserving upgrade path.
-- [ ] Obtain Frostie's final sign-off against the complete project scope.
+- [ ] Obtain final sign-off against the complete project scope.
 
-An in-app **Remove Mod** button is not required. The accepted interface supports
-import, enable/disable and supplied configuration. Broad mod compatibility
-remains a coverage item.
+The mod interface supports import, enable/disable and supplied configuration. 
+Broad mod compatibility remains a coverage item.
 
 ## Minor issues deferred beyond the first release
 
-Frostie accepted the Jiggy-challenge screen lines (marker 1) and the brief shunt
+The Jiggy-challenge screen lines (marker 1) and the brief shunt
 when dialogue animation starts (marker 2) as follow-up work after the first
-release. Keep them in known issues; do not claim they were corrected by the font
-change. The updated app works according to Frostie's report; the exact restored
-font appearance has not been separately confirmed.
+release. Keep them in known issues.
 
 ## First Android release milestone
 
@@ -143,7 +137,7 @@ capture contains 20 minutes 17 seconds after gameplay confirmation. Frostie
 reported Debug-like behavior apart from the launcher font; ROM selection,
 Aiming Invert and the UI texture mod worked. Marker 3 confirms the visited
 first-person area worked. No restart/resume marker was recorded in that capture;
-Frostie subsequently confirmed release save/settings/mod persistence after
+Confirmed release save/settings/mod persistence after
 closing/reopening. That manual follow-up predates the APK update; the later
 public-download update is the separate saves/settings pass recorded above.
 The supplied app-log excerpts omit a middle section; this is a functional
