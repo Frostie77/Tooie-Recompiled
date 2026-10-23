@@ -46,6 +46,9 @@ def prepare(unsigned, built, build_report, tools, source_commit, version_code, o
         release.check_payload(unsigned_copy, built_copy, report, version)
         name = "Tooie-Recompiled-Android-arm64-" + source_commit[:12] + "-Unsigned.apk"
         result = {**report, "artifact_kind": "unsigned-release-candidate", "apk": name,
+                  "package": release.PACKAGE, "application_label": "Tooie Recompiled",
+                  "development_package": release.DEVELOPMENT_PACKAGE, "activity": release.ACTIVITY,
+                  "installation_strategy": "separate-apps", "shared_app_data": False,
                   "sha256": release.digest(unsigned_copy.read_bytes()), "version_name": version,
                   "version_code": version_code, "verified_debug_apk_sha256": report["sha256"],
                   "signing": "UNSIGNED; local protected release signing is still required",
@@ -65,8 +68,11 @@ def prepare(unsigned, built, build_report, tools, source_commit, version_code, o
             "Tooie Recompiled: unsigned Android ARM64 candidate\n\n"
             "This APK cannot be installed until signed. No release has been published.\n"
             "Review build-report.json and the source commit before local signing.\n"
-            "Keep your existing development installation and its data. A new release\n"
-            "key does not establish a compatible update from the debug certificate.\n\n"
+            "This is the separate release app: " + release.PACKAGE + "\n"
+            "The existing debug app remains " + release.DEVELOPMENT_PACKAGE + ".\n"
+            "Both can stay installed. Saves, settings, mods and imported ROMs are\n"
+            "private to each app; the release starts with its own data. No transfer\n"
+            "or replacement of the debug installation is performed.\n\n"
             "For a fresh-install candidate, in Ubuntu run:\n"
             "  python3 sign_candidate.py --new-install\n\n"
             "The default key stays at ~/.local/share/tooie-recompiled/signing/tooie-release.p12.\n"

@@ -18,6 +18,9 @@ def sign(candidate_dir, tools, keystore, identities, output, previous=None):
     report_file = candidate_dir / "build-report.json"
     report = json.loads(report_file.read_text(encoding="utf-8"))
     require(report.get("artifact_kind") == "unsigned-release-candidate", "Expected the unsigned candidate report")
+    require(report.get("package") == release.PACKAGE and
+            report.get("installation_strategy") == "separate-apps",
+            "Expected the separate release app; rebuild older same-package candidates")
     name = report["apk"]
     require(Path(name).name == name and name.endswith(".apk"), "Invalid candidate APK filename")
     require(report["version_name"] == report["native_version"], "Native and Android versions differ")
@@ -39,6 +42,8 @@ def sign(candidate_dir, tools, keystore, identities, output, previous=None):
         unsigned, signed = root / "unsigned.apk", root / "signed.apk"
         shutil.copyfile(candidate_dir / name, unsigned)
         require(release.digest(unsigned.read_bytes()) == report["sha256"], "Unsigned candidate hash differs")
+        release.check_release_manifest(release.manifest_identity(unsigned, tools), unsigned, tools,
+                                       report["version_name"], report["version_code"])
         stable_report = root / "build-report.json"
         stable_report.write_text(json.dumps(report), encoding="utf-8")
         # Inherit the local terminal for apksigner's password prompt. No password
@@ -74,7 +79,7 @@ def main():
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--previous-apk", type=Path)
     mode.add_argument("--new-install", action="store_true",
-                      help="Prepare a fresh-install candidate; does not establish an update from a development key")
+                      help="Prepare the separate release app; existing development app data is not transferred")
     args = parser.parse_args()
     output = args.output or args.candidate_dir / "signed-candidate"
     os.umask(0o077)
@@ -83,7 +88,7 @@ def main():
     except (ValueError, OSError, KeyError, TypeError, zipfile.BadZipFile) as error:
         parser.exit(1, f"STOP: {error}\nNo installation or publishing was attempted.\n")
     print("PASS: locally signed candidate, expected certificate and complete unsigned payload verified")
-    print("Installation, development-key migration and publication approval remain separate steps.")
+    print("Separate release app verified. Installation and publication approval remain pending.")
     print(output)
 
 

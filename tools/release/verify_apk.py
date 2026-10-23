@@ -11,8 +11,10 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-PACKAGE = "io.github.banjotooierecompiled"
-ACTIVITY = PACKAGE + ".BanjoTooieSDLActivity"
+DEVELOPMENT_PACKAGE = "io.github.banjotooierecompiled"
+PACKAGE = DEVELOPMENT_PACKAGE + ".release"
+# Application IDs differ; the existing Java/JNI class namespace does not.
+ACTIVITY = DEVELOPMENT_PACKAGE + ".BanjoTooieSDLActivity"
 LIBRARIES = {"libmain.so", "libSDL2.so"}
 
 
@@ -189,6 +191,8 @@ def verify(candidate, built, build_report, tools, expected_version, expected_cod
         return {"source_commit": source_commit, "apk_sha256": digest(candidate_copy.read_bytes()),
                 "version_name": expected_version, "version_code": expected_code,
                 "certificate_sha256": expected_certificate, "package": PACKAGE,
+                "development_package": DEVELOPMENT_PACKAGE, "activity": ACTIVITY,
+                "installation_strategy": "separate-apps", "shared_app_data": False,
                 "native_libraries_and_assets_match_verified_build": True,
                 "all_unsigned_payload_matches": report.get("artifact_kind") == "unsigned-release-candidate",
                 "previous_apk": previous_result, "install_performed": False,
@@ -207,7 +211,7 @@ def main():
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--previous-apk", type=Path)
     mode.add_argument("--new-install", action="store_true",
-                      help="Inspect a fresh-install candidate; does not verify replacement of an installed development build")
+                      help="Inspect the separate release app; existing development app data is not transferred")
     args = parser.parse_args()
     try:
         require(not args.output.exists(), "Output already exists; choose a new report path")

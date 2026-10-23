@@ -20,7 +20,10 @@ Known limits include minor scene/jigsaw graphics details, remaining intro/demo
 cadence/stutter, broader lifecycle/mod compatibility and full-adventure coverage.
 Automatic startup update detection is planned and is not included.
 
-A public-key change does not establish an update from existing debug APKs.
-Keep development installs/data until a migration path has been verified.
-Distribution review, key backup, candidate testing and final release notes must
-be completed before Frostie approves publication.
+The release installs alongside the existing debug app, using its own ROM import,
+saves, settings and mods. Existing debug progress stays in the debug app; no
+automatic transfer is included. Future debug builds are labelled
+**Tooie Recompiled Debug**.
+
+Signing-key backups are complete. Distribution review, separate-app candidate
+testing and final release notes remain required before Frostie approves publication.

@@ -29,6 +29,24 @@ the packaged launcher still needs its normal device check.
 
 ## Version and signing
 
+Frostie selected separate release and debug apps:
+
+| App | Android application ID | Launcher label |
+|---|---|---|
+| Release | `io.github.banjotooierecompiled.release` | Tooie Recompiled |
+| Debug | `io.github.banjotooierecompiled` | Tooie Recompiled Debug |
+
+The debug identity stays unchanged so the established local build can keep its
+existing data and signing key. The new label applies when a debug APK is rebuilt
+with this packaging. The release installs alongside it and starts with its own
+ROM import, saves, settings and mods. No uninstall, signing-key migration or
+automatic data transfer is part of this plan.
+
+Both variants keep the Java/JNI activity class
+`io.github.banjotooierecompiled.BanjoTooieSDLActivity`. A release launcher must
+use the full component
+`io.github.banjotooierecompiled.release/io.github.banjotooierecompiled.BanjoTooieSDLActivity`.
+
 Development defaults remain Android version code `1` / name `0.1.0-android`.
 For a candidate, Gradle accepts explicit `-PtooieVersionCode=…` and
 `-PtooieVersionName=…`. Choose the next public version once the candidate source
@@ -50,16 +68,20 @@ certificate SHA-256 is
 The certificate identifies `CN=Frostie, O=Tooie Recompiled` and expires in 2056.
 Only public certificate identifiers are recorded in
 [`signing-identities.json`](../../tools/release/signing-identities.json).
-The private key and password stay on Frostie's PC. Confirm a private backup
-outside the WSL installation before relying on this key for publication.
+The private key and password stay on Frostie's PC. Frostie confirmed private
+backups of both signing keys outside WSL. The existing debug app's private-data
+backup was verified against its device file hashes; restoration remains untested.
 
-Frostie's existing Odin installation uses the established development signing
-identity. A new release key does not automatically update it. Compare the
-previous accepted APK before any replacement; a different certificate requires
-a separately verified migration/signing-lineage plan. Do not uninstall or reset
-data to work around the mismatch. The accepted development APK's certificate is
+Frostie's existing Odin installation keeps the established development signing
+identity. The accepted development APK's certificate is
 `548bdb3c2702e830f61695c6d701da9c021a48af4b72566209fba0b518be2836`.
-No migration is implemented by these candidate tools.
+CI debug APKs use the runner's temporary debug key and cannot update that local
+installation. Keep using the established local debug builder for that app.
+
+The earlier candidate from `52db0a44fb11` was locally signed and verified, but
+uses the shared application ID. It is superseded for installation: rebuild the
+separate release package before the first device check. The protected release
+key stays the same; no new key or backup is needed for the packaging change.
 
 Android's primary references: [app signing](https://developer.android.com/studio/publish/app-signing)
 and [versioning](https://developer.android.com/studio/publish/versioning).
@@ -91,8 +113,8 @@ including DEX/resources/manifest, before creating a new `signed-candidate` direc
 It preserves the original unsigned artifact and never overwrites an existing
 output. A verification failure leaves no exported signed result.
 
-`--new-install` describes fresh-install metadata only. It does not make this APK
-an update for Frostie's debug installation. For a future same-key update, use
+`--new-install` prepares the separate release app. It does not import the debug
+app's private data. For a future same-key release update, use
 `--previous-apk` instead; a different signer or non-increasing version code stops
 before the signing prompt. Neither route installs an APK or publishes anything.
 
@@ -116,9 +138,12 @@ Run `python3 tools/release/verify_apk.py --help` for required arguments. Reports
 are created at a new `--output` path and never overwrite an existing report.
 The tool performs no device, install, signing, network or publishing operation.
 
-CI exercises the real AGP release variant, unsigned export, bundled local signer
-and verifier using a temporary two-day fixture certificate, then discards that
-key and signed test packages. A valid signature on an altered DEX is rejected.
+CI exercises both real AGP variants, separate IDs/labels and the unchanged
+activity namespace. It builds two release version codes for the same-key update
+fixture and tests unsigned export, bundled local signing and verification with
+temporary two-day certificates. A re-signed debug app, wrong previous package,
+wrong key and valid signature on an altered DEX are rejected. Fixture keys and
+signed test packages are discarded.
 The fixture is not a production release identity or an uploaded release asset.
 
 Keep [distribution review, device coverage and publication approval](../android-completion-requirements.md)

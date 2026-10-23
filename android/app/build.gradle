@@ -37,6 +37,9 @@ android {
 
     buildTypes {
         release {
+            // Keep the established debug app and its private data installed.
+            // The Java namespace/JNI activity stays unchanged.
+            applicationIdSuffix '.release'
             debuggable false
             minifyEnabled false
             // Deliberately unsigned. Signing happens locally with the chosen,
