@@ -22,6 +22,8 @@ import uuid
 import zipfile
 import zlib
 
+import private_backup
+
 HERE = Path(__file__).resolve().parent
 REPO = 'https://github.com/Frostie77/Tooie-Recompiled.git'
 TOOL_BRANCH = 'tools/android-workflow-20261020'
@@ -475,6 +477,9 @@ def package_evidence(archive, profile):
     """Keep the complete capture locally; share exact fresh data within one ZIP."""
     archive = Path(archive).resolve()
     require(archive.is_file(), 'Evidence ZIP is missing.')
+    with zipfile.ZipFile(archive) as source:
+        require(private_backup.MANIFEST not in source.namelist(),
+                'Private app-data backup: do not upload. It cannot be packaged as evidence.')
     summary = summarize_archive(archive)
     prefix = archive_prefix(archive)
     output = archive.with_name(prefix + '-Share-' + unique_id() + '.zip')
@@ -685,6 +690,7 @@ def parser():
     package_parser = sub.add_parser('package', help='Prepare one compact upload from existing evidence; no device commands.')
     package_parser.add_argument('evidence', type=Path, nargs='?')
     package_parser.add_argument('--latest', action='store_true', help='Package the newest original evidence ZIP in Downloads.')
+    sub.add_parser('backup-debug-data', help='Privately back up a closed debuggable app; read-only on Odin, never an evidence upload.')
     sub.add_parser('update', help='Explicitly fast-forward this isolated tooling checkout.')
     return result
 
@@ -707,6 +713,10 @@ def main(argv=None):
     elif args.command == 'package':
         require(bool(args.evidence) != args.latest, 'Choose an evidence path or --latest.')
         package_evidence(latest_evidence(args.downloads) if args.latest else args.evidence, profile)
+    elif args.command == 'backup-debug-data':
+        with exclusive_lock(args.state, 'device'):
+            private_backup.create_backup(default_adb(), profile['device'],
+                                        Path.home() / '.local/share/tooie-recompiled/private-backups')
     return 0
 
 

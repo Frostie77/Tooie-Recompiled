@@ -3,13 +3,17 @@ from pathlib import Path
 import ast
 import contextlib
 import copy
+import datetime as dt
+import hashlib
 import importlib.util
 import io
 import json
 import os
 import subprocess
 import sys
+import tarfile
 import tempfile
+import types
 import unittest
 from unittest.mock import patch
 import zipfile
@@ -703,6 +707,256 @@ class Workflow(unittest.TestCase):
         self.assertEqual(two.pop('GAMEPLAY_ONLY'), 'Constant(value=True)')
         self.assertEqual(one.pop('GAMEPLAY_ONLY'), 'Constant(value=False)')
         self.assertEqual(one,two)
+
+
+class PrivateBackup(unittest.TestCase):
+    """Real binary archive consumers with a stubbed, read-only ADB transport."""
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='tooie-private-backup-tests-')
+        self.root = Path(self.temp.name)
+        self.directory = self.root / 'private-backups'
+        self.device = {'serial': 'fixture-odin', 'package': 'io.github.banjotooierecompiled'}
+        self.module = tooie.private_backup
+        self.data = {'files/data/save.bin': b'\0\xff\x80\r\n\0private save\n',
+                     'files/data/texture pack.rtz': b'PK\x03\x04binary archive\0',
+                     'shared_prefs/settings.xml': b'<settings aim="1"/>'}
+        self.selected = ['files', 'shared_prefs']
+        self.payload = self.tar()
+        self.hash_calls = 0
+        self.commands = []
+        self.redirect = contextlib.redirect_stdout(io.StringIO())
+        self.redirect.__enter__()
+
+    def tearDown(self):
+        self.redirect.__exit__(None, None, None)
+        self.temp.cleanup()
+
+    def tar(self, *, extra=None):
+        result = io.BytesIO()
+        with tarfile.open(fileobj=result, mode='w') as archive:
+            for name in self.selected:
+                item = tarfile.TarInfo(name)
+                item.type = tarfile.DIRTYPE
+                archive.addfile(item)
+            for name, content in self.data.items():
+                item = tarfile.TarInfo(name)
+                item.size = len(content)
+                archive.addfile(item, io.BytesIO(content))
+            if extra:
+                archive.addfile(extra)
+        return result.getvalue()
+
+    def fake_adb(self, args, **kwargs):
+        self.assertEqual(args[:3], ['fixture-adb', '-s', 'fixture-odin'])
+        self.assertEqual(kwargs['stdin'], subprocess.DEVNULL)
+        self.assertIn('timeout', kwargs)
+        command = args[3:]
+        self.commands.append(command)
+        if command == ['get-state']:
+            value, code = b'device\r\n', 0
+        elif command == ['shell', '-T', 'getprop ro.product.model']:
+            value, code = b'Odin2 Portal\r\n', 0
+        elif command == ['shell', '-T', 'getprop ro.build.version.sdk']:
+            value, code = b'33\n', 0
+        elif command == ['shell', '-T', 'pidof ' + self.device['package']]:
+            value, code = b'', 1
+        elif command == self.module.app_shell(self.device['package'],
+                'find ' + ' '.join(self.selected) + ' -type f -exec sha256sum {} +'):
+            self.hash_calls += 1
+            value = ''.join(hashlib.sha256(content).hexdigest() + '  ' + name + '\n'
+                            for name, content in self.data.items()).encode()
+            code = 0
+        elif command[:2] == ['shell', '-T'] and command[2].startswith('run-as ') and 'for d in ' in command[2]:
+            value, code = ('\n'.join(self.selected) + '\n').encode(), 0
+        elif command == ['shell', '-T', 'run-as ' + self.device['package'] + ' tar -cf - ' + ' '.join(self.selected)]:
+            kwargs['stdout'].write(self.payload)
+            value, code = None, 0
+        else:
+            self.fail('Unexpected operation: ' + repr(command))
+        return subprocess.CompletedProcess(args, code, value, b'')
+
+    def backup(self):
+        with patch.object(subprocess, 'run', side_effect=self.fake_adb):
+            return self.module.create_backup('fixture-adb', self.device, self.directory)
+
+    def test_binary_copy_manifest_hashes_permissions_and_evidence_guard(self):
+        output = self.backup()
+        self.assertEqual(output.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.directory.stat().st_mode & 0o777, 0o700)
+        self.assertEqual(self.hash_calls, 2)
+        with zipfile.ZipFile(output) as bundle:
+            self.assertEqual(bundle.read('app-data.tar'), self.payload)
+            manifest = json.loads(bundle.read(self.module.MANIFEST))
+        self.assertEqual(manifest['kind'], self.module.KIND)
+        self.assertFalse(manifest['share_allowed'])
+        self.assertFalse(manifest['device_modified'])
+        self.assertFalse(manifest['restoration_tested'])
+        self.assertEqual(manifest['tar_sha256'], hashlib.sha256(self.payload).hexdigest())
+        self.assertEqual(manifest['device']['api'], 33)
+        self.assertEqual(set(manifest['files']), set(self.data))
+        for name, content in self.data.items():
+            self.assertEqual(manifest['files'][name]['sha256'], hashlib.sha256(content).hexdigest())
+        with self.assertRaisesRegex(RuntimeError, 'cannot be packaged as evidence'):
+            tooie.package_evidence(output, {'identity': {'commit': '0' * 40}})
+        with self.assertRaisesRegex(RuntimeError, 'No original evidence'):
+            tooie.latest_evidence(self.directory)
+        self.assertEqual(list(self.directory.iterdir()), [output])
+
+    def test_running_unknown_and_failed_pid_checks_never_copy(self):
+        for code, value, error, message in [(0, b'112 113\r\n', b'', 'App is running'),
+                (0, b'', b'', 'inconclusive'), (1, b'', b'denied', 'inconclusive'),
+                (2, b'', b'', 'inconclusive')]:
+            with self.subTest(code=code, value=value, error=error):
+                def fake(args, **kwargs):
+                    if args[-1].startswith('pidof '):
+                        return subprocess.CompletedProcess(args, code, value, error)
+                    return self.fake_adb(args, **kwargs)
+                with patch.object(subprocess, 'run', side_effect=fake), self.assertRaisesRegex(RuntimeError, message):
+                    self.module.create_backup('fixture-adb', self.device, self.directory)
+        self.assertFalse(any('tar -cf' in str(command) for command in self.commands))
+        self.assertFalse(list(self.directory.glob('*.zip')))
+
+    def test_actual_binary_subprocess_transport_roundtrip(self):
+        tar = self.root / 'synthetic-data.tar'
+        tar.write_bytes(self.payload)
+        hashes = ''.join(hashlib.sha256(content).hexdigest() + '  ' + name + '\n'
+                         for name, content in self.data.items()).encode()
+        script = self.root / 'synthetic-adb'
+        script.write_text('#!' + sys.executable + '\n'
+            'import pathlib,sys\n'
+            'a=sys.argv[1:]\n'
+            'assert a[:2] == ["-s", "fixture-odin"]\n'
+            'c=a[2:]\n'
+            'if c == ["get-state"]: b=b"device\\r\\n"\n'
+            'elif c[-1] == "getprop ro.product.model": b=b"Odin2 Portal\\r\\n"\n'
+            'elif c[-1] == "getprop ro.build.version.sdk": b=b"33\\n"\n'
+            'elif c[-1].startswith("pidof "): sys.exit(1)\n'
+            'elif "for d in " in c[-1]: b=b"files\\nshared_prefs\\n"\n'
+            'elif "sha256sum" in c[-1]: b=' + repr(hashes) + '\n'
+            'elif " tar -cf - " in c[-1]: b=pathlib.Path(' + repr(str(tar)) + ').read_bytes()\n'
+            'else: raise AssertionError(c)\n'
+            'sys.stdout.buffer.write(b)\n')
+        script.chmod(0o700)
+        output = self.module.create_backup(script, self.device, self.directory)
+        with zipfile.ZipFile(output) as archive:
+            self.assertEqual(archive.read('app-data.tar'), self.payload)
+
+    def test_existing_backup_is_never_overwritten_or_removed_on_collision(self):
+        class Clock(dt.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return cls(2026, 10, 23, 12, 0, 0, tzinfo=tz)
+        with patch.object(self.module.dt, 'datetime', Clock), \
+                patch.object(self.module.uuid, 'uuid4', return_value=types.SimpleNamespace(hex='fixturecollision')):
+            original = self.backup()
+            data = original.read_bytes()
+            with self.assertRaises(FileExistsError):
+                self.backup()
+            self.assertEqual(original.read_bytes(), data)
+            self.assertEqual(list(self.directory.iterdir()), [original])
+
+    def test_failed_saved_zip_readback_does_not_export_a_verified_backup(self):
+        original = self.module.digest
+        def corrupted_readback(stream):
+            return '0' * 64 if isinstance(stream, zipfile.ZipExtFile) else original(stream)
+        with patch.object(self.module, 'digest', side_effect=corrupted_readback), \
+                self.assertRaisesRegex(RuntimeError, 'readback differs'):
+            self.backup()
+        self.assertFalse(list(self.directory.iterdir()))
+
+    def test_pid_and_transfer_timeouts_are_unknown_without_retry(self):
+        for stage in ('pidof ', ' tar -cf - '):
+            with self.subTest(stage=stage):
+                failures = []
+                def fake(args, **kwargs):
+                    if stage in args[-1]:
+                        failures.append(args)
+                        raise subprocess.TimeoutExpired(args, kwargs['timeout'])
+                    return self.fake_adb(args, **kwargs)
+                with patch.object(subprocess, 'run', side_effect=fake), self.assertRaisesRegex(RuntimeError, 'timed out.*unknown'):
+                    self.module.create_backup('fixture-adb', self.device, self.directory)
+                self.assertEqual(len(failures), 1)
+                self.assertFalse(list(self.directory.iterdir()))
+
+    def test_remote_transfer_error_is_not_a_backup(self):
+        def fake(args, **kwargs):
+            if ' tar -cf - ' in args[-1]:
+                kwargs['stdout'].write(self.payload)
+                return subprocess.CompletedProcess(args, 1, None, b'private read failed')
+            return self.fake_adb(args, **kwargs)
+        with patch.object(subprocess, 'run', side_effect=fake), self.assertRaisesRegex(RuntimeError, 'Private app-data copy failed'):
+            self.module.create_backup('fixture-adb', self.device, self.directory)
+        self.assertFalse(list(self.directory.iterdir()))
+
+    def test_changed_device_or_corrupt_copied_bytes_block_export(self):
+        original = self.payload
+        self.payload = original.replace(b'private save', b'changed save')
+        with self.assertRaisesRegex(RuntimeError, 'copied bytes differ'):
+            self.backup()
+        self.payload = original
+        self.hash_calls = 0
+        def fake(args, **kwargs):
+            result = self.fake_adb(args, **kwargs)
+            if 'sha256sum' in args[-1] and self.hash_calls == 2:
+                result.stdout = result.stdout.replace(hashlib.sha256(self.data['files/data/save.bin']).hexdigest().encode(), b'0' * 64)
+            return result
+        with patch.object(subprocess, 'run', side_effect=fake), self.assertRaisesRegex(RuntimeError, 'files changed'):
+            self.module.create_backup('fixture-adb', self.device, self.directory)
+        self.assertFalse(list(self.directory.iterdir()))
+
+    def test_tar_rejects_traversal_duplicate_links_and_missing_end_marker(self):
+        traversal = tarfile.TarInfo('files/../../outside')
+        duplicate = tarfile.TarInfo('files/data/save.bin')
+        link = tarfile.TarInfo('files/link')
+        link.type, link.linkname = tarfile.SYMTYPE, '/outside'
+        payloads = [self.tar(extra=item) for item in (traversal, duplicate, link)]
+        # A cleanly ended last file with no zero records is still incomplete.
+        end = 0
+        with tarfile.open(fileobj=io.BytesIO(self.payload)) as archive:
+            for member in archive:
+                end = member.offset_data + ((member.size + 511) // 512) * 512
+        payloads += [self.payload[:end], self.payload[:end + 512], self.payload[:-1], b'broken' * 512]
+        for index, payload in enumerate(payloads):
+            with self.subTest(index=index):
+                self.payload = payload
+                with self.assertRaises(RuntimeError):
+                    self.backup()
+                self.assertFalse(list(self.directory.iterdir()))
+
+    def test_device_identity_and_root_checks_precede_copy(self):
+        for label, output in [('getprop ro.product.model', b'Another device\n'),
+                              ('getprop ro.build.version.sdk', b'unknown\n'),
+                              ('for d in ', b'files\nfiles\n')]:
+            with self.subTest(label=label):
+                def fake(args, **kwargs):
+                    result = self.fake_adb(args, **kwargs)
+                    if label in args[-1]:
+                        result.stdout = output
+                    return result
+                with patch.object(subprocess, 'run', side_effect=fake), self.assertRaises(RuntimeError):
+                    self.module.create_backup('fixture-adb', self.device, self.directory)
+                self.assertFalse(list(self.directory.iterdir()))
+
+    def test_private_destination_rejects_git_and_open_permissions_before_adb(self):
+        self.directory.mkdir(mode=0o755)
+        with patch.object(subprocess, 'run') as transport, self.assertRaisesRegex(RuntimeError, 'mode 700'):
+            self.module.create_backup('fixture-adb', self.device, self.directory)
+        transport.assert_not_called()
+        (self.root / '.git').mkdir()
+        with patch.object(subprocess, 'run') as transport, self.assertRaisesRegex(RuntimeError, 'outside Git'):
+            self.module.create_backup('fixture-adb', self.device, self.directory)
+        transport.assert_not_called()
+
+    def test_cli_uses_device_lock_private_home_and_no_artifact_or_installer(self):
+        home = self.root / 'home'
+        home.mkdir()
+        with patch.object(Path, 'home', return_value=home), patch.object(tooie, 'default_adb', return_value='fixture-adb'), \
+                patch.object(self.module, 'create_backup') as backup, patch.object(tooie, 'select_artifact') as artifact:
+            self.assertEqual(tooie.main(['--tool-root', str(self.root / 'tools'), 'backup-debug-data']), 0)
+        self.assertEqual(backup.call_args.args[0], 'fixture-adb')
+        self.assertEqual(backup.call_args.args[2], home / '.local/share/tooie-recompiled/private-backups')
+        self.assertTrue((self.root / 'tools/workflow/device.lock').exists())
+        artifact.assert_not_called()
 
 
 if __name__ == '__main__':

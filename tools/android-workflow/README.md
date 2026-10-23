@@ -66,6 +66,34 @@ the public profile. `TOOIE_DOWNLOADS` or `--downloads` can override Downloads;
 `TOOIE_ADB` can select an installed ADB executable. Detection reads local account
 metadata and does not issue a device command.
 
+### Private backup before changing signing keys
+
+Close the game normally with **Exit**, then run in the same Ubuntu terminal:
+
+```bash
+~/projects/tooie-tools/tooie backup-debug-data
+```
+
+This reads the existing debuggable Odin installation without installing,
+launching, stopping or changing it. It copies the app-private `files` directory
+and any existing `shared_prefs`, `databases` and `no_backup` directories. The
+imported ROM, saves, settings and installed mods can be in these directories.
+Cache, shared/external storage and the PC's signing keys are outside this scope.
+
+The command requires unambiguous process absence, checks device file hashes
+before and after copying, verifies every copied regular file, and reads back
+the saved archive. A timeout, changed file or unsupported archive record stops
+without exporting a verified backup. This is not an atomic snapshot or a
+tested restore. Keep the current app and its data until migration is verified.
+
+It prints one **PRIVATE** ZIP under
+`~/.local/share/tooie-recompiled/private-backups/`, with private directory/file
+permissions. Keep it outside GitHub and chat attachments: it may contain your
+ROM, saves, settings, mods and logs. `tooie package` refuses these backups, and
+`package --latest` still selects only ordinary evidence. Copy the private ZIP
+to your own backup storage; do not upload it for review. No restore or signing
+key transition is performed by this command.
+
 `build` reuses the current exact APK when its report, source identity and SHA-256
 match. The full packaged-native/DEX/JNI checks still run before any installation.
 For a new compilation, use `build --rebuild`. Compatible builds share a source
