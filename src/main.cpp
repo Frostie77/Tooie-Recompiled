@@ -434,10 +434,9 @@ void initialize_launcher_menu(recompui::LauncherMenu* menu) {
     game_options->set_height(41.0f, recompui::Unit::Percent);
 
     for (recompui::GameOption* option : game_options->get_options()) {
-        // Approved launcher button font; other interface text keeps LatoLatin.
-        option->set_font_family("Comic Neue");
+        // Match the accepted Debug launcher; other interface text keeps LatoLatin.
+        option->set_font_family("Suplexmentary Comic NC");
         if (recompui::Label* label = option->get_label()) {
-            label->set_font_weight(700);
             // Size *and* line box. recompui's typography presets set
             // `line_height = font_size` as a fixed dp value
             // (ui_theme.cpp: create_typography_preset), so raising the font size
@@ -566,8 +565,8 @@ static int tooie_recomp_main(int argc, char** argv) {
     recompui::register_extra_font("LatoLatin-Italic.ttf");
     recompui::register_extra_font("LatoLatin-BoldItalic.ttf");
     // RmlUi registers extra fonts using the TTF's embedded family name.
-    // Comic Neue Bold is selected explicitly on the launcher option labels.
-    recompui::register_extra_font("ComicNeue-Bold.ttf");
+    // The launcher selects the same family as the accepted Debug build.
+    recompui::register_extra_font("Suplexmentary Comic NC.ttf");
 
     std::fprintf(stderr, "[tooie] step programconfig\n");
     tooie_android_debug_log("[tooie] step programconfig"); std::fflush(stderr);

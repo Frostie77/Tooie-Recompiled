@@ -31,14 +31,19 @@ PromptFont
   Source: https://github.com/Shinmera/promptfont/blob/master/LICENSE.txt
   Included trademarks remain the property of their respective owners.
 
-Comic Neue Bold
-  Bundled font: version 2.003, unmodified.
-  Copyright 2014 The Comic Neue Project Authors
-  (https://github.com/crozynski/comicneue).
-  Licensed under the SIL Open Font License, Version 1.1.
-  Original family license: licenses/ComicNeue-OFL.txt
-  Sources: https://github.com/crozynski/comicneue
-           https://github.com/google/fonts/tree/main/ofl/comicneue
+Suplexmentary Comic NC
+  Author: Jayvee D. Enaguas (NipCen / GrandChaos9000 / HarvettFox96).
+  Bundled font: Version 1.000 2010 initial release, unmodified.
+  Embedded notice: Copyright (c) 2009, 2010 NipCen a.k.a. SMWCNC.
+                   All rights reserved.
+  Exact working Debug font: 118,452 bytes, SHA-256
+    3b849afe7f85e52a588ba47e5d51ab6200cef0f180263f0e9ee17f0002b6ce9b
+  Author's listing: https://www.dafont.com/suplexmentary-comic-nc.font
+  Author's current site: https://tilde.club/~harvettfox96/
+  Font-specific redistribution permission remains under review. The file
+  contains no licence grant; the author's general website CC BY 4.0 footer
+  has not been established to cover this font. This font is not under the
+  SIL OFL notices for the other bundled families.
 
 Notice sources and the remaining distribution review are documented in
 docs/development/release.md in the source repository.
