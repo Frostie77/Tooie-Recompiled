@@ -2,12 +2,25 @@
 
 Updated: 24 October 2026. **Unresolved; no new compatibility APK is ready.**
 
+## Current priority
+
+Frostie has selected the **Poco X3 Pro / Android 12 / Adreno 640** report as the
+primary startup-crash investigation. Work from its supplied log and confirmed
+failures with v1.0.1 and the previous Actions test. The Poco reporter will test
+a further compatibility build when one is verified and ready.
+
+The **Retroid Pocket 5 / Adreno 650** report is **parked pending more data**:
+Android version, a fresh app log and the result of the existing PR #27 test.
+Keep that report and experiment unresolved; resume their investigation when
+useful evidence arrives. Do not assume a Poco result proves the Retroid cause
+or requires another Retroid test build.
+
 ## Reports and current test status
 
 | Reporter | Device | Confirmed evidence | Status |
 |---|---|---|---|
-| gojera | Retroid Pocket 5, Snapdragon 865 / Adreno 650 | Original black-screen/exit report; [PR #27](https://github.com/Frostie77/Tooie-Recompiled/pull/27) and [Actions run 40041658420](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40041658420) were offered for testing | Android version, fresh log and result of that test remain unreported as of the latest issue read |
-| dusk-beep | Poco X3 Pro, Android 12, Snapdragon 860 / Adreno 640 | [Follow-up](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747) confirms startup exit with both public v1.0.1 and run 40041658420; supplied [Debug log](https://github.com/user-attachments/files/33901672/banjotooi-debug.log) | Supplied log identifies an early Vulkan feature guard; no successful compatibility result |
+| gojera | Retroid Pocket 5, Snapdragon 865 / Adreno 650 | Original black-screen/exit report; [PR #27](https://github.com/Frostie77/Tooie-Recompiled/pull/27) and [Actions run 40041658420](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40041658420) were offered for testing | Parked pending Android version, fresh app log and result of the existing test |
+| dusk-beep | Poco X3 Pro, Android 12, Snapdragon 860 / Adreno 640 | [Follow-up](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747) confirms startup exit with both public v1.0.1 and run 40041658420; supplied [Debug log](https://github.com/user-attachments/files/33901672/banjotooi-debug.log) | Primary active investigation; supplied log identifies an early Vulkan feature guard; no successful compatibility result |
 
 Frostie says the reporting user can test further builds. Draft messages in chat
 for Frostie to post; do not post issue comments on his behalf. Treat the two
@@ -52,7 +65,7 @@ verified package or confirmed fix. No new test APK, compatible driver bundle or
 successful Poco/Retroid result is available. Preserve the indexing, descriptor,
 ownership, synchronization and timeout guards while evaluating any route.
 
-Before asking the reporter to test another build:
+Before asking the Poco reporter to test another build:
 
 1. Complete the experiment with a separate test-app identity and independent
    data, preserving the public release and any existing Debug installation.

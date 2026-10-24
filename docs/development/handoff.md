@@ -51,8 +51,11 @@ deferral remain on-device checks planned for the next update; see the
 combinations and broader gameplay/lifecycle/device coverage remain open.
 Broader release/local Debug ROM/save/mod independence, fresh defaults and
 own-channel updates remain separate from the passed basic settings comparison.
-Retroid Pocket 5 issue #26 and its separate Adreno 650 experiment are not
-resolved by this release.
+The primary startup-crash investigation is the Poco X3 Pro / Android 12 /
+Adreno 640 report in issue #26. Frostie has parked the Retroid Pocket 5 report
+and existing Adreno 650 experiment pending more data (Android version, fresh
+app log and the result of the existing test). Both remain unresolved; do not
+infer one device's cause or success from the other.
 
 Frostie chose to collect several more fixes before another public release.
 Keep the accepted Home/resume audio change under **Unreleased**; public v1.0.1
@@ -135,7 +138,7 @@ frames and character rendering remain open as MD-003 through MD-005; repeated
 marker 1 and both unparsed inputs are retained with distinct references.
 
 See the [issue #26 investigation](startup-crash-issue26.md) before proposing
-another test to the Poco/Retroid reporters. There is no new compatibility APK
-ready; the Poco failure occurs before the earlier 650 pool experiment can help.
-Frostie says the reporting user will test further builds. No issue reply was
+another test to the Poco reporter, who will test further builds. There is no
+new compatibility APK ready; the Poco failure occurs before the earlier 650
+pool experiment can help. The Retroid report is parked pending more data. No issue reply was
 posted on his behalf, no test success was invented and no new release was made.
