@@ -110,7 +110,10 @@ Downloads and installation remain manual.
 - Minor visual lines during the Jiggy challenge.
 - A brief screen shift when dialogue animation begins.
 - Intro/demo stutter and animation cadence still need further work.
-- A startup crash has been reported on Retroid Pocket 5 / Adreno 650;
+- Brief audio distortion after returning from Android Home in v1.0.1. A fix
+  passed focused Odin Debug testing; see [Unreleased](CHANGELOG.md#unreleased).
+- Startup crashes have been reported on Retroid Pocket 5 / Adreno 650 and
+  Poco X3 Pro / Android 12 / Adreno 640;
   see [issue #26](https://github.com/Frostie77/Tooie-Recompiled/issues/26).
 - A complete playthrough and broad Android compatibility have not been verified.
 

@@ -40,6 +40,15 @@ font/artwork and basic settings separation between the public release and his
 retained local Debug app after restarting both. Debug has not been published.
 Background/sleep checks were not accepted in this follow-up.
 
+A subsequent locally re-signed Debug candidate from [PR #29](https://github.com/Frostie77/Tooie-Recompiled/pull/29)
+passed the focused Home/resume audio check. CI passed at fix commit
+`ba5f84533a3b4cbb5a36a390cd7202522ca318af`; its tested integration source is
+`0e2f81f118bc042add064dcefc3a6244d7344be0`. SDK checks verified the established
+Debug certificate and every unsigned APK payload entry; `adb install -r`
+returned Success. After the requested Home/reopen test, Frostie reported the
+audio glitch fixed. No fresh audio log/recording or broader sleep/wake acceptance
+was supplied. See the [exact test record](history/android-home-resume-audio-20261024.md).
+
 ## Current priorities
 
 Continue post-release playtesting through the established Debug app. Track the
@@ -54,12 +63,18 @@ own-channel updates remain separate from the passed basic settings comparison.
 Retroid Pocket 5 issue #26 and its separate Adreno 650 experiment are not
 resolved by this release.
 
-A new audio report needs investigation: **Home → reopen → Continue** produces
-roughly one second of abnormal audio, then normal playback. A full close and
-relaunch is clean. Keep background/return acceptance open; sleep/wake has not
-been separately confirmed. The queue's retained state across SDL playback pause
-is an unconfirmed lead. Compare the retained private Debug app and inspect its
-existing audio log before choosing a fix. No runtime/audio changes are made.
+Frostie chose to collect several more fixes before another public release.
+Keep the accepted Home/resume audio change under **Unreleased**; public v1.0.1
+still has the issue. Verify the fix in the next signed release and retain the
+broader audio, sleep/wake and interruption checks.
+
+Issue #26 also has a [Poco X3 Pro report](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747):
+Android 12, Snapdragon 860 / Adreno 640, crashing with both v1.0.1 and the
+Adreno 650 test from Actions run `40041658420`. Its supplied Debug log ends at
+`descriptor-indexing-features-not-enabled`; the driver reports Vulkan 1.1.128,
+no descriptor-indexing extension and disabled indexing features. The 650-only
+pool-reservation experiment does not address this earlier feature check. No
+Adreno 640 compatibility fix or successful device result is established.
 
 Frostie has created the local release keystore and supplied its public certificate
 metadata. The public fingerprint and the different accepted development signer

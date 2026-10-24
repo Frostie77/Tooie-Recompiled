@@ -1,6 +1,8 @@
 # Android Home/resume audio candidate — 24 October 2026
 
-Status: host checks pass; Android ARM64 CI and Odin acceptance are pending.
+Status: host checks and Android ARM64 CI pass. Frostie accepted the focused
+Odin Debug Home/resume audio test on 24 October 2026 (AEDT). This fix is
+**unreleased**; more fixes will be collected before the next public release.
 
 ## Reproduction and log evidence
 
@@ -56,15 +58,45 @@ change is part of this candidate.
 
 ## Odin acceptance
 
-After CI passes, sign the test APK locally with the established Debug identity
-so it can update the retained Debug installation. Keep the public release app
-for the next real update-notice check.
+| Item | Verified or reported value |
+|---|---|
+| Fix commit | `ba5f84533a3b4cbb5a36a390cd7202522ca318af` |
+| Tested integration source | `0e2f81f118bc042add064dcefc3a6244d7344be0` |
+| CI | [Android APK run 40081543248](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40081543248), attempt 1: passed host regressions, ARM64 compilation, APK verification and release-signing fixture |
+| CI APK ZIP SHA-256 | `67f98f2873e41cb7985bc6d85902a1db0d440f01d5f6343d845d3d2ae0d3f8d0` |
+| Locally signed APK | `Tooie-Audio-Fix-0e2f81f118bc-Local-Debug.apk` |
+| Signed APK SHA-256 | `0259dde07039804028c5271493b72a673ffe4bf8e3a2ec53e4000afa9252a606` |
+| Debug certificate SHA-256 | `548bdb3c2702e830f61695c6d701da9c021a48af4b72566209fba0b518be2836` |
+| Android identity | `io.github.banjotooierecompiled`, `0.1.0-android`, code `1`, debuggable |
+| Device | AYN Odin 2 Portal / Adreno 740 |
 
-Compare normal playback, Home/return cycles and a full close/relaunch. Confirm
-the private log contains event=resume-reset and check steady playback after
-return. The first five-second window may still include background decimation;
-evaluate the audible result and a later fully foreground window separately.
-Do not mark the audio/background item passed until Frostie accepts the result.
+Frostie verified the CI ZIP against GitHub's artifact digest, then signed a copy
+locally with the existing Debug key. SDK signature, certificate, ZIP alignment
+and actual package/version checks passed. Every non-signature APK payload entry
+matched the APK inside the hash-verified ZIP, including the manifest, DEX,
+native libraries, assets and notices. A local verification JSON was written.
+No private signing material was uploaded. ADB `install -r` returned **Success**
+for the retained Debug app.
+
+The requested test was to load the existing save, press Android Home, wait ten
+seconds, reopen Debug and continue playing for fifteen seconds, repeating the
+Home/reopen cycle three times. Frostie then reported **“thats fixed it”**. Record
+this as focused manual acceptance of the previously audible Home/resume glitch;
+the reply does not separately enumerate the completed cycles or measure audio
+latency.
+
+No fresh candidate audio log or recording was supplied. The proposed
+`event=resume-reset` log-marker check and post-fix queue-depth/decimation
+measurements have not been independently observed. Broader sleep/wake,
+interruption, long-play and signed-release audio checks remain open. The first
+five-second diagnostic window can still include background decimation; any
+later log assessment should separate it from fully foreground playback.
+
+Public **v1.0.1** and its stable-feed entry remain current. Frostie chose to
+collect several more fixes before another release. Keep the public release app
+for the next real update-notice check; this Debug result is not publication or
+release-app acceptance. This record is a documentation-only follow-up to the
+exact tested source above; its APK does not need rebuilding for these notes.
 
 SDL behavior was checked against the primary sources for
 [Android event pumping](https://github.com/libsdl-org/SDL/blob/release-2.32.10/src/video/android/SDL_androidevents.c),

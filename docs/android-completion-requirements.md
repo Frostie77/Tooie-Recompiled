@@ -71,6 +71,18 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
   planned for the next update.
 - [x] Published v1.0.1, verified both public assets and advanced the stable feed.
 
+## Unreleased Debug checks
+
+- [x] Home/resume audio fix: CI passed, the APK was locally re-signed with the
+  established Debug key and `adb install -r` returned Success. Frostie reported
+  the brief audio glitch fixed after the requested Home/reopen test on Odin.
+  This is focused manual Debug acceptance, without a fresh audio log or recording;
+  see the [test record](development/history/android-home-resume-audio-20261024.md).
+
+Frostie chose to collect more fixes before publishing another release. Public
+v1.0.1 still contains the Home/resume issue; signed-release acceptance and broader
+background/sleep coverage remain open.
+
 ## Still required for full completion
 
 - [ ] Complete the adventure through the credits, covering major areas,
@@ -78,9 +90,8 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 - [ ] Verify representative uninterrupted 20–30-minute sessions, with correct
   gameplay speed, graphics, camera behavior and sound. Record frame pacing,
   input delay, thermal behavior and memory trends; check for progressive slowdown.
-- [ ] Investigate the Home/resume audio glitch: Home → reopen → Continue causes
-  roughly one second of abnormal audio, then normal playback. A full close and
-  relaunch is clean. Background/return acceptance remains open.
+- [ ] Verify the accepted Home/resume audio fix in the next signed public release.
+  The focused local Debug check above does not complete broader lifecycle testing.
 - [ ] Complete broader audio checks.
 - [ ] Verify controller navigation throughout menus, gameplay and egg/first-person
   aiming, plus remapping, reconnecting and saved preferences.

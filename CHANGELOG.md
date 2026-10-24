@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Brief audio distortion after pressing Android Home and returning to gameplay
+  ([#29](https://github.com/Frostie77/Tooie-Recompiled/pull/29)). Focused Odin
+  Debug testing passed; verification in a signed public release remains pending.
+
+Further fixes will be collected before the next release. **v1.0.1** remains the
+latest public release.
+
 ## [v1.0.1](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1) — 2026-10-24
 
 ### Added
