@@ -3,6 +3,7 @@
 #include "runtime_diagnostics.h"
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <climits>
 #include <cstring>
 #include <mutex>
@@ -25,6 +26,42 @@ class QueuedAudio {
     uint64_t calls=0, inputFrames=0, outputFrames=0, queueErrors=0, zeroPolls=0;
     uint32_t windowMinBytes=UINT32_MAX, windowMaxBytes=0, windowMaxDecimation=1;
     unsigned errorRecords=0;
+#if defined(__ANDROID__)
+    std::atomic<bool> resumePending{false};
+    bool watchingEvents=false;
+    static int SDLCALL applicationEvent(void *userdata, SDL_Event *event) noexcept {
+        // SDL emits foreground events before it releases some Android audio
+        // driver locks. Never take our mutex or call audio APIs from this watch.
+        if (event && event->type == SDL_APP_WILLENTERFOREGROUND)
+            static_cast<QueuedAudio *>(userdata)->resumePending.store(true, std::memory_order_release);
+        return 0;
+    }
+#endif
+    void stopWatchingLocked() {
+#if defined(__ANDROID__)
+        if (watchingEvents) {
+            if (SDL_WasInit(SDL_INIT_EVENTS)) SDL_DelEventWatch(applicationEvent, this);
+            watchingEvents = false;
+        }
+        resumePending.store(false, std::memory_order_relaxed);
+#endif
+    }
+    void resetAfterResumeLocked(uint32_t &queuedBytes) {
+#if defined(__ANDROID__)
+        if (!resumePending.exchange(false, std::memory_order_acq_rel)) return;
+        const uint32_t discardedBytes = queuedBytes;
+        SDL_ClearQueuedAudio(device);
+        history.fill(0);
+        queuedBytes = 0;
+        char text[256];
+        std::snprintf(text, sizeof(text),
+            "event=resume-reset discarded_bytes=%u discarded_us=%llu history_reset=1",
+            discardedBytes, (unsigned long long)(uint64_t(discardedBytes) / (channels * sizeof(float)) * 1'000'000 / outputRate));
+        diagnostics::log("audio", text);
+#else
+        (void)queuedBytes;
+#endif
+    }
 
     bool error(const char *reason) {
         ++queueErrors;
@@ -49,6 +86,7 @@ class QueuedAudio {
         history.fill(0);
     }
     void closeLocked() {
+        stopWatchingLocked();
         if (device) {
             diagnostics::log("audio", "event=close");
             SDL_CloseAudioDevice(device);
@@ -56,6 +94,9 @@ class QueuedAudio {
         }
     }
 public:
+#if defined(__ANDROID__)
+    ~QueuedAudio() { close(); }
+#endif
     bool open(uint32_t rate) {
         std::lock_guard lock(mutex);
         if(!rate || rate>INT_MAX) return error("invalid-output-rate");
@@ -88,6 +129,10 @@ public:
         diagnostics::log("audio",text);
         SDL_PauseAudioDevice(device, 0);
         diagnostics::log("audio", "event=pause paused=0 reason=open");
+#if defined(__ANDROID__)
+        SDL_AddEventWatch(applicationEvent, this);
+        watchingEvents = true;
+#endif
         return true;
     }
     void close() {std::lock_guard lock(mutex);closeLocked();}
@@ -106,6 +151,13 @@ public:
         if(count>size_t(INT_MAX)/sizeof(float)-prefix || converter.len_mult<1) return error("conversion-size-overflow");
         const size_t floats=count+prefix;
         if(floats>buffer.max_size()/size_t(converter.len_mult) || floats>size_t(INT_MAX)/sizeof(float)/size_t(converter.len_mult)) return error("conversion-size-overflow");
+#if defined(__ANDROID__)
+        // A producer may have waited in SDL while Android paused the device.
+        // Consume the foreground request after that wait, before conversion or
+        // backlog decimation, so no old samples/history survive the transition.
+        uint32_t queuedBytes=SDL_GetQueuedAudioSize(device);
+        resetAfterResumeLocked(queuedBytes);
+#endif
         buffer.resize(floats*size_t(converter.len_mult));
         std::copy(history.begin(),history.end(),buffer.begin());
         // Preserve the N64 memory/channel ordering and existing half gain.
@@ -127,7 +179,9 @@ public:
         // an odd discard count must never start halfway through stereo.
         const size_t leadingFrames=size_t(discard/2);
         float *start=buffer.data()+leadingFrames*channels;
+#if !defined(__ANDROID__)
         const uint32_t queuedBytes=SDL_GetQueuedAudioSize(device);
+#endif
         if(!queuedBytes) ++zeroPolls;
         const uint64_t queuedUs=uint64_t(queuedBytes)/frameBytes*1'000'000/outputRate;
         // Retain adaptive backlog decimation, bounded by shift width AND the
@@ -149,6 +203,14 @@ public:
         if(queuedFrames>UINT32_MAX/frameBytes) return error("queue-size-overflow");
         if(queuedFrames && SDL_QueueAudio(device,start,uint32_t(queuedFrames*frameBytes))<0) return error("queue-failed");
         history = nextHistory;
+#if defined(__ANDROID__)
+        // Also catch a foreground request arriving while conversion/QueueAudio
+        // was in progress, including a QueueAudio call blocked by the driver.
+        if (resumePending.load(std::memory_order_acquire)) {
+            uint32_t queuedAfterWrite = SDL_GetQueuedAudioSize(device);
+            resetAfterResumeLocked(queuedAfterWrite);
+        }
+#endif
         ++calls;
         inputFrames += count / inputChannels;
         outputFrames += queuedFrames;
@@ -168,7 +230,9 @@ public:
     size_t remainingFrames() {
         std::lock_guard lock(mutex);
         if(!device) return 0;
-        const uint64_t outputFrames=SDL_GetQueuedAudioSize(device)/(channels*sizeof(float));
+        uint32_t queuedBytes=SDL_GetQueuedAudioSize(device);
+        resetAfterResumeLocked(queuedBytes);
+        const uint64_t outputFrames=queuedBytes/(channels*sizeof(float));
         const uint64_t inputFrames=outputFrames*inputRate/outputRate;
         const uint32_t bias=inputRate/60; // Preserve the existing one-VI bias.
         return size_t(inputFrames>bias?inputFrames-bias:0);

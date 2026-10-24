@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <dlfcn.h>
+#include <memory>
 #include <thread>
 
 #define REQUIRE(x) do {if(!(x)){std::fprintf(stderr,"FAIL %d: %s\n",__LINE__,#x);std::exit(1);}}while(0)
@@ -14,16 +15,50 @@ static std::vector<float> captured;
 static Uint32 capturedBytes=0;
 static bool failQueue=false,failConvert=false;
 static unsigned opens=0,closes=0;
+static bool trackQueue=false;
+#if defined(__ANDROID__)
+static std::atomic<unsigned> clears{0},watchAdds{0},watchRemoves{0};
+static bool resumeDuringQuery=false,resumeDuringWrite=false;
+static void foregroundEvent() {
+    SDL_Event event={};event.type=SDL_APP_WILLENTERFOREGROUND;
+    REQUIRE(SDL_PushEvent(&event)==1);
+}
+extern "C" void SDL_AddEventWatch(SDL_EventFilter filter,void *userdata) {
+    static auto real=reinterpret_cast<void(*)(SDL_EventFilter,void *)>(dlsym(RTLD_NEXT,"SDL_AddEventWatch"));
+    REQUIRE(real);++watchAdds;real(filter,userdata);
+}
+extern "C" void SDL_DelEventWatch(SDL_EventFilter filter,void *userdata) {
+    static auto real=reinterpret_cast<void(*)(SDL_EventFilter,void *)>(dlsym(RTLD_NEXT,"SDL_DelEventWatch"));
+    REQUIRE(real);++watchRemoves;real(filter,userdata);
+}
+#endif
 extern "C" SDL_AudioDeviceID SDL_OpenAudioDevice(const char *,int,const SDL_AudioSpec *desired,SDL_AudioSpec *obtained,int allowed) {
     REQUIRE(allowed==0 && desired->format==AUDIO_F32SYS && desired->channels==2);
     if(obtained) {*obtained=*desired;obtained->size=obtained->samples*8;}++opens;return 7;
 }
 extern "C" void SDL_CloseAudioDevice(SDL_AudioDeviceID d) {REQUIRE(d==7);++closes;}
 extern "C" void SDL_PauseAudioDevice(SDL_AudioDeviceID d,int paused) {REQUIRE(d==7 && !paused);}
-extern "C" Uint32 SDL_GetQueuedAudioSize(SDL_AudioDeviceID d) {REQUIRE(d==7);return queuedBytes;}
+extern "C" Uint32 SDL_GetQueuedAudioSize(SDL_AudioDeviceID d) {
+    REQUIRE(d==7);
+#if defined(__ANDROID__)
+    if(resumeDuringQuery){resumeDuringQuery=false;foregroundEvent();}
+#endif
+    return queuedBytes;
+}
+extern "C" void SDL_ClearQueuedAudio(SDL_AudioDeviceID d) {
+    REQUIRE(d==7);queuedBytes=0;
+#if defined(__ANDROID__)
+    ++clears;
+#endif
+}
 extern "C" int SDL_QueueAudio(SDL_AudioDeviceID d,const void *data,Uint32 len) {
     REQUIRE(d==7);if(failQueue) return SDL_SetError("injected queue error");
-    REQUIRE(len%sizeof(float)==0);capturedBytes=len;const auto *f=static_cast<const float *>(data);captured.assign(f,f+len/sizeof(float));return 0;
+    REQUIRE(len%sizeof(float)==0);capturedBytes=len;const auto *f=static_cast<const float *>(data);captured.assign(f,f+len/sizeof(float));
+    if(trackQueue) queuedBytes.fetch_add(len);
+#if defined(__ANDROID__)
+    if(resumeDuringWrite){resumeDuringWrite=false;foregroundEvent();}
+#endif
+    return 0;
 }
 extern "C" int SDL_ConvertAudio(SDL_AudioCVT *cvt) {
     if(failConvert) return SDL_SetError("injected conversion error");
@@ -44,9 +79,17 @@ using TestAudio=tooie::audio::QueuedAudio;
 int main(int argc,char **argv) {
 #if defined(TOOIE_AUDIO_REAL_DUMMY)
     REQUIRE(SDL_Init(SDL_INIT_AUDIO)==0);tooie::audio::QueuedAudio a;REQUIRE(a.open(48000));
-    int16_t signal[128]={};REQUIRE(a.queue(signal,128));a.close();
+    int16_t signal[128]={};REQUIRE(a.queue(signal,128));
+#if defined(__ANDROID__)
+    SDL_Event event={};event.type=SDL_APP_WILLENTERFOREGROUND;
+    REQUIRE(SDL_PushEvent(&event)==1);REQUIRE(a.remainingFrames()==0);
+#endif
+    a.close();
     std::printf("PASS: actual SDL %s dummy backend open/convert/queue/close; no hardware audio claim\n",SDL_GetRevision());SDL_Quit();
 #else
+#if defined(__ANDROID__)
+    REQUIRE(SDL_Init(SDL_INIT_EVENTS)==0);
+#endif
     TestAudio a;REQUIRE(a.open(48000));
     const std::string mode=argc>1?argv[1]:"all";
     std::vector<int16_t> signal(128);
@@ -69,6 +112,66 @@ int main(int argc,char **argv) {
         REQUIRE(a.queue(signal.data(),30));REQUIRE(capturedBytes%8==0 && captured.size()==7*2);
     }
 #if !defined(TOOIE_AUDIO_BASELINE)
+#if defined(__ANDROID__)
+    if(mode=="resume") {
+        trackQueue=true;a.setFrequency(22050);queuedBytes=0;
+        std::vector<int16_t> constant(128),zero(128);
+        for(size_t i=0;i<constant.size();i+=2){constant[i]=-8192;constant[i+1]=16384;}
+        REQUIRE(a.queue(constant.data(),constant.size()));queuedBytes=0;
+        REQUIRE(a.queue(constant.data(),constant.size()));
+        const size_t fullPacketFloats=captured.size();
+        // Match the Odin capture: 136,864 output bytes = 356 ms at 48 kHz,
+        // enough to trigger 8:1 backlog decimation before returning from Home.
+        queuedBytes=136864;REQUIRE(a.queue(constant.data(),constant.size()));
+        REQUIRE(captured.size()<fullPacketFloats/4);
+        queuedBytes=136864;foregroundEvent();
+        // The SDL watch only records a request. Audio work must wait for the
+        // producer/poll callback, outside SDL's foreground/driver-lock path.
+        REQUIRE(clears==0 && queuedBytes==136864);
+        REQUIRE(a.queue(zero.data(),zero.size()));
+        REQUIRE(clears==1 && captured.size()==fullPacketFloats);
+        for(float x:captured) REQUIRE(x==0); // No old resampler history leaks.
+
+        queuedBytes=136864;foregroundEvent();REQUIRE(a.remainingFrames()==0);
+        REQUIRE(clears==2 && queuedBytes==0);
+        // Foreground arriving inside a blocked query must not reenter our
+        // audio mutex; it is applied after the query returns.
+        queuedBytes=136864;resumeDuringQuery=true;
+        REQUIRE(a.queue(zero.data(),zero.size()));
+        REQUIRE(clears==3 && captured.size()==fullPacketFloats);
+        for(float x:captured) REQUIRE(x==0);
+        // Also discard a packet whose QueueAudio call crossed the transition.
+        queuedBytes=0;resumeDuringWrite=true;
+        REQUIRE(a.queue(constant.data(),constant.size()));
+        REQUIRE(clears==4 && queuedBytes==0);
+        REQUIRE(a.queue(zero.data(),zero.size()));
+        for(float x:captured) REQUIRE(x==0);
+
+        const auto before=clears.load();
+        SDL_Event unrelated={};unrelated.type=SDL_APP_DIDENTERFOREGROUND;
+        REQUIRE(SDL_PushEvent(&unrelated)==1);a.remainingFrames();REQUIRE(clears==before);
+        unrelated.type=SDL_APP_WILLENTERBACKGROUND;
+        REQUIRE(SDL_PushEvent(&unrelated)==1);a.remainingFrames();REQUIRE(clears==before);
+        // Reopening replaces the watcher; it does not carry a pending request
+        // into the new device or leave a duplicate registration behind.
+        foregroundEvent();REQUIRE(a.open(48000));queuedBytes=0;
+        a.remainingFrames();REQUIRE(clears==before);
+        REQUIRE(watchAdds==2 && watchRemoves==1);
+        std::thread notifications([]{for(unsigned i=0;i<200;++i)foregroundEvent();});
+        std::thread packets([&]{for(unsigned i=0;i<200;++i){REQUIRE(a.queue(zero.data(),zero.size()));a.remainingFrames();}});
+        notifications.join();packets.join();a.close();
+        REQUIRE(watchAdds==watchRemoves);
+        {
+            auto temporary=std::make_unique<TestAudio>();REQUIRE(temporary->open(48000));
+            foregroundEvent();temporary.reset();
+        }
+        foregroundEvent(); // ASan catches any watcher retained after destruction.
+        REQUIRE(watchAdds==watchRemoves);
+        SDL_Quit();
+        std::puts("PASS: Android resume clears stale queue/history on audio callbacks; query/write races, event-only notification, reopen and watcher lifetime");
+        return 0;
+    }
+#endif
     if(mode=="all") {
         queuedBytes=0;a.setFrequency(48000);REQUIRE(a.queue(signal.data(),2));REQUIRE(captured.size()==2);
         // All rates use real SDL conversion. Independent constant channel
@@ -103,6 +206,10 @@ int main(int argc,char **argv) {
         REQUIRE(opens==1 && closes==0);REQUIRE(a.open(48000));REQUIRE(opens==2 && closes==1);
     }
 #endif
-    a.close();std::puts("PASS: stereo order/gain, prefix, queue duration, complete-frame decimation, rates/history, small/malformed packets, errors and serialized callbacks");
+    a.close();
+#if defined(__ANDROID__)
+    SDL_Quit();
+#endif
+    std::puts("PASS: stereo order/gain, prefix, queue duration, complete-frame decimation, rates/history, small/malformed packets, errors and serialized callbacks");
 #endif
 }
