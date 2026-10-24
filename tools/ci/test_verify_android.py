@@ -6,10 +6,15 @@ packaging step still verifies the actual Gradle-built and signed Android APK.
 """
 import contextlib
 import io
+import json
+import os
+from pathlib import Path
+import tempfile
 import unittest
+from unittest import mock
 import zipfile
 
-from verify_android import check_update_java
+from verify_android import check_update_java, check_configuration, check_native_entries, apk_profile
 
 
 class UpdateJavaPackagingTests(unittest.TestCase):
@@ -54,6 +59,53 @@ class UpdateJavaPackagingTests(unittest.TestCase):
     def test_marker_split_across_dex_files_does_not_count(self):
         with self.assertRaisesRegex(ValueError, "UpdateClient"):
             self.check({"classes.dex": b"Update", "classes2.dex": b"Client\0" + self.bridge})
+
+
+class DriverVariantPackagingTests(unittest.TestCase):
+    def test_isolated_identity_and_min_api(self):
+        revision = "a" * 40
+        normal, experimental = apk_profile(revision, False), apk_profile(revision, True)
+        self.assertEqual(normal["package"], "io.github.banjotooierecompiled")
+        self.assertEqual(experimental["package"], normal["package"] + ".gputest.g" + revision[:12])
+        self.assertEqual((normal["min_api"], experimental["min_api"]), (24, 28))
+
+    def test_native_hooks_cannot_leak_into_normal_package(self):
+        originals = {"libmain.so": None, "libSDL2.so": None}
+        names = ["lib/arm64-v8a/" + n for n in originals]
+        check_native_entries(names, originals)
+        with self.assertRaisesRegex(ValueError, "native library"):
+            check_native_entries(names + ["lib/arm64-v8a/libmain_hook.so"], originals)
+        with self.assertRaisesRegex(ValueError, "native library"):
+            check_native_entries(names + ["lib/x86_64/libmain.so"], originals)
+
+    def test_missing_hook_is_rejected(self):
+        names = ["libmain.so", "libSDL2.so", "libmain_hook.so", "libhook_impl.so", "libfile_redirect_hook.so", "libgsl_alloc_hook.so", "libc++_shared.so"]
+        for missing in names:
+            with self.subTest(missing=missing), self.assertRaisesRegex(ValueError, "native library"):
+                check_native_entries(["lib/arm64-v8a/" + n for n in names if n != missing], dict.fromkeys(names))
+
+    def configuration(self, mode, cache_mode=None, flags=None, loader_source=True):
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "source"; work = Path(temp) / "work"; ndk = Path(temp) / "ndk"
+            native = work / "native"; native.mkdir(parents=True)
+            cache = "TOOIE_ANDROID_RUNTIME:BOOL=ON\nTOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE:BOOL=OFF\nANDROID_ABI:STRING=arm64-v8a\n"
+            cache += "TOOIE_ANDROID_DRIVER_TEST:BOOL=" + (cache_mode or ("ON" if mode == "1" else "OFF")) + "\nANDROID_STL:STRING=c++_shared\n"
+            (native / "CMakeCache.txt").write_text(cache)
+            targets = ["src/main.cpp", "src/recomp_api.cpp", "src/aiming_controls.cpp", "lib/rt64/src/contrib/plume/plume_vulkan.cpp",
+                       "lib/rt64/src/hle/rt64_present_queue.cpp", "lib/rt64/src/render/rt64_transform_processor.cpp"]
+            if mode == "1" and loader_source: targets += ["src/android_vulkan_driver.cpp"]
+            defines = ["-D" + name + "=0" for name in ("TOOIE_ANDROID_TIMING_TRACE", "TOOIE_ANDROID_GEOMETRY_TRACE", "TOOIE_ANDROID_CORRECTION_TRACE", "TOOIE_VULKAN_QUEUE_ISOLATION_TEST")]
+            defines += flags if flags is not None else (["-DTOOIE_ANDROID_DRIVER_TEST=1"] if mode == "1" else [])
+            commands = [{"file": str(source / path), "arguments": [str(ndk / "bin/aarch64-linux-android24-clang++"), *defines]} for path in targets]
+            (native / "compile_commands.json").write_text(json.dumps(commands))
+            with mock.patch.dict(os.environ, {"TOOIE_ANDROID_DRIVER_TEST": mode}), contextlib.redirect_stdout(io.StringIO()):
+                check_configuration(source, work, ndk)
+
+    def test_actual_compile_mode_is_checked(self):
+        self.configuration("0"); self.configuration("1")
+        for mode, options in (("1", {"cache_mode": "OFF"}), ("1", {"flags": []}),
+                              ("0", {"flags": ["-DTOOIE_ANDROID_DRIVER_TEST=1"]}), ("1", {"loader_source": False})):
+            with self.subTest(mode=mode, options=options), self.assertRaises(ValueError): self.configuration(mode, **options)
 
 
 if __name__ == "__main__":

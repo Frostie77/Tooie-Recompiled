@@ -2,11 +2,15 @@ name: Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, test/android-turnip-loader]
   pull_request:
     branches: [main]
   workflow_dispatch:
     inputs:
+      gpu_driver_test:
+        description: 'Build a separate experimental GPU-driver test app (never a release candidate)'
+        type: boolean
+        default: false
       prepare_candidate:
         description: 'Export an UNSIGNED release candidate (no installation or publication)'
         type: boolean
@@ -39,6 +43,7 @@ jobs:
       ANDROID_NDK_VERSION: 28.2.13676358
       CMAKE_BUILD_PARALLEL_LEVEL: 2
       TOOIE_CI_ROOT: ${{ github.workspace }}/.ci-android
+      TOOIE_ANDROID_DRIVER_TEST: ${{ (github.ref_name == 'test/android-turnip-loader' || github.head_ref == 'test/android-turnip-loader' || (github.event_name == 'workflow_dispatch' && inputs.gpu_driver_test)) && '1' || '0' }}
       TOOIE_RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.prepare_candidate && inputs.version_name || '' }}
       TOOIE_RELEASE_VERSION_CODE: ${{ github.event_name == 'workflow_dispatch' && inputs.prepare_candidate && inputs.version_code || '3' }}
     steps:
@@ -93,6 +98,8 @@ jobs:
           mkdir -p .ci-android/logs
           {
             python3 tools/ci/test_verify_android.py
+            python3 tools/android-workflow/tests/test_gpu_driver_staging.py
+            python3 tools/test_android_vulkan_driver.py
             python3 tools/android-workflow/tests/test_workflow.py
             python3 tools/android-workflow/tests/test_terminal.py
             python3 tools/android-workflow/tests/test_collector.py
@@ -119,6 +126,7 @@ jobs:
         run: bash tools/ci/build_android.sh package
 
       - name: Check release packaging with an ephemeral test certificate
+        if: env.TOOIE_ANDROID_DRIVER_TEST != '1'
         run: |
           python3 tools/test_android_release.py \
             --integration-work .ci-android \
