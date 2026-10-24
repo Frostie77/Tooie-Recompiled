@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0.1 — Unreleased
+## [v1.0.1](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1) — 2026-10-24
 
 ### Added
 

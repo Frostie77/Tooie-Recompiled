@@ -38,8 +38,8 @@ established signing identity for existing Odin updates; public-release signing
 and migration must be verified. Current CI success is separate from device
 gameplay acceptance.
 
-- [Changelog](../../CHANGELOG.md): public release changes and the v1.0.1 candidate.
-- [v1.0.1 Odin candidate checks](release-v1.0.1-check-20261024.md): exact signed
+- [Changelog](../../CHANGELOG.md): public release changes through v1.0.1.
+- [v1.0.1 release and Odin checks](release-v1.0.1-check-20261024.md): exact signed
   APK identity, manually reported results and remaining notice/browser checks.
 
 ## Evidence

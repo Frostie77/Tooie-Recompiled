@@ -1,9 +1,9 @@
 # Android startup update checks
 
-The startup checker is included in the signed **v1.0.1 / code 4 candidate**.
-Its focused Odin checks passed as described below; publication is pending.
-Published v1.0.0 predates this code and needs one manual APK update to gain it.
-The stable feed stays on the verified v1.0.0 APK until v1.0.1 is public.
+The startup checker is included in public **v1.0.1 / code 4**. Its focused Odin
+checks passed as described below; remaining notice/browser checks are separate.
+Version 1.0.0 predates this code and needs one manual APK update to gain it.
+The stable feed now describes the verified public v1.0.1 APK.
 
 ## Player behavior
 
@@ -119,7 +119,10 @@ CI additionally compiles the actual ARM64 UI/bridge and checks the packaged
 network permission, DEX entry points and native strings.
 
 The initial v1.0.0 entry was independently regenerated from its actual signed
-APK using Android SDK signature/manifest checks and matches the checked-in feed.
+APK using Android SDK signature/manifest checks. The current v1.0.1 entry binds
+the exact APK to its local SDK signing report, independent packaged-manifest
+inspection and the public GitHub asset's matching size/digest. See the
+[publication record](release-v1.0.1-check-20261024.md#public-release-and-feed).
 Host fixtures cover newer/equal/older codes; invalid channels, identities and
 assets; minimum API/ABI; offline/retry; ETags; throttling; malformed, oversized
 and deeply nested data; concurrent requests; and duplicate-notice deferral.

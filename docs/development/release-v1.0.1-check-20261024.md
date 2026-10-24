@@ -1,6 +1,6 @@
-# v1.0.1 candidate and Odin update checks
+# v1.0.1 release and Odin update checks
 
-Date: **24 October 2026 (AEDT)**. Publication is pending.
+Published: **24 October 2026 (AEDT)**.
 
 ## Exact candidate
 
@@ -45,15 +45,27 @@ capture was supplied. Installed mod retention does not separately test execution
 of every mod after this update. A fresh save-write/reload and exhaustive ROM,
 menu and lifecycle coverage were not established.
 
-## Remaining coverage and publication
+## Public release and feed
+
+Frostie published [v1.0.1](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1). Its tag points to the exact source commit
+in the table above. The public APK and SHA256SUMS have the same filenames, sizes
+and SHA-256 digests as the verified signed upload.
+
+The stable feed now identifies v1.0.1 / code 4 and the canonical public APK.
+Feed preparation reused the local SDK signing verification, bound to the exact
+APK hash, plus independent packaged-manifest/archive checks and matching public
+asset metadata. SDK signature verification was performed on Frostie's PC; the
+publication host did not rerun that signature check. Existing metadata rejection
+tests passed. This publication/feed update does not retest the newer-notice UI
+on Odin.
+
+## Remaining coverage
 
 - A real newer-version offer, Later, View Release/browser return, controller
   navigation and deferral during gameplay remain on-device checks. Host tests
-  exercise those selection/lifecycle branches. The older v1.0.0 feed produces
-  the expected no-newer result; it does not exercise a newer release's API lookup.
-- Publish the exact APK under the **v1.0.1** tag and canonical APK filename,
-  with the matching checksum; then advance the stable feed using the signed APK.
-- Keep the stable feed on its previous public entry until publication succeeds.
+  exercise those selection/lifecycle branches. During the Odin checks, the older
+  v1.0.0 feed produced the expected no-newer result; that did not exercise a newer
+  release's API lookup.
 - Retroid Pocket 5 issue #26 and its separate Adreno 650 experiment are not
   resolved by this candidate. Known Jiggy lines, dialogue shift and intro/demo
   stutter remain tracked.

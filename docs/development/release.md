@@ -8,9 +8,9 @@ on Odin, updated the existing code-`2` candidate and confirmed the app worked
 with all saves and settings retained. This is a manual device result without a
 fresh capture. Distribution review remains open.
 
-## v1.0.1 candidate
+## v1.0.1 published release
 
-The signed **v1.0.1 / code 4** candidate uses source
+The public [v1.0.1 release](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1) uses Android code **4** and source
 `a3c6f5c571cf9baf5c1a8f368b4ccbce9b7db4d6` and the same protected release
 certificate. Its APK SHA-256 is
 `8e1a89308912b68001d7e2d98dc9f6feb3a43bc8617906645425b2ebc01187b2`.
@@ -22,12 +22,13 @@ Frostie installed it over v1.0.0 on Odin and reported the existing save, setting
 and installed mods retained. Online checks, Off-preference persistence, offline
 startup/error handling and reconnect recovery passed. A real newer-version
 notice and browser-return flow remain untested on device. See the
-[candidate record](release-v1.0.1-check-20261024.md) and [changelog](../../CHANGELOG.md).
+[release record](release-v1.0.1-check-20261024.md) and [changelog](../../CHANGELOG.md).
 
-Publication is pending. Publish the exact signed APK as **v1.0.1** before
-advancing `updates/android-stable.json`; follow the [update guide](update-plan.md).
-Documentation commits do not change the selected APK source or require a new
-build/signature. Retain the selected release source for the tag.
+Frostie published v1.0.1 on **24 October 2026 (AEDT)**. The tag points to the
+exact source above; the public APK and checksum digests match the verified upload.
+The stable feed now records v1.0.1 / code 4. Follow the [update guide](update-plan.md)
+for future releases. Documentation/feed commits do not change the selected APK
+source or require a new build/signature.
 
 ## Bundled notices
 
@@ -70,7 +71,7 @@ does not establish a licence grant.
 Source/font equality establishes the restored inputs. Frostie's published-APK
 update report confirms the app worked with retained saves and settings; it does
 not separately describe the restored font's appearance. Future updates must use
-a version code higher than `3` and the same release signing identity.
+a version code higher than `4` and the same release signing identity.
 
 The [24 October candidate check](release-candidate-check-20261024.md) records
 ROM selection, Aiming Invert, the UI texture mod and the visited first-person
@@ -146,7 +147,7 @@ For future candidates, open **Actions → Android APK → Run workflow**, select
 the reviewed source branch, enable `prepare_candidate`, and set the candidate
 version name/code. The first preview used `0.1.0-preview.1` / `2`; the published
 font-corrected release uses **`1.0.0` / `3`**. Future releases need a version
-code greater than `3`; do not reuse the 1.0.0 workflow defaults for a new release.
+code greater than `4`; do not reuse the 1.0.0 workflow defaults for a new release.
 Keep the existing protected release key and the separate Debug app. The native
 stamp and Android version use the same supplied name.
 
@@ -216,7 +217,7 @@ Keep [distribution review and device coverage](../android-completion-requirement
 open until each has its own evidence. Frostie's publication approval is recorded
 separately from the package-verification reports: their `publication_approved`
 field remains false because those tools do not grant publication permission.
-The startup checker is included in the v1.0.1 candidate; its feed and remaining
+The startup checker is included in public v1.0.1; its feed and remaining
 device checks are described in the [update guide](update-plan.md).
 
 The [v1.0.0 release record](preview-notes.md) identifies the published signed APK,

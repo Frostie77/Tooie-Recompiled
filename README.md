@@ -4,7 +4,7 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 [N64Recomp](https://github.com/N64Recomp/N64Recomp) and
 [RT64](https://github.com/rt64/rt64).
 
-## Latest Release - [v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/Banjo-Tooie)
+## Latest Release - [v1.0.1](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1)
 
 **You must supply your own supported Banjo-Tooie (USA) ROM. No ROM is included.**
 
@@ -61,7 +61,7 @@ input and the regular camera retain their behavior.
 
 ### Update checks (v1.0.1)
 
-The upcoming **v1.0.1** adds background startup update checks and
+**v1.0.1** adds background startup update checks and
 **Settings → Updates** for manual checks and a saved automatic-check toggle.
 Newer compatible releases offer **View Release / Later**; the release page
 provides the APK to download and install. Offline checks leave the app usable.
@@ -99,10 +99,11 @@ formats do not make Banjo-Kazooie mods or desktop native extensions compatible.
 
 ### Does the game update itself?
 
-Published v1.0.0 uses manual GitHub downloads. The next release adds background
-startup checks and **Settings → Updates**, with an automatic-check toggle and
-**Check for Updates**. **View Release** opens the matching GitHub release;
+Version 1.0.0 needs one manual APK update to gain the checker. From v1.0.1,
+background startup checks and **Settings → Updates** can notify you of newer
+compatible releases. **View Release** opens the matching GitHub release;
 download the APK from Assets and install it as an update to keep your progress.
+Downloads and installation remain manual.
 
 ## Known issues
 

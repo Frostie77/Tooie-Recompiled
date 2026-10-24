@@ -6,6 +6,12 @@ The goal is a reliable native Android ARM64 release for the Android,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
 Checked boxes describe the tested scope; the project is not fully complete.
 
+[Tooie Recompiled v1.0.1](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1)
+was published on **24 October 2026 (AEDT)** with Android version code **4**.
+Its tag matches the tested source; both public asset digests match the verified
+signed upload. The stable feed now identifies v1.0.1. Focused Odin results are
+recorded [below](#v101-release-checks).
+
 [Tooie Recompiled v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/Banjo-Tooie)
 was published on **24 October 2026 (AEDT)** with Android version code **3**.
 The public APK and checksum match the verified signed upload. 
@@ -41,11 +47,11 @@ The texture/aiming capture and later manual restart/Off checks are recorded
 separately in [PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14).
 These passes cover the named fixtures and routes, not every mod, scene or device.
 
-## v1.0.1 candidate checks
+## v1.0.1 release checks
 
-The signed **v1.0.1 / code 4** candidate from `a3c6f5c571cf` was installed
+The signed **v1.0.1 / code 4** APK from `a3c6f5c571cf` was installed
 over v1.0.0 on Odin. These are Frostie's manual reports, without a new capture;
-see the [candidate record](development/release-v1.0.1-check-20261024.md).
+see the [release record](development/release-v1.0.1-check-20261024.md).
 
 - [x] ADB update returned Success; existing save, settings and installed mods
   were reported retained after loading the existing save.
@@ -56,7 +62,7 @@ see the [candidate record](development/release-v1.0.1-check-20261024.md).
 - [x] Manual checks recovered after Wi-Fi was restored.
 - [ ] Observe a real newer-version notice, Later, View Release and browser return
   on device, including controller navigation and deferral during gameplay.
-- [ ] Publish v1.0.1, verify the public assets and then advance the stable feed.
+- [x] Published v1.0.1, verified both public assets and advanced the stable feed.
 
 ## Still required for full completion
 
