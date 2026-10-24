@@ -45,6 +45,9 @@ def guard_observer_command(args, adb, serial):
     if operation[0] == 'exec-out':
         require(operation[1:] == ['screencap', '-p'], 'Only foreground screenshot reads are allowed.')
         return
+    if operation[0] == 'logcat':
+        require('-d' in operation and '-c' not in operation, 'Only saved Logcat reads are allowed.')
+        return
     require(operation[0] == 'shell', 'Attach mode cannot install, launch or change app data.')
     shell = operation[1:]
     if shell and shell[0] == '-T':

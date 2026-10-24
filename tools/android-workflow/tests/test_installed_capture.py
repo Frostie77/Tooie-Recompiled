@@ -102,6 +102,7 @@ class InstalledCapture(unittest.TestCase):
         capture.guard_observer_command(base + ['shell', '-T', 'pm path io.github.banjotooierecompiled'], 'adb', 'device')
         capture.guard_observer_command(base + ['shell', '-T', "log -p i -t TooieUserMark '{\"note\":\"am start; pm clear\"}'"], 'adb', 'device')
         capture.guard_observer_command(base + ['exec-out', 'screencap', '-p'], 'adb', 'device')
+        capture.guard_observer_command(base + ['logcat', '-b', 'all', '-d', '-T', '2026-10-24 21:30:00.000'], 'adb', 'device')
 
     def test_wrong_installed_apk_stops_without_starting_a_capture(self):
         self.c.SERIAL = 'fixture-device'
@@ -238,6 +239,38 @@ class InstalledCapture(unittest.TestCase):
         summary = Path(prefix + '-Evidence.txt').read_text()
         self.assertIn(self.c.CAPTURE_SCOPE_OVERRIDE, summary)
         self.assertNotIn('Timing observation includes', summary)
+
+    def test_real_final_collection_retains_private_delta_and_logcat_dump(self):
+        self.c.ADB, self.c.SERIAL = 'fixture-adb', 'fixture-device'
+        self.c.attempted = True
+        self.c.original_pid = 1234
+        self.c.capture_start = '2026-10-24 21:30:00'
+        self.c.baseline = b'old log\n'
+        delta = b'Runtime audio: mono_us=123 pid=1234 tid=2 event=window\n'
+        self.c.CAPTURE_SCOPE_OVERRIDE = 'Installed capture\n'
+        self.c.TIMING_SCOPE_OVERRIDE = 'Available diagnostics only\n'
+        calls = []
+        def command(args, name=None, **kwargs):
+            values = list(map(str, args))
+            capture.guard_observer_command(values, 'fixture-adb', 'fixture-device')
+            calls.append(values)
+            operation = values[3:]
+            if operation[0] == 'logcat': payload = b'fixture app Logcat dump\n'
+            elif operation[-1].startswith('run-as '): payload = self.c.baseline + delta
+            elif operation[-1].startswith('pidof '): payload = b'1234\n'
+            else: payload = b'fixture device state\n'
+            if name is not None:
+                self.c.save(name, payload)
+                self.c.save(name + '-status', 'returncode=0\n')
+            return subprocess.CompletedProcess(values, 0, payload, b'')
+        self.c.command = command
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.c.collect()
+        prefix = str(self.c.prefix)
+        self.assertEqual(Path(prefix + '-NewLog.txt').read_bytes(), delta)
+        self.assertEqual(Path(prefix + '-Logcat-Dump.txt').read_bytes(), b'fixture app Logcat dump\n')
+        self.assertEqual(list(self.area.glob('*-read-error.txt')), [])
+        self.assertEqual(len(calls), 8)
 
     def test_marker_budget_failure_preserves_raw_and_produces_no_partial_share(self):
         prefix = 'Tooie-' + self.source[:12] + '-Budget-Test'
