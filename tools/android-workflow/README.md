@@ -1,5 +1,36 @@
 # Tooie Recompiled Android workflow
 
+## Record an already installed Debug build
+
+`capture_installed.py` verifies a locally signed CI APK and its signing/CI JSON
+reports, checks the installed base APK's hash and attaches to that Debug app.
+Open the app and load the save manually, then type `playing`. This mode does not
+install, launch, stop or reset the app, change settings or send game input.
+
+In the same Ubuntu terminal:
+
+- Type `1` through `30`, optionally followed by a short description.
+- Reuse numbers for further events. Each occurrence keeps its own sequence and
+  event ID; `note 30 DESCRIPTION` annotates the latest occurrence of marker 30.
+- The first 30 fresh events attempt a foreground screenshot. All later markers
+  and notes remain recorded after that screenshot limit.
+- Type `save` when finished. There is no automatic gameplay time limit.
+
+The usual durable input journal, private-log delta, process checks, bounded
+foreground screenshot reads and single compact Share ZIP are retained. Every
+marker, follow-up note and input-journal entry is included in the Share ZIP;
+packaging stops with the complete local evidence retained if their metadata
+cannot fit the upload budget. Log excerpts and other omissions stay explicit.
+The collector does not inherit the old profile's timing-observer claims.
+
+Use a pinned copy of the recorder with `--apk`, `--verification`, `--build-report`,
+`--expect-source`, `--expect-sha256`, `--expect-cert`, `--build-tools`, `--downloads`,
+`--adb` and `--serial`. These bind the capture to the selected installed build.
+The historical `tooie test` profiles below perform a replacement installation;
+they must not be used to attach to a newer CI APK.
+
+See the [minor-details backlog and marker-review protocol](../../docs/development/minor-details.md).
+
 ## Current milestone: real texture import and saved aiming preference
 
 The build is pinned to `dcba2d96d8155ba3d8c93460345eeb9c0d23ef8f`, exact tree

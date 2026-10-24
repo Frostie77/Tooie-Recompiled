@@ -46,6 +46,8 @@ EXTENSION_SECONDS = 300
 original_pid = None
 launch_existing_pids = ()
 finish_requested = False
+CAPTURE_SCOPE_OVERRIDE = None
+TIMING_SCOPE_OVERRIDE = None
 ENGINEERING = '9ec05e8667b9529d7b1096608a74c846c1bda4eb'
 NATIVE_SOURCE = SHA
 ARTWORK_HASH = '3c125d58ad008e837f3c7dc335133d03bb9aae19086ffbde90d8a71daa52c707'
@@ -60,6 +62,8 @@ def require(ok, message):
         raise RuntimeError(message)
 
 def save(name, value):
+    if name == 'Timing-Capture-Scope' and TIMING_SCOPE_OVERRIDE is not None:
+        value = TIMING_SCOPE_OVERRIDE
     path = Path(str(prefix) + '-' + name + '.txt')
     with path.open('xb') as f:
         f.write(value if isinstance(value, bytes) else value.encode())
@@ -208,7 +212,7 @@ class LiveInput:
 live_input = None
 live_events = []
 marker_shots = 0
-MARKER_SHOT_LIMIT = 10
+MARKER_SHOT_LIMIT = 30
 
 def marker_screenshot(record):
     global marker_shots
@@ -246,7 +250,7 @@ def input_hub():
 
 def handle_live_note(item, phase):
     value = item['text'].strip()
-    match = re.fullmatch(r'(?:(note)\s+)?(10|[1-9])(?:\s+(.*))?', value, re.I)
+    match = re.fullmatch(r'(?:(note)\s+)?(30|[12][0-9]|[1-9])(?:\s+(.*))?', value, re.I)
     if match is None:
         return False
     kind, number, description = ('note' if match[1] else 'event'), int(match[2]), match[3] or ''
@@ -315,7 +319,7 @@ def wait_with_live_notes(seconds, phase):
             save('User-Finish-Request', json.dumps(item, ensure_ascii=False, indent=2) + '\n')
             print('Finish request saved. Keeping the evidence; leave the app as it is.', flush=True)
             return
-        print('During capture: type 1–10 and a short note, or save to finish. Other choices are available when the timer ends. Raw input retained.', flush=True)
+        print('During capture: type 1–30 and a short note, or save to finish. Other choices are available when the timer ends. Raw input retained.', flush=True)
 
 def close_live_input():
     if live_input is None:
@@ -339,13 +343,13 @@ def observe(label):
     timed = demo or label.startswith('Gameplay-')
     duration = DEMO_SECONDS if demo else (GAMEPLAY_SECONDS if label == 'Gameplay-01' else EXTENSION_SECONDS) if timed else OBSERVE_SECONDS
     if demo:
-        print('INTRO/DEMO CAPTURE: FIVE MINUTES. Leave Odin untouched so the intro and automatic demos can run. Do not skip scenes or load a save yet. In THIS Ubuntu window, mark visible speed changes, demo transitions or hitches with 1–10 and a short description.', flush=True)
+        print('INTRO/DEMO CAPTURE: FIVE MINUTES. Leave Odin untouched so the intro and automatic demos can run. Do not skip scenes or load a save yet. In THIS Ubuntu window, mark visible speed changes, demo transitions or hitches with 1–30 and a short description.', flush=True)
     elif timed:
         print(f'GAMEPLAY CAPTURE: {duration // 60} MINUTES. Play normally from your existing save. Mark input delay, freezes, stretching or sound problems in THIS Ubuntu window. First-person entrance/boss success was already observed; another visit is optional.', flush=True)
     else:
         print(f'Collecting launcher evidence for {duration} seconds. Leave the app untouched; do not reopen it if it closes.', flush=True)
     if timed:
-        print('Notes: 1 intro looks fast  [then Enter]. The first ten fresh numbered events also attempt a foreground screenshot in the SAME ZIP; notes are always saved. A number alone works; reuse 1–10 for more markers. Use note 1 DESCRIPTION to add detail later. Type save at any time to finish. Keep graphics/volume settings unchanged during capture. No camera or second window is needed.', flush=True)
+        print('Notes: 1 intro looks fast  [then Enter]. The first thirty fresh numbered events also attempt a foreground screenshot in the SAME ZIP; notes are always saved. A number alone works; reuse 1–30 for more markers. Use note 1 DESCRIPTION to add detail later. Type save at any time to finish. Keep graphics/volume settings unchanged during capture. No camera or second window is needed.', flush=True)
     started = time.monotonic()
     started_wall = dt.datetime.now().astimezone().isoformat()
     deadline = started + duration
@@ -760,10 +764,10 @@ def main():
     print('PASS: Odin2 Portal / 7907333f. Existing app PIDs: ' + (', '.join(map(str, initial_pids)) or 'none'), flush=True)
     print('This test performs one replacement install and one launch of this exact APK. Updating ends any running app session. App data is retained. No force-stop, uninstall, data reset or settings change is performed.', flush=True)
     if GAMEPLAY_ONLY:
-        print('GAMEPLAY TEST. Follow ready and playing in this ONE Ubuntu window. Load your existing save after Start Game. The ten-minute timer starts only when you can move Banjo and type playing. No timed demo is required. Use 1–10 plus a note, or save to finish. Notes and bug pictures go in the SAME ZIP.', flush=True)
+        print('GAMEPLAY TEST. Follow ready and playing in this ONE Ubuntu window. Load your existing save after Start Game. The ten-minute timer starts only when you can move Banjo and type playing. No timed demo is required. Use 1–30 plus a note, or save to finish. Notes and bug pictures go in the SAME ZIP.', flush=True)
     else:
         print('Replay wait correction is enabled. Timing diagnostics include observer/logging cost. This profile observes only the intro and automatic demos.' if DEMO_ONLY else 'Replay wait correction and timing diagnostics are enabled; measurements include observer/logging cost. Optional gameplay is available after demo capture.', flush=True)
-        print(('INTRO/DEMO ONLY. Follow ready and watching in this ONE Ubuntu window; leave Odin untouched after Start Game. Type 1–10 plus a note during capture, or save to finish. Notes go in the SAME evidence ZIP. Do not type done.' if DEMO_ONLY else 'ONE UBUNTU WINDOW. Follow ready, watching and playing. Type 1–10 plus a note during capture, or save to finish. Notes go in the SAME evidence ZIP. Do not type done.'), flush=True)
+        print(('INTRO/DEMO ONLY. Follow ready and watching in this ONE Ubuntu window; leave Odin untouched after Start Game. Type 1–30 plus a note during capture, or save to finish. Notes go in the SAME evidence ZIP. Do not type done.' if DEMO_ONLY else 'ONE UBUNTU WINDOW. Follow ready, watching and playing. Type 1–30 plus a note during capture, or save to finish. Notes go in the SAME evidence ZIP. Do not type done.'), flush=True)
     # Running this supplied collector requests the described one-install/one-launch test.
     stamp = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
     prefix = DOWNLOADS / f'Tooie-3a8ef82eafc0-Task-Delivery-Timing-Odin-{stamp}-{uuid.uuid4().hex[:8]}'
@@ -1128,6 +1132,8 @@ def collect():
         scope = 'GAMEPLAY ONLY: user-selected existing-save test, ten minutes after playing confirmation with optional extensions; no timed demo window. ' + scope
     elif DEMO_ONLY:
         scope = 'INTRO/DEMO ONLY: no save loading or playable-area test is requested. ' + scope
+    if CAPTURE_SCOPE_OVERRIDE is not None:
+        scope = CAPTURE_SCOPE_OVERRIDE
     save('Capture-Scope', scope)
     summary += '\nRuntime records correlated with original PID ' + str(original_pid) + ': ' + str(counts) + '; window=' + str(len(window)) + '\n' + scope
     if correlated:
@@ -1135,7 +1141,7 @@ def collect():
     save('Evidence', summary)
     print('Evidence saved for original PID ' + str(original_pid) + '; runtime counts: ' + str(counts), flush=True)
     bundles, index = archive_evidence()
-    print('CAPTURE COMPLETE. Gameplay diagnostic APK; visual corrections require hardware verification; no intentional probe exit. Observer cost is included. Process presence, frame counts and screenshots alone do not establish correct speed or gameplay.', flush=True)
+    print('CAPTURE COMPLETE. Installed Debug observation saved; markers are pending review. Logging/ADB cost is included.' if CAPTURE_SCOPE_OVERRIDE is not None else 'CAPTURE COMPLETE. Gameplay diagnostic APK; visual corrections require hardware verification; no intentional probe exit. Observer cost is included. Process presence, frame counts and screenshots alone do not establish correct speed or gameplay.', flush=True)
     print('Full raw archive saved locally. The workflow will print the ONE file to upload.', flush=True)
     print('Capture is saved. You may close the app normally. For another separately recorded session, use the workflow test command again.', flush=True)
 

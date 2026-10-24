@@ -439,7 +439,7 @@ def summarize_archive(archive):
             result['original_pid'] = original
         elif found:
             result['original_pid'] = found[1]
-        raw = read('User-Markers') or ''
+        raw = read('User-Markers', 128 * 1024 * 1024) or ''
         for line in raw.splitlines():
             try:
                 result['user_markers'].append(json.loads(line))
@@ -488,6 +488,8 @@ def package_evidence(archive, profile):
                          'Full capture and omitted originals remain on the PC. '
                          'This compact upload is not the complete raw archive.'}
     local_only = {prefix + '-Baseline.txt', prefix + '-FullLog.txt'}
+    user_records = {prefix + '-' + s + '.txt' for s in
+                    ('User-Markers', 'User-Marker-Summary', 'Live-Input-Journal', 'User-Follow-Up')}
     primary = {prefix + '-' + s + '.txt' for s in ('NewLog', 'Logcat', 'Logcat-Dump')}
     with zipfile.ZipFile(archive) as source:
         if prefix + '-NewLog.txt' not in source.namelist():
@@ -512,6 +514,8 @@ def package_evidence(archive, profile):
 
     def priority(info):
         name = info.filename
+        if name in user_records:
+            return (-1, name)
         if name in local_only:
             return (9, name)
         if name.endswith('.txt') and info.file_size <= 256 * 1024 and name not in primary:
@@ -549,6 +553,9 @@ def package_evidence(archive, profile):
                 entry = {'name': info.filename, 'size_bytes': info.file_size,
                          'sha256': digest.hexdigest(), 'mode': 'local-only', 'stored_files': []}
                 cost = compressed + 100 + 2 * len(info.filename.encode('utf-8'))
+                require(info.filename not in user_records or cost <= remaining,
+                        'User marker records exceed the compact upload budget. '
+                        'Every record remains in the complete local evidence ZIP; no incomplete upload was produced.')
                 if info.filename in local_only:
                     entry['reason'] = 'Accumulated private log/baseline; fresh delta is preferred.'
                 elif cost <= remaining:

@@ -107,3 +107,13 @@ work orders must not be treated as the current status.
 A Remove Mod button is not required. Public GitHub prose identifies the owner
 as **Frostie**. Follow the [technical guides and history](README.md) for the
 relevant subsystem rather than reusing an old investigation's pending-work list.
+
+## Uploaded marker follow-up
+
+Frostie requested markers 1–30 for longer Debug playtests and wants every
+uploaded observation and its details recorded for later follow-up. Review all
+marker events, follow-up notes and raw input, including repeated numbers. Use
+session, sequence and event ID to preserve references when grouping duplicates.
+Track confirmed minor observations in the [minor-details backlog](minor-details.md)
+and keep other observations in the appropriate issue/session record. Nothing
+is resolved automatically; see that backlog's review protocol.
