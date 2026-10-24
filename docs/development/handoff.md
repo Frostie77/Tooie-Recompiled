@@ -54,10 +54,12 @@ own-channel updates remain separate from the passed basic settings comparison.
 Retroid Pocket 5 issue #26 and its separate Adreno 650 experiment are not
 resolved by this release.
 
-A new audio report needs investigation: reopening the app produces a brief
-problem for roughly one second, then audio returns to normal. The exact reopen
-steps (foreground return, sleep/wake or full relaunch) are not yet confirmed.
-Keep background/sleep acceptance open.
+A new audio report needs investigation: **Home → reopen → Continue** produces
+roughly one second of abnormal audio, then normal playback. A full close and
+relaunch is clean. Keep background/return acceptance open; sleep/wake has not
+been separately confirmed. The queue's retained state across SDL playback pause
+is an unconfirmed lead. Compare the retained private Debug app and inspect its
+existing audio log before choosing a fix. No runtime/audio changes are made.
 
 Frostie has created the local release keystore and supplied its public certificate
 metadata. The public fingerprint and the different accepted development signer

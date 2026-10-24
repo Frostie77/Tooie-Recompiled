@@ -41,7 +41,7 @@ against the existing release app; ADB returned **Success**.
 | Fresh post-update save | New progress saved and reloaded after closing/reopening; existing ROM reused without selection, settings/mods retained |
 | Launcher appearance | Restored font and artwork matched the accepted Debug appearance |
 | Basic app settings isolation | A harmless change in one app left the other unchanged after restarting both |
-| Reopening audio | A brief glitch was reported for roughly one second, then normal audio returned; exact reopen steps remain unconfirmed |
+| Home/resume audio | Home → reopen → Continue produces roughly one second of abnormal audio, then recovers; full close/relaunch is normal |
 
 These are Frostie's manual confirmations in chat. No new screen capture,
 logcat session, input-device-specific navigation record or measured performance
@@ -53,6 +53,18 @@ Frostie subsequently confirmed fresh post-update saving/ROM reuse, launcher
 appearance and basic settings separation. The comparison used his existing
 private Debug installation; no Debug release has been published. Background
 and sleep testing was not included in this confirmation.
+
+Frostie then clarified the audio reproduction: press Home during play, reopen
+the app and Continue. Audio is briefly abnormal for about one second, then
+normal. A full close/relaunch is clean. Background/return remains open because
+of this audio result; sleep/wake has not been separately confirmed.
+
+Read-only inspection found that `src/queued_audio.h` has no application
+background/resume reset, while SDL 2.32.10's Android nonblocking event pump
+pauses playback devices. Retained queued audio is a possible lead, not an
+established cause. A matched Home/resume run in Frostie's retained Debug app
+can expose its existing private audio log for driver, queue-depth and decimation
+correlation. No runtime/audio code has been changed for this investigation.
 
 ## Public release and feed
 

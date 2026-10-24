@@ -78,8 +78,9 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 - [ ] Verify representative uninterrupted 20–30-minute sessions, with correct
   gameplay speed, graphics, camera behavior and sound. Record frame pacing,
   input delay, thermal behavior and memory trends; check for progressive slowdown.
-- [ ] Investigate the reported audio glitch when reopening the app: it lasts
-  roughly one second before returning to normal. Exact reopen steps are pending.
+- [ ] Investigate the Home/resume audio glitch: Home → reopen → Continue causes
+  roughly one second of abnormal audio, then normal playback. A full close and
+  relaunch is clean. Background/return acceptance remains open.
 - [ ] Complete broader audio checks.
 - [ ] Verify controller navigation throughout menus, gameplay and egg/first-person
   aiming, plus remapping, reconnecting and saved preferences.
