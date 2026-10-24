@@ -38,12 +38,21 @@ against the existing release app; ADB returned **Success**.
 | Offline manual check | Could not check; message allowed continued play and retry later |
 | Reconnect | Manual checks recovered after Wi-Fi returned |
 | Existing progress | Existing save loaded; settings and installed mods reported unchanged |
+| Fresh post-update save | New progress saved and reloaded after closing/reopening; existing ROM reused without selection, settings/mods retained |
+| Launcher appearance | Restored font and artwork matched the accepted Debug appearance |
+| Basic app settings isolation | A harmless change in one app left the other unchanged after restarting both |
+| Reopening audio | A brief glitch was reported for roughly one second, then normal audio returned; exact reopen steps remain unconfirmed |
 
 These are Frostie's manual confirmations in chat. No new screen capture,
 logcat session, input-device-specific navigation record or measured performance
 capture was supplied. Installed mod retention does not separately test execution
-of every mod after this update. A fresh save-write/reload and exhaustive ROM,
-menu and lifecycle coverage were not established.
+of every mod after this update. Exhaustive ROM, menu and lifecycle coverage
+were not established.
+
+Frostie subsequently confirmed fresh post-update saving/ROM reuse, launcher
+appearance and basic settings separation. The comparison used his existing
+private Debug installation; no Debug release has been published. Background
+and sleep testing was not included in this confirmation.
 
 ## Public release and feed
 
@@ -65,7 +74,11 @@ on Odin.
   navigation and deferral during gameplay remain on-device checks. Host tests
   exercise those selection/lifecycle branches. During the Odin checks, the older
   v1.0.0 feed produced the expected no-newer result; that did not exercise a newer
-  release's API lookup.
+  release's API lookup. The newer-notice/browser checks are planned for the
+  next update.
+- Android background/return and sleep/wake remain open. Broader release/local
+  Debug ROM/save/mod independence, fresh defaults and own-channel updates also
+  remain separate from the accepted basic settings comparison.
 - Retroid Pocket 5 issue #26 and its separate Adreno 650 experiment are not
   resolved by this candidate. Known Jiggy lines, dialogue shift and intro/demo
   stutter remain tracked.

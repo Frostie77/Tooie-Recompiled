@@ -34,18 +34,30 @@ reports without a new capture. The public tag/assets and stable-feed identity ar
 verified; a real newer-version offer remains pending. See the
 [release record](release-v1.0.1-check-20261024.md).
 
+Frostie's later manual follow-up confirmed fresh post-update save-write/reload,
+ROM reuse without selection, retained settings/mods, the restored launcher
+font/artwork and basic settings separation between the public release and his
+retained local Debug app after restarting both. Debug has not been published.
+Background/sleep checks were not accepted in this follow-up.
+
 ## Current priorities
 
 Continue post-release playtesting through the established Debug app. Track the
 deferred Jiggy-challenge lines, dialogue shift and intro/demo stutter. Startup
 checks are published in v1.0.1 and the stable feed points to its verified APK.
 A real newer notice, Later, browser return, controller navigation and notice
-deferral remain
-on-device checks; see the [update guide](update-plan.md). Save export/import,
-multi-mod combinations and broader gameplay/lifecycle/device coverage remain
-open. Exact menu appearance, explicit ROM reuse and fresh post-update save
-writes remain separate coverage items. Retroid Pocket 5 issue #26 and its
-separate Adreno 650 experiment are not resolved by this candidate.
+deferral remain on-device checks planned for the next update; see the
+[update guide](update-plan.md). Background/sleep, save export/import, multi-mod
+combinations and broader gameplay/lifecycle/device coverage remain open.
+Broader release/local Debug ROM/save/mod independence, fresh defaults and
+own-channel updates remain separate from the passed basic settings comparison.
+Retroid Pocket 5 issue #26 and its separate Adreno 650 experiment are not
+resolved by this release.
+
+A new audio report needs investigation: reopening the app produces a brief
+problem for roughly one second, then audio returns to normal. The exact reopen
+steps (foreground return, sleep/wake or full relaunch) are not yet confirmed.
+Keep background/sleep acceptance open.
 
 Frostie has created the local release keystore and supplied its public certificate
 metadata. The public fingerprint and the different accepted development signer

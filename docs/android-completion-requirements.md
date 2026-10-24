@@ -55,13 +55,20 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 
 - [x] ADB update returned Success; existing save, settings and installed mods
   were reported retained after loading the existing save.
+- [x] Fresh post-update progress saved and reloaded after closing/reopening;
+  the existing ROM was reused without selection and settings/mods remained.
+- [x] Restored launcher font and artwork matched the accepted Debug appearance.
+- [x] Basic settings separation: a harmless setting change in one app left the
+  other unchanged after restarting both. Debug is Frostie's retained local build,
+  not a published Debug release.
 - [x] Online manual update check reported no newer release available.
 - [x] Automatic-check Off preference survived closing and reopening the app.
 - [x] Offline startup remained normal and the manual check showed a recoverable
   error explaining that play can continue.
 - [x] Manual checks recovered after Wi-Fi was restored.
 - [ ] Observe a real newer-version notice, Later, View Release and browser return
-  on device, including controller navigation and deferral during gameplay.
+  on device, including controller navigation and deferral during gameplay;
+  planned for the next update.
 - [x] Published v1.0.1, verified both public assets and advanced the stable feed.
 
 ## Still required for full completion
@@ -71,16 +78,19 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 - [ ] Verify representative uninterrupted 20–30-minute sessions, with correct
   gameplay speed, graphics, camera behavior and sound. Record frame pacing,
   input delay, thermal behavior and memory trends; check for progressive slowdown.
-- [ ] Complete save-write/reload and broader audio checks.
+- [ ] Investigate the reported audio glitch when reopening the app: it lasts
+  roughly one second before returning to normal. Exact reopen steps are pending.
+- [ ] Complete broader audio checks.
 - [ ] Verify controller navigation throughout menus, gameplay and egg/first-person
   aiming, plus remapping, reconnecting and saved preferences.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving
   progress between devices or app channels; this is later completion work.
-- [ ] Verify signed **Tooie Recompiled** and **Tooie Recompiled Debug** coexist
-  with independent ROM imports, saves, settings and mods across restarts and
-  updates. Each app must update within its own package/signing channel.
+- [ ] Complete broader coexistence checks for the public release and retained
+  local Debug app: independent ROM imports, saves and mods across restarts and
+  updates. Basic settings separation passed; each app retains its own
+  package/signing channel.
 - [ ] Verify first-time release setup, ROM selection, controller navigation and
   default graphics/audio settings without inheriting a debug configuration.
 - [ ] Verify cancelled imports, incorrect ROMs, incompatible/corrupt mods and
@@ -93,9 +103,8 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
   keep clean-checkout Android builds and documentation usable.
 - [x] Establish permanent release signing and increasing version codes; the
   published code-`3` APK updated the protected-key-signed code-`2` candidate.
-- [ ] Complete broader upgrade checks, including explicit ROM reuse and a fresh
-  save-write/reload after updating. The v1.0.0 update retained saves/settings;
-  the v1.0.1 candidate also retained the reported existing save/settings/mods.
+- [x] Post-update checks on Odin v1.0.1: existing ROM reuse, fresh save-write/reload
+  and settings/mod retention after closing/reopening.
 - [ ] Resolve font/artwork/dependency distribution terms and required notices.
   No ROM or unapproved third-party pack is to be bundled.
 - [x] Publish v1.0.0 with the verified signed APK, checksum and release notes.
@@ -129,17 +138,17 @@ and the selected GitHub-download update passed for saves and settings:
 - [x] Verify the installed protected-key-signed release candidate against its
   exact APK/source/version report: `af97304f201a`, version `0.1.0-preview.1`,
   code `2`. This check applies to that candidate; replacements need verification.
-- [ ] Finish release/Debug coexistence acceptance: confirm data independence,
-  fresh defaults and the rebuilt launcher menu. The separate release is installed;
-  ROM selection, played controls, Aiming Invert and the UI mod were reported working.
+- [ ] Finish broader release/local Debug coexistence acceptance: fresh defaults,
+  independent ROM/save/mod data and updates within each signing channel. Basic
+  settings separation and launcher appearance passed on v1.0.1.
 - [x] Write a release-app save, close/relaunch and resume it; check persistence
   of settings and representative installed mods. Frostie confirmed this manually
   after the captured session; it is not an APK-update test.
 - [x] Download the public signed 1.0.0 APK from GitHub on Odin and update the
   existing release candidate. Frostie confirmed the update worked and all
   settings and saves were retained; this was a manual report without a fresh capture.
-- [ ] Separately confirm the restored launcher font, imported ROM reuse,
-  installed mods and close/reopen behavior after this APK update.
+- [x] Restored launcher font/artwork, imported ROM reuse, installed mods and
+  close/reopen behavior confirmed on v1.0.1 after the APK update.
 - [x] Publish the signed APK, checksum and release notes for **v1.0.0**, version
   code **3**, with known issues and documented tested scope.
 - [ ] Complete distribution/notices review.
@@ -153,8 +162,8 @@ Version 1.0.0 does not declare the full project scope complete.
 Release packaging and notice preparation passed [PR #17](https://github.com/Frostie77/Tooie-Recompiled/pull/17).
 After opening the separate release candidate, Frostie selected the Debug menu's
 Suplexmentary Comic NC appearance. Its exact font and styling are restored;
-font-specific redistribution terms remain unverified, and exact menu appearance
-needs its separate device confirmation. Candidate tools support unsigned exports
+font-specific redistribution terms remain unverified. Frostie confirmed the
+restored font/artwork on v1.0.1 in a later manual check. Candidate tools support unsigned exports
 and local signing with the recorded release certificate; the private key stays
 on the PC.
 
