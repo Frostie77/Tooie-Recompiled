@@ -10,6 +10,13 @@ flags=(-std=c++17 -pthread -fsanitize=address,undefined -fno-omit-frame-pointer 
 ASAN_OPTIONS=detect_leaks=0 "$t/audio"
 "${CXX:-clang++}" "${flags[@]}" -DTOOIE_AUDIO_REAL_DUMMY "$r/tests/audio_queue.cpp" "${sdl_libs[@]}" -ldl -o "$t/dummy"
 SDL_AUDIODRIVER=dummy ASAN_OPTIONS=detect_leaks=0 "$t/dummy"
+# Exercise the Android-only SDL event bridge on the host. The event watch must
+# not call audio APIs while Android's playback-driver locks may still be held.
+"${CXX:-clang++}" "${flags[@]}" -D__ANDROID__ -DSDL_MAIN_HANDLED "$r/tests/audio_queue.cpp" "${sdl_libs[@]}" -ldl -o "$t/resume"
+ASAN_OPTIONS=detect_leaks=0 timeout 20 "$t/resume" resume
+ASAN_OPTIONS=detect_leaks=0 timeout 20 "$t/resume" all
+"${CXX:-clang++}" "${flags[@]}" -D__ANDROID__ -DSDL_MAIN_HANDLED -DTOOIE_AUDIO_REAL_DUMMY "$r/tests/audio_queue.cpp" "${sdl_libs[@]}" -ldl -o "$t/resume-dummy"
+SDL_AUDIODRIVER=dummy ASAN_OPTIONS=detect_leaks=0 timeout 20 "$t/resume-dummy"
 python3 - "$r" "$t" <<'PY'
 from pathlib import Path
 import sys,re
