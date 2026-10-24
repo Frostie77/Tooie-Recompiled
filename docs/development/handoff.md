@@ -57,6 +57,13 @@ and existing Adreno 650 experiment pending more data (Android version, fresh
 app log and the result of the existing test). Both remain unresolved; do not
 infer one device's cause or success from the other.
 
+Frostie has made **floating on-screen touch controls a next-update priority**
+alongside Poco startup compatibility. Track implementation and phone-only
+acceptance in the [completion checklist](../android-completion-requirements.md#still-required-for-full-completion).
+This is planned work, not an implemented or tested feature. The Poco reporter's
+planned controller setup is still awaiting their reply; missing touch controls
+and the Vulkan startup exit are separate requirements.
+
 Frostie chose to collect several more fixes before another public release.
 Keep the accepted Home/resume audio change under **Unreleased**; public v1.0.1
 still has the issue. Verify the fix in the next signed release and retain the

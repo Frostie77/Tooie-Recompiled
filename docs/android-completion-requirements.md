@@ -73,6 +73,12 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 
 ## Still required for full completion
 
+**Next update priorities:** investigate Poco X3 Pro startup compatibility and
+add optional floating on-screen controls for phone players. Touch controls are
+planned and unimplemented; acceptance requires actual phone testing. The
+Retroid Pocket 5 investigation remains parked pending more data. See the
+[startup-crash record](development/startup-crash-issue26.md).
+
 - [ ] Complete the adventure through the credits, covering major areas,
   transformations, mechanics and optional activities.
 - [ ] Verify representative uninterrupted 20–30-minute sessions, with correct
@@ -84,6 +90,13 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 - [ ] Complete broader audio checks.
 - [ ] Verify controller navigation throughout menus, gameplay and egg/first-person
   aiming, plus remapping, reconnecting and saved preferences.
+- [ ] **Next update priority — floating touch controls:** add an optional
+  on-screen analog stick, D-pad, A/B, Z, L/R, C buttons and Start for phone play.
+  Support simultaneous movement/button touches, adjustable position, size and
+  opacity, and a saved show/hide preference. Test menu navigation, movement,
+  combined actions and egg/first-person aiming on a phone without a gamepad;
+  release held inputs after touch cancellation or backgrounding, and preserve
+  physical-gamepad operation when touch controls are shown or hidden.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving
