@@ -39,3 +39,23 @@ screenshots do not establish motion or audio quality.
 
 No entries for a future playtest have been invented. Populate the session
 review and backlog after its actual evidence and details are supplied.
+
+## Installed Debug playtest — 24 October 2026
+
+The [session review](installed-debug-playtest-20261024-223111.md) accounts for
+**all nine marker events and both additional unparsed observations** from session
+`2c305aa4`. Marker 1 occurred twice; there is no marker 2. Grouping below is by
+reported symptom for follow-up, not a finding that the events have one cause.
+All entries remain open and their severity is provisional.
+
+| ID | Observation | Status | Evidence and next step |
+|---|---|---|---|
+| MD-003 | Reported unusual frames; the first description is only “strange” | Open — detail needed | Events E01 and E02 (both marker 1), screenshots 001–002. Clarify the visible change and reproduce it before assigning a rendering cause. |
+| MD-004 | Screen shaking | Open — reproduce | Events E03–E06 (markers 3–6), screenshots 003–006, plus journal observation J04 entered as `33 screen shaking`. Reproduce the camera/action and distinguish it from the earlier dialogue shift MD-002. Static screenshots cannot establish motion. |
+| MD-005 | Unusual character rendering | Open — detail needed | Events E07–E09 (markers 7–9), screenshots 007–009, plus unnumbered journal observation J10. Identify the affected character/body part and action; retain each occurrence separately until the evidence supports a common cause. |
+
+The session review retains each full event ID, sequence, receipt timestamp,
+literal description and evidence filename. J04 and J10 were not accepted marker
+commands and have no marker-triggered screenshots; their journal entries are
+preserved for review. No observation was marked fixed, and this run does not
+resolve startup compatibility on other devices.

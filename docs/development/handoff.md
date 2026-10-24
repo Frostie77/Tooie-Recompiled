@@ -54,12 +54,19 @@ own-channel updates remain separate from the passed basic settings comparison.
 Retroid Pocket 5 issue #26 and its separate Adreno 650 experiment are not
 resolved by this release.
 
-A new audio report needs investigation: **Home → reopen → Continue** produces
-roughly one second of abnormal audio, then normal playback. A full close and
-relaunch is clean. Keep background/return acceptance open; sleep/wake has not
-been separately confirmed. The queue's retained state across SDL playback pause
-is an unconfirmed lead. Compare the retained private Debug app and inspect its
-existing audio log before choosing a fix. No runtime/audio changes are made.
+Frostie chose to collect several more fixes before another public release.
+Keep the accepted Home/resume audio change under **Unreleased**; public v1.0.1
+still has the issue. Verify the fix in the next signed release and retain the
+broader audio, sleep/wake and interruption checks.
+
+Issue #26 also has a [Poco X3 Pro report](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747):
+Android 12, Snapdragon 860 / Adreno 640, crashing with both v1.0.1 and the
+Adreno 650 test from Actions run `40041658420`. Its supplied Debug log ends at
+`descriptor-indexing-features-not-enabled`; the driver reports Vulkan 1.1.128,
+no descriptor-indexing extension on the recorded discovery path and did not
+enable indexing (the individual features were not queried). The 650-only
+pool-reservation experiment does not address this earlier feature check. No
+Adreno 640 compatibility fix or successful device result is established.
 
 Frostie has created the local release keystore and supplied its public certificate
 metadata. The public fingerprint and the different accepted development signer
@@ -117,3 +124,18 @@ session, sequence and event ID to preserve references when grouping duplicates.
 Track confirmed minor observations in the [minor-details backlog](minor-details.md)
 and keep other observations in the appropriate issue/session record. Nothing
 is resolved automatically; see that backlog's review protocol.
+
+## Latest uploaded Debug playthrough
+
+The [24 October installed Debug session](installed-debug-playtest-20261024-223111.md)
+retains all nine accepted marker events and two additional unparsed observations.
+The declared 56-minute-35-second window kept its original PID present at all
+641 checks. Nine marker screenshots were captured. Screen shaking, unusual
+frames and character rendering remain open as MD-003 through MD-005; repeated
+marker 1 and both unparsed inputs are retained with distinct references.
+
+See the [issue #26 investigation](startup-crash-issue26.md) before proposing
+another test to the Poco/Retroid reporters. There is no new compatibility APK
+ready; the Poco failure occurs before the earlier 650 pool experiment can help.
+Frostie says the reporting user will test further builds. No issue reply was
+posted on his behalf, no test success was invented and no new release was made.
