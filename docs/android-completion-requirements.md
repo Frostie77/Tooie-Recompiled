@@ -6,7 +6,7 @@ The goal is a reliable native Android ARM64 release for the Android,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
 Checked boxes describe the tested scope; the project is not fully complete.
 
-[Tooie Recompiled v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.0)
+[Tooie Recompiled v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/Banjo-Tooie)
 was published on **24 October 2026 (AEDT)** with Android version code **3**.
 The public APK and checksum match the verified signed upload. 
 
@@ -41,6 +41,23 @@ The texture/aiming capture and later manual restart/Off checks are recorded
 separately in [PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14).
 These passes cover the named fixtures and routes, not every mod, scene or device.
 
+## v1.0.1 candidate checks
+
+The signed **v1.0.1 / code 4** candidate from `a3c6f5c571cf` was installed
+over v1.0.0 on Odin. These are Frostie's manual reports, without a new capture;
+see the [candidate record](development/release-v1.0.1-check-20261024.md).
+
+- [x] ADB update returned Success; existing save, settings and installed mods
+  were reported retained after loading the existing save.
+- [x] Online manual update check reported no newer release available.
+- [x] Automatic-check Off preference survived closing and reopening the app.
+- [x] Offline startup remained normal and the manual check showed a recoverable
+  error explaining that play can continue.
+- [x] Manual checks recovered after Wi-Fi was restored.
+- [ ] Observe a real newer-version notice, Later, View Release and browser return
+  on device, including controller navigation and deferral during gameplay.
+- [ ] Publish v1.0.1, verify the public assets and then advance the stable feed.
+
 ## Still required for full completion
 
 - [ ] Complete the adventure through the credits, covering major areas,
@@ -70,8 +87,9 @@ These passes cover the named fixtures and routes, not every mod, scene or device
   keep clean-checkout Android builds and documentation usable.
 - [x] Establish permanent release signing and increasing version codes; the
   published code-`3` APK updated the protected-key-signed code-`2` candidate.
-- [ ] Complete broader upgrade checks for ROM reuse, installed mods and
-  close/reopen persistence. The v1.0.0 Odin update passed for saves and settings.
+- [ ] Complete broader upgrade checks, including explicit ROM reuse and a fresh
+  save-write/reload after updating. The v1.0.0 update retained saves/settings;
+  the v1.0.1 candidate also retained the reported existing save/settings/mods.
 - [ ] Resolve font/artwork/dependency distribution terms and required notices.
   No ROM or unapproved third-party pack is to be bundled.
 - [x] Publish v1.0.0 with the verified signed APK, checksum and release notes.
@@ -79,11 +97,12 @@ These passes cover the named fixtures and routes, not every mod, scene or device
   checklist. Distribution review remains a separate open item.
 - [x] Obtain Frostie's explicit publication approval for the first Android
   release as **1.0.0**. Final project-completion sign-off remains separate.
-- [ ] Complete Odin acceptance of startup update detection, the Updates tab,
-  automatic-check preference, Later and browser return. The implementation and
-  host checks cover version codes, stable release identity, offline/error
-  handling, user choice and a release-page upgrade path; see the
-  [update guide](development/update-plan.md). Published v1.0.0 predates the checker.
+- [ ] Complete the remaining on-device updater flow: a real newer-version offer,
+  Later, View Release/browser return, controller navigation and notice deferral.
+  The v1.0.1 candidate's manual checks, Off-preference persistence, offline startup
+  and recovery passed as recorded above. Host tests cover the other branches;
+  see the [update guide](development/update-plan.md). Published v1.0.0 predates
+  the checker.
 - [ ] Obtain final sign-off against the complete project scope.
 
 The mod interface supports import, enable/disable and supplied configuration. 
@@ -122,7 +141,7 @@ and the selected GitHub-download update passed for saves and settings:
   version code **3**.
 
 Full-adventure and broader-device coverage, longer-session acceptance, save
-export/import and the planned startup updater remain full-completion milestones.
+export/import and the remaining startup-notice checks remain full-completion milestones.
 Version 1.0.0 does not declare the full project scope complete.
 
 Release packaging and notice preparation passed [PR #17](https://github.com/Frostie77/Tooie-Recompiled/pull/17).

@@ -83,9 +83,13 @@ A local release key and public certificate have been created and privately
 backed up. Release and debug are separate apps with independent data; no
 development-key migration is planned. Public v1.0.0 (code 3) successfully updated
 the installed Odin release candidate with saves/settings retained. Distribution
-review and broader device coverage remain open. Startup detection is implemented
-for the next release and still needs Odin acceptance. No signing secret is
-required by this job. CI success does not verify gameplay, demo cadence or Odin performance.
+review and broader device coverage remain open. The v1.0.1 / code 4 candidate
+passed focused Odin manual-check, preference-persistence, offline-startup and
+recovery checks, with existing save/settings/mods reported retained. A real newer
+notice and browser-return flow remain device checks; see the
+[candidate record](docs/development/release-v1.0.1-check-20261024.md).
+No signing secret is required by this job. CI success does not verify gameplay,
+demo cadence or Odin performance.
 
 For an unsigned candidate, manually run **Android APK** with `prepare_candidate`
 enabled and explicit version name/code. The first public release was `1.0.0` /

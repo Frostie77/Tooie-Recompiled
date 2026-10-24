@@ -38,6 +38,10 @@ established signing identity for existing Odin updates; public-release signing
 and migration must be verified. Current CI success is separate from device
 gameplay acceptance.
 
+- [Changelog](../../CHANGELOG.md): public release changes and the v1.0.1 candidate.
+- [v1.0.1 Odin candidate checks](release-v1.0.1-check-20261024.md): exact signed
+  APK identity, manually reported results and remaining notice/browser checks.
+
 ## Evidence
 
 [PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14) records executable

@@ -4,7 +4,7 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 [N64Recomp](https://github.com/N64Recomp/N64Recomp) and
 [RT64](https://github.com/rt64/rt64).
 
-## [First release — v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.0)
+## Latest Release - [v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/Banjo-Tooie)
 
 **You must supply your own supported Banjo-Tooie (USA) ROM. No ROM is included.**
 
@@ -13,6 +13,7 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 - [System requirements](#system-requirements)
 - [Features](#features)
 - [Getting started](#getting-started)
+- [Changelog](CHANGELOG.md)
 - [Planned features](#planned-features)
 - [FAQ](#faq)
 - [Known issues](#known-issues)
@@ -58,6 +59,16 @@ compatibility limits.
 first-person looking. The saved preference defaults Off; walking, horizontal
 input and the regular camera retain their behavior.
 
+### Update checks (v1.0.1)
+
+The upcoming **v1.0.1** adds background startup update checks and
+**Settings → Updates** for manual checks and a saved automatic-check toggle.
+Newer compatible releases offer **View Release / Later**; the release page
+provides the APK to download and install. Offline checks leave the app usable.
+
+Version 1.0.0 needs one manual APK update to gain the checker. See the
+[changelog](CHANGELOG.md) for release changes.
+
 ## Getting started
 
 1. Install the Android APK from the release's **Assets**.
@@ -68,8 +79,6 @@ See [setup and ROM requirements](docs/getting-started.md) for details.
 
 ## Planned features
 
-- Startup update notices and **Settings → Updates** are implemented for the next
-  release; published v1.0.0 needs a manual update to gain the checker.
 - Optional in-app APK download and installation.
 - Broader device, mod-combination and full-game validation.
 
@@ -97,8 +106,11 @@ download the APK from Assets and install it as an update to keep your progress.
 
 ## Known issues
 
-- Some visual artifacts remain, including reported Jiggy-challenge lines.
+- Minor visual lines during the Jiggy challenge.
+- A brief screen shift when dialogue animation begins.
 - Intro/demo stutter and animation cadence still need further work.
+- A startup crash has been reported on Retroid Pocket 5 / Adreno 650;
+  see [issue #26](https://github.com/Frostie77/Tooie-Recompiled/issues/26).
 - A complete playthrough and broad Android compatibility have not been verified.
 
 Report reproducible problems through

@@ -1,12 +1,33 @@
-# Android v1.0.0 release and signing
+# Android release signing
 
 Frostie approved and published the first Android release,
-[v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.0),
+[v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/Banjo-Tooie),
 on **24 October 2026 (AEDT)**. Its Android version code is **3** and its public
 APK and checksum match the verified signed upload. Frostie downloaded that asset
 on Odin, updated the existing code-`2` candidate and confirmed the app worked
 with all saves and settings retained. This is a manual device result without a
 fresh capture. Distribution review remains open.
+
+## v1.0.1 candidate
+
+The signed **v1.0.1 / code 4** candidate uses source
+`a3c6f5c571cf9baf5c1a8f368b4ccbce9b7db4d6` and the same protected release
+certificate. Its APK SHA-256 is
+`8e1a89308912b68001d7e2d98dc9f6feb3a43bc8617906645425b2ebc01187b2`.
+The complete unsigned payload passed the local signer/verifier. The uploaded
+APK matches that report and its packaged version, release identity, ARM64 ABI
+and Internet permission were inspected.
+
+Frostie installed it over v1.0.0 on Odin and reported the existing save, settings
+and installed mods retained. Online checks, Off-preference persistence, offline
+startup/error handling and reconnect recovery passed. A real newer-version
+notice and browser-return flow remain untested on device. See the
+[candidate record](release-v1.0.1-check-20261024.md) and [changelog](../../CHANGELOG.md).
+
+Publication is pending. Publish the exact signed APK as **v1.0.1** before
+advancing `updates/android-stable.json`; follow the [update guide](update-plan.md).
+Documentation commits do not change the selected APK source or require a new
+build/signature. Retain the selected release source for the tag.
 
 ## Bundled notices
 
@@ -195,7 +216,8 @@ Keep [distribution review and device coverage](../android-completion-requirement
 open until each has its own evidence. Frostie's publication approval is recorded
 separately from the package-verification reports: their `publication_approved`
 field remains false because those tools do not grant publication permission.
-This preparation does not implement the future startup updater.
+The startup checker is included in the v1.0.1 candidate; its feed and remaining
+device checks are described in the [update guide](update-plan.md).
 
 The [v1.0.0 release record](preview-notes.md) identifies the published signed APK,
 checksums and Frostie's actual GitHub-download update result. Distribution review

@@ -1,8 +1,9 @@
 # Android startup update checks
 
-The startup checker targets the **next Android release**. Published v1.0.0
-predates this code; it needs one manual APK update to gain the checker.
-The initial feed describes the already published, verified v1.0.0 APK.
+The startup checker is included in the signed **v1.0.1 / code 4 candidate**.
+Its focused Odin checks passed as described below; publication is pending.
+Published v1.0.0 predates this code and needs one manual APK update to gain it.
+The stable feed stays on the verified v1.0.0 APK until v1.0.1 is public.
 
 ## Player behavior
 
@@ -123,11 +124,19 @@ Host fixtures cover newer/equal/older codes; invalid channels, identities and
 assets; minimum API/ABI; offline/retry; ETags; throttling; malformed, oversized
 and deeply nested data; concurrent requests; and duplicate-notice deferral.
 
-Odin acceptance is still required for the Updates tab/controller navigation,
-automatic preference persistence, offline launch, Later, browser return and a
-real newer-release notice. Keep using Debug for gameplay investigation.
-The previously accepted v1.0.0 GitHub-download upgrade retained saves/settings;
-that result is separate from testing the new checker.
+On 24 October 2026, Frostie updated the Odin release app from v1.0.0 / code 3
+to the signed v1.0.1 / code 4 candidate. Online manual checks returned no newer
+release; the automatic-check Off setting survived a restart; offline startup
+remained normal with a recoverable manual-check error; and checks recovered
+after Wi-Fi returned. Frostie also reported the existing save, settings and
+installed mods retained. These are manual confirmations without a new capture;
+see the [exact candidate and evidence limits](release-v1.0.1-check-20261024.md).
+
+A real newer-version notice, Later, View Release/browser return, controller
+navigation and notice deferral still need device acceptance. The no-newer result
+checks the older-feed path; it does not test the newer release-by-tag lookup.
+Keep using Debug for gameplay investigation. The earlier public v1.0.0 upgrade
+is a separate saves/settings check.
 
 ## Primary references
 

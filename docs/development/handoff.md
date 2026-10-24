@@ -13,7 +13,7 @@ first-person entrance and a reported boss fight. The executable example's
 GOLD/BLUE, configuration, restart/update persistence and disabled phases passed.
 BT Reloaded UI import and Aiming Invert also passed their scoped checks.
 
-The first Android release, [v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.0),
+The first Android release, [v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/Banjo-Tooie),
 is public. Its signed APK and checksum match the verified upload; source is
 `49dab086f10c9e65d5e7f7ea91b08e0e7ef093ab`, version code `3`. Frostie downloaded
 the release on Odin, updated the code-`2` candidate and confirmed the app worked
@@ -26,15 +26,25 @@ and restart persistence were manually accepted without a new capture.
 [PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14) retains that
 distinction and exact artifact identities. Neither result is a full playthrough.
 
+The **v1.0.1 / code 4 candidate**, source `a3c6f5c571cf`, has passed focused
+Odin checks for online manual checks, Off-preference persistence, offline launch,
+error handling and recovery after Wi-Fi returned. Frostie reported the existing
+save/settings/installed mods retained after the ADB update. These are manual
+reports without a new capture. Publication and a real newer-version offer remain
+pending; see the [candidate record](release-v1.0.1-check-20261024.md).
+
 ## Current priorities
 
 Continue post-release playtesting through the established Debug app. Track the
 deferred Jiggy-challenge lines, dialogue shift and intro/demo stutter. Startup
-checks are implemented for the next release and need Odin acceptance; see the
-[update guide](update-plan.md). Save export/import, multi-mod combinations and
-broader gameplay/lifecycle/device coverage remain open. Extend update acceptance to the
-separately unconfirmed menu appearance, ROM reuse, installed mods and a further
-close/reopen cycle; the public-download saves/settings update check has passed.
+checks are ready in the tested v1.0.1 candidate; prepare its public release and
+advance the stable feed only after the exact signed APK is public. A real newer
+notice, Later, browser return, controller navigation and notice deferral remain
+on-device checks; see the [update guide](update-plan.md). Save export/import,
+multi-mod combinations and broader gameplay/lifecycle/device coverage remain
+open. Exact menu appearance, explicit ROM reuse and fresh post-update save
+writes remain separate coverage items. Retroid Pocket 5 issue #26 and its
+separate Adreno 650 experiment are not resolved by this candidate.
 
 Frostie has created the local release keystore and supplied its public certificate
 metadata. The public fingerprint and the different accepted development signer
@@ -72,6 +82,8 @@ work orders must not be treated as the current status.
   and undefined transfer/fallback/barrier diagnostic selectors.
 - Actual-consumer regressions and meaningful exact-parent/failure controls.
   Host compilation, software Vulkan and device gameplay are separate evidence.
+- Draft issue/PR replies and release text in chat for Frostie to post; do not
+  post responses on his behalf.
 - One-terminal captures, numbered notes and one compact Share ZIP. Keep graphics
   fixed during comparisons and retain raw evidence locally. Separately recorded
   replacement install/launch sessions are allowed; resolve unknown outcomes
