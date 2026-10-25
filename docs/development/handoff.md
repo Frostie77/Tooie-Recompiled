@@ -1,6 +1,6 @@
 # Engineering handoff
 
-Updated: 24 October 2026.
+Updated: 25 October 2026.
 
 Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).
@@ -49,6 +49,13 @@ returned Success. After the requested Home/reopen test, Frostie reported the
 audio glitch fixed. No fresh audio log/recording or broader sleep/wake acceptance
 was supplied. See the [exact test record](history/android-home-resume-audio-20261024.md).
 
+The configurable touch controls from source `1bc772153fcc7c4192890aa1ce8adf99d6f4ea79`
+passed focused Odin Debug acceptance on 25 October. Frostie confirmed they work
+and are customizable, and requested inclusion in the next update. The verified
+installed APK, complete uploaded marker review, overlay screenshot and native
+input-consumer records are in the [acceptance record](android-touch-controls-odin-20261025.md).
+Broader phone, persistence, all-button and lifecycle checks remain open.
+
 ## Current priorities
 
 Continue post-release playtesting through the established Debug app. Track the
@@ -60,8 +67,18 @@ deferral remain on-device checks planned for the next update; see the
 combinations and broader gameplay/lifecycle/device coverage remain open.
 Broader release/local Debug ROM/save/mod independence, fresh defaults and
 own-channel updates remain separate from the passed basic settings comparison.
-Retroid Pocket 5 issue #26 and its separate Adreno 650 experiment are not
-resolved by this release.
+The primary startup-crash investigation is the Poco X3 Pro / Android 12 /
+Adreno 640 report in issue #26. Frostie has parked the Retroid Pocket 5 report
+and existing Adreno 650 experiment pending more data (Android version, fresh
+app log and the result of the existing test). Both remain unresolved; do not
+infer one device's cause or success from the other.
+
+Touch controls are implemented and accepted for the next update on Odin.
+The Poco reporter requested touch input; Frostie requires it in the Poco test
+APK. Combine the accepted touch/audio source with the separate guarded graphics
+experiment before sharing the next tester build. The user-facing custom Vulkan
+driver import/reset interface is the next planned feature, with a pre-renderer
+recovery path. Touch acceptance is separate from Poco Vulkan compatibility.
 
 Frostie chose to collect several more fixes before another public release.
 Keep the accepted Home/resume audio change under **Unreleased**; public v1.0.1
@@ -72,9 +89,15 @@ Issue #26 also has a [Poco X3 Pro report](https://github.com/Frostie77/Tooie-Rec
 Android 12, Snapdragon 860 / Adreno 640, crashing with both v1.0.1 and the
 Adreno 650 test from Actions run `40041658420`. Its supplied Debug log ends at
 `descriptor-indexing-features-not-enabled`; the driver reports Vulkan 1.1.128,
-no descriptor-indexing extension and disabled indexing features. The 650-only
+no descriptor-indexing extension on the recorded discovery path and did not
+enable indexing (the individual features were not queried). The 650-only
 pool-reservation experiment does not address this earlier feature check. No
 Adreno 640 compatibility fix or successful device result is established.
+The isolated loader/discovery experiment passed CI at
+`7ecd6430bd6694db99324139b838a9fe37145ea5` (run 40150658088). The combined Poco
+and touch-controls build retains the experimental separate package/data and
+PC staging helper. Start with its system-driver baseline, then use an optional
+verified Turnip selection only if needed; see the [test guide](poco-gpu-driver-test.md).
 
 Frostie has created the local release keystore and supplied its public certificate
 metadata. The public fingerprint and the different accepted development signer
@@ -122,3 +145,28 @@ work orders must not be treated as the current status.
 A Remove Mod button is not required. Public GitHub prose identifies the owner
 as **Frostie**. Follow the [technical guides and history](README.md) for the
 relevant subsystem rather than reusing an old investigation's pending-work list.
+
+## Uploaded marker follow-up
+
+Frostie requested markers 1–30 for longer Debug playtests and wants every
+uploaded observation and its details recorded for later follow-up. Review all
+marker events, follow-up notes and raw input, including repeated numbers. Use
+session, sequence and event ID to preserve references when grouping duplicates.
+Track confirmed minor observations in the [minor-details backlog](minor-details.md)
+and keep other observations in the appropriate issue/session record. Nothing
+is resolved automatically; see that backlog's review protocol.
+
+## Latest uploaded Debug playthrough
+
+The [24 October installed Debug session](installed-debug-playtest-20261024-223111.md)
+retains all nine accepted marker events and two additional unparsed observations.
+The declared 56-minute-35-second window kept its original PID present at all
+641 checks. Nine marker screenshots were captured. Screen shaking, unusual
+frames and character rendering remain open as MD-003 through MD-005; repeated
+marker 1 and both unparsed inputs are retained with distinct references.
+
+See the [issue #26 investigation](startup-crash-issue26.md) before proposing
+another test to the Poco reporter, who will test further builds. There is no
+new compatibility APK ready; the Poco failure occurs before the earlier 650
+pool experiment can help. The Retroid report is parked pending more data. No issue reply was
+posted on his behalf, no test success was invented and no new release was made.

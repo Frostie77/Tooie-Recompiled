@@ -2,13 +2,18 @@
 
 ## Unreleased
 
-### In development
+### Added
 
 - Configurable Android touch controls with a floating stick, N64 buttons,
   multi-touch, independent sizes, opacity, saved positions and Auto/On/Off
-  visibility. Host checks pass; Odin/phone acceptance is pending.
-- A custom Vulkan driver picker/reset interface is planned after touch controls.
+  visibility under **Settings → Touch**. Frostie accepted the focused Odin
+  Debug test and customization for the next update; phone and signed-release
+  verification remain pending.
 
+### In development
+
+- A custom Vulkan driver picker/reset interface is planned next. Poco driver
+  compatibility remains experimental; its test APK also includes touch controls.
 
 ### Fixed
 

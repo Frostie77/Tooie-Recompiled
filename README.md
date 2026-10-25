@@ -147,8 +147,11 @@ Banjo: Recompiled team and unaffiliated with Nintendo, Rare or Microsoft.
 
 ## Unreleased touch-controls work
 
-Configurable Android on-screen controls are being developed for phone play:
-independent button/joystick sizes, opacity, movable positions and Auto/On/Off
-visibility. Odin and phone acceptance remain open; see the
-[touch-controls test guide](docs/development/android-touch-controls.md).
-A user-facing custom-driver picker/reset flow is next after touch controls.
+Configurable Android on-screen controls are accepted on Odin 2 Portal for the
+next update: a floating stick, N64 buttons, independent button/joystick sizes,
+opacity, movable positions and Auto/On/Off visibility. Configure them under
+**Settings → Touch**. See the [Odin test record](docs/development/android-touch-controls-odin-20261025.md)
+and [touch-controls guide](docs/development/android-touch-controls.md).
+Phone testing and verification in the next signed release remain open. The
+Poco compatibility test will include these controls; a user-facing custom-driver
+picker/reset flow is the next planned feature.

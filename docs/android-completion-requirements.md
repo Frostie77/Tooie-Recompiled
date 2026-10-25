@@ -1,6 +1,6 @@
 # Tooie Recompiled completion checklist
 
-Updated: 24 October 2026.
+Updated: 25 October 2026.
 
 The goal is a reliable native Android ARM64 release for the Android,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
@@ -73,6 +73,11 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 
 ## Unreleased Debug checks
 
+- [x] Configurable floating touch controls accepted on Odin for the next update.
+  Frostie confirmed they work and are customizable. The captured overlay and
+  native input consumption support this focused result; see the
+  [25 October record](development/android-touch-controls-odin-20261025.md).
+  The Poco compatibility test must include these controls too.
 - [x] Home/resume audio fix: CI passed, the APK was locally re-signed with the
   established Debug key and `adb install -r` returned Success. Frostie reported
   the brief audio glitch fixed after the requested Home/reopen test on Odin.
@@ -85,6 +90,12 @@ background/sleep coverage remain open.
 
 ## Still required for full completion
 
+**Next update priorities:** investigate Poco X3 Pro startup compatibility and
+include the touch controls accepted on Odin in its experimental test APK.
+Actual phone compatibility and the remaining touch matrix are still open.
+The Retroid Pocket 5 investigation remains parked pending more data. See the
+[startup-crash record](development/startup-crash-issue26.md).
+
 - [ ] Complete the adventure through the credits, covering major areas,
   transformations, mechanics and optional activities.
 - [ ] Verify representative uninterrupted 20–30-minute sessions, with correct
@@ -95,12 +106,13 @@ background/sleep coverage remain open.
 - [ ] Complete broader audio checks.
 - [ ] Verify controller navigation throughout menus, gameplay and egg/first-person
   aiming, plus remapping, reconnecting and saved preferences.
-- [ ] **Next update priority: configurable floating touch controls.** Verify the
-  analog stick and all N64 buttons, simultaneous touches, independent button/
-  joystick sizes, opacity, saved movable positions and Auto/On/Off visibility.
-  Frostie will test On and built-in-pad Auto hiding on Odin. Source/host checks
-  do not complete this item; see [the touch guide](development/android-touch-controls.md).
-- [ ] **After touch controls are sorted:** add a custom Vulkan driver import/
+- [ ] Extend touch-control coverage to phones, all buttons and aiming, sustained
+  simultaneous touches, size/opacity extremes, saved positions after restart,
+  Auto/On/Off during gameplay, interruptions and physical-pad coexistence.
+  The focused Odin acceptance above does not complete this matrix; see
+  [the touch guide](development/android-touch-controls.md). Verify the next
+  signed release separately.
+- [ ] **Next compatibility feature:** add a custom Vulkan driver import/
   selection UI, Reset to System Default, loaded/selected details and restart
   status. Include a pre-renderer selection/reset path for the Poco startup
   failure. A successful build is not a confirmed driver compatibility fix.

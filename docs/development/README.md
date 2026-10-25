@@ -44,6 +44,9 @@ gameplay acceptance.
 
 ## Evidence
 
+- [25 October Odin touch-controls acceptance](android-touch-controls-odin-20261025.md):
+  exact installed build, complete marker accounting and remaining phone coverage.
+
 [PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14) records executable
 mod and texture/aiming results. Captured sessions and Frostie's later manual
 checks retain their separate attribution.
