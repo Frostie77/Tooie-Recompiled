@@ -12,6 +12,9 @@ toolchain="$ndk/build/cmake/android.toolchain.cmake"
 mkdir -p "$work/logs"
 exec > >(tee "$work/logs/${1:?Expected prepare, native, package or candidate}.log") 2>&1
 export CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:-2}
+touch_test=${TOOIE_ANDROID_TOUCH_TEST:-0}
+[[ "$touch_test" == 0 || "$touch_test" == 1 ]] || { echo 'Invalid TOOIE_ANDROID_TOUCH_TEST' >&2; exit 1; }
+[[ "$touch_test" == 0 || -z "${TOOIE_RELEASE_VERSION:-}" ]] || { echo 'Touch tests cannot prepare a release candidate.' >&2; exit 1; }
 sdl="$work/prefixes/sdl"
 freetype="$work/prefixes/freetype"
 common=(-G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$toolchain"
@@ -69,6 +72,7 @@ package)
   python3 "$source_root/tools/ci/verify_android.py" apk "$source_root" "$work" "$ndk"
   ;;
 candidate)
+  [[ "$touch_test" == 0 ]] || { echo 'Touch-test packages cannot become release candidates.' >&2; exit 1; }
   revision=$(git -C "$source_root" rev-parse HEAD)
   version=$(cat "$work/logs/version.txt")
   code=${TOOIE_RELEASE_VERSION_CODE:-3}

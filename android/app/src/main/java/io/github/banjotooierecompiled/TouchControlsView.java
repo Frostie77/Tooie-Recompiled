@@ -11,11 +11,13 @@ import android.hardware.input.InputManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
+import android.os.Process;
+import android.util.Log;
 import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowInsets;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -40,10 +42,12 @@ final class TouchControlsView extends View implements InputManager.InputDeviceLi
     private float scale=1,stickScale=1,opacity=.5f,dragX,dragY;
     private boolean foreground,attached,editing,claimed,gamepad,allowed,registered;
     private long epoch;
+    private String lastTrace="";
     private final Runnable tick=new Runnable() {
         @Override public void run() {
             if (!attached || !foreground) return;
-            refresh(); handler.postDelayed(this,33);
+            refresh();
+            if(editing||TouchControllerModel.enabled(mode,gamepad)) handler.postDelayed(this,33);
         }
     };
     TouchControlsView(Context context) {
@@ -87,6 +91,12 @@ final class TouchControlsView extends View implements InputManager.InputDeviceLi
         } catch(UnsatisfiedLinkError unavailable) { allowed=false; clearPointers(); }
         int visibility=foreground&&(editing||allowed)?VISIBLE:GONE;
         if(getVisibility()!=visibility) { setVisibility(visibility); if(visibility==VISIBLE) requestApplyInsets(); invalidate(); }
+        String state="mode="+mode+" gamepad_detected="+gamepad+" native_allowed="+allowed+" visible="+(visibility==VISIBLE)+
+            " editing="+editing+" button_scale="+scale+" stick_scale="+stickScale+" opacity="+opacity;
+        if(!state.equals(lastTrace)) {
+            Log.i("TooieTouch","Runtime touch-overlay: mono_uptime_ms="+SystemClock.uptimeMillis()+" pid="+Process.myPid()+" tid="+Process.myTid()+" "+state);
+            lastTrace=state;
+        }
     }
     private void clearPointers() { model.cancel(); menuPointer=-1; editPointer=-1; editControl=-1; claimed=false; }
     private void cancelGesture() {
@@ -126,7 +136,7 @@ final class TouchControlsView extends View implements InputManager.InputDeviceLi
     }
     private void relayout() { cancelGesture(); model.layout(getWidth()-left-right,getHeight()-top-bottom,scale,stickScale); invalidate(); }
     @Override protected void onSizeChanged(int w,int h,int oldw,int oldh) { super.onSizeChanged(w,h,oldw,oldh); relayout(); }
-    private void devicesChanged() { readGamepads(); cancelGesture(); refresh(); }
+    private void devicesChanged() { readGamepads(); cancelGesture(); refresh(); handler.removeCallbacks(tick); if(attached&&foreground) handler.post(tick); }
     @Override public void onInputDeviceAdded(int id) { devicesChanged(); }
     @Override public void onInputDeviceRemoved(int id) { devicesChanged(); }
     @Override public void onInputDeviceChanged(int id) { devicesChanged(); }
@@ -181,14 +191,18 @@ final class TouchControlsView extends View implements InputManager.InputDeviceLi
         if(action==MotionEvent.ACTION_DOWN || action==MotionEvent.ACTION_POINTER_DOWN) {
             refresh(); if(!allowed) return false;
             if(model.hit(x,y,false)==model.MENU) { menuPointer=id; claimed=true; }
-            else claimed=model.down(id,x,y)||claimed;
+            else { model.down(id,x,y); claimed=true; } // Gameplay touches must not become SDL mouse/camera input.
         } else if(action==MotionEvent.ACTION_MOVE) {
             for(int p=0;p<event.getPointerCount();p++) model.move(event.getPointerId(p),event.getX(p)-left,event.getY(p)-top);
         } else if(action==MotionEvent.ACTION_UP || action==MotionEvent.ACTION_POINTER_UP) {
             boolean menu=id==menuPointer && model.hit(x,y,false)==model.MENU;
             if(id==menuPointer) menuPointer=-1;
             model.up(id);
-            if(menu) { cancelGesture(); nativeMenu(); refresh(); return true; }
+            if(menu) {
+                cancelGesture(); nativeMenu(); allowed=false; setVisibility(GONE);
+                handler.removeCallbacks(tick); if(attached&&foreground) handler.postDelayed(tick,50);
+                return true;
+            }
         }
         boolean consume=claimed; submit();
         if(action==MotionEvent.ACTION_UP) claimed=false;

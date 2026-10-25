@@ -40,6 +40,10 @@ right-side stick placement, visibility policy and cancellation. The real
 native input wrapper is exercised with controlled engine/physical-input
 boundaries under ASan/UBSan, including stale epochs, player selection,
 suppression, finite/clamped axes and coherent concurrent snapshots.
+The actual JNI bridge also runs in a real JVM with `-Xcheck:jni`, including
+focus-loss suppression, stale submissions, UI-only MENU events and settings
+exception cleanup. Candidate ZIP/source/payload/capture binding and missing
+DEX entry-point controls pass host regressions.
 
 These are host checks, not evidence that the Android overlay is visible over
 Vulkan or comfortable/correct in gameplay. Android native compilation, APK
@@ -48,8 +52,31 @@ Home/resume audio fix from source `1b735c08a7d1` is retained as this branch's ba
 
 ## Odin acceptance still required
 
-Use a separate verified touch-test app when available; keep both established
-apps and their data installed.
+Frostie chose to **update his established Debug app**. The candidate keeps
+package `io.github.banjotooierecompiled`, Android version `0.1.0-android` / code 1
+and the accepted audio fix. CI uses a temporary signer; verify the exact ZIP,
+re-sign locally with the established Debug key, compare the complete unsigned
+payload/certificate/version, then use `adb install -r`. Do not uninstall or
+clear data. The release app remains its own channel. The old installed-build
+capture launcher is pinned to source `0e2f81f118bc` and must not be reused for a
+new APK without updating its verification inputs.
+
+The CI artifact bundles `prepare_touch_debug.py`. Given the independently
+verified artifact ZIP hash and source commit, it checks the candidate, verifies
+the public certificate from the local Debug keystore, signs locally, compares
+every unsigned APK member and writes a verification receipt. It also prepares
+a new `capture-touch.sh` bound to the new APK/source/signer. The capture launcher
+checks its own collector files before recording and retains markers 1–30,
+repeated markers and all descriptions/raw journal entries. Preparation does
+not access a device; installation remains a separate `adb install -r` step.
+CI additionally exercises this complete signing path with the real packaged
+APK and a disposable fixture key before exporting the artifact.
+
+For evidence, `Runtime touch-overlay` state changes appear in logcat. A bounded
+`Runtime touch-input` record in the private runtime log identifies touch input
+actually consumed by the player-1 callback, with its merged values. These
+records help distinguish Java visibility from gameplay consumption; neither
+replaces the manual acceptance checks below.
 
 1. Confirm Auto hides the controls when Android detects the Odin's built-in
    pad; choose On to show them, then Off and Auto to check hiding/restoration.

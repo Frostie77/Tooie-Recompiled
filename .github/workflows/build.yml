@@ -2,11 +2,15 @@ name: Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/android-touch-controls]
   pull_request:
     branches: [main]
   workflow_dispatch:
     inputs:
+      touch_controls_test:
+        description: 'Build a touch-controls Debug candidate for local signing (not a release candidate)'
+        type: boolean
+        default: false
       prepare_candidate:
         description: 'Export an UNSIGNED release candidate (no installation or publication)'
         type: boolean
@@ -39,6 +43,7 @@ jobs:
       ANDROID_NDK_VERSION: 28.2.13676358
       CMAKE_BUILD_PARALLEL_LEVEL: 2
       TOOIE_CI_ROOT: ${{ github.workspace }}/.ci-android
+      TOOIE_ANDROID_TOUCH_TEST: ${{ (github.ref_name == 'feature/android-touch-controls' || github.head_ref == 'feature/android-touch-controls' || (github.event_name == 'workflow_dispatch' && inputs.touch_controls_test)) && '1' || '0' }}
       TOOIE_RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.prepare_candidate && inputs.version_name || '' }}
       TOOIE_RELEASE_VERSION_CODE: ${{ github.event_name == 'workflow_dispatch' && inputs.prepare_candidate && inputs.version_code || '3' }}
     steps:
@@ -93,9 +98,12 @@ jobs:
           mkdir -p .ci-android/logs
           {
             python3 tools/ci/test_verify_android.py
+            python3 tools/test_touch_debug_preparation.py
+            python3 tools/test_android_touch_controls.py --android-jar "$ANDROID_HOME/platforms/android-36/android.jar" --jni-include "$JAVA_HOME/include"
             python3 tools/android-workflow/tests/test_workflow.py
             python3 tools/android-workflow/tests/test_terminal.py
             python3 tools/android-workflow/tests/test_collector.py
+            python3 tools/android-workflow/tests/test_installed_capture.py
             python3 tools/test_transform_upload.py
             python3 tools/test_aiming_controls.py
             python3 tools/test_android_release.py
@@ -119,8 +127,16 @@ jobs:
         run: bash tools/ci/build_android.sh package
 
       - name: Check release packaging with an ephemeral test certificate
+        if: env.TOOIE_ANDROID_TOUCH_TEST != '1'
         run: |
           python3 tools/test_android_release.py \
+            --integration-work .ci-android \
+            --build-tools "$ANDROID_HOME/build-tools/36.0.0"
+
+      - name: Check touch Debug local signing with an ephemeral test certificate
+        if: env.TOOIE_ANDROID_TOUCH_TEST == '1'
+        run: |
+          python3 tools/test_touch_debug_preparation.py \
             --integration-work .ci-android \
             --build-tools "$ANDROID_HOME/build-tools/36.0.0"
 

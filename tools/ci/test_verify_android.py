@@ -6,10 +6,12 @@ packaging step still verifies the actual Gradle-built and signed Android APK.
 """
 import contextlib
 import io
+import os
 import unittest
+from unittest.mock import patch
 import zipfile
 
-from verify_android import check_update_java
+from verify_android import check_update_java, check_touch_java, touch_test_profile
 
 
 class UpdateJavaPackagingTests(unittest.TestCase):
@@ -54,6 +56,40 @@ class UpdateJavaPackagingTests(unittest.TestCase):
     def test_marker_split_across_dex_files_does_not_count(self):
         with self.assertRaisesRegex(ValueError, "UpdateClient"):
             self.check({"classes.dex": b"Update", "classes2.dex": b"Client\0" + self.bridge})
+
+
+class TouchPackagingTests(unittest.TestCase):
+    markers = (b"TouchControlsView", b"TouchControllerModel", b"showTouchControlsSettings",
+               b"nativeStatus", b"nativeSubmit", b"nativeCancel", b"nativeMenu")
+
+    def check(self, entries):
+        data = io.BytesIO()
+        with zipfile.ZipFile(data, "w") as package:
+            for name, content in entries.items():
+                package.writestr(name, content)
+        with zipfile.ZipFile(io.BytesIO(data.getvalue())) as package:
+            check_touch_java(package)
+
+    def test_executable_secondary_dex_and_each_missing_entry_point(self):
+        self.check({"classes.dex": b"primary", "classes2.dex": b"\0".join(self.markers)})
+        for marker in self.markers:
+            with self.subTest(marker=marker), self.assertRaisesRegex(ValueError, marker.decode()):
+                self.check({"classes.dex": b"\0".join(m for m in self.markers if m != marker)})
+
+    def test_assets_cannot_supply_touch_code(self):
+        for name in ("assets/classes2.dex", "classes02.dex", "classes1.dex"):
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "TouchControlsView"):
+                self.check({"classes.dex": b"primary", name: b"\0".join(self.markers)})
+        with self.assertRaisesRegex(ValueError, "primary"):
+            self.check({"classes2.dex": b"\0".join(self.markers)})
+
+    def test_touch_candidate_retains_established_debug_identity(self):
+        for mode, variant in (("0", "Debug"), ("1", "Touch-Debug-Candidate")):
+            with patch.dict(os.environ, TOOIE_ANDROID_TOUCH_TEST=mode):
+                self.assertEqual(touch_test_profile("a" * 40),
+                                 ("io.github.banjotooierecompiled", "Tooie Recompiled Debug", variant))
+        with patch.dict(os.environ, TOOIE_ANDROID_TOUCH_TEST="invalid"), self.assertRaises(ValueError):
+            touch_test_profile("a" * 40)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 import hashlib
 import io
 import json
+import os
 import re
 import shlex
 import shutil
@@ -17,6 +18,24 @@ from PIL import Image
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def touch_test_profile(revision):
+    value = os.environ.get("TOOIE_ANDROID_TOUCH_TEST", "0")
+    require(value in ("0", "1"), "invalid TOOIE_ANDROID_TOUCH_TEST")
+    require(re.fullmatch(r"[0-9a-f]{40}", revision), "invalid source revision")
+    if value == "1":
+        return ("io.github.banjotooierecompiled", "Tooie Recompiled Debug", "Touch-Debug-Candidate")
+    return ("io.github.banjotooierecompiled", "Tooie Recompiled Debug", "Debug")
+
+
+def check_touch_java(package):
+    require("classes.dex" in package.namelist(), "APK primary classes.dex is missing")
+    dex = {name: package.read(name) for name in package.namelist()
+           if re.fullmatch(r"classes(?:[2-9]|[1-9][0-9]+)?\.dex", name)}
+    for marker in (b"TouchControlsView", b"TouchControllerModel", b"showTouchControlsSettings",
+                   b"nativeStatus", b"nativeSubmit", b"nativeCancel", b"nativeMenu"):
+        require(any(marker in data for data in dex.values()), "Touch-control Java code is missing: " + marker.decode())
 
 
 def check_update_java(package):
@@ -44,6 +63,7 @@ def check_configuration(source, work, ndk):
     commands = json.loads((work / "native/compile_commands.json").read_text())
     targets = [source / p for p in (
         "src/main.cpp", "src/recomp_api.cpp", "src/aiming_controls.cpp",
+        "src/android_touch_input.cpp", "src/android_touch_controls.cpp", "src/android_touch_jni.cpp",
         "lib/rt64/src/contrib/plume/plume_vulkan.cpp",
         "lib/rt64/src/hle/rt64_present_queue.cpp",
         "lib/rt64/src/render/rt64_transform_processor.cpp")]
@@ -80,6 +100,8 @@ def build_id(readelf, path):
 
 def check_apk(source, work, ndk):
     check_configuration(source, work, ndk)
+    revision = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
+    package_name, application_label, variant = touch_test_profile(revision)
     apk = work / "package/app/build/outputs/apk/debug/app-debug.apk"
     toolbin = ndk / "toolchains/llvm/prebuilt/linux-x86_64/bin"
     verify = work / "verify"
@@ -117,11 +139,17 @@ def check_apk(source, work, ndk):
         for marker in (b"automatic_update_checks", b"getUpdateState", b"requestUpdateCheck", b"canShowUpdateNotice", b"openUpdateRelease"):
             require(marker in main, "Android update UI/JNI bridge is missing: " + marker.decode())
         check_update_java(package)
+        check_touch_java(package)
+        require(b"TooieTouchControls" in main and b"showTouchControlsSettings" in main,
+                "native touch-control registration/settings bridge is missing")
         require(version.encode() in main, "native CI version stamp is missing")
         symbols = subprocess.check_output([str(toolbin / "llvm-nm"), "-D", "--defined-only", str(verify / "libmain.so")], text=True)
         for suffix in ("nativeFileDialogResult", "nativeModFileDialogResult", "nativePresentationLifecycle"):
             require("Java_io_github_banjotooierecompiled_BanjoTooieSDLActivity_" + suffix in symbols,
                     f"JNI export missing: {suffix}")
+        for suffix in ("nativeStatus", "nativeSubmit", "nativeCancel", "nativeMenu"):
+            require("Java_io_github_banjotooierecompiled_TouchControlsView_" + suffix in symbols,
+                    "Touch JNI export is missing: " + suffix)
         # Verify every checked-in asset and launcher icon against the APK.
         for path in (source / "android/app/src/main/assets").rglob("*"):
             if path.is_file():
@@ -138,26 +166,34 @@ def check_apk(source, work, ndk):
     tools = sdk / "build-tools/36.0.0"
     subprocess.run([str(tools / "apksigner"), "verify", "--verbose", str(apk)], check=True)
     badging = subprocess.check_output([str(tools / "aapt"), "dump", "badging", str(apk)], text=True)
-    require("package: name='io.github.banjotooierecompiled'" in badging, "Android package identity differs")
-    require("application-label:'Tooie Recompiled Debug'" in badging, "Android debug application label differs")
+    require("package: name='" + package_name + "'" in badging, "Android package identity differs")
+    require("application-label:'" + application_label + "'" in badging, "Android debug application label differs")
     require("launchable-activity: name='io.github.banjotooierecompiled.BanjoTooieSDLActivity'" in badging,
             "launch activity differs")
     require("sdkVersion:'24'" in badging and "targetSdkVersion:'35'" in badging, "Android API profile differs")
     require("uses-permission: name='android.permission.INTERNET'" in badging, "Android update network permission is missing")
     require("android.permission.REQUEST_INSTALL_PACKAGES" not in badging, "Release-page checks must not request package-install permission")
-    revision = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
     output = work / "artifacts"
     output.mkdir(exist_ok=True)
-    filename = "Tooie-Recompiled-Android-arm64-" + revision[:12] + "-Debug.apk"
+    filename = "Tooie-Recompiled-Android-arm64-" + revision[:12] + "-" + variant + ".apk"
     shutil.copyfile(apk, output / filename)
     report = {"source_commit": revision, "native_version": version,
-              "package": "io.github.banjotooierecompiled", "application_label": "Tooie Recompiled Debug",
-              "installation_strategy": "separate-apps",
+              "package": package_name, "application_label": application_label, "variant": variant,
+              "installation_strategy": "local-resign-debug-update" if variant == "Touch-Debug-Candidate" else "separate-apps",
               "apk": filename, "sha256": hashlib.sha256(apk.read_bytes()).hexdigest(),
               "ndk": ndk.name, "libraries": libraries, "signing": "CI debug key; not a release/update signing identity",
               "device_tested": False}
+    if variant == "Touch-Debug-Candidate":
+        capture_sources={"capture_installed.py":source/"tools/android-workflow/capture_installed.py",
+                         "collector.py":source/"tools/android-workflow/templates/collector.py",
+                         "tooie.py":source/"tools/android-workflow/tooie.py"}
+        report["capture_tools"]={name:hashlib.sha256(path.read_bytes()).hexdigest() for name,path in capture_sources.items()}
+        for name,path in capture_sources.items():shutil.copyfile(path,output/name)
+        shutil.copyfile(source/"tools/android-workflow/prepare_touch_debug.py",output/"prepare_touch_debug.py")
     (output / "build-report.json").write_text(json.dumps(report, indent=2) + "\n")
     (output / "SHA256SUMS").write_text(report["sha256"] + "  " + filename + "\n")
+    if variant == "Touch-Debug-Candidate":
+        shutil.copyfile(source / "docs/development/android-touch-controls.md", output / "TOUCH-TEST-INSTRUCTIONS.md")
     print("PASS: signed Android ARM64 APK, exact native libraries/Build IDs, JNI, assets, icon, name and API profile")
 
 
