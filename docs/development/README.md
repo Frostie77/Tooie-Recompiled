@@ -46,6 +46,8 @@ gameplay acceptance.
 
 - [26 October working Poco/Turnip result](poco-turnip-result-20261026.md): reviewed
   screenshot and manual acceptance; Share startup log failure MD-010 is reproduced on Odin.
+- [26 October startup-log sharing repair](android-startup-log-sharing-20261026.md):
+  confirmed oversized chooser transaction, attachment fix and pending Odin acceptance.
 
 - [Poco on-device driver-picker test](poco-driver-picker-test-20261025.md):
   verified download, regular R8 import, touch controls and requested diagnostics;

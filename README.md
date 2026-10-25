@@ -180,7 +180,8 @@ and [touch-controls guide](docs/development/android-touch-controls.md).
 Phone testing and verification in the next signed release remain open. The
 Poco compatibility test includes these controls. Its stock driver failed, but
 the reporter now confirms a working game with Turnip; see the [latest result](docs/development/poco-turnip-result-20261026.md).
-Share startup log currently fails on Poco and Odin and is being addressed for the update.
+Share startup log failed on Poco and Odin. A text-attachment fix is implemented
+for the update, with Odin verification pending; see the [sharing record](docs/development/android-startup-log-sharing-20261026.md).
 Custom-driver settings are implemented under Graphics with a pre-Vulkan Android
 startup/recovery screen. Focused Odin system/Turnip switching, gameplay and
 System Default rollback passed. Focused 7a checks also passed for first-launch/

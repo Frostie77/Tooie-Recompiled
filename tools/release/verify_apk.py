@@ -117,7 +117,7 @@ def check_driver_java(package):
     require("classes.dex" in package.namelist(), "APK primary classes.dex is missing")
     dex = [package.read(name) for name in package.namelist()
            if re.fullmatch(r"classes(?:[2-9]|[1-9][0-9]+)?\.dex", name)]
-    for marker in (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy",
+    for marker in (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy", b"shared-startup-logs", b"StartupLogProvider",
                    b"GraphicsDriverActivity", b"GraphicsDriverSettingsActivity", b"BanjoTooieGameActivity", b"showGraphicsDriverSettings",
                    b"getGraphicsDriverState", b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady"):
         require(any(marker in data for data in dex), "Driver-picker Java code is missing: " + marker.decode())
@@ -180,6 +180,14 @@ def check_driver_manifest(xml, package):
     require(launcher[2] < alias_index, "legacy alias target must be declared before its alias")
     require("android.intent.action.MAIN" not in body and "android.intent.category.LAUNCHER" not in body,
             "legacy alias must not add a duplicate launcher icon")
+    providers = blocks("provider")
+    require(len(providers) == 1, "startup log requires exactly one narrow provider")
+    provider = providers[0][0]
+    require(provider.get("name") == prefix + "StartupLogProvider" and
+            provider.get("authorities") == package + ".startup-logs" and
+            provider.get("exported") == false and provider.get("grantUriPermissions") == true and
+            provider.get("enabled", true) == true and "process" not in provider,
+            "startup-log provider authority/permission/process role differs")
 
 
 def is_signature_entry(name):

@@ -91,4 +91,4 @@ or on-device observation of the new MD-009 spacing is claimed.
 
 | ID | Observation | Status | Evidence and follow-up |
 |---|---|---|---|
-| MD-010 | Share startup log does nothing; no Android share UI appears | Open — reported on Poco and reproduced on Odin | [Poco result](poco-turnip-result-20261026.md), comment 6398094156; Odin signed v1.1.0 source `33fcd5516c8f`. Diagnose/fix on Odin for the update. Further Poco logs are deferred; the working-game report remains accepted within scope. |
+| MD-010 | Share startup log does nothing; no Android share UI appears | Fix implemented — Odin attachment/share acceptance pending | [Poco result](poco-turnip-result-20261026.md), comment 6398094156; Odin signed v1.1.0 source `33fcd5516c8f`. Fresh Odin logs confirm `TransactionTooLargeException`, 791464-byte chooser parcel. [Attachment fix and acceptance](android-startup-log-sharing-20261026.md): bounded private text snapshot and temporary read-only content URI. Further Poco logs are deferred; the working-game report remains accepted within scope. |

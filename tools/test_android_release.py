@@ -30,7 +30,7 @@ def elf(extra=b""):
     return bytes(header) + VERSION.encode() + extra
 
 
-DRIVER_MARKERS = (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy",
+DRIVER_MARKERS = (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy", b"shared-startup-logs", b"StartupLogProvider",
                   b"GraphicsDriverActivity", b"GraphicsDriverSettingsActivity", b"BanjoTooieGameActivity", b"showGraphicsDriverSettings",
                   b"getGraphicsDriverState", b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady")
 
@@ -57,6 +57,11 @@ def driver_xml(package):
               f'      A: android:targetActivity="{release.DRIVER_ACTIVITY}"',
               '      A: android:exported=(type 0x12)0xffffffff',
               '      A: android:enabled=(type 0x12)0xffffffff']
+    lines += ['    E: provider (line=8)',
+              f'      A: android:name="{release.DEVELOPMENT_PACKAGE}.StartupLogProvider"',
+              f'      A: android:authorities="{package}.startup-logs"',
+              '      A: android:exported=(type 0x12)0x0',
+              '      A: android:grantUriPermissions=(type 0x12)0xffffffff']
     return '\n'.join(lines)
 
 

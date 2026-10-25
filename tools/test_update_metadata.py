@@ -101,6 +101,11 @@ class UpdateMetadata(unittest.TestCase):
                   f'      A: android:targetActivity="{release.DRIVER_ACTIVITY}"',
                   '      A: android:exported=(type 0x12)0xffffffff',
                   '      A: android:enabled=(type 0x12)0xffffffff']
+        lines += ['    E: provider (line=8)',
+                  f'      A: android:name="{release.DEVELOPMENT_PACKAGE}.StartupLogProvider"',
+                  f'      A: android:authorities="{release.PACKAGE}.startup-logs"',
+                  '      A: android:exported=(type 0x12)0x0',
+                  '      A: android:grantUriPermissions=(type 0x12)0xffffffff']
         xml = "\n".join(lines)
         self.verification.write_text(json.dumps(self.report))
         with patch.object(release, "apk_identity", return_value=self.identity), patch.object(release, "run_tool", return_value=xml):

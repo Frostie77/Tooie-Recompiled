@@ -44,10 +44,12 @@ The reporter says tapping Share startup log does nothing and no Android share
 UI appears. Frostie reproduced the same visible failure on the locally signed
 v1.1.0 Odin candidate, source `33fcd5516c8f0b05b9b0ae0399c027e11e2690f1`.
 
-Current code reads private `files/data/banjotooi-debug.log` and sends measured
+The failing d6/source33 code reads private `files/data/banjotooi-debug.log` and sends measured
 details plus up to 256 KiB of text through ACTION_SEND. It does not save a
-separate export. That observation does not establish the failure's cause;
-obtain Odin Android error output before assigning one.
+separate export. Fresh Odin main/system output later confirmed an oversized
+chooser transaction (`TransactionTooLargeException`, 791464-byte parcel). The
+replacement uses a text-file attachment with temporary read-only access. See
+the [sharing repair and pending acceptance](android-startup-log-sharing-20261026.md).
 
 Frostie chose to fix sharing on Odin and include it in the update. Further Poco
 logs are deferred until the reporter updates; do not ask them to repeat this

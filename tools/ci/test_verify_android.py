@@ -169,6 +169,11 @@ class DriverUiPackagingTests(unittest.TestCase):
                   f'      A: android:targetActivity="{prefix}GraphicsDriverActivity"',
                   '      A: android:exported=(type 0x12)0xffffffff',
                   '      A: android:enabled=(type 0x12)0xffffffff']
+        lines += ['    E: provider (line=8)',
+                  f'      A: android:name="{prefix}StartupLogProvider"',
+                  f'      A: android:authorities="{self.package}.startup-logs"',
+                  '      A: android:exported=(type 0x12)0x0',
+                  '      A: android:grantUriPermissions=(type 0x12)0xffffffff']
         return "\n".join(lines)
 
     def test_compiled_manifest_process_roles(self):
@@ -190,15 +195,26 @@ class DriverUiPackagingTests(unittest.TestCase):
                 check_driver_manifest(xml.replace(old, new, count), self.package)
         for text in ("", xml.replace("A: android:", "unknown: ")):
             with self.assertRaises(ValueError): check_driver_manifest(text, self.package)
-        alias=xml[xml.index('    E: activity-alias'):]
+        alias=xml[xml.index('    E: activity-alias'):xml.index('    E: provider')]
         before=xml[:xml.index('    E: activity-alias')].splitlines()
         for text in (xml[:xml.index('    E: activity-alias')],xml+'\n'+alias,
                      '\n'.join(before[:2]+alias.splitlines()+before[2:]),
-                     xml+'\n      E: intent-filter\n        E: category\n          A: android:name="android.intent.category.LAUNCHER"'):
+                     xml.replace('    E: provider','      E: intent-filter\n        E: category\n          A: android:name="android.intent.category.LAUNCHER"\n    E: provider')):
             with self.assertRaises(ValueError):check_driver_manifest(text,self.package)
 
+    def test_startup_log_provider_must_be_private_grantable_and_identity_scoped(self):
+        xml=self.manifest();provider=xml[xml.index('    E: provider'):]
+        for replacement in ('',provider.replace('StartupLogProvider','OtherProvider'),
+                            provider.replace(self.package+'.startup-logs','other.startup-logs'),
+                            provider.replace('exported=(type 0x12)0x0','exported=(type 0x12)0xffffffff'),
+                            provider.replace('grantUriPermissions=(type 0x12)0xffffffff','grantUriPermissions=(type 0x12)0x0'),
+                            provider+'\n      A: android:enabled=(type 0x12)0x0',
+                            provider+'\n      A: android:process=":game"',provider+'\n'+provider):
+            with self.subTest(provider=replacement),self.assertRaises(ValueError):
+                check_driver_manifest(xml[:xml.index('    E: provider')]+replacement,self.package)
+
     def test_driver_java_must_be_executable_dex(self):
-        markers = (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy", b"GraphicsDriverActivity",
+        markers = (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy", b"shared-startup-logs", b"StartupLogProvider", b"GraphicsDriverActivity",
                    b"GraphicsDriverSettingsActivity", b"BanjoTooieGameActivity", b"showGraphicsDriverSettings", b"getGraphicsDriverState",
                    b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady")
         def check(entries):

@@ -145,7 +145,12 @@ for Odin serial `7907333f`:
   is not an independent installed-APK readback or a data-retention test.
 
 Frostie then reproduced the Poco Share startup log failure on this candidate.
-Track MD-010 and diagnose/fix on Odin for the update. Signed gameplay, retained
+Fresh Odin output confirms `TransactionTooLargeException` with a 791464-byte
+chooser parcel. A text-attachment/read-only URI fix is implemented for the
+replacement v1.1.0 / code 5 candidate; see the
+[sharing record](android-startup-log-sharing-20261026.md). The source33 artifact
+and signed APK above are retained evidence of the failing candidate, not the
+sharing fix. Odin share-menu/attachment acceptance remains open. Signed gameplay, retained
 data, audio, touch, driver and legacy-launch acceptance remains open. The
 retained private Debug app is unchanged. Further Poco logs are deferred until
 the reporter updates; its working-game result remains accepted within scope.

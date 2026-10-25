@@ -22,10 +22,9 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 import java.io.File;
 import java.io.InputStream;
-import java.io.RandomAccessFile;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 
 /** Java-only launcher/recovery UI. SDL and Vulkan live in the separate :game process. */
@@ -257,13 +256,29 @@ public class GraphicsDriverActivity extends Activity {
     }
     private void share() {
         if(busy)return;busy=true;
+        main.removeCallbacks(poll);
+        final int generation=intentGeneration;
+        final String details=current==null?"":current.labels[3];
+        Toast.makeText(this,"Preparing startup-log attachment…",Toast.LENGTH_SHORT).show();
         DriverRuntime.IO.execute(()->{
-            String details=current==null?"":current.labels[3];String content;
-            try(RandomAccessFile file=new RandomAccessFile(new File(getFilesDir(),"data/banjotooi-debug.log"),"r")) {
-                long length=file.length();file.seek(Math.max(0,length-256*1024));byte[] bytes=new byte[(int)Math.min(length,256*1024)];file.readFully(bytes);
-                content=details+"\n\nLast up to 256 KiB of startup log:\n"+new String(bytes,StandardCharsets.UTF_8);
-            }catch(Exception failure){content=details+"\nNo startup log available: "+failure.getMessage();}
-            final String text=content;main.post(()->{busy=false;if(paused)return;startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,text),"Share startup log"));});
+            File snapshot=null;String error="";
+            try {snapshot=StartupLog.write(getFilesDir(),getCacheDir(),details);}
+            catch(Exception failure) {error=failure.getMessage();android.util.Log.w("TooieDriver","Could not prepare startup-log attachment",failure);}
+            final File attachment=snapshot;final String failure=error;
+            main.post(()->{
+                busy=false;if(isFinishing() || isDestroyed())return;
+                if(generation!=intentGeneration || paused){message="Tap Share startup log again when ready.";schedule();return;}
+                try {
+                    if(attachment==null)throw new java.io.IOException(failure);
+                    startActivity(StartupLogProvider.chooser(this,attachment));
+                }catch(Exception unavailable) {
+                    android.util.Log.w("TooieDriver","Could not share startup-log attachment",unavailable);
+                    message="Could not share startup log: "+unavailable.getMessage();
+                    new AlertDialog.Builder(this).setTitle("Could not share startup log").setMessage(message)
+                        .setPositiveButton("Close",null).show();
+                }
+                schedule();
+            });
         });
     }
 }

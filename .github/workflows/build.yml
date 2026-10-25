@@ -124,6 +124,7 @@ jobs:
             python3 tools/android-workflow/tests/test_driver_recovery_check.py
             python3 tools/test_android_vulkan_driver.py --jni-include "$JAVA_HOME/include"
             python3 tools/test_android_driver_picker.py --android-jar "$ANDROID_HOME/platforms/android-36/android.jar" --jni-include "$JAVA_HOME/include"
+            python3 tools/test_android_startup_log.py --android-jar "$ANDROID_HOME/platforms/android-36/android.jar"
             python3 tools/test_touch_debug_preparation.py
             python3 tools/test_android_touch_controls.py --android-jar "$ANDROID_HOME/platforms/android-36/android.jar" --jni-include "$JAVA_HOME/include"
             python3 tools/android-workflow/tests/test_workflow.py

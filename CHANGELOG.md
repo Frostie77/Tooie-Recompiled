@@ -37,10 +37,13 @@ graphics drivers alongside fixes. Public v1.0.1 remains unchanged until publicat
   System Default reset/retry and normal launcher reopening also passed on Odin.
   Actual failed-driver recovery and signed-release checks remain open.
 
-### Known candidate issue
+### Pending verification
 
-- Share startup log does nothing on Poco and Odin (MD-010). Fix locally for the
-  update; further Poco logs are deferred until the reporter updates.
+- Share startup log now prepares a text-file attachment instead of placing the
+  log in the share-menu request, which exceeded Android's transaction limit on
+  Odin (MD-010). Adds temporary read-only access and visible preparation/error
+  feedback. Odin share-menu/attachment acceptance is pending; further Poco logs
+  remain deferred.
 
 ### Fixed
 

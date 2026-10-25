@@ -146,8 +146,12 @@ instructions](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomme
 on 25 October. The reporter now confirms a working game with Turnip; the reviewed
 screenshot shows loaded Turnip matching the running game. See the [26 October
 result](poco-turnip-result-20261026.md). Share startup log does nothing on Poco and
-Frostie reproduced it on the signed Odin candidate (MD-010). Fix it on Odin for
-the update; Frostie deferred further Poco logs until the reporter updates.
+Frostie reproduced it on the signed Odin candidate (MD-010). Fresh Odin logs
+confirm a 791464-byte chooser parcel and `TransactionTooLargeException`. A
+bounded text-attachment/read-only content-URI fix is implemented for the next
+candidate; Odin share-menu and receiving-app acceptance remains open. See the
+[sharing record](android-startup-log-sharing-20261026.md). Frostie deferred
+further Poco logs until the reporter updates.
 Detailed touch/audio/persistence and final signed-phone checks remain separate.
 
 Frostie explicitly deferred updating his retained Odin Debug app until after the

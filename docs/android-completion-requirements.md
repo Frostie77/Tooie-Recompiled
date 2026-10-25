@@ -151,8 +151,12 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   [driver guide](development/android-driver-picker.md). Extra space between the
   three status fields is implemented for the next build; Frostie requested no
   separate device test. Driver controls remain inside Graphics.
-- [ ] Repair Share startup log (MD-010) on Odin and include the fix in the update;
-  further Poco logs are deferred until the reporter updates.
+- [ ] Verify the Share startup log attachment fix (MD-010) on Odin and include it
+  in the update. Oversized chooser transactions are confirmed on Odin; the fix
+  uses a text attachment with temporary read permission. Opening the share menu,
+  reading the attachment in a receiving app and cancellation/return remain to be
+  checked. Further Poco logs are deferred until the reporter updates. See the
+  [sharing record](development/android-startup-log-sharing-20261026.md).
 - [ ] Verify the combined normal signed release candidate over v1.0.1 / code 4:
   retained ROM/saves/settings/mods, accepted audio/touch behavior, first-launch/
   healthy-reopen driver routing, legacy explicit-launch compatibility alias,
