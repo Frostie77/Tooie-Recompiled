@@ -1,5 +1,10 @@
 # Poco X3 Pro Vulkan driver experiment
 
+This guide records the original c849 PC-staging experiment. After its transfer
+failed, the next proposed test is the [verified d6 on-device picker](poco-driver-picker-test-20261025.md),
+which includes touch controls and does not require the staging script. The older
+source/package remains unchanged for evidence comparison.
+
 This is an experimental Android 9+ ARM64 app for issue #26, targeting the Poco
 X3 Pro / Android 12 / Adreno 640 report. **No device compatibility or gameplay
 fix is established yet.** Retroid testing is parked pending more data. This is

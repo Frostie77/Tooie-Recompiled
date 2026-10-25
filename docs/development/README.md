@@ -44,6 +44,9 @@ gameplay acceptance.
 
 ## Evidence
 
+- [Poco on-device driver-picker test](poco-driver-picker-test-20261025.md):
+  verified download, regular R8 import, touch controls and requested diagnostics;
+  tester delivery and Poco compatibility remain pending.
 - [25 October Odin driver-picker checks](android-driver-picker-odin-20261025.md):
   startup/system-driver/cancellation results and the scrolling/colour follow-ups.
 - [Device compatibility reports](device-compatibility.md): includes Frostie's

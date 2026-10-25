@@ -30,10 +30,39 @@ def elf(extra=b""):
     return bytes(header) + VERSION.encode() + extra
 
 
-def zip_apk(path, changes=None, duplicate=False):
+DRIVER_MARKERS = (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy",
+                  b"GraphicsDriverActivity", b"GraphicsDriverSettingsActivity", b"showGraphicsDriverSettings",
+                  b"getGraphicsDriverState", b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady")
+
+
+def driver_xml(package):
+    lines = ['E: manifest (line=1)', '  E: application (line=2)',
+             '    A: android:debuggable(0x0101000f)=(type 0x12)0x0']
+    for name, exported, suffix, process, launcher in (
+            ('BanjoTooieSDLActivity', '0x0', '.game', ':game', False),
+            ('GraphicsDriverActivity', '0xffffffff', '.drivers', None, True),
+            ('GraphicsDriverSettingsActivity', '0x0', '.drivers', None, False)):
+        lines += ['    E: activity (line=3)',
+                  f'      A: android:name="{release.DEVELOPMENT_PACKAGE}.{name}"',
+                  f'      A: android:exported=(type 0x12){exported}',
+                  f'      A: android:taskAffinity="{package + suffix}"',
+                  '      A: android:hardwareAccelerated=(type 0x12)0x0']
+        if process: lines += [f'      A: android:process="{process}"']
+        if launcher:
+            lines += ['      E: intent-filter (line=4)', '        E: action (line=5)',
+                      '          A: android:name="android.intent.action.MAIN"',
+                      '        E: category (line=6)', '          A: android:name="android.intent.category.LAUNCHER"']
+    return '\n'.join(lines)
+
+
+def zip_apk(path, changes=None, duplicate=False, driver_picker=False):
     entries = {"classes.dex": b"fixture dex", "resources.arsc": b"fixture resources",
                "AndroidManifest.xml": b"fixture manifest", "assets/licenses/font.txt": b"notice",
                "lib/arm64-v8a/libmain.so": elf(), "lib/arm64-v8a/libSDL2.so": elf(b"sdl")}
+    if driver_picker:
+        entries['classes.dex'] = b'\0'.join(DRIVER_MARKERS)
+        entries.update({'lib/arm64-v8a/' + name: elf(name.encode())
+                        for name in release.DRIVER_LIBRARIES - release.LIBRARIES})
     entries.update(changes or {})
     with zipfile.ZipFile(path, "w") as package:
         for name, data in entries.items():
@@ -67,6 +96,7 @@ class ReleaseChecks(unittest.TestCase):
         self.cert = CERT
         self.dn = "CN=Tooie test fixture"
         self.package = release.PACKAGE
+        self.activity = release.ACTIVITY
         self.previous_code = 1
 
     def write_report(self):
@@ -83,7 +113,7 @@ class ReleaseChecks(unittest.TestCase):
         old = Path(args[-1]).name == "previous.apk"
         return (f"package: name='{self.package}' versionCode='{self.previous_code if old else 2}' versionName='{VERSION}'\n"
                 "sdkVersion:'24'\ntargetSdkVersion:'35'\napplication-label:'Tooie Recompiled'\n"
-                f"launchable-activity: name='{release.ACTIVITY}'\n" + self.badging_extra)
+                f"launchable-activity: name='{self.activity}'\n" + self.badging_extra)
 
     def verify(self, previous=True, **kwargs):
         with patch.object(release, "run_tool", side_effect=self.sdk):
@@ -109,6 +139,64 @@ class ReleaseChecks(unittest.TestCase):
         with patch.object(release, "run_tool", side_effect=ValueError("signature rejected")):
             with self.assertRaisesRegex(ValueError, "signature rejected"):
                 release.apk_identity(self.candidate, self.root)
+
+    def driver_fixture(self):
+        self.activity = release.DRIVER_ACTIVITY
+        self.xml = driver_xml(release.PACKAGE)
+        for path in (self.built, self.candidate): zip_apk(path, driver_picker=True)
+        self.build_report['driver_picker'] = True
+        self.build_report['sha256'] = release.digest(self.built.read_bytes())
+        with zipfile.ZipFile(self.built) as package:
+            self.build_report['libraries'] = {name: {'sha256': release.digest(package.read('lib/arm64-v8a/' + name))}
+                                             for name in release.DRIVER_LIBRARIES}
+        self.write_report()
+
+    def test_driver_release_and_legacy_previous_apk(self):
+        self.driver_fixture()
+        result = self.verify()
+        self.assertEqual(result['activity'], release.DRIVER_ACTIVITY)
+        self.assertTrue(result['driver_picker'])
+        self.assertTrue(result['previous_apk']['direct_update_metadata_compatible'])
+        prepared = self.prepare()
+        self.assertTrue(prepared['driver_picker'])
+        self.assertEqual(prepared['activity'], release.DRIVER_ACTIVITY)
+        self.assertEqual(set(prepared['libraries']), release.DRIVER_LIBRARIES)
+
+    def test_driver_library_profile_and_every_hook_are_bound(self):
+        self.driver_fixture()
+        for name in release.DRIVER_LIBRARIES - release.LIBRARIES:
+            zip_apk(self.candidate, {'lib/arm64-v8a/' + name: elf(b'changed')}, driver_picker=True)
+            with self.subTest(library=name),self.assertRaisesRegex(ValueError,'differs from'):
+                self.verify()
+        zip_apk(self.candidate, driver_picker=True)
+        for value in (False, 'true', 1):
+            self.build_report['driver_picker'] = value;self.write_report()
+            with self.subTest(profile=value),self.assertRaises(ValueError):self.verify()
+
+    def test_driver_compiled_manifest_and_executable_dex_are_required(self):
+        self.driver_fixture()
+        original = self.xml
+        self.xml = original.replace('android:process=":game"','android:process=":other"')
+        with self.assertRaisesRegex(ValueError,'game process'):self.verify()
+        self.xml = original
+        self.activity = release.ACTIVITY
+        with self.assertRaisesRegex(ValueError,'launch activity'):self.verify()
+        self.activity = release.DRIVER_ACTIVITY
+        for marker in DRIVER_MARKERS:
+            zip_apk(self.candidate,{'classes.dex':b'\0'.join(m for m in DRIVER_MARKERS if m!=marker),
+                                    'assets/classes2.dex':marker},driver_picker=True)
+            with self.subTest(marker=marker),self.assertRaisesRegex(ValueError,'Java code'):self.verify()
+
+    def test_isolated_gpu_build_is_not_promoted_to_a_release(self):
+        self.driver_fixture()
+        for key,value in (('variant','android-gpu-driver-test'),
+                          ('package',release.DEVELOPMENT_PACKAGE+'.gputest.g'+'a'*12)):
+            original = self.build_report.get(key)
+            self.build_report[key] = value;self.write_report()
+            with self.assertRaisesRegex(ValueError,'Isolated GPU tests'):self.prepare()
+            if original is None:self.build_report.pop(key)
+            else:self.build_report[key] = original
+        self.assertFalse((self.root/'export').exists())
 
     def test_unexpected_signer_and_debug_key_rejected(self):
         with self.assertRaisesRegex(ValueError, "Unexpected release signing"):
@@ -382,7 +470,7 @@ def integration(work, tools):
                 release.one(r"^application-label:'([^']*)'", debug["badging"], "debug label", re.M)
                 == "Tooie Recompiled Debug" and
                 release.one(r"^launchable-activity: name='([^']+)'", debug["badging"], "debug activity", re.M)
-                == release.ACTIVITY and "application-debuggable" in debug["badging"],
+                == release.launcher_for(report) and "application-debuggable" in debug["badging"],
                 "Real AGP debug package, label, activity or debuggable flag differs")
         prepared = root / "prepared"
         unsigned_report = preparation.prepare(unsigned, built, build_report, tools,

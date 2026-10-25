@@ -50,7 +50,9 @@ public class GraphicsDriverActivity extends Activity {
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
-        if(!DriverRuntime.enabled(this)) { finish();return; }
+        // Android 7/8 retain their System Default route. Do not touch the
+        // Android 9+ driver store, shortcuts or native loader on that route.
+        if(!DriverRuntime.enabled(this)) { startActivity(gameIntent());finish();return; }
         configureIntent(getIntent());
         if(state!=null) { pickerRequested=state.getBoolean("picker_requested",false);if(pickerRequested)settingsOnly=true; }
         publishRecoveryShortcut();
@@ -163,7 +165,7 @@ public class GraphicsDriverActivity extends Activity {
                     if(!result.setupSeen)rememberSetup();
                     if(action==DriverBootPolicy.Action.SETUP) {message="Choose a graphics driver for this first launch, then press Start. Later healthy launches open the game launcher directly.";}
                     if(action==DriverBootPolicy.Action.WAIT) {message="Waiting for game startup. Driver selection and reset remain available here.";}
-                    if(action==DriverBootPolicy.Action.UNKNOWN) {message="Cannot verify the game process. Close and reopen the test app before restarting it.";}
+                    if(action==DriverBootPolicy.Action.UNKNOWN) {message="Cannot verify the game process. Close and reopen the app before restarting it.";}
                     if(action==DriverBootPolicy.Action.RECOVER && !settingsOnly) {driverOptions.setVisibility(View.VISIBLE);message="The previous startup did not reach the menu. You can import a driver or reset to System Default before trying again.";}
                     if(pendingAction==1){pendingAction=0;pick();return;}
                     if(pendingAction==2){pendingAction=0;change(()->DriverRuntime.store(this).reset(),"System Default selected.");return;}
@@ -238,7 +240,7 @@ public class GraphicsDriverActivity extends Activity {
     private void restart() {
         if(busy)return;
         int pid=DriverRuntime.gamePid(this);
-        if(pid<0 || pid==Process.myPid()){message="Cannot safely identify the game process. Close and reopen the test app.";schedule();return;}
+        if(pid<0 || pid==Process.myPid()){message="Cannot safely identify the game process. Close and reopen the app.";schedule();return;}
         if(pid==0){start();return;}
         // Fresh exact-name/UID query immediately before the only cross-process signal.
         if(DriverRuntime.gamePid(this)!=pid){message="Game process changed. Try again.";schedule();return;}

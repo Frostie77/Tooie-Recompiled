@@ -24,10 +24,8 @@ driver_test=${TOOIE_ANDROID_DRIVER_TEST:-0}
 sdl="$work/prefixes/sdl"
 freetype="$work/prefixes/freetype"
 common=(-G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$toolchain"
-        -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 -DCMAKE_POSITION_INDEPENDENT_CODE=ON)
-if [[ "$driver_test" == 1 ]]; then
-  common+=(-DANDROID_STL:STRING=c++_shared)
-fi
+        -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DANDROID_STL:STRING=c++_shared)
 case "$1" in
 prepare)
   python3 "$source_root/tools/ci/prepare_android.py" "$source_root" "$work"
@@ -58,11 +56,9 @@ native)
   }
   printf '%s\n' "$BT_VERSION" > "$work/logs/version.txt"
   flags='-DTOOIE_ANDROID_TIMING_TRACE=0 -DTOOIE_ANDROID_GEOMETRY_TRACE=0 -DTOOIE_ANDROID_CORRECTION_TRACE=0 -DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=0'
-  driver_option=OFF
-  [[ "$driver_test" == 0 ]] || driver_option=ON
   cmake -S "$source_root" -B "$work/native" "${common[@]}" \
     -DTOOIE_ANDROID_RUNTIME=ON -DTOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE:BOOL=OFF \
-    -DTOOIE_ANDROID_DRIVER_TEST:BOOL="$driver_option" \
+    -DTOOIE_ANDROID_VULKAN_DRIVERS:BOOL=ON \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS="$flags" -DCMAKE_CXX_FLAGS="$flags" \
     -DSDL2_DIR="$sdl/lib/cmake/SDL2" -DFREETYPE_LIBRARY="$freetype/lib/libfreetype.a" \
     -DFREETYPE_LIBRARY_RELEASE="$freetype/lib/libfreetype.a" \
@@ -84,12 +80,12 @@ package)
   if [[ "$driver_test" == 1 ]]; then
     revision=$(git -C "$source_root" rev-parse HEAD)
     driver_gradle=("-PtooieDriverTestId=${revision:0:12}")
-    for library in libmain_hook.so libhook_impl.so libfile_redirect_hook.so libgsl_alloc_hook.so; do
-      cp "$work/native/$library" "$jni/$library"
-    done
-    cp "$ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so" "$jni/"
-    python3 "$source_root/tools/ci/verify_android.py" notices "$source_root" "$work" "$ndk"
   fi
+  for library in libmain_hook.so libhook_impl.so libfile_redirect_hook.so libgsl_alloc_hook.so; do
+    cp "$work/native/$library" "$jni/$library"
+  done
+  cp "$ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so" "$jni/"
+  python3 "$source_root/tools/ci/verify_android.py" notices "$source_root" "$work" "$ndk"
   gradle --no-daemon --console=plain --stacktrace -p "$package" "${driver_gradle[@]}" assembleDebug
   python3 "$source_root/tools/ci/verify_android.py" apk "$source_root" "$work" "$ndk"
   ;;

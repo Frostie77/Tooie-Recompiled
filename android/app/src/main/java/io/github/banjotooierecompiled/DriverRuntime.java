@@ -24,7 +24,7 @@ final class DriverRuntime {
     private static final Map<String,Object> measured=new LinkedHashMap<>();
     private static volatile String[] cached={"Selected: reading…","Loaded: reading…","Status: reading…",""};
     static boolean enabled(Context context) {
-        return Build.VERSION.SDK_INT>=28 && context.getPackageName().matches("io\\.github\\.banjotooierecompiled\\.gputest\\.g[0-9a-f]{12}");
+        return DriverBootPolicy.enabled(Build.VERSION.SDK_INT,context.getPackageName());
     }
     static DriverStore store(Context context) throws IOException {
         return new DriverStore(context.getFilesDir(),Build.VERSION.SDK_INT,new DriverStore.FileOps() {

@@ -41,7 +41,7 @@ def main():
         build([ROOT / "tests/android_vulkan_driver_jni.cpp", ROOT / "src/android_vulkan_driver.cpp"], jni,
               ["-I" + str(ROOT / "tests/android_gpu_headers"), "-I" + str(ROOT / "lib/adrenotools/include"),
                "-I" + str(jni_include), "-I" + str(jni_include / "linux"), "-Wl,--wrap=dlsym"])
-        for fault in ("system", "success", "no-env", "no-activity", "no-files", "activity-class", "method",
+        for fault in ("system", "legacy", "success", "no-env", "no-activity", "no-files", "activity-class", "method",
                       "info", "info-class", "field", "value", "utf", "open", "symbol"):
             files = work / fault; driver = files / "vulkan-driver"; hooks = work / (fault + "-installed-native-dir")
             stage = driver / ("a" * 32)

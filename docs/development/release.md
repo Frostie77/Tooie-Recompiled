@@ -97,10 +97,15 @@ with this packaging. The release installs alongside it and starts with its own
 ROM import, saves, settings and mods. No uninstall, signing-key migration or
 automatic data transfer is part of this plan.
 
-Both variants keep the Java/JNI activity class
-`io.github.banjotooierecompiled.BanjoTooieSDLActivity`. A release launcher must
-use the full component
-`io.github.banjotooierecompiled.release/io.github.banjotooierecompiled.BanjoTooieSDLActivity`.
+The v1.0.1 launch component is the Java/JNI activity class
+`io.github.banjotooierecompiled.BanjoTooieSDLActivity`. The upcoming driver-enabled
+candidate retains that class internally in `:game`, with an exported
+`GraphicsDriverActivity` opening before Vulkan. Its release launch component is
+`io.github.banjotooierecompiled.release/io.github.banjotooierecompiled.GraphicsDriverActivity`.
+Use the normal icon or update explicit external-launcher components accordingly.
+The application ID, protected signer and private data directory do not change.
+Android 9+ gets setup/recovery and custom drivers; Android 7/8 keeps System Default
+without entering the newer store. The manifest minimum remains API 24.
 
 Development defaults remain Android version code `1` / name `0.1.0-android`.
 For a candidate, Gradle accepts explicit `-PtooieVersionCode=…` and
@@ -147,7 +152,10 @@ For future candidates, open **Actions → Android APK → Run workflow**, select
 the reviewed source branch, enable `prepare_candidate`, and set the candidate
 version name/code. The first preview used `0.1.0-preview.1` / `2`; the published
 font-corrected release uses **`1.0.0` / `3`**. Future releases need a version
-code greater than `4`; do not reuse the 1.0.0 workflow defaults for a new release.
+code greater than `4`. Workflow defaults are now **1.0.2 / code 5**; pushes to the
+driver feature branch also export that unsigned candidate after the build and
+signing fixture pass. Keep the README latest-release heading and stable feed at
+v1.0.1 until the new release is actually published.
 Keep the existing protected release key and the separate Debug app. The native
 stamp and Android version use the same supplied name.
 
@@ -163,6 +171,13 @@ non-debuggable ARM64 APK, build report, checksums, public identities, GPL text
 and local signing helpers. Export verifies the release manifest and exact native
 libraries/assets against the already verified debug build. The ordinary debug
 artifact and Ubuntu playtesting workflow remain available.
+
+Driver-enabled reports bind all seven ARM64 libraries, compiled three-Activity
+process/export/task roles and driver entry points in executable DEX. The verifier
+retains support for the original two-library v1.0.1 profile. Isolated GPU-test
+provenance is rejected for release preparation. Same-key update metadata has a
+host fixture; retaining real v1.0.1 data still needs the signed candidate checked
+on Odin.
 
 Extract the candidate artifact on the PC and open Ubuntu in that directory.
 For the update from the installed code-2 release candidate, run the helper with

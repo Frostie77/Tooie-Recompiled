@@ -41,8 +41,10 @@ const Selection& selectedDriver() {
                     return adrenotools_open_libvulkan(RTLD_NOW | RTLD_LOCAL, ADRENOTOOLS_DRIVER_CUSTOM,
                         cache.c_str(), hooks.c_str(), directory.c_str(), library.c_str(), nullptr, nullptr);
                 }, [](void* library, const char* name) { return dlsym(library, name); }};
-            selected = files && *files ? selectDriver(std::filesystem::path(files) / "vulkan-driver", android_get_device_api_level(), platform)
-                : invalid("private-files-directory-unavailable");
+            if (android_get_device_api_level() >= 28) {
+                selected = files && *files ? selectDriver(std::filesystem::path(files) / "vulkan-driver", android_get_device_api_level(), platform)
+                    : invalid("private-files-directory-unavailable");
+            }
         } catch (const std::exception&) {
             selected = invalid("driver-selection-exception");
         }

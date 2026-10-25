@@ -25,7 +25,7 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 - Android 7.0 / API 24 or newer, with a 64-bit ARM processor.
 - A compatible Vulkan GPU with the features required by RT64.
 - A supported USA ROM in `.z64` format.
-- A physical controller; testing currently uses the Odin 2 Portal's controls.
+- A physical controller for v1.0.1. The next update adds configurable touch controls.
 
 The primary test device is the **AYN Odin 2 Portal / Adreno 740**. Frostie also
 confirmed public **v1.0.1 works on Pixel 8 Pro / Android 17 / Mali-G715 MP7**.
@@ -47,7 +47,7 @@ Current Odin testing uses **Manual 60** in Graphics.
 
 ### Custom graphics drivers (next update)
 
-**Settings → Graphics** lets you import/select a custom Vulkan driver, reset to
+On **Android 9 or newer**, **Settings → Graphics** lets you import/select a custom Vulkan driver, reset to
 **System Default**, and view the selected driver, loaded driver and restart status.
 Distinct value colours and space between fields make the details easier to read;
 controller focus automatically scrolls options into view.
@@ -55,6 +55,8 @@ Driver setup appears on first launch. Later healthy launches open the Tooie
 launcher directly using the saved driver; open Graphics to change it. A failed
 startup brings back the driver screen before Vulkan so you can select/reset and
 retry.
+
+Android 7/8 retain the existing System Default startup path and API 24 minimum.
 
 The exact driver tested successfully on **Odin 2 Portal** is
 [**Mesa Turnip v26.0.0 R8 — download ZIP**](https://github.com/K11MCH1/AdrenoToolsDrivers/releases/download/v26.0.0-rc08/Turnip_v26.0.0_R8.zip).

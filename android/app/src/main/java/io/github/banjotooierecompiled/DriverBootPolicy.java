@@ -2,6 +2,12 @@ package io.github.banjotooierecompiled;
 
 /** Decisions shared by the pre-renderer launcher and its host regressions. */
 final class DriverBootPolicy {
+    static boolean enabled(int api,String packageName) {
+        return api>=28 && packageName!=null &&
+            (packageName.equals("io.github.banjotooierecompiled") ||
+             packageName.equals("io.github.banjotooierecompiled.release") ||
+             packageName.matches("io\\.github\\.banjotooierecompiled\\.gputest\\.g[0-9a-f]{12}"));
+    }
     enum Action { SETUP, START, CONTINUE, WAIT, RECOVER, UNKNOWN, EXIT }
     static final class ProcessInfo {
         final int pid, uid;

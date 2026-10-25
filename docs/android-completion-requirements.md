@@ -112,6 +112,9 @@ background/sleep coverage remain open.
 verified c849 test includes the touch controls accepted on Odin, but the reporter
 confirms the same system-driver exit. The optional Turnip test and Poco touch
 acceptance remain open; see the [25 October result](development/poco-system-driver-result-20261025.md).
+The next [verified Poco picker test](development/poco-driver-picker-test-20261025.md)
+imports Turnip on the phone instead of using the failed PC transfer. Delivery
+and Poco device results remain pending.
 The remaining touch matrix and next signed-release checks are still open.
 The Retroid Pocket 5 investigation remains parked pending more data. See the
 [startup-crash record](development/startup-crash-issue26.md).
@@ -140,6 +143,11 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   [driver guide](development/android-driver-picker.md). Extra space between the
   three status fields is implemented for the next build; Frostie requested no
   separate device test. Driver controls remain inside Graphics.
+- [ ] Verify the combined normal signed release candidate over v1.0.1 / code 4:
+  retained ROM/saves/settings/mods, accepted audio/touch behavior, first-launch/
+  healthy-reopen driver routing, System Default/Turnip and startup recovery.
+  Normal-build integration is implemented; unsigned 1.0.2 / code 5 preparation
+  and CI/signing/device results must be recorded separately.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving

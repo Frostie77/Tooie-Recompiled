@@ -111,12 +111,26 @@ separate from Poco Vulkan compatibility.
 
 Frostie now wants to prepare another release with the accepted audio/touch/driver
 work. Audio PR #29 and touch PR #30 have been merged; driver PR #32 remains draft.
-The driver feature is still gated to GPU-test builds and needs normal release
-integration plus a combined signed-candidate check. The focused Odin test is
+Normal-build integration now enables `TOOIE_ANDROID_VULKAN_DRIVERS` in Android
+Debug/release, while the GPU-test flag controls only the separate identity.
+The release package/signer and API 24 minimum are retained. Android 7/8 bypasses
+the newer store and uses System Default; Android 9+ gets the driver UI/recovery.
+The verifier binds seven native libraries and compiled process roles, retains
+legacy v1.0.1 checks and rejects GPU-test provenance for releases. Host driver,
+touch, Java/JNI, update and release checks pass. Full CI and the combined signed
+candidate still need their own results. Feature-branch pushes prepare an unsigned
+1.0.2 / code 5 candidate after CI's signing fixture passes. The focused Odin test is
 complete and the test app may be closed. Keep these changes **Unreleased**;
 public v1.0.1
 still has the issue. Verify the fix in the next signed release and retain the
 broader audio, sleep/wake and interruption checks.
+
+The next Poco step is the [verified d6 on-device picker test](poco-driver-picker-test-20261025.md),
+including touch controls and audio. Its successful CI artifact, ZIP/APK digests,
+all seven native hashes/Build IDs and JNI/DEX markers were checked. It imports
+the regular tested R8 ZIP on Android, avoiding the failed PC transfer. The older
+c849 source/package stays unchanged. Frostie will send the instructions; test
+delivery, real failure/recovery and Poco Turnip gameplay remain unconfirmed.
 
 Issue #26 also has a [Poco X3 Pro report](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747):
 Android 12, Snapdragon 860 / Adreno 640, crashing with both v1.0.1 and the

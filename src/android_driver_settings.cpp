@@ -3,6 +3,7 @@
 #include "recompui/config.h"
 #include "elements/ui_label.h"
 #include <SDL.h>
+#include <android/api-level.h>
 #include <utility>
 
 namespace {
@@ -72,5 +73,8 @@ public:
 };
 }
 void tooie::android::gpu::register_settings() {
+    // Keep the existing System Default experience below Android 9. The Java
+    // router takes the same route without loading its newer storage APIs.
+    if(android_get_device_api_level()<28)return;
     recompui::config::append_tab_contents(recompui::config::graphics::id,[](recompui::ContextId context,recompui::Element* parent){context.create_element<DriverSection>(parent);});
 }

@@ -12,7 +12,7 @@
 
 #include "plume_vulkan.h"
 #include "plume_vulkan_enumeration.h"
-#if defined(__ANDROID__) && defined(TOOIE_ANDROID_DRIVER_TEST) && TOOIE_ANDROID_DRIVER_TEST
+#if defined(__ANDROID__) && defined(TOOIE_ANDROID_VULKAN_DRIVERS) && TOOIE_ANDROID_VULKAN_DRIVERS
 #include "../../../../../src/android_vulkan_driver.h"
 #include "../../../../../src/android_driver_settings.h"
 #endif
@@ -5610,7 +5610,7 @@ namespace plume {
             unsigned(driverProperties.driverID), physicalDeviceProperties.driverVersion, driverProperties.driverName, driverProperties.driverInfo,
             unsigned(driverPropertiesFound), androidDescriptorPoolQualification(physicalDeviceProperties, driverProperties));
         tooie_android_debug_log(driverRecord);
-#if defined(TOOIE_ANDROID_DRIVER_TEST) && TOOIE_ANDROID_DRIVER_TEST
+#if defined(TOOIE_ANDROID_VULKAN_DRIVERS) && TOOIE_ANDROID_VULKAN_DRIVERS
         const auto& selectedDriver = tooie::android::gpu::selectedDriver();
         const bool acceptedBackend = tooie::android::gpu::acceptBackend(selectedDriver.mode,
             driverPropertiesFound, unsigned(driverProperties.driverID), unsigned(VK_DRIVER_ID_MESA_TURNIP));
@@ -6241,7 +6241,7 @@ namespace plume {
     VulkanInterface::VulkanInterface() {
 #endif
         VkResult res = VK_ERROR_INITIALIZATION_FAILED;
-#if defined(__ANDROID__) && defined(TOOIE_ANDROID_DRIVER_TEST) && TOOIE_ANDROID_DRIVER_TEST
+#if defined(__ANDROID__) && defined(TOOIE_ANDROID_VULKAN_DRIVERS) && TOOIE_ANDROID_VULKAN_DRIVERS
         const auto& selectedDriver = tooie::android::gpu::selectedDriver();
         if (!tooie::android::gpu::initialize(selectedDriver,
                 [&] { res = volkInitialize(); return res == VK_SUCCESS; },

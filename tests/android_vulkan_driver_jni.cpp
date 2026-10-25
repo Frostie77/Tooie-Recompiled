@@ -21,7 +21,7 @@ template<class T> static T ref(int value) { ++refs; return reinterpret_cast<T>(s
 extern "C" void* SDL_AndroidGetJNIEnv() { return fault == "no-env" ? nullptr : &env; }
 extern "C" void* SDL_AndroidGetActivity() { return fault == "no-activity" ? nullptr : ref<jobject>(16); }
 extern "C" const char* SDL_AndroidGetInternalStoragePath() { return fault == "no-files" ? nullptr : files.c_str(); }
-extern "C" int android_get_device_api_level() { return 31; }
+extern "C" int android_get_device_api_level() { return fault == "legacy" ? 24 : 31; }
 extern "C" void* adrenotools_open_libvulkan(int, int flags, const char* cache, const char* native,
         const char* directory, const char* library, const char* redirect, void** mapping) {
     ++opens; assert(flags == ADRENOTOOLS_DRIVER_CUSTOM && !redirect && !mapping);
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
     const auto& selected = tooie::android::gpu::selectedDriver();
     using tooie::android::gpu::Mode;
     if (fault == "success") assert(selected.mode == Mode::Custom && opens == 1);
-    else if (fault == "system") assert(selected.mode == Mode::System && !opens && !calls);
+    else if (fault == "system" || fault == "legacy") assert(selected.mode == Mode::System && !opens && !calls);
     else assert(selected.mode == Mode::Invalid);
     assert(!pending && refs == 0);
     assert(&selected == &tooie::android::gpu::selectedDriver());

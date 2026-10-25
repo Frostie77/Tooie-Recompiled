@@ -3,7 +3,8 @@
 The driver controls are inside the existing **Settings → Graphics** page:
 select/import, Reset to System Default, loaded/selected details and restart
 status. There is no additional settings tab/banner. This remains an isolated
-GPU test candidate. The [Odin manual record](android-driver-picker-odin-20261025.md)
+GPU test candidate for Odin acceptance; the next candidate also enables the
+feature in normal Debug/release builds. The [Odin manual record](android-driver-picker-odin-20261025.md)
 confirms startup, system/Turnip switching, gameplay, cancellation/resume and
 System Default rollback. First-launch/healthy-reopen behavior, explicit Graphics
 access/return, controller scrolling and clearer values also passed focused 7a
@@ -46,6 +47,15 @@ activation and correct gameplay require separate device checks.
 
 ## Test app and data
 
+Normal Debug/release builds retain their established application IDs, labels,
+signing channels and API 24 minimum. Driver setup/import/recovery is available
+on Android 9+. Android 7/8 goes directly through the existing System Default
+route without opening the newer driver store or exposing unusable driver
+settings. This compatibility route has host coverage; device checks remain open.
+The release launcher is now `GraphicsDriverActivity`; the existing SDL/JNI class
+remains internal in `:game`. External launchers using an explicit old SDL
+component need to use the new exported launcher or the normal app icon.
+
 Read the exact source, package, APK digest and launcher Activity from
 `build-report.json`; `driver_picker` must be true for this interface. This app
 uses an isolated `io.github.banjotooierecompiled.gputest.g<SOURCE12>` package,
@@ -54,10 +64,11 @@ private Odin Debug installed. This candidate has independent ROM/save/settings
 storage and needs its own supported user-supplied USA ROM.
 
 The Poco tester's original source `c8490fbec193b2257bd5f863cb5d9fe63a740105`
-remains unchanged. That older artifact has a PC staging helper but no in-app
-picker. Its system-driver failure is recorded in the
-[25 October result](poco-system-driver-result-20261025.md). Do not replace it
-while the reporter is conducting its optional Turnip comparison.
+remains unchanged. Its PC staging attempt failed before a verified custom-driver
+run. The [new d6 picker test](poco-driver-picker-test-20261025.md) installs as
+another separate app and imports the ZIP directly through Android. It does not
+require rerunning or diagnosing the failed PC transfer first. Poco compatibility
+remains unconfirmed until the tester supplies a result.
 
 ## Select a driver on the device
 
@@ -144,5 +155,9 @@ Imports are bounded ZIP transactions in private storage, validating paths,
 links, duplicates, CRCs, metadata, Android API and ARM64 ELF libraries. Libraries
 are protected and hashed before the native selection changes atomically. Existing
 Vulkan indexing/descriptor/ownership/synchronization/timeout checks are retained.
-The experimental loader remains off in normal production builds. Build success
-is separate from Odin/Poco acceptance and inclusion in the next signed release.
+The loader/UI are enabled in normal Android builds for the upcoming candidate;
+the experimental test flag controls identity only. The candidate verifier binds
+all seven native libraries and the compiled process roles, keeps the protected
+release signing/update path and rejects isolated GPU-test provenance. Existing
+two-library v1.0.1 reports remain verifiable. Build success is separate from
+Odin/Poco acceptance and validation of the next signed release.

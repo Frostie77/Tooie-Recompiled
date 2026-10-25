@@ -12,6 +12,12 @@
 
 ### In development
 
+- Enable driver support in normal Debug/release candidates while retaining the
+  release package, protected signing/update path and API 24 minimum. Android 9+
+  gets the picker/recovery screen; Android 7/8 retains System Default. Candidate
+  verification now binds seven native libraries and compiled process roles,
+  with the original v1.0.1 verifier profile retained. Signed-device acceptance
+  and Poco compatibility remain pending.
 - Experimental custom Vulkan driver import/selection and System Default reset
   under **Graphics**, with selected/loaded details and restart status. A separate
   Android startup/recovery screen opens before Vulkan so driver options remain
