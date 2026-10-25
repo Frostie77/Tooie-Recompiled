@@ -108,7 +108,7 @@ def main(argv=None):
              "--build-report",str(folder/"build-report.json"),"--build-tools",str(args.build_tools),"--downloads",str(args.downloads),
              "--expect-source",args.expect_source,"--expect-sha256",receipt["apk_sha256"],"--expect-cert",args.expect_cert,
              "--adb",args.adb,"--serial",args.serial,"--state",str(folder/"capture-state"),"--tool-revision",TOOL_REVISION]
-    check="from pathlib import Path; import hashlib; expected="+repr(expected_tools)+"; assert all(hashlib.sha256(Path(p).read_bytes()).hexdigest()==h for p,h in expected.items()), 'Capture tools changed; stop and reverify'"
+    check="from pathlib import Path; import hashlib,sys; expected="+repr(expected_tools)+"; changed=any(hashlib.sha256(Path(p).read_bytes()).hexdigest()!=h for p,h in expected.items()); sys.exit('Capture tools changed; stop and reverify' if changed else 0)"
     launcher=folder/"capture-touch.sh";launcher.write_text("#!/bin/sh\n"+shlex.join([sys.executable,"-c",check])+" || exit 1\nexec "+shlex.join(command)+"\n");launcher.chmod(0o700)
     require(signed.read_bytes()==data,"Signed APK changed during verification")
     print("PASS: established Debug certificate, APK signature/alignment/version and complete CI payload verified.")

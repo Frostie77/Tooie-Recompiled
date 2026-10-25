@@ -5,6 +5,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -160,7 +161,8 @@ def integration(work, tools):
         changed = folder / "capture-tools/capture_installed.py"
         changed.chmod(0o600)
         changed.write_text("raise RuntimeError('Changed capture code executed')\n")
-        blocked = subprocess.run([str(launcher)], capture_output=True, text=True, timeout=15)
+        blocked = subprocess.run([str(launcher)], capture_output=True, text=True, timeout=15,
+                                 env={**os.environ, "PYTHONOPTIMIZE": "1"})
         preparation.require(blocked.returncode != 0 and "Capture tools changed" in blocked.stderr and
                             "Changed capture code executed" not in blocked.stderr, "Capture tool mutation did not stop")
         wrong = command.copy()
