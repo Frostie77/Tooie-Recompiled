@@ -144,3 +144,11 @@ retain their own terms; distribution review is part of release preparation.
 
 Maintained by **Frostie**. This is an unofficial fan project, independent of the
 Banjo: Recompiled team and unaffiliated with Nintendo, Rare or Microsoft.
+
+## Unreleased touch-controls work
+
+Configurable Android on-screen controls are being developed for phone play:
+independent button/joystick sizes, opacity, movable positions and Auto/On/Off
+visibility. Odin and phone acceptance remain open; see the
+[touch-controls test guide](docs/development/android-touch-controls.md).
+A user-facing custom-driver picker/reset flow is next after touch controls.

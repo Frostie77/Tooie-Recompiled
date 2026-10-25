@@ -245,6 +245,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Android")
     add_compile_definitions("RT64_SDL_WINDOW_VULKAN")
     target_include_directories(BanjoTooieRecompiled PRIVATE ${SDL2_INCLUDE_DIRS})
     target_link_libraries(BanjoTooieRecompiled PRIVATE SDL2::SDL2 android log vulkan)
+    target_sources(BanjoTooieRecompiled PRIVATE src/android_touch_input.cpp src/android_touch_controls.cpp)
 endif()
 # --- DXC options (required by rt64) ----------------------------------------
 set(DXC_COMMON_OPTS "-I${PROJECT_SOURCE_DIR}/src")

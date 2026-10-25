@@ -44,6 +44,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     private volatile boolean romPickerDestroyed;
     private volatile boolean presentationResumed;
     private volatile boolean updateWindowFocused;
+    private TouchControlsView touchControls;
     private final WindowSnapshotLog windowSnapshotLog = new WindowSnapshotLog();
     private final ViewTreeObserver.OnGlobalLayoutListener windowLayoutObserver = () -> traceWindow("layout");
 
@@ -79,6 +80,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     // its main thread/EGL context, not RT64's independent presentation worker.
     @Override protected void onPause() {
         presentationResumed = false;
+        if (touchControls != null) touchControls.setForeground(false);
         presentationLifecycle(1);
         super.onPause();
         traceWindow("pause");
@@ -86,10 +88,12 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     @Override protected void onResume() {
         super.onResume();
         presentationResumed = true;
+        if (touchControls != null) touchControls.setForeground(updateWindowFocused);
         presentationLifecycle(2);
         traceWindow("resume");
     }
     @Override protected void onStop() {
+        if (touchControls != null) touchControls.setForeground(false);
         presentationLifecycle(1); // Includes SDL multi-window pause behavior.
         super.onStop();
     }
@@ -147,7 +151,20 @@ public class BanjoTooieSDLActivity extends SDLActivity {
         Log.i(TAG, "Data path: " + dataDir.getAbsolutePath());
 
         AndroidUpdates.get(this);
+        if (!SDLActivity.mBrokenLibraries && mLayout != null) {
+            touchControls = new TouchControlsView(this);
+            mLayout.addView(touchControls, new android.view.ViewGroup.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT));
+            touchControls.setForeground(presentationResumed && updateWindowFocused);
+        }
         applyImmersiveFullscreen();
+    }
+
+    public void showTouchControlsSettings() {
+        runOnUiThread(() -> {
+            if (touchControls != null && !romPickerDestroyed && !isFinishing() && !isDestroyed())
+                touchControls.showSettings();
+        });
     }
 
     /** SDL JNI callers only enqueue background work; no network runs on the UI/render threads. */
@@ -335,6 +352,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     @Override
     protected void onDestroy() {
         presentationResumed = false;
+        if (touchControls != null) touchControls.dispose();
         presentationLifecycle(7);
         if (getWindow() != null && getWindow().getDecorView() != null) {
             ViewTreeObserver observer = getWindow().getDecorView().getViewTreeObserver();
@@ -368,6 +386,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         updateWindowFocused = hasFocus;
+        if (touchControls != null) touchControls.setForeground(hasFocus && presentationResumed);
         if (!hasFocus) presentationLifecycle(3);
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) presentationLifecycle(4);

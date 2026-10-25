@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### In development
+
+- Configurable Android touch controls with a floating stick, N64 buttons,
+  multi-touch, independent sizes, opacity, saved positions and Auto/On/Off
+  visibility. Host checks pass; Odin/phone acceptance is pending.
+- A custom Vulkan driver picker/reset interface is planned after touch controls.
+
+
 ### Fixed
 
 - Brief audio distortion after pressing Android Home and returning to gameplay

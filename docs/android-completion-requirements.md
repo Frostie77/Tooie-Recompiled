@@ -95,6 +95,15 @@ background/sleep coverage remain open.
 - [ ] Complete broader audio checks.
 - [ ] Verify controller navigation throughout menus, gameplay and egg/first-person
   aiming, plus remapping, reconnecting and saved preferences.
+- [ ] **Next update priority: configurable floating touch controls.** Verify the
+  analog stick and all N64 buttons, simultaneous touches, independent button/
+  joystick sizes, opacity, saved movable positions and Auto/On/Off visibility.
+  Frostie will test On and built-in-pad Auto hiding on Odin. Source/host checks
+  do not complete this item; see [the touch guide](development/android-touch-controls.md).
+- [ ] **After touch controls are sorted:** add a custom Vulkan driver import/
+  selection UI, Reset to System Default, loaded/selected details and restart
+  status. Include a pre-renderer selection/reset path for the Poco startup
+  failure. A successful build is not a confirmed driver compatibility fix.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving

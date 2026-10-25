@@ -47,6 +47,10 @@
 #include "mod_support.h"
 #include "mod_runtime.h"
 #include "aiming_controls.h"
+#if defined(__ANDROID__)
+#include "touch_input.h"
+#include "android_touch_controls.h"
+#endif
 #include "android_updates.h"
 #include "launcher_layout.h"
 
@@ -254,6 +258,9 @@ void initialize_config() {
     recompui::config::create_sound_tab();
     recompui::config::create_mods_tab();
     tooie::updates::register_options(recompui::config::get_general_config());
+#if defined(__ANDROID__)
+    tooie::touch::register_options();
+#endif
     recompui::config::finalize();
 }
 
@@ -648,7 +655,11 @@ static int tooie_recomp_main(int argc, char** argv) {
 
     ultramodern::input::callbacks_t input_callbacks{
         .poll_input = recompinput::poll_inputs,
+#if defined(__ANDROID__)
+        .get_input = tooie::touch::read_n64_input,
+#else
         .get_input = recompinput::profiles::get_n64_input,
+#endif
         .set_rumble = recompinput::set_rumble,
         .get_connected_device_info = get_connected_device_info,
     };
