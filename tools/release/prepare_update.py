@@ -32,7 +32,9 @@ def metadata(apk, verification, tools):
             re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", version), "Expected a stable version")
     require(type(code) is int and 0 < code <= 2100000000 and code == report.get("version_code") and
             version == report.get("version_name"), "Android version differs from verification")
-    release.check_release_manifest(identity, apk, tools, version, code)
+    driver_picker = report.get("driver_picker", False)
+    require(isinstance(driver_picker, bool), "Invalid verified driver-picker profile")
+    release.check_release_manifest(identity, apk, tools, version, code, driver_picker)
     source = report.get("source_commit")
     require(isinstance(source, str) and re.fullmatch(r"[0-9a-f]{40}", source), "Invalid verified source commit")
     with zipfile.ZipFile(apk) as bundle:

@@ -52,9 +52,11 @@ signing channels and API 24 minimum. Driver setup/import/recovery is available
 on Android 9+. Android 7/8 goes directly through the existing System Default
 route without opening the newer driver store or exposing unusable driver
 settings. This compatibility route has host coverage; device checks remain open.
-The release launcher is now `GraphicsDriverActivity`; the existing SDL/JNI class
-remains internal in `:game`. External launchers using an explicit old SDL
-component need to use the new exported launcher or the normal app icon.
+The main launcher is `GraphicsDriverActivity`; a private `BanjoTooieGameActivity`
+inherits the existing SDL/JNI class in `:game`. An exported alias preserves the
+original `BanjoTooieSDLActivity` component and forwards it to the pre-renderer
+router. Existing ES-DE entries/shortcuts can keep their component; the alias
+does not add a second launcher icon. Verify that path in the signed candidate.
 
 Read the exact source, package, APK digest and launcher Activity from
 `build-report.json`; `driver_picker` must be true for this interface. This app

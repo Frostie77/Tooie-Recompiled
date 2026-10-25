@@ -1,5 +1,5 @@
 package io.github.banjotooierecompiled;
-public final class BanjoTooieSDLActivity {
+public class BanjoTooieSDLActivity {
     String mode,reason,packageHash,libraryHash,device,name,info;
     long version;
     int action,id,ready,calls;

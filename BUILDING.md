@@ -64,6 +64,9 @@ For the upcoming driver-enabled update, native builds enable
 package seven verified ARM64 libraries: `main`, `SDL2`, four libadrenotools hooks
 and `c++_shared`, with their notices. The compiled manifest is checked for a
 software-rendered Java launcher/recovery process and a private `:game` process.
+An exported compatibility alias preserves the old SDL launch component and sends
+existing ES-DE/shortcut links through recovery; its target/order/export state
+and absence of a duplicate launcher filter are checked in the compiled manifest.
 Android 9+ exposes the driver controls; Android 7/8 bypasses the newer Java
 driver store and uses System Default. The normal APK minimum remains API 24.
 `TOOIE_ANDROID_DRIVER_TEST=1` now chooses only the separate, source-specific test
@@ -110,7 +113,7 @@ artifact includes checksums and local signing helpers; the normal debug artifact
 remains available. No private key is sent to CI. Follow the
 [candidate/signing guide](docs/development/release.md) before using its output.
 
-Pushes to `feature/android-driver-picker` also prepare an unsigned **1.0.2 / code 5**
+Pushes to `feature/android-driver-picker` also prepare an unsigned **1.1.0 / code 5**
 candidate for review, alongside the normal Debug artifact, after the real
 Gradle/signing fixture passes. Explicit GPU or touch tests do not export a
 release candidate. No release is signed with Frostie's key or published by CI.

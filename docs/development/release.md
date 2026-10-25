@@ -84,6 +84,14 @@ deferred.
 
 ## Version and signing
 
+Use [Semantic Versioning 2.0.0](https://semver.org/): compatible bug fixes increment
+PATCH, compatible features increment MINOR (resetting PATCH), and breaking changes
+increment MAJOR (resetting MINOR/PATCH). For this Android app, preserve existing
+ROM/save/settings compatibility, supported Android behavior and documented launch
+components when calling an update compatible. The touch/driver feature update
+targets **v1.1.0**, rather than a bug-fix-only v1.0.2. Android's integer code is
+independent and advances from public code 4 to **5** for this release.
+
 Frostie selected separate release and debug apps:
 
 | App | Android application ID | Launcher label |
@@ -97,12 +105,14 @@ with this packaging. The release installs alongside it and starts with its own
 ROM import, saves, settings and mods. No uninstall, signing-key migration or
 automatic data transfer is part of this plan.
 
-The v1.0.1 launch component is the Java/JNI activity class
-`io.github.banjotooierecompiled.BanjoTooieSDLActivity`. The upcoming driver-enabled
-candidate retains that class internally in `:game`, with an exported
-`GraphicsDriverActivity` opening before Vulkan. Its release launch component is
-`io.github.banjotooierecompiled.release/io.github.banjotooierecompiled.GraphicsDriverActivity`.
-Use the normal icon or update explicit external-launcher components accordingly.
+The v1.0.1 launch component
+`io.github.banjotooierecompiled.release/io.github.banjotooierecompiled.BanjoTooieSDLActivity`
+remains available as an exported compatibility alias to `GraphicsDriverActivity`.
+Existing ES-DE/shortcut components therefore enter the pre-Vulkan router, as does
+the normal app icon. The private `BanjoTooieGameActivity` inherits the original
+SDL/JNI class in `:game`; its native method namespace stays unchanged. Android's
+[activity-alias contract](https://developer.android.com/guide/topics/manifest/activity-alias-element)
+defines the redirect; signed-device acceptance still needs to exercise it.
 The application ID, protected signer and private data directory do not change.
 Android 9+ gets setup/recovery and custom drivers; Android 7/8 keeps System Default
 without entering the newer store. The manifest minimum remains API 24.
@@ -152,7 +162,7 @@ For future candidates, open **Actions → Android APK → Run workflow**, select
 the reviewed source branch, enable `prepare_candidate`, and set the candidate
 version name/code. The first preview used `0.1.0-preview.1` / `2`; the published
 font-corrected release uses **`1.0.0` / `3`**. Future releases need a version
-code greater than `4`. Workflow defaults are now **1.0.2 / code 5**; pushes to the
+code greater than `4`. Workflow defaults are now **1.1.0 / code 5**; pushes to the
 driver feature branch also export that unsigned candidate after the build and
 signing fixture pass. Keep the README latest-release heading and stable feed at
 v1.0.1 until the new release is actually published.

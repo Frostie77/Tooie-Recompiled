@@ -205,7 +205,7 @@ public class GraphicsDriverActivity extends Activity {
             final String result=text;main.post(()->{busy=false;message=result;refresh(true);});
         });
     }
-    private Intent gameIntent() {return new Intent().setComponent(new ComponentName(this,BanjoTooieSDLActivity.class)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);}
+    private Intent gameIntent() {return new Intent().setComponent(new ComponentName(this,BanjoTooieGameActivity.class)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);}
     private void closeSettings() {
         if(!busy && DriverRuntime.gamePid(this)>0)bringGame();else if(!busy)finish();
     }

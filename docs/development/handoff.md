@@ -119,7 +119,17 @@ The verifier binds seven native libraries and compiled process roles, retains
 legacy v1.0.1 checks and rejects GPU-test provenance for releases. Host driver,
 touch, Java/JNI, update and release checks pass. Full CI and the combined signed
 candidate still need their own results. Feature-branch pushes prepare an unsigned
-1.0.2 / code 5 candidate after CI's signing fixture passes. The focused Odin test is
+1.1.0 / code 5 candidate after CI's signing fixture passes. Both normal-build CI
+runs passed at source `32142e8ea45877e7abb4e4ab4f192c4e28bcb201`, validating the
+normal package and actual release-signing fixture. Its unsigned 1.0.2 artifact is
+superseded by the selected 1.1.0 feature-update target; rebuild before local signing.
+The feed-preparation helper now validates the new driver launcher/process layout;
+six host metadata tests pass, including an unchanged-parent failing control.
+The 1.1.0 candidate also retains the old SDL launch component as an exported
+alias to the pre-Vulkan router, preserving ES-DE/shortcut links. The private
+game subclass inherits the existing JNI namespace. Verify the compatibility
+alias in the signed Odin candidate; this route has not yet been exercised on device.
+The focused Odin test is
 complete and the test app may be closed. Keep these changes **Unreleased**;
 public v1.0.1
 still has the issue. Verify the fix in the next signed release and retain the
@@ -131,6 +141,15 @@ all seven native hashes/Build IDs and JNI/DEX markers were checked. It imports
 the regular tested R8 ZIP on Android, avoiding the failed PC transfer. The older
 c849 source/package stays unchanged. Frostie will send the instructions; test
 delivery, real failure/recovery and Poco Turnip gameplay remain unconfirmed.
+
+Frostie explicitly deferred updating his retained Odin Debug app until after the
+new release. It remains the accepted locally signed touch/audio build from
+`1bc772153fcc`; its pinned `touch-1bc772153fcc-52ef9836/capture-touch.sh` remains
+the playthrough command, with manual `playing`, markers 1–30 and `save`.
+Before that later Debug update, extend the local touch-signing helper from its
+two-library profile to the new seven-library profile and make attached capture
+track the private `:game` PID while retaining the package for file/foreground
+queries. Do not reuse that old capture launcher for a newly updated Debug APK.
 
 Issue #26 also has a [Poco X3 Pro report](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747):
 Android 12, Snapdragon 860 / Adreno 640, crashing with both v1.0.1 and the

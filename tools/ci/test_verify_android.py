@@ -152,7 +152,7 @@ class DriverUiPackagingTests(unittest.TestCase):
         prefix = "io.github.banjotooierecompiled."
         lines = ["E: manifest (line=1)", "  E: application (line=2)"]
         for name, exported, affinity, process, launcher in (
-                ("BanjoTooieSDLActivity", "0x0", ".game", ":game", False),
+                ("BanjoTooieGameActivity", "0x0", ".game", ":game", False),
                 ("GraphicsDriverActivity", "0xffffffff", ".drivers", None, True),
                 ("GraphicsDriverSettingsActivity", "0x0", ".drivers", None, False)):
             lines += ["    E: activity (line=3)", f'      A: android:name(0x01010003)="{prefix + name}"',
@@ -164,6 +164,11 @@ class DriverUiPackagingTests(unittest.TestCase):
                 lines += ["      E: intent-filter (line=4)", "        E: action (line=5)",
                           '          A: android:name(0x01010003)="android.intent.action.MAIN"',
                           "        E: category (line=6)", '          A: android:name(0x01010003)="android.intent.category.LAUNCHER"']
+        lines += ["    E: activity-alias (line=7)",
+                  f'      A: android:name="{prefix}BanjoTooieSDLActivity"',
+                  f'      A: android:targetActivity="{prefix}GraphicsDriverActivity"',
+                  '      A: android:exported=(type 0x12)0xffffffff',
+                  '      A: android:enabled=(type 0x12)0xffffffff']
         return "\n".join(lines)
 
     def test_compiled_manifest_process_roles(self):
@@ -176,16 +181,25 @@ class DriverUiPackagingTests(unittest.TestCase):
             ('="io.github.banjotooierecompiled.GraphicsDriverActivity"', '="missing.Activity"', 1),
             ('      A: android:hardwareAccelerated', '      A: android:process=":game"\n      A: android:hardwareAccelerated', 3),
             ("      A: android:exported(0x01010010)=(type 0x12)0xffffffff", "      A: android:exported(0x01010010)=(type 0x12)0x0", 1),
+            ('android:targetActivity="io.github.banjotooierecompiled.GraphicsDriverActivity"',
+             'android:targetActivity="io.github.banjotooierecompiled.BanjoTooieGameActivity"', 1),
+            ('android:enabled=(type 0x12)0xffffffff', 'android:enabled=(type 0x12)0x0', 1),
         ]
         for old, new, count in changes:
             with self.subTest(change=old), self.assertRaises(ValueError):
                 check_driver_manifest(xml.replace(old, new, count), self.package)
         for text in ("", xml.replace("A: android:", "unknown: ")):
             with self.assertRaises(ValueError): check_driver_manifest(text, self.package)
+        alias=xml[xml.index('    E: activity-alias'):]
+        before=xml[:xml.index('    E: activity-alias')].splitlines()
+        for text in (xml[:xml.index('    E: activity-alias')],xml+'\n'+alias,
+                     '\n'.join(before[:2]+alias.splitlines()+before[2:]),
+                     xml+'\n      E: intent-filter\n        E: category\n          A: android:name="android.intent.category.LAUNCHER"'):
+            with self.assertRaises(ValueError):check_driver_manifest(text,self.package)
 
     def test_driver_java_must_be_executable_dex(self):
         markers = (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy", b"GraphicsDriverActivity",
-                   b"GraphicsDriverSettingsActivity", b"showGraphicsDriverSettings", b"getGraphicsDriverState",
+                   b"GraphicsDriverSettingsActivity", b"BanjoTooieGameActivity", b"showGraphicsDriverSettings", b"getGraphicsDriverState",
                    b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady")
         def check(entries):
             with io.BytesIO() as stream:

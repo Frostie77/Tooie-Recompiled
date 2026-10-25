@@ -18,11 +18,13 @@ controls; its real native loader wrapper returns System Default before inspectin
 custom selection or loading hooks. The manifest minimum remains API 24.
 
 The Java root/settings Activities remain separate from the private `:game`
-process in all variants. The exported release component becomes
-`io.github.banjotooierecompiled.release/io.github.banjotooierecompiled.GraphicsDriverActivity`;
-external launchers using the old SDL component need updating. The internal
-SDL/JNI namespace, application IDs, protected release certificate, version-code
-rules and private data paths are retained.
+process in all variants. A private `BanjoTooieGameActivity` inherits the original
+SDL class and its JNI namespace. The main icon enters `GraphicsDriverActivity`;
+an exported alias retains the old `BanjoTooieSDLActivity` component and redirects
+existing ES-DE/shortcut links through the same pre-Vulkan router. The alias has
+no launcher filter, so it adds no duplicate icon. Compiled-role checks reject a
+missing/disabled alias or a redirect to the private game. The application IDs,
+protected certificate, version-code rules and private data paths are retained.
 
 CI checks all seven native library bytes/Build IDs and compiled manifest roles
 for the normal package too. The release exporter/signer reuses those manifest
@@ -31,7 +33,7 @@ rejects GPU-test provenance and retains legacy two-library v1.0.1 verification.
 Unsigned payload binding, previous-package/certificate/version checks and local
 password prompting remain in place. No release key is uploaded to CI.
 
-Feature-branch pushes prepare **unsigned 1.0.2 / code 5** only after the normal
+Feature-branch pushes prepare **unsigned 1.1.0 / code 5** only after the normal
 APK and ephemeral release-signing fixture pass. Manual GPU/touch tests remain
 separate and cannot request a release candidate. No release/tag/feed is published.
 
@@ -48,6 +50,8 @@ separate and cannot request a release candidate. No release/tag/feed is publishe
   publication/reset/retention, exact Java-to-native selection consumption and
   real JVM graphics JNI checks. Policy covers normal Debug/release/GPU identities
   across API 24–36 and rejects unknown packages.
+  The production game subclass is also used by the real-JVM graphics JNI test
+  to exercise inherited callback lookup while retaining the original namespace.
 - Native Vulkan driver policy/JNI/dispatch tests under ASan/UBSan, including the
   new real-wrapper API 24 System Default case with a custom-selection fixture,
   plus the exact old enumeration consumer's failing control/current consumer pass.
@@ -67,9 +71,21 @@ then passed. These are local invocation/setup results, not device regressions.
 
 ## Remaining acceptance
 
-Full clean Android CI, actual release-manifest/signing integration, downloaded
-unsigned artifact verification and local protected signing still need their own
-results. The combined signed candidate must update v1.0.1 on Odin and retain
+Clean push [CI 40192895897](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40192895897)
+and PR [CI 40192899563](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40192899563)
+passed for `32142e8ea45877e7abb4e4ab4f192c4e28bcb201`, including actual ARM64/API24
+compilation, normal-package manifest/library verification, real release signing
+and complete unsigned-payload/update-metadata fixture checks. The push exported
+an unsigned 1.0.2 / code 5 artifact; that artifact is superseded for release
+selection by **1.1.0 / code 5**. A fresh build with that native/Android name is
+required before signing. No protected-key/device result is inferred from CI.
+
+The feed generator's new-driver profile is now tested against the actual
+manifest consumer: unchanged-parent code rejects the new launcher, corrected
+code accepts it and rejects wrong process roles/profile. All six metadata tests pass.
+
+Downloaded 1.1.0 artifact verification and local protected signing still need
+their own results. The combined signed candidate must update v1.0.1 on Odin and retain
 ROM/saves/settings/mods while rechecking audio, touch and driver behavior.
 Android 7/8 has host route coverage, not a physical-device result.
 

@@ -79,7 +79,7 @@ def main():
         run([area/"consumer",area/"files/vulkan-driver"],env={**os.environ,"ASAN_OPTIONS":"detect_leaks=0","UBSAN_OPTIONS":"halt_on_error=1"})
         jni=args.jni_include or java.parent.parent/"include"
         if not (jni/"jni.h").is_file():raise ValueError("Provide JDK headers with --jni-include")
-        run([*javac,"--release","17","-d",area/"jni",*sorted((ROOT/"tests/java_driver_jni").rglob("*.java"))])
+        run([*javac,"--release","17","-d",area/"jni",source/"BanjoTooieGameActivity.java",*sorted((ROOT/"tests/java_driver_jni").rglob("*.java"))])
         run([os.environ.get("CXX","g++"),"-std=c++20","-O1","-g","-fPIC","-shared","-I"+str(jni),"-I"+str(jni/"linux"),
              "-I"+str(ROOT/"tests/android_touch_headers"),ROOT/"src/android_driver_jni.cpp",ROOT/"tests/android_driver_ui_jni.cpp","-o",area/"libtooie_driver_ui_jni.so"])
         result=run([java,"-ea","-Xcheck:jni","-Djava.library.path="+str(area),"-cp",area/"jni","io.github.banjotooierecompiled.DriverJniTest"],capture_output=True,text=True)

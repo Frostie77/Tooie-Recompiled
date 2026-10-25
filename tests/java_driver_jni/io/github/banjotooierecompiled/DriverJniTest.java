@@ -4,7 +4,7 @@ public final class DriverJniTest {
     private static native void init(Object peer);
     private static native void probe(int mode);
     public static void main(String[] args) {
-        BanjoTooieSDLActivity peer=new BanjoTooieSDLActivity();init(peer);
+        BanjoTooieSDLActivity peer=new BanjoTooieGameActivity();init(peer);
         probe(0);assert peer.mode.equals("system") && peer.packageHash.equals("zip") && peer.libraryHash.equals("library");
         assert peer.queried && peer.accepted && peer.id==18 && peer.version==4294967295L;
         assert peer.device.equals("Adreno 640") && peer.name.equals("Mesa Turnip") && peer.info.equals("measured driver");
@@ -15,6 +15,6 @@ public final class DriverJniTest {
         peer.throwing=true;probe(0);peer.throwing=false;probe(1);assert peer.mode.equals("custom-turnip-test");
         init(new Object());probe(0);init(null);probe(0);
         init(peer);probe(3);init(null);
-        System.out.println("PASS: actual graphics-driver JNI signatures, measured backend/version, absent/throwing callbacks and local-reference cleanup");
+        System.out.println("PASS: production game subclass inherits actual graphics-driver JNI signatures; measured backend/version, absent/throwing callbacks and local-reference cleanup");
     }
 }

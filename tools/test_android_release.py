@@ -31,7 +31,7 @@ def elf(extra=b""):
 
 
 DRIVER_MARKERS = (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy",
-                  b"GraphicsDriverActivity", b"GraphicsDriverSettingsActivity", b"showGraphicsDriverSettings",
+                  b"GraphicsDriverActivity", b"GraphicsDriverSettingsActivity", b"BanjoTooieGameActivity", b"showGraphicsDriverSettings",
                   b"getGraphicsDriverState", b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady")
 
 
@@ -39,7 +39,7 @@ def driver_xml(package):
     lines = ['E: manifest (line=1)', '  E: application (line=2)',
              '    A: android:debuggable(0x0101000f)=(type 0x12)0x0']
     for name, exported, suffix, process, launcher in (
-            ('BanjoTooieSDLActivity', '0x0', '.game', ':game', False),
+            ('BanjoTooieGameActivity', '0x0', '.game', ':game', False),
             ('GraphicsDriverActivity', '0xffffffff', '.drivers', None, True),
             ('GraphicsDriverSettingsActivity', '0x0', '.drivers', None, False)):
         lines += ['    E: activity (line=3)',
@@ -52,6 +52,11 @@ def driver_xml(package):
             lines += ['      E: intent-filter (line=4)', '        E: action (line=5)',
                       '          A: android:name="android.intent.action.MAIN"',
                       '        E: category (line=6)', '          A: android:name="android.intent.category.LAUNCHER"']
+    lines += ['    E: activity-alias (line=7)',
+              f'      A: android:name="{release.ACTIVITY}"',
+              f'      A: android:targetActivity="{release.DRIVER_ACTIVITY}"',
+              '      A: android:exported=(type 0x12)0xffffffff',
+              '      A: android:enabled=(type 0x12)0xffffffff']
     return '\n'.join(lines)
 
 

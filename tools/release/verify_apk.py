@@ -118,7 +118,7 @@ def check_driver_java(package):
     dex = [package.read(name) for name in package.namelist()
            if re.fullmatch(r"classes(?:[2-9]|[1-9][0-9]+)?\.dex", name)]
     for marker in (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy",
-                   b"GraphicsDriverActivity", b"GraphicsDriverSettingsActivity", b"showGraphicsDriverSettings",
+                   b"GraphicsDriverActivity", b"GraphicsDriverSettingsActivity", b"BanjoTooieGameActivity", b"showGraphicsDriverSettings",
                    b"getGraphicsDriverState", b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady"):
         require(any(marker in data for data in dex), "Driver-picker Java code is missing: " + marker.decode())
 
@@ -145,17 +145,17 @@ def check_driver_manifest(xml, package):
                     value = attr[3]
                     quoted = re.match(r'"([^"\n]*)"', value)
                     attributes[attr[2]] = quoted[1] if quoted else re.sub(r"\s+", "", value)
-            result.append((attributes, "\n".join(body)))
+            result.append((attributes, "\n".join(body), index))
         return result
     application = blocks("application")
     require(len(application) == 1 and "process" not in application[0][0], "unexpected application process")
     activities = blocks("activity")
     require(len(activities) == 3, "driver support requires exactly three Activity roles")
-    by_name = {attributes.get("name"): (attributes, body) for attributes, body in activities}
+    by_name = {attributes.get("name"): (attributes, body, index) for attributes, body, index in activities}
     require(len(by_name) == 3, "duplicate Activity role")
     prefix = "io.github.banjotooierecompiled."
     game, launcher, settings = (by_name.get(prefix + name) for name in
-                               ("BanjoTooieSDLActivity", "GraphicsDriverActivity", "GraphicsDriverSettingsActivity"))
+                               ("BanjoTooieGameActivity", "GraphicsDriverActivity", "GraphicsDriverSettingsActivity"))
     require(all((game, launcher, settings)), "missing driver Activity role")
     false, true = "(type0x12)0x0", "(type0x12)0xffffffff"
     require(game[0].get("exported") == false and game[0].get("process") in (":game", package + ":game") and
@@ -170,6 +170,16 @@ def check_driver_manifest(xml, package):
             "pre-renderer launcher is missing")
     require("android.intent.action.MAIN" not in settings[1] and "android.intent.category.LAUNCHER" not in settings[1],
             "private settings must not be an external launcher")
+    aliases = blocks("activity-alias")
+    require(len(aliases) == 1, "the established launch component must be retained exactly once")
+    alias, body, alias_index = aliases[0]
+    require(alias.get("name") == prefix + "BanjoTooieSDLActivity" and
+            alias.get("targetActivity") == prefix + "GraphicsDriverActivity" and
+            alias.get("exported") == true and alias.get("enabled") == true and "process" not in alias,
+            "legacy launch alias must enter the pre-renderer router")
+    require(launcher[2] < alias_index, "legacy alias target must be declared before its alias")
+    require("android.intent.action.MAIN" not in body and "android.intent.category.LAUNCHER" not in body,
+            "legacy alias must not add a duplicate launcher icon")
 
 
 def is_signature_entry(name):

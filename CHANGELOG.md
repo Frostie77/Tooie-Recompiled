@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+Target: **v1.1.0 / Android version code 5**, adding touch controls and custom
+graphics drivers alongside fixes. Public v1.0.1 remains unchanged until publication.
+
 ### Added
 
 - Configurable Android touch controls with a floating stick, N64 buttons,
@@ -16,6 +19,7 @@
   release package, protected signing/update path and API 24 minimum. Android 9+
   gets the picker/recovery screen; Android 7/8 retains System Default. Candidate
   verification now binds seven native libraries and compiled process roles,
+  with a compatibility alias retaining existing external launcher links,
   with the original v1.0.1 verifier profile retained. Signed-device acceptance
   and Poco compatibility remain pending.
 - Experimental custom Vulkan driver import/selection and System Default reset

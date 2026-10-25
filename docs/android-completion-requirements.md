@@ -145,9 +145,14 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   separate device test. Driver controls remain inside Graphics.
 - [ ] Verify the combined normal signed release candidate over v1.0.1 / code 4:
   retained ROM/saves/settings/mods, accepted audio/touch behavior, first-launch/
-  healthy-reopen driver routing, System Default/Turnip and startup recovery.
-  Normal-build integration is implemented; unsigned 1.0.2 / code 5 preparation
+  healthy-reopen driver routing, legacy explicit-launch compatibility alias,
+  System Default/Turnip and startup recovery.
+  Normal-build integration is implemented; unsigned 1.1.0 / code 5 preparation
   and CI/signing/device results must be recorded separately.
+- [ ] After the new release, update Frostie's retained Odin Debug app with its
+  established signer and data preserved. First extend local preparation to seven
+  native libraries and attached capture to the `:game` process; generate a new
+  pinned capture launcher. The current touch/audio Debug stays installed until then.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving
