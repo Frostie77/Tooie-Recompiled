@@ -45,6 +45,23 @@ future launches.
 Configure graphics, input mappings and audio through the launcher menus.
 Current Odin testing uses **Manual 60** in Graphics.
 
+### Custom graphics drivers (next update)
+
+**Settings → Graphics** lets you import/select a custom Vulkan driver, reset to
+**System Default**, and view the selected driver, loaded driver and restart status.
+Driver setup appears on first launch. Later healthy launches open the Tooie
+launcher directly using the saved driver; open Graphics to change it. A failed
+startup brings back the driver screen before Vulkan so you can select/reset and
+retry.
+
+The exact driver tested successfully on **Odin 2 Portal** is
+[**Mesa Turnip v26.0.0 R8 — download ZIP**](https://github.com/K11MCH1/AdrenoToolsDrivers/releases/download/v26.0.0-rc08/Turnip_v26.0.0_R8.zip).
+Leave it zipped and select it with the driver picker. Turnip is for compatible
+**Adreno** GPUs; Mali devices should use **System Default**. No driver ZIP is
+bundled. The [driver guide](docs/development/android-driver-picker.md) includes
+the checksum and setup details. Odin acceptance covers this tested combination;
+Poco and broader compatibility remain under test.
+
 ### Mod support
 
 Import compatible Tooie `.nrm` mods, RT64 `.rtz` texture packs and supported
@@ -158,6 +175,7 @@ Phone testing and verification in the next signed release remain open. The
 Poco compatibility test includes these controls, but its system-driver startup
 failure remains unresolved; see the [latest result](docs/development/poco-system-driver-result-20261025.md).
 Custom-driver settings are implemented under Graphics with a pre-Vulkan Android
-startup/recovery screen. Focused Odin system-driver/cancellation checks passed;
-custom-driver switching remains under test. See the
+startup/recovery screen. Focused Odin system/Turnip switching, gameplay and
+System Default rollback passed. The first-launch-only flow and UI refinements
+await their next device check. See the
 [driver-picker record](docs/development/android-driver-picker-odin-20261025.md).

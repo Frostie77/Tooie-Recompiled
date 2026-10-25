@@ -26,6 +26,14 @@ public final class DriverStoreTest {
     public static void main(String[] args) throws Exception {
         File fixtures=new File(args[0]),files=new File(args[1]);assert files.mkdirs();
         DriverStore store=new DriverStore(files,31,OPS);assert !store.selected().custom();
+        assert !store.setupSeen();store.markSetupSeen();assert store.setupSeen();
+        assert new DriverStore(files,31,OPS).setupSeen();
+        File setup=new File(store.root,"setup-seen.json");
+        for(String invalid:new String[]{"{}","{\"schema\":2,\"seen\":true}","{\"schema\":1,\"seen\":false}","{\"schema\":1,\"seen\":true,\"seen\":true}"}) {
+            Files.writeString(setup.toPath(),invalid);rejected(store::setupSeen);
+        }
+        setup.delete();Files.createSymbolicLink(setup.toPath(),new File(store.root,"missing-setup").toPath());
+        rejected(store::setupSeen);store.markSetupSeen();assert store.setupSeen();
         DriverStore.Choice first;
         try(FileInputStream input=new FileInputStream(new File(fixtures,"good.zip"))) {first=store.importZip(input);}
         assert first.custom()&&first.minApi==28&&store.selected().fingerprint().equals(first.fingerprint());
@@ -42,7 +50,7 @@ public final class DriverStoreTest {
         rejected(()->{try(FileInputStream input=new FileInputStream(new File(fixtures,"good.zip"))) {store.importZip(input);}});
         failPublish=false;assert Arrays.equals(selected,Files.readAllBytes(new File(store.root,"selection.txt").toPath()));
         assert store.choices().size()==2;assert library.isFile();
-        store.reset();assert !store.selected().custom()&&library.isFile();
+        store.reset();assert !store.selected().custom()&&library.isFile()&&store.setupSeen();
         store.select(first);assert store.selected().fingerprint().equals(first.fingerprint());
         File data=new File(files,"save-fixture.bin");Files.write(data.toPath(),new byte[]{1,2,3});store.reset();assert data.length()==3;
         File selection=new File(store.root,"selection.txt");Files.createSymbolicLink(selection.toPath(),new File(store.root,"missing").toPath());
@@ -50,7 +58,7 @@ public final class DriverStoreTest {
         store.select(first);
         File other=new File(files,"outside");assert other.mkdir();
         rejected(()->store.atomicWrite(new File(other,"selection.txt"),"no"));
-        DriverStore copied=new DriverStore(files,31,OPS);assert copied.selected().fingerprint().equals(first.fingerprint());
+        DriverStore copied=new DriverStore(files,31,OPS);assert copied.selected().fingerprint().equals(first.fingerprint())&&copied.setupSeen();
         System.out.println("PASS: actual driver importer/store, "+cases+" invalid packages, failed publish, reset, retained files and restored selection");
         System.out.println("NATIVE_ROOT="+store.root.getAbsolutePath());
     }

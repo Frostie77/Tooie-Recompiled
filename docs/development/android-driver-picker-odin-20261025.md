@@ -1,8 +1,8 @@
 # Odin driver-picker checks — 25 October 2026
 
-Status: focused manual system-driver checks passed; custom-driver activation,
-restart and System Default rollback remain pending. This does not establish a
-Poco fix or a successful custom driver.
+Status: the focused manual Odin system/Turnip driver-switching test passed,
+including restart, playable controls/sound and System Default rollback. Poco
+compatibility and the newer startup/UI refinements remain separate checks.
 
 ## Exact test build
 
@@ -42,6 +42,27 @@ receipt, screenshot bundle or captured timing/gameplay session for this test yet
 5. Cancelled the custom-driver document picker, returned to gameplay and
    explicitly confirmed controls and sound returned to normal.
 
+6. The pinned regular `Turnip_v26.0.0_R8.zip` was downloaded and hashed on the
+   PC and Odin, both matching
+   `e634db0f929e2205e95511c769071817d0390180ec72c8e690bc76375e813715`.
+   The supplied command reported 3,478,359 bytes copied to
+   `/sdcard/Download/Tooie-Turnip-R8-a1ccec04.zip` without stopping the game.
+7. Imported the ZIP through the on-device picker while System Default was still
+   loaded. Reported Selected = `Mesa turnip driver`, Loaded = `System default`,
+   Status = `restart required to apply selection`.
+8. Performed the deliberate driver restart. Reported Selected = `mesa turnip
+   driver v26.0.0`, Loaded = `turnip mesa driver`, Status = `selected driver
+   matches running game`. After the requested movement/jumping/sound check,
+   reported gameplay was good with Turnip.
+9. Confirmed the requested final reset/restart check worked: System Default was
+   loaded again and the existing imported ROM still started and played normally.
+   This confirms focused ROM reuse; no separate fresh save/reload capture or
+   broader persistence/stability matrix is claimed.
+
+These are Frostie's manual reports, with no new app-log or captured performance
+window. The test is complete for the requested system → Turnip → system roundtrip.
+The additional startup-screen request below applies to a future candidate.
+
 ## Follow-up observations and requested changes
 
 - **MD-006:** New Graphics driver buttons can receive controller focus below the
@@ -53,16 +74,24 @@ receipt, screenshot bundle or captured timing/gameplay session for this test yet
   their values in another colour. Light blue (`#78BEFF`) is implemented for the
   values on both the rendered Graphics page and Android startup/recovery UI.
   Device appearance remains pending in a later build.
+- **MD-008:** Show driver setup on first launch, explicit Graphics/recovery
+  entry or a failed/incomplete startup. Later healthy launches go directly to
+  the Tooie launcher. A saved setup marker and guarded automatic routing are
+  implemented; the new flow needs its own device check.
 
 These observations came from conversation during this manual test, not numbered
 capture markers. Do not invent marker IDs or classify them as existing rendering
 issues MD-001–MD-005. Keep both new follow-ups open until their scoped result or
 an explicit acceptance is recorded.
 
-## Remaining current-build checks
+## Remaining validation
 
-Import the pinned Turnip ZIP while the game is running; inspect selected versus
-loaded and restart-required status. Deliberately restart and check the measured
-backend and functional result, then reset to System Default and verify recovery.
-Keep app data and the current evidence. A driver failure should leave the Android
-startup/recovery interface accessible when reopening the app icon.
+The first-launch-only flow, controller focus scrolling and blue-value styling
+were requested after testing the 4ee candidate. Keep them separate from its
+accepted results. The current source passes host first-launch/healthy-launch/
+failed-start policy, persisted-marker and invalid-state controls, native loader/
+JNI/store regressions and full Android Java compilation. Device confirmation
+of that new startup flow and the UI refinements remains open.
+
+Poco testing, genuinely failed-driver recovery on device, broader GPU/input/
+lifecycle coverage, long sessions and the next signed release remain separate.

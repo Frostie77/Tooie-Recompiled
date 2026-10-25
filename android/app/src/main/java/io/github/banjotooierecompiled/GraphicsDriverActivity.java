@@ -36,9 +36,12 @@ public class GraphicsDriverActivity extends Activity {
     private final Handler main=new Handler(Looper.getMainLooper());
     private LinearLayout body;
     private LinearLayout driverOptions;
+    private ScrollView content;
     private TextView summary;
     private boolean busy,paused=true,handled,pickerRequested,settingsOnly;
+    private boolean contentAttached,gameOpened,returningFromGame;
     private int pendingAction;
+    private int intentGeneration;
     private DriverRuntime.Snapshot current;
     private String message="";
     private int stoppingPid;
@@ -49,11 +52,11 @@ public class GraphicsDriverActivity extends Activity {
         super.onCreate(state);
         if(!DriverRuntime.enabled(this)) { finish();return; }
         configureIntent(getIntent());
-        if(state!=null) { pickerRequested=state.getBoolean("picker_requested",false);handled=state.getBoolean("handled",false); }
+        if(state!=null) { pickerRequested=state.getBoolean("picker_requested",false);if(pickerRequested)settingsOnly=true; }
         publishRecoveryShortcut();
-        ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);
+        content=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);
         int pad=(int)(20*getResources().getDisplayMetrics().density);body.setPadding(pad,pad,pad,pad);
-        scroll.addView(body);setContentView(scroll);
+        content.addView(body);
         TextView title=new TextView(this);title.setText(settingsOnly?"Graphics driver":"Tooie Recompiled");title.setTextSize(24);body.addView(title);
         summary=new TextView(this);summary.setTextIsSelectable(true);summary.setPadding(0,pad,0,pad);body.addView(summary);
         button("Start / return to game",this::start);
@@ -70,11 +73,12 @@ public class GraphicsDriverActivity extends Activity {
         button("Share startup log",this::share);
         body=page;
         button("Close",this::closeSettings);
+        if(settingsOnly)showScreen(true);
     }
     private void configureIntent(Intent intent) {
         // The exported recovery entry only opens UI; only the private Activity accepts actions.
         boolean trusted=this instanceof GraphicsDriverSettingsActivity;
-        settingsOnly=trusted || (intent!=null && RECOVER.equals(intent.getAction()));
+        settingsOnly=trusted || pickerRequested || (intent!=null && RECOVER.equals(intent.getAction()));
         pendingAction=trusted && intent!=null?intent.getIntExtra(ACTION,0):0;
     }
     private void publishRecoveryShortcut() {
@@ -87,20 +91,37 @@ public class GraphicsDriverActivity extends Activity {
         } catch(RuntimeException unsupported) { android.util.Log.i("TooieDriver","Recovery shortcut is unavailable",unsupported); }
     }
     @Override protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);setIntent(intent);configureIntent(intent);handled=false;
-        if(driverOptions!=null)driverOptions.setVisibility(settingsOnly?View.VISIBLE:View.GONE);
+        super.onNewIntent(intent);setIntent(intent);configureIntent(intent);intentGeneration++;handled=false;gameOpened=false;returningFromGame=false;message="";
+        if(driverOptions!=null) {
+            driverOptions.setVisibility(settingsOnly?View.VISIBLE:View.GONE);
+            if(settingsOnly)showScreen(true);else content.setVisibility(View.INVISIBLE);
+        }
         refresh(false);
     }
     @Override protected void onSaveInstanceState(Bundle state) {
-        state.putBoolean("picker_requested",pickerRequested);state.putBoolean("handled",handled);super.onSaveInstanceState(state);
+        state.putBoolean("picker_requested",pickerRequested);super.onSaveInstanceState(state);
     }
-    @Override protected void onResume() { super.onResume();paused=false;if(body!=null)refresh(false); }
+    @Override protected void onResume() {
+        super.onResume();paused=false;
+        if(gameOpened) {returningFromGame=true;gameOpened=false;}
+        if(body!=null)refresh(false);
+    }
     @Override protected void onPause() { paused=true;main.removeCallbacks(poll);super.onPause(); }
     private void button(String label,Runnable action) {
         Button button=new Button(this);button.setText(label);button.setAllCaps(false);body.addView(button);
         button.setOnClickListener(view->{if(!busy && !paused)action.run();});
     }
     private void schedule() { main.removeCallbacks(poll);if(!paused && !isFinishing())main.postDelayed(poll,1200); }
+    private void showScreen(boolean expand) {
+        if(!contentAttached){setContentView(content);contentAttached=true;}
+        content.setVisibility(View.VISIBLE);if(expand)driverOptions.setVisibility(View.VISIBLE);
+    }
+    private void rememberSetup() {
+        DriverRuntime.IO.execute(()->{
+            try {DriverRuntime.store(this).markSetupSeen();}
+            catch(Exception failure){main.post(()->{message="Could not remember first-launch setup: "+failure.getMessage();schedule();});}
+        });
+    }
     private void showSummary(DriverRuntime.Snapshot snapshot) {
         SpannableStringBuilder text=new SpannableStringBuilder();
         for(int i=0;i<3;i++) {
@@ -115,20 +136,32 @@ public class GraphicsDriverActivity extends Activity {
     private void refresh(boolean actionCompleted) {
         if(paused || busy || isFinishing())return;
         busy=true;
+        final int generation=intentGeneration;
         DriverRuntime.IO.execute(()->{
             DriverRuntime.Snapshot snapshot=null;String error="";
             try {snapshot=DriverRuntime.snapshot(this);}catch(Exception failure){error=failure.getMessage();}
             final DriverRuntime.Snapshot result=snapshot;final String failure=error;
             main.post(()->{
                 busy=false;if(isFinishing() || isDestroyed())return;
+                if(generation!=intentGeneration){if(!paused)refresh(false);return;}
                 current=result;
-                if(result==null){summary.setText("Driver settings unavailable: "+failure);schedule();return;}
+                if(result==null){if(!paused)showScreen(true);summary.setText("Driver settings unavailable: "+failure);schedule();return;}
+                if(paused)return;
                 showSummary(result);
-                if(!paused && !handled) {
+                DriverBootPolicy.Action action=DriverBootPolicy.decide(settingsOnly,result.setupSeen,result.validSelection,result.attempted,result.ready,result.pid);
+                if(returningFromGame && !settingsOnly) {
+                    returningFromGame=false;
+                    action=DriverBootPolicy.returnedFromGame(action);
+                    if(action==DriverBootPolicy.Action.EXIT) {finish();return;}
+                    // A dead/incomplete game startup returns here without another auto-launch.
+                    handled=false;
+                }
+                if(!handled) {
                     handled=true;
-                    DriverBootPolicy.Action action=DriverBootPolicy.decide(settingsOnly,result.validSelection,result.attempted,result.ready,result.pid);
-                    if(action==DriverBootPolicy.Action.CONTINUE) {message="The game is running. Choose Start / return to game when ready.";}
-                    if(action==DriverBootPolicy.Action.START) {message="Ready. Choose Start or open Graphics driver options before starting Vulkan.";}
+                    if(action==DriverBootPolicy.Action.START || action==DriverBootPolicy.Action.CONTINUE) {start();return;}
+                    showScreen(true);
+                    if(!result.setupSeen)rememberSetup();
+                    if(action==DriverBootPolicy.Action.SETUP) {message="Choose a graphics driver for this first launch, then press Start. Later healthy launches open the game launcher directly.";}
                     if(action==DriverBootPolicy.Action.WAIT) {message="Waiting for game startup. Driver selection and reset remain available here.";}
                     if(action==DriverBootPolicy.Action.UNKNOWN) {message="Cannot verify the game process. Close and reopen the test app before restarting it.";}
                     if(action==DriverBootPolicy.Action.RECOVER && !settingsOnly) {driverOptions.setVisibility(View.VISIBLE);message="The previous startup did not reach the menu. You can import a driver or reset to System Default before trying again.";}
@@ -177,8 +210,8 @@ public class GraphicsDriverActivity extends Activity {
     @Override public void onBackPressed() {closeSettings();}
     private void bringGame() {
         if(paused)return;
-        try {startActivity(gameIntent());if(this instanceof GraphicsDriverSettingsActivity)finish();}
-        catch(RuntimeException failure){message="Could not open the game: "+failure.getMessage();schedule();}
+        try {gameOpened=true;startActivity(gameIntent());if(this instanceof GraphicsDriverSettingsActivity)finish();}
+        catch(RuntimeException failure){gameOpened=false;showScreen(true);message="Could not open the game: "+failure.getMessage();schedule();}
     }
     private void start() {
         if(busy)return;busy=true;
@@ -192,7 +225,7 @@ public class GraphicsDriverActivity extends Activity {
             final String failure=error;
             main.post(()->{
                 busy=false;if(paused || isFinishing())return;
-                if(!failure.isEmpty()){message=failure;refresh(false);return;}
+                if(!failure.isEmpty()){showScreen(true);message=failure;refresh(false);return;}
                 bringGame();schedule();
             });
         });

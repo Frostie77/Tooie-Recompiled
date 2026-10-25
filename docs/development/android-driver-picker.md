@@ -4,23 +4,36 @@ The driver controls are inside the existing **Settings → Graphics** page:
 select/import, Reset to System Default, loaded/selected details and restart
 status. There is no additional settings tab/banner. This remains an isolated
 GPU test candidate. The [Odin manual record](android-driver-picker-odin-20261025.md)
-confirms startup, system-driver gameplay and cancellation/resume; custom-driver
-switching and rollback remain pending. No public release is made.
+confirms startup, system/Turnip switching, gameplay, cancellation/resume and
+System Default rollback. The first-launch-only behavior and UI refinements need
+their next device check. No public release is made.
 
 ## Start and recovery before Vulkan
 
-Opening the experimental app first shows an Android startup screen without
-loading SDL, RT64 or a Vulkan driver. Reopening the icon also stays on this
-screen when a game process already exists; it never automatically forwards to
-a potentially black game window. Choose **Start / return to game** to start
-Vulkan, or **Graphics driver options** to import/select/reset first. The full
-rendered game menu and gameplay still require a compatible driver.
+The first launch shows an Android driver setup screen before loading SDL, RT64
+or Vulkan. Choose **Start / return to game** to continue, or select/import a
+driver first. The app remembers that setup has been shown separately from the
+selected driver, so changing/resetting drivers does not reset first-launch setup.
+
+Later healthy launches go directly to the normal Tooie launcher using the saved
+driver; an already-running healthy game is brought forward. The driver screen
+opens again through **Settings → Graphics**, the manual recovery shortcut, or
+when the previous startup failed to reach the menu/the selection is invalid.
+An incomplete or unknown process state stays in recovery rather than starting
+a duplicate process. The driver controls are not attached to the normal launch
+window while forwarding, avoiding a chooser flash. The full rendered game menu
+and gameplay still require a compatible driver.
 
 A failed game process cannot take down the separate Android settings process.
 Reopen the test app to review/reset the selection and retry. Long-pressing its
 app icon also offers **Graphics driver** on launchers supporting dynamic
 shortcuts, including when a running game has reached its menu. The recovery
 entry opens UI only; external intents cannot automatically reset a driver.
+
+The [exact regular Turnip R8 ZIP tested on Odin](https://github.com/K11MCH1/AdrenoToolsDrivers/releases/download/v26.0.0-rc08/Turnip_v26.0.0_R8.zip)
+has SHA-256 `e634db0f929e2205e95511c769071817d0390180ec72c8e690bc76375e813715`.
+Leave it zipped for import. That is the tested candidate, not a general guarantee
+for another GPU/driver combination.
 
 The default choice is **System Default**. An incompatible system driver can
 therefore be replaced for this app before starting the renderer. A custom driver
@@ -75,11 +88,12 @@ identity is not proof that the menu/gameplay works. Historical details are
 labelled when no game is active. The render thread reads cached status rather
 than repeatedly reading/hashing files.
 
-## Focused Odin acceptance to perform
+## Next-candidate Odin checks
 
-- Open the app and enter driver options before pressing Start. Verify this does
-  not start the game. Start with System Default; check menu, own-ROM import,
-  controls, sound and closing/reopening.
+- On a fresh test app, confirm the first-launch driver screen appears. After
+  starting successfully, close/reopen and confirm it goes directly to the normal
+  launcher. Open Graphics to bring back driver settings deliberately. Check that
+  reset/import does not make healthy future launches repeat setup.
 - Verify the controls appear under Graphics and the normal graphics settings
   still work. Confirm the accepted Touch controls and Home/resume audio behavior.
 - Cancel a document pick and try an invalid ZIP. Verify the selected/loaded

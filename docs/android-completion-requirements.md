@@ -76,6 +76,11 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 
 ## Unreleased Debug checks
 
+- [x] Focused Odin driver-picker roundtrip in the separate 4ee GPU test app:
+  startup options, system-driver gameplay, picker cancellation/resume, Turnip
+  import/loaded status, deliberate restart, playable controls/sound and System
+  Default rollback with ROM reuse. See the
+  [manual record](development/android-driver-picker-odin-20261025.md).
 - [x] Configurable floating touch controls accepted on Odin for the next update.
   Frostie confirmed they work and are customizable. The captured overlay and
   native input consumption support this focused result; see the
@@ -117,16 +122,13 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   The focused Odin acceptance above does not complete this matrix; see
   [the touch guide](development/android-touch-controls.md). Verify the next
   signed release separately.
-- [ ] Validate the implemented experimental driver import/selection UI **inside
-  Graphics**, System Default reset, loaded/selected details and restart status.
-  Its Android startup/recovery screen opens before Vulkan; device acceptance and
-  next signed-release verification remain open. There is no additional settings
-  tab/banner. See the [test guide](development/android-driver-picker.md). A
-  successful build is not a confirmed driver compatibility fix.
-  Focused Odin startup, system-driver gameplay and picker cancellation/resume
-  passed in the [manual test](development/android-driver-picker-odin-20261025.md).
-  Custom-driver restart/rollback remain open; scrolling and blue-value UI
-  follow-ups are implemented for a later build and remain unverified on device.
+- [ ] Verify the newer first-launch-only driver setup/direct healthy launch,
+  controller focus scrolling and blue values on device, plus failed-start
+  recovery, broader compatibility and the next signed release. The original
+  system/Turnip roundtrip passed focused Odin testing; see the
+  [manual record](development/android-driver-picker-odin-20261025.md) and
+  [driver guide](development/android-driver-picker.md). Driver controls stay
+  inside Graphics with no additional settings tab/banner.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving

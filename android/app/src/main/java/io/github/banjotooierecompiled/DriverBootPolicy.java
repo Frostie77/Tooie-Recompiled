@@ -2,7 +2,7 @@ package io.github.banjotooierecompiled;
 
 /** Decisions shared by the pre-renderer launcher and its host regressions. */
 final class DriverBootPolicy {
-    enum Action { START, CONTINUE, WAIT, RECOVER, UNKNOWN }
+    enum Action { SETUP, START, CONTINUE, WAIT, RECOVER, UNKNOWN, EXIT }
     static final class ProcessInfo {
         final int pid, uid;
         final String name;
@@ -18,13 +18,20 @@ final class DriverBootPolicy {
         }
         return found;
     }
-    static Action decide(boolean settings, boolean validSelection, boolean attempted, boolean menuReady, int pid) {
+    static Action decide(boolean settings, boolean setupSeen, boolean validSelection, boolean attempted, boolean menuReady, int pid) {
         if (settings) return Action.RECOVER;
+        if (!setupSeen) return Action.SETUP;
+        if (!validSelection) return Action.RECOVER;
         if (pid<0) return Action.UNKNOWN;
         if (pid>0) return menuReady ? Action.CONTINUE : Action.WAIT;
-        return !validSelection || (attempted && !menuReady) ? Action.RECOVER : Action.START;
+        return attempted && !menuReady ? Action.RECOVER : Action.START;
     }
     static boolean restartRequired(String selected, String loaded, boolean gameAlive) {
         return gameAlive && !selected.equals(loaded);
+    }
+    static Action returnedFromGame(Action route) {
+        // Returning after a normal quit closes the router. A failed startup
+        // stays in recovery, never automatically retries the same driver.
+        return route==Action.START || route==Action.CONTINUE ? Action.EXIT : route;
     }
 }

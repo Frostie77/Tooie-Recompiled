@@ -55,6 +55,7 @@ final class DriverRuntime {
     }
     static void beginAttempt(Context context) throws IOException {
         DriverStore store=store(context);store.selected();
+        store.markSetupSeen();
         Map<String,Object> attempt=new LinkedHashMap<>();
         attempt.put("attempt",UUID.randomUUID().toString());attempt.put("elapsed_ms",SystemClock.elapsedRealtime());
         store.atomicWrite(new File(store.root,"boot.json"),new JSONObject(attempt).toString());
@@ -93,13 +94,15 @@ final class DriverRuntime {
     static final class Snapshot {
         DriverStore.Choice selected;
         List<DriverStore.Choice> choices=new ArrayList<>();
-        boolean validSelection,attempted,ready;
+        boolean validSelection,attempted,ready,setupSeen;
         int pid;
         String error="";
         String[] labels;
     }
     static Snapshot snapshot(Context context) throws IOException {
         DriverStore store=store(context);Snapshot snapshot=new Snapshot();snapshot.pid=gamePid(context);
+        try { snapshot.setupSeen=store.setupSeen(); }
+        catch(IOException invalid) { snapshot.error="First-launch state is unavailable; review the driver before starting."; }
         try { snapshot.selected=store.selected();snapshot.validSelection=true; }
         catch(IOException invalid) { snapshot.error=invalid.getMessage(); }
         try { snapshot.choices=store.choices(); } catch(IOException invalid) { snapshot.error+= "\n"+invalid.getMessage(); }

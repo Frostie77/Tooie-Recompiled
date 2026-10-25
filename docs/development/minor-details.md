@@ -80,6 +80,7 @@ These are conversation reports; no marker numbers or capture IDs were supplied.
 |---|---|---|---|
 | MD-006 | Controller focus does not scroll the new Graphics driver buttons into view; touch scrolling is required | Open — source fix implemented, device check pending | Frostie's manual 4ee test. Reuse existing config-option nearest scrolling on focus. Continue the current driver test without another installation. |
 | MD-007 | Give Selected/Loaded/Status values a colour distinct from their white labels | Open — light-blue source styling implemented, appearance check pending | Frostie's request during the same test. Values use #78BEFF on the rendered Graphics and Android startup/recovery screens. |
+| MD-008 | Show driver setup once, then open the normal launcher directly on healthy launches; retain explicit Graphics access and failed-start recovery | Open — saved setup marker/routing implemented, device check pending | Frostie requested this after the accepted 4ee system/Turnip roundtrip. Resetting a driver retains the setup-seen state. |
 
-MD-001–MD-005 retain their prior open/deferred status. Neither new UI item is
+MD-001–MD-005 retain their prior open/deferred status. None of these UI items is
 accepted as fixed on device merely because the source compiles.

@@ -66,6 +66,16 @@ final class DriverStore {
             operations.replace(pending,destination);
         } finally {pending.delete();}
     }
+    synchronized boolean setupSeen() throws IOException {
+        File file=new File(root,"setup-seen.json");
+        if(!Files.exists(file.toPath(),LinkOption.NOFOLLOW_LINKS))return false;
+        Map<String,Object> fields=DriverJson.parse(readText(file,4096));
+        DriverPackage.require(fields.size()==2 && DriverJson.integer(fields,"schema")==1 && Boolean.TRUE.equals(fields.get("seen")),"Invalid first-launch setup state.");
+        return true;
+    }
+    synchronized void markSetupSeen() throws IOException {
+        atomicWrite(new File(root,"setup-seen.json"),"{\"schema\":1,\"seen\":true}");
+    }
     synchronized Choice importZip(InputStream input) throws IOException {
         File zip=new File(root,"import-"+token()+".zip"),directory=new File(root,token());boolean created=false,complete=false;
         try {

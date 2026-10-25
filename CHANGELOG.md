@@ -15,15 +15,18 @@
 - Experimental custom Vulkan driver import/selection and System Default reset
   under **Graphics**, with selected/loaded details and restart status. A separate
   Android startup/recovery screen opens before Vulkan so driver options remain
-  accessible after a failed startup. Device acceptance remains pending; Poco
-  driver compatibility is still experimental. Selected/Loaded/Status values
+  accessible after a failed startup. The system/Turnip switching and rollback
+  passed focused Odin checks; Poco compatibility remains experimental. Setup
+  appears on first launch or explicit Graphics/recovery entry, with later healthy
+  launches opening the normal launcher directly. This revised flow awaits its
+  next device check. Selected/Loaded/Status values
   use light blue to distinguish them from their white labels.
 
 ### Fixed
 
 - Graphics driver buttons scroll into view when controller focus reaches them,
   matching existing settings navigation. This source fix awaits its next device
-  check; the original driver test continues on the installed build.
+  check; the completed Odin roundtrip used the original 4ee build.
 - Brief audio distortion after pressing Android Home and returning to gameplay
   ([#29](https://github.com/Frostie77/Tooie-Recompiled/pull/29)). Focused Odin
   Debug testing passed; verification in a signed public release remains pending.

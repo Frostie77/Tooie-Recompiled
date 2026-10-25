@@ -10,18 +10,27 @@ public final class DriverBootPolicyTest {
         assert gamePid(List.of(new ProcessInfo(42,101,pkg+":game"),new ProcessInfo(41,100,pkg+":other")),100,pkg)==0;
         assert gamePid(List.of(new ProcessInfo(42,100,pkg+":game"),new ProcessInfo(43,100,pkg+":game")),100,pkg)==-1;
         assert gamePid(List.of(new ProcessInfo(0,100,pkg+":game")),100,pkg)==-1;
-        assert decide(false,true,false,false,0)==Action.START;
-        assert decide(false,true,true,true,0)==Action.START;
-        assert decide(false,true,true,false,0)==Action.RECOVER;
-        assert decide(false,false,false,false,0)==Action.RECOVER;
-        assert decide(false,true,true,false,42)==Action.WAIT;
-        assert decide(false,true,true,true,42)==Action.CONTINUE;
-        assert decide(false,true,true,true,-1)==Action.UNKNOWN;
-        assert decide(true,true,true,true,42)==Action.RECOVER;
-        assert decide(true,true,true,true,-1)==Action.RECOVER;
+        assert decide(false,false,true,false,false,0)==Action.SETUP;
+        assert decide(false,false,true,true,true,42)==Action.SETUP;
+        assert decide(false,true,true,false,false,0)==Action.START;
+        assert decide(false,true,true,true,true,0)==Action.START;
+        assert decide(false,true,true,true,false,0)==Action.RECOVER;
+        assert decide(false,true,false,false,false,0)==Action.RECOVER;
+        assert decide(false,true,false,true,true,42)==Action.RECOVER;
+        assert decide(false,true,true,true,false,42)==Action.WAIT;
+        assert decide(false,true,true,true,true,42)==Action.CONTINUE;
+        assert decide(false,true,true,true,true,-1)==Action.UNKNOWN;
+        assert decide(true,true,true,true,true,42)==Action.RECOVER;
+        assert decide(true,true,true,true,true,-1)==Action.RECOVER;
+        assert decide(true,false,true,false,false,0)==Action.RECOVER;
+        assert returnedFromGame(Action.START)==Action.EXIT;
+        assert returnedFromGame(Action.CONTINUE)==Action.EXIT;
+        assert returnedFromGame(Action.RECOVER)==Action.RECOVER;
+        assert returnedFromGame(Action.WAIT)==Action.WAIT;
+        assert returnedFromGame(Action.UNKNOWN)==Action.UNKNOWN;
         assert restartRequired("new-driver","old-driver",true);
         assert !restartRequired("same","same",true);
         assert !restartRequired("new-driver","old-driver",false);
-        System.out.println("PASS: startup recovery, unknown/foreign/ambiguous process handling and deliberate restart decisions");
+        System.out.println("PASS: first-launch setup, healthy direct launch/return, failed-start recovery, explicit settings and unknown/foreign/ambiguous processes");
     }
 }
