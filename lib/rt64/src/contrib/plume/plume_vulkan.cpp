@@ -14,6 +14,7 @@
 #include "plume_vulkan_enumeration.h"
 #if defined(__ANDROID__) && defined(TOOIE_ANDROID_DRIVER_TEST) && TOOIE_ANDROID_DRIVER_TEST
 #include "../../../../../src/android_vulkan_driver.h"
+#include "../../../../../src/android_driver_settings.h"
 #endif
 #if defined(__ANDROID__)
 #include "../../../../../src/android_presentation_lifecycle.h"
@@ -5619,6 +5620,9 @@ namespace plume {
             selectedDriver.mode == tooie::android::gpu::Mode::Custom ? "custom-turnip-test" : "system",
             unsigned(driverPropertiesFound), unsigned(driverProperties.driverID), unsigned(acceptedBackend));
         tooie_android_debug_log(backendRecord);
+        tooie::android::gpu::recordBackend(driverPropertiesFound,unsigned(driverProperties.driverID),
+            physicalDeviceProperties.deviceName,driverProperties.driverName,driverProperties.driverInfo,
+            physicalDeviceProperties.driverVersion,acceptedBackend);
         if (!acceptedBackend) {
             fprintf(stderr, "Requested custom driver did not activate Mesa Turnip; refusing silent stock fallback.\n");
             return;

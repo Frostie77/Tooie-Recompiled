@@ -254,7 +254,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Android")
         set(BUILD_SHARED_LIBS OFF)
         add_subdirectory(lib/adrenotools ${CMAKE_BINARY_DIR}/adrenotools)
         set_target_properties(adrenotools linkernsbypass PROPERTIES POSITION_INDEPENDENT_CODE ON)
-        target_sources(BanjoTooieRecompiled PRIVATE src/android_vulkan_driver.cpp)
+        target_sources(BanjoTooieRecompiled PRIVATE src/android_vulkan_driver.cpp src/android_driver_jni.cpp src/android_driver_settings.cpp)
         target_compile_definitions(BanjoTooieRecompiled PRIVATE TOOIE_ANDROID_DRIVER_TEST=1)
         target_compile_definitions(rt64 PRIVATE TOOIE_ANDROID_DRIVER_TEST=1)
         # plume_vulkan.cpp is compiled by plume, not by rt64.

@@ -1,4 +1,5 @@
 #include "android_vulkan_driver.h"
+#include "android_driver_settings.h"
 #include "android_debug_log.h"
 #include <SDL.h>
 #include <SDL_system.h>
@@ -50,6 +51,7 @@ const Selection& selectedDriver() {
             " reason=" + (selected.error.empty() ? "none" : selected.error) +
             " package_sha256_declared=" + selected.packageSha256 + " library_sha256_verified=" + selected.librarySha256;
         tooie_android_debug_log(record.c_str());
+        recordSelection(selected);
         return selected;
     }();
     return selection;

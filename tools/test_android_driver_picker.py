@@ -57,6 +57,7 @@ def fixtures(root):
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument("--android-jar",type=Path,required=True);parser.add_argument("--json-jar",type=Path)
+    parser.add_argument("--jni-include",type=Path)
     args=parser.parse_args()
     java=Path(shutil.which("java")).resolve();javac=[shutil.which("javac")] if shutil.which("javac") else [str(java),"com.sun.tools.javac.Main"]
     def run(cmd,**kw):return subprocess.run([str(x) for x in cmd],check=True,**kw)
@@ -68,12 +69,21 @@ def main():
             jar.write_bytes(data)
         if hashlib.sha256(jar.read_bytes()).hexdigest()!=JSON_SHA:raise ValueError("Pinned host JSON library differs")
         source=ROOT/"android/app/src/main/java/io/github/banjotooierecompiled"
-        run([*javac,"--release","17","-cp",args.android_jar,"-d",area/"classes",*[source/n for n in ("DriverJson.java","DriverPackage.java","DriverStore.java")],
+        run([*javac,"--release","17","-cp",args.android_jar,"-d",area/"classes",*[source/n for n in ("DriverJson.java","DriverPackage.java","DriverStore.java","DriverBootPolicy.java")],
              *sorted((ROOT/"tests/java_driver_picker").rglob("*.java"))])
         fixtures(area/"fixtures")
         result=run([java,"-ea","-cp",str(area/"classes")+os.pathsep+str(jar),"io.github.banjotooierecompiled.DriverStoreTest",area/"fixtures",area/"files"],capture_output=True,text=True)
         print(result.stdout,end="")
+        run([java,"-ea","-cp",str(area/"classes"),"io.github.banjotooierecompiled.DriverBootPolicyTest"])
         run([os.environ.get("CXX","g++"),"-std=c++20","-O1","-g","-fsanitize=address,undefined","-fno-omit-frame-pointer","-no-pie",ROOT/"tests/android_driver_picker_selection.cpp","-o",area/"consumer"])
         run([area/"consumer",area/"files/vulkan-driver"],env={**os.environ,"ASAN_OPTIONS":"detect_leaks=0","UBSAN_OPTIONS":"halt_on_error=1"})
+        jni=args.jni_include or java.parent.parent/"include"
+        if not (jni/"jni.h").is_file():raise ValueError("Provide JDK headers with --jni-include")
+        run([*javac,"--release","17","-d",area/"jni",*sorted((ROOT/"tests/java_driver_jni").rglob("*.java"))])
+        run([os.environ.get("CXX","g++"),"-std=c++20","-O1","-g","-fPIC","-shared","-I"+str(jni),"-I"+str(jni/"linux"),
+             "-I"+str(ROOT/"tests/android_touch_headers"),ROOT/"src/android_driver_jni.cpp",ROOT/"tests/android_driver_ui_jni.cpp","-o",area/"libtooie_driver_ui_jni.so"])
+        result=run([java,"-ea","-Xcheck:jni","-Djava.library.path="+str(area),"-cp",area/"jni","io.github.banjotooierecompiled.DriverJniTest"],capture_output=True,text=True)
+        print(result.stdout,end="")
+        if "WARNING in native method" in result.stdout+result.stderr:raise RuntimeError("JNI checker warning: "+result.stderr)
 
 if __name__=="__main__":main()

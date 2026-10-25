@@ -87,6 +87,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     }
     @Override protected void onResume() {
         super.onResume();
+        DriverRuntime.refreshAsync(this);
         presentationResumed = true;
         if (touchControls != null) touchControls.setForeground(updateWindowFocused);
         presentationLifecycle(2);
@@ -118,6 +119,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        DriverRuntime.gameStarting(this);
         try {
             copyProgramAssets();
         } catch (IOException e) {
@@ -166,6 +168,21 @@ public class BanjoTooieSDLActivity extends SDLActivity {
                 touchControls.showSettings();
         });
     }
+
+    public void showGraphicsDriverSettings(int action) {
+        if(!DriverRuntime.enabled(this))return;
+        runOnUiThread(()->{
+            if(romPickerDestroyed || isFinishing() || isDestroyed())return;
+            presentationLifecycle(1);
+            try {startActivity(new Intent(this,GraphicsDriverSettingsActivity.class)
+                .putExtra(GraphicsDriverActivity.ACTION,action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));}
+            catch(RuntimeException failure) {if(presentationResumed)presentationLifecycle(2);Log.w(TAG,"Could not open graphics driver settings",failure);}
+        });
+    }
+    public String getGraphicsDriverState(int index) {return DriverRuntime.enabled(this)?DriverRuntime.cached(index):"";}
+    public void recordGraphicsDriverSelection(String mode,String reason,String packageHash,String libraryHash) {DriverRuntime.selection(mode,reason,packageHash,libraryHash);}
+    public void recordGraphicsDriverBackend(boolean queried,int id,String device,String name,String info,long version,boolean accepted) {DriverRuntime.backend(queried,id,device,name,info,version,accepted);}
+    public void recordGraphicsMenuReady() {DriverRuntime.menuReady();}
 
     /** SDL JNI callers only enqueue background work; no network runs on the UI/render threads. */
     public void requestUpdateCheck(boolean automatic) {
@@ -371,6 +388,9 @@ public class BanjoTooieSDLActivity extends SDLActivity {
         }
         romImportWorker.shutdownNow(); // Do not block SDL teardown waiting for a provider.
         super.onDestroy();
+        // A restarted renderer must get a fresh native loader, never SDL's cached static selection.
+        if(DriverRuntime.enabled(this) && android.app.Application.getProcessName().equals(getPackageName()+":game"))
+            android.os.Process.killProcess(android.os.Process.myPid());
     }
 
     @Override

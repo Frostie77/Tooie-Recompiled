@@ -3,6 +3,25 @@
           xmlns:tools="http://schemas.android.com/tools">
     <application android:label="${tooieDriverTestLabel}" tools:replace="android:label">
         <activity android:name="io.github.banjotooierecompiled.BanjoTooieSDLActivity"
-                  android:label="${tooieDriverTestLabel}" tools:replace="android:label" />
+                  android:label="${tooieDriverTestLabel}" android:exported="false"
+                  android:process=":game" android:taskAffinity="${applicationId}.game"
+                  tools:replace="android:label,android:exported">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+        <activity android:name="io.github.banjotooierecompiled.GraphicsDriverActivity"
+                  android:exported="true" android:launchMode="singleTask"
+                  android:taskAffinity="${applicationId}.drivers" android:excludeFromRecents="true"
+                  android:screenOrientation="landscape" android:hardwareAccelerated="false"
+                  android:theme="@style/DriverSettingsTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name="io.github.banjotooierecompiled.GraphicsDriverSettingsActivity"
+                  android:exported="false" android:launchMode="singleTask"
+                  android:taskAffinity="${applicationId}.drivers" android:excludeFromRecents="true"
+                  android:screenOrientation="landscape" android:hardwareAccelerated="false"
+                  android:theme="@style/DriverSettingsTheme" />
     </application>
 </manifest>

@@ -112,6 +112,9 @@ namespace recompui {
             tab_callbacks::on_close_t on_close = nullptr
         );
 
+        // Append inside an existing generated page; register before finalize().
+        void append_tab_contents(const std::string &id, tab_callbacks::create_contents_t create_contents);
+
         struct GeneralTabOptions {
             bool has_rumble_strength = true;
             bool has_gyro_sensitivity = false;

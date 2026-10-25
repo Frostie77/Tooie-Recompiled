@@ -10,6 +10,8 @@ static int refs = 0, opens = 0, calls = 0;
 static bool pending = false;
 static JNINativeInterface_ table{};
 static JNIEnv env{&table};
+// Measured-state reporting is exercised by the separate real-JVM UI bridge test.
+namespace tooie::android::gpu { void recordSelection(const Selection&) {} }
 static bool fail(const char* point) {
     assert(!pending); ++calls;
     if (fault == point) { pending = true; return true; }
