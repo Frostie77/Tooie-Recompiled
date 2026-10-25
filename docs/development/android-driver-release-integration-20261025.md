@@ -154,3 +154,13 @@ sharing fix. Odin share-menu/attachment acceptance remains open. Signed gameplay
 data, audio, touch, driver and legacy-launch acceptance remains open. The
 retained private Debug app is unchanged. Further Poco logs are deferred until
 the reporter updates; its working-game result remains accepted within scope.
+
+## Verified sharing-fix replacement — 26 October
+
+Source `277c9df95bc8d451e3be1c38804edb91ba8837c1` keeps v1.1.0 / code 5 and
+repairs MD-010 by sharing a bounded text attachment through a private read-only
+content provider. [Both CIs and the exact unsigned candidate download passed](android-startup-log-sharing-20261026.md#verified-replacement-build).
+The replacement still needs local protected signing and Odin share-menu/file
+acceptance, followed by the remaining combined signed-candidate checks. This
+does not close MD-010, merge PR #32 or publish a release. Public v1.0.1 and the
+retained private Debug app remain unchanged.

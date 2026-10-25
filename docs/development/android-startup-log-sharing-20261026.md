@@ -73,3 +73,40 @@ the remaining signed-candidate checks in the
 
 No Poco retest is requested now. No new release is published, no stable feed is
 changed, and the retained private Debug app is not updated by this change.
+
+## Verified replacement build
+
+App source: **`277c9df95bc8d451e3be1c38804edb91ba8837c1`**, version **1.1.0**,
+Android version code **5**, package `io.github.banjotooierecompiled.release`.
+
+- [Push CI 40200834899](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40200834899)
+  and [PR CI 40200838000](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40200838000)
+  both succeeded. The push job is `121191474123`.
+- The actual host regression ran the new attachment consumer and the failing
+  inline-intent control. Actual ARM64/API24 compilation, APK assembly and
+  compiled manifest/provider verification, ephemeral release signing/full
+  unsigned-payload controls and unsigned candidate export all passed.
+- [Unsigned candidate ZIP](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40200834899/artifacts/12601834014),
+  artifact `12601834014`, **14,047,375 bytes**,
+  SHA-256 `f57f3505175dffc2cbaaf27bd20de8544e891837523ae54e73ab4a8fa759e647`.
+- Unsigned APK `Tooie-Recompiled-Android-arm64-277c9df95bc8-Unsigned.apk`,
+  SHA-256 `c49fe3361a42484b4077017fbde599fa0347a84bf460107ab9a44d948be6c06e`.
+- [Normal CI Debug artifact](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40200834899/artifacts/12601684017),
+  artifact `12601684017`, **15,351,951 bytes**,
+  ZIP SHA-256 `74a6382103a102459a069a7348b59b98b14774756d13140171733ec32c26be98`;
+  Debug APK SHA-256 `597c60711a6a79a97c43048310949af6f14ee8d8a0eac4e13c7023bdb7befe3b`.
+
+Both ZIPs were downloaded and checked independently: exact sizes/hashes, CRCs,
+all bundled SHA256SUMS entries, source and APK hashes, release identity/version,
+seven AArch64 ELF hashes/Build IDs, candidate native/asset equality with the
+verified Debug APK, executable attachment/provider markers, and bundled signer,
+verifier, public identities and COPYING byte equality with source 277c.
+The native payload is unchanged by this Java/manifest repair; libmain SHA-256
+remains `4b59f6da9b72d81e73345c8b4d6665e9e0dfad19419de1f418b899fee15707f1`,
+Build ID `c25e76b34783f388a7b84e3f5951e2f2a83fd89d`.
+
+**Local protected signing, replacement installation and device sharing acceptance
+remain pending for source 277c.** The installed source33 candidate remains
+separate evidence. The normal CI Debug artifact is not a request to replace
+Frostie's retained private Debug app. Further documentation-only commits do not
+change the candidate's source identity.
