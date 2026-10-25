@@ -56,6 +56,10 @@ installed APK, complete uploaded marker review, overlay screenshot and native
 input-consumer records are in the [acceptance record](android-touch-controls-odin-20261025.md).
 Broader phone, persistence, all-button and lifecycle checks remain open.
 
+Frostie explicitly confirmed public v1.0.1 works on Pixel 8 Pro / Android 17 /
+Mali-G715 MP7 on 25 October. This is a successful manual functional report;
+see the [device record](device-compatibility.md) for scope.
+
 ## Current priorities
 
 Continue post-release playtesting through the established Debug app. Track the
@@ -74,11 +78,16 @@ app log and the result of the existing test). Both remain unresolved; do not
 infer one device's cause or success from the other.
 
 Touch controls are implemented and accepted for the next update on Odin.
-The Poco reporter requested touch input; Frostie requires it in the Poco test
-APK. Combine the accepted touch/audio source with the separate guarded graphics
-experiment before sharing the next tester build. The user-facing custom Vulkan
-driver import/reset interface is the next planned feature, with a pre-renderer
-recovery path. Touch acceptance is separate from Poco Vulkan compatibility.
+The combined c849 Poco test includes the accepted touch/audio source and guarded
+graphics experiment. The reporter has confirmed the same startup exit with the
+system driver; both new logs were reviewed. Turnip has not been selected in
+those logs, so the next controlled test uses the existing PC staging helper.
+See the [25 October result](poco-system-driver-result-20261025.md).
+The user-facing custom Vulkan driver import/reset interface belongs inside
+Graphics, with no additional settings tab/banner and a pre-renderer recovery
+path. Its package/store core is checkpointed on the separate driver-picker
+branch; UI and device acceptance remain open. Touch acceptance on Odin is
+separate from Poco Vulkan compatibility.
 
 Frostie chose to collect several more fixes before another public release.
 Keep the accepted Home/resume audio change under **Unreleased**; public v1.0.1
@@ -166,7 +175,8 @@ frames and character rendering remain open as MD-003 through MD-005; repeated
 marker 1 and both unparsed inputs are retained with distinct references.
 
 See the [issue #26 investigation](startup-crash-issue26.md) before proposing
-another test to the Poco reporter, who will test further builds. There is no
-new compatibility APK ready; the Poco failure occurs before the earlier 650
-pool experiment can help. The Retroid report is parked pending more data. No issue reply was
-posted on his behalf, no test success was invented and no new release was made.
+another test to the Poco reporter. The verified c849 test has now failed its
+system-driver baseline at the same indexing guard, before the earlier 650 pool
+experiment can help. The existing APK supports the pending optional Turnip
+comparison through its PC helper. The Retroid report is parked pending more
+data. Draft replies for Frostie to post; no new public release is authorized.

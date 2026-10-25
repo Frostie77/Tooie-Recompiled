@@ -27,8 +27,10 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 - A supported USA ROM in `.z64` format.
 - A physical controller; testing currently uses the Odin 2 Portal's controls.
 
-The tested device is the **AYN Odin 2 Portal / Adreno 740**. Compatibility with
-other Android hardware remains unverified. This project distributes Android
+The primary test device is the **AYN Odin 2 Portal / Adreno 740**. Frostie also
+confirmed public **v1.0.1 works on Pixel 8 Pro / Android 17 / Mali-G715 MP7**.
+See the [device reports](docs/development/device-compatibility.md) for tested
+scope and unresolved compatibility reports. This project distributes Android
 APKs; Windows and Linux are development hosts.
 
 ## Features
@@ -153,5 +155,6 @@ opacity, movable positions and Auto/On/Off visibility. Configure them under
 **Settings → Touch**. See the [Odin test record](docs/development/android-touch-controls-odin-20261025.md)
 and [touch-controls guide](docs/development/android-touch-controls.md).
 Phone testing and verification in the next signed release remain open. The
-Poco compatibility test will include these controls; a user-facing custom-driver
-picker/reset flow is the next planned feature.
+Poco compatibility test includes these controls, but its system-driver startup
+failure remains unresolved; see the [latest result](docs/development/poco-system-driver-result-20261025.md).
+A user-facing custom-driver picker/reset flow is in progress under Graphics.

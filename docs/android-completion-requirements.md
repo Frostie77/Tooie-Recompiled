@@ -70,6 +70,9 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
   on device, including controller navigation and deferral during gameplay;
   planned for the next update.
 - [x] Published v1.0.1, verified both public assets and advanced the stable feed.
+- [x] Additional device confirmation: Frostie reports public v1.0.1 works on
+  Pixel 8 Pro / Android 17 / Mali-G715 MP7. This is a manual functional result;
+  see the [device record](development/device-compatibility.md).
 
 ## Unreleased Debug checks
 
@@ -90,9 +93,11 @@ background/sleep coverage remain open.
 
 ## Still required for full completion
 
-**Next update priorities:** investigate Poco X3 Pro startup compatibility and
-include the touch controls accepted on Odin in its experimental test APK.
-Actual phone compatibility and the remaining touch matrix are still open.
+**Next update priorities:** resolve Poco X3 Pro startup compatibility. Its
+verified c849 test includes the touch controls accepted on Odin, but the reporter
+confirms the same system-driver exit. The optional Turnip test and Poco touch
+acceptance remain open; see the [25 October result](development/poco-system-driver-result-20261025.md).
+The remaining touch matrix and next signed-release checks are still open.
 The Retroid Pocket 5 investigation remains parked pending more data. See the
 [startup-crash record](development/startup-crash-issue26.md).
 

@@ -44,6 +44,10 @@ gameplay acceptance.
 
 ## Evidence
 
+- [Device compatibility reports](device-compatibility.md): includes Frostie's
+  confirmed working v1.0.1 on Pixel 8 Pro.
+- [25 October Poco system-driver result](poco-system-driver-result-20261025.md):
+  both supplied logs, their overlap and the pending optional Turnip test.
 - [25 October Odin touch-controls acceptance](android-touch-controls-odin-20261025.md):
   exact installed build, complete marker accounting and remaining phone coverage.
 

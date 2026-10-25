@@ -83,6 +83,11 @@ the new discovery path may itself distinguish the failure.
 
 ## Second test: optional Turnip driver
 
+The [25 October reporter result](poco-system-driver-result-20261025.md) confirms
+that the c849 system-driver baseline still exits at the indexing guard. The
+supplied logs contain no custom-driver selection. This optional second test is
+now the next useful comparison; use the same installed c849 GPU test app.
+
 The initial candidate is K11MCH1's regular
 [Turnip v26.0.0 R8](https://github.com/K11MCH1/AdrenoToolsDrivers/releases/tag/v26.0.0-rc08),
 asset **Turnip_v26.0.0_R8.zip** (not its a8xx, Gmem or Sysmem variants).

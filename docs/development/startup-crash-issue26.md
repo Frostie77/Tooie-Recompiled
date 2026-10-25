@@ -6,8 +6,11 @@ Updated: 25 October 2026. **Unresolved; experimental builds are not a confirmed 
 
 Frostie has selected the **Poco X3 Pro / Android 12 / Adreno 640** report as the
 primary startup-crash investigation. Work from its supplied log and confirmed
-failures with v1.0.1 and the previous Actions test. The Poco reporter will test
-a further compatibility build when one is verified and ready.
+failures with v1.0.1 and the previous Actions test. The reporter has now tested
+the combined c849 graphics/touch build and confirmed the same system-driver
+startup exit. Both new logs were reviewed; see the
+[25 October result](poco-system-driver-result-20261025.md). The next controlled
+test is optional Turnip selection in that existing test app.
 
 The **Retroid Pocket 5 / Adreno 650** report is **parked pending more data**:
 Android version, a fresh app log and the result of the existing PR #27 test.
@@ -20,7 +23,7 @@ or requires another Retroid test build.
 | Reporter | Device | Confirmed evidence | Status |
 |---|---|---|---|
 | gojera | Retroid Pocket 5, Snapdragon 865 / Adreno 650 | Original black-screen/exit report; [PR #27](https://github.com/Frostie77/Tooie-Recompiled/pull/27) and [Actions run 40041658420](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40041658420) were offered for testing | Parked pending Android version, fresh app log and result of the existing test |
-| dusk-beep | Poco X3 Pro, Android 12, Snapdragon 860 / Adreno 640 | [Follow-up](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747) confirms startup exit with both public v1.0.1 and run 40041658420; supplied [Debug log](https://github.com/user-attachments/files/33901672/banjotooi-debug.log) | Primary active investigation; supplied log identifies an early Vulkan feature guard; no successful compatibility result |
+| dusk-beep | Poco X3 Pro, Android 12, Snapdragon 860 / Adreno 640 | [Follow-up](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747) confirms startup exit with both public v1.0.1 and run 40041658420; supplied [Debug log](https://github.com/user-attachments/files/33901672/banjotooi-debug.log) | Primary active investigation; the c849 system baseline still exits at the same guard; Turnip and Poco touch testing remain pending |
 
 Frostie says the reporting user can test further builds. Draft messages in chat
 for Frostie to post; do not post issue comments on his behalf. Treat the two

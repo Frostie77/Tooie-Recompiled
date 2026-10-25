@@ -11,8 +11,11 @@ The work starts from the combined Poco/touch test at
 passed and its downloaded artifact was verified. ZIP SHA-256 is
 `0a0739646cc23053d89ce5a2928611f2b5ddde86893980d392333d72a758bcdb`;
 APK SHA-256 is `25c1af61fe1cd57c790bba76ac6a7674f716ece1deaf26ee993d5a22dd884a04`.
-The reporter has been sent that build. Keep it unchanged while awaiting their
-result; this driver-picker work uses a separate branch/test candidate.
+The reporter tested that build and confirmed the same system-driver startup
+exit; both supplied logs were reviewed in the
+[25 October result](poco-system-driver-result-20261025.md). Optional Turnip
+selection is the next comparison. Keep the c849 source unchanged; this
+Graphics-only driver-picker work uses a separate branch/test candidate.
 
 ## Current checkpoint
 
