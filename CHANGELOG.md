@@ -37,16 +37,13 @@ graphics drivers alongside fixes. Public v1.0.1 remains unchanged until publicat
   System Default reset/retry and normal launcher reopening also passed on Odin.
   Actual failed-driver recovery and signed-release checks remain open.
 
-### Pending verification
-
-- Share startup log now prepares a text-file attachment instead of placing the
-  log in the share-menu request, which exceeded Android's transaction limit on
-  Odin (MD-010). Adds temporary read-only access and visible preparation/error
-  feedback. Odin share-menu/attachment acceptance is pending; further Poco logs
-  remain deferred.
-
 ### Fixed
 
+- Share startup log now sends a text-file attachment, avoiding the oversized
+  Android share-menu request (MD-010), with temporary read-only access and
+  preparation/error feedback. The signed v1.1.0 candidate passed the Odin share
+  menu, readable attachment and cancellation/return checks. Poco sharing retest
+  remains deferred.
 - Graphics driver buttons scroll into view when controller focus reaches them,
   matching existing settings navigation. Frostie confirmed automatic scrolling
   in the focused 7a Odin check.

@@ -60,15 +60,14 @@ the production helper must fail the same consumer test. Android adapters check
 the Intent/URI contract; they do **not** prove Android permission enforcement,
 Binder parcel size or that a physical device's share menu opens.
 
-Full SDK Java compilation, packaging/signing regressions and CI must pass before
-handing over the replacement candidate. Local exporter/provider and inline-text
+Full SDK Java compilation, packaging/signing regressions and both CIs passed
+before handing over the replacement candidate. Local exporter/provider and inline-text
 negative control, full Activity/View SDK compilation and touch/JNI regressions,
 driver store/policy/native-consumer/JNI regressions, 17 CI packaging controls,
-26 release checks and 6 update-metadata checks passed. A new full Android CI
-build is still required. **MD-010 remains open until Odin shows
-the share menu and a chosen receiving app can open the text attachment with
-driver details and a log tail.** Check cancelling/returning as well. Then run
-the remaining signed-candidate checks in the
+26 release checks and 6 update-metadata checks passed. **MD-010 is resolved on
+Odin:** the share menu opens, the attachment is readable, and cancelling returns
+to the game. See the signed-device record below. Continue the remaining
+signed-candidate checks in the
 [release integration record](android-driver-release-integration-20261025.md).
 
 No Poco retest is requested now. No new release is published, no stable feed is
@@ -105,8 +104,48 @@ The native payload is unchanged by this Java/manifest repair; libmain SHA-256
 remains `4b59f6da9b72d81e73345c8b4d6665e9e0dfad19419de1f418b899fee15707f1`,
 Build ID `c25e76b34783f388a7b84e3f5951e2f2a83fd89d`.
 
-**Local protected signing, replacement installation and device sharing acceptance
-remain pending for source 277c.** The installed source33 candidate remains
-separate evidence. The normal CI Debug artifact is not a request to replace
-Frostie's retained private Debug app. Further documentation-only commits do not
-change the candidate's source identity.
+Local protected signing, replacement installation and focused Odin sharing
+acceptance subsequently passed, as recorded below. The earlier source33
+candidate remains separate evidence of the defect. The normal CI Debug artifact
+is not a request to replace Frostie's retained private Debug app. Further
+documentation-only commits do not change the candidate's source identity.
+
+## Odin signed-candidate acceptance
+
+Frostie supplied the local signer verification for source 277c:
+
+- Signed APK SHA-256
+  `6ed259e1c3f3b5313834bfd59440b54cb3a31888d58301e6166114159569e029`.
+- Release certificate SHA-256
+  `129f612a7b1b35c120fd84b7d49923da882b626a248f8d55470f7dfd8ce8d0e1`;
+  package `io.github.banjotooierecompiled.release`, v1.1.0 / code 5,
+  GraphicsDriverActivity launcher, driver picker enabled.
+- Complete unsigned payload and native/asset provenance matched. The helper's
+  previous-APK comparison used archived public v1.0.1 / code 4, SHA-256
+  `8e1a89308912b68001d7e2d98dc9f6feb3a43bc8617906645425b2ebc01187b2`.
+- Odin Windows ADB `install -r` returned **Success**. The actual device update
+  replaced the earlier unpublished source33 / code 5 candidate; it was not a
+  fresh direct v1.0.1-to-277c installation. No independent installed-APK readback
+  or retained-data acceptance was supplied with that terminal result.
+
+Frostie then confirmed, in order:
+
+1. Android's share menu appears when selecting **Share startup log**.
+2. The text attachment can be opened/read, including driver details and log lines.
+3. Sharing can be cancelled and the user can return to the game.
+
+The received export `Tooie-startup-e13d1b8563b54544b822da79584fd7f2.txt`
+is **262,801 bytes**, **1,400 lines**. Its text was reviewed: it contains the
+startup-log heading, System Default selection, measured Qualcomm Adreno 740
+startup details and native diagnostic log lines. The measured record has
+`accepted=true` and `menu_ready=true`; its historical-startup label is retained
+and does not independently prove which process was active at sharing time.
+No receiving-app name or new installed-APK hash was supplied, so neither is
+invented. The receipt and user's reading report establish actual attachment
+delivery, rather than accepting the share menu alone.
+
+**MD-010 is resolved on Odin in the locally signed source277c candidate.**
+This is focused sharing/cancel/return acceptance, not full gameplay/audio/touch,
+save/settings/mod retention, final driver roundtrip or legacy-launch acceptance.
+Those remaining release checks stay open. Poco sharing retest remains deferred;
+its accepted working-game report is unchanged. No release has been published.

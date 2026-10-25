@@ -120,8 +120,9 @@ background/sleep coverage remain open.
 ## Still required for full completion
 
 **Next update priorities:** the Poco/Turnip working run is now accepted within
-its manual scope. Fix Share startup log (MD-010), reproduced on Poco and Odin;
-Frostie chose to diagnose it on Odin and let the reporter send logs after updating.
+its manual scope. Share startup log (MD-010) is now resolved on Odin in the signed
+277c candidate: share menu, readable attachment and cancel/return passed. The
+reporter can send logs after updating; further Poco sharing tests remain deferred.
 See the [26 October result](development/poco-turnip-result-20261026.md).
 The remaining touch matrix and next signed-release checks are still open.
 The Retroid Pocket 5 investigation remains parked pending more data. See the
@@ -151,18 +152,19 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   [driver guide](development/android-driver-picker.md). Extra space between the
   three status fields is implemented for the next build; Frostie requested no
   separate device test. Driver controls remain inside Graphics.
-- [ ] Verify the Share startup log attachment fix (MD-010) on Odin and include it
-  in the update. Oversized chooser transactions are confirmed on Odin; the fix
-  uses a text attachment with temporary read permission. Opening the share menu,
-  reading the attachment in a receiving app and cancellation/return remain to be
-  checked. Further Poco logs are deferred until the reporter updates. See the
-  [sharing record](development/android-startup-log-sharing-20261026.md).
+- [x] Verify the Share startup log attachment fix (MD-010) on Odin for the update.
+  Signed source277c passed local protected signing and ADB installation. Frostie
+  confirmed the share menu, readable driver/log attachment and cancellation/
+  return to game; the 262801-byte export was received and reviewed. Further Poco
+  logs are deferred until the reporter updates. See the
+  [sharing record](development/android-startup-log-sharing-20261026.md#odin-signed-candidate-acceptance).
 - [ ] Verify the combined normal signed release candidate over v1.0.1 / code 4:
   retained ROM/saves/settings/mods, accepted audio/touch behavior, first-launch/
   healthy-reopen driver routing, legacy explicit-launch compatibility alias,
   System Default/Turnip and startup recovery.
   CI and unsigned 1.1.0 / code 5 download verification passed. Local protected
-  signing and device results must be recorded separately.
+  signing, installation and focused sharing checks passed on source277c; the
+  other signed-device checks remain open.
 - [ ] After the new release, update Frostie's retained Odin Debug app with its
   established signer and data preserved. First extend local preparation to seven
   native libraries and attached capture to the `:game` process; generate a new

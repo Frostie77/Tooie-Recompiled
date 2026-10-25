@@ -137,8 +137,9 @@ Use **Share startup log** to choose a destination yourself. It shares measured
 state and up to the last 256 KiB of `files/data/banjotooi-debug.log` in a text-file
 attachment. The replacement candidate uses temporary read-only content-URI
 access; the log text is not embedded in the share-menu request. This repairs the
-oversized chooser transaction found on Odin, with device attachment acceptance
-still pending; see the [sharing record](android-startup-log-sharing-20261026.md).
+oversized chooser transaction found on Odin. The locally signed 277c candidate
+passed Odin share-menu, readable attachment and cancellation/return checks; see
+the [sharing record](android-startup-log-sharing-20261026.md#odin-signed-candidate-acceptance).
 The original private log is retained. The pinned PC helper in the artifact also supports
 read-only `--collect NEW_LOG_FILE` after startup exits.
 

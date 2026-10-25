@@ -150,7 +150,7 @@ chooser parcel. A text-attachment/read-only URI fix is implemented for the
 replacement v1.1.0 / code 5 candidate; see the
 [sharing record](android-startup-log-sharing-20261026.md). The source33 artifact
 and signed APK above are retained evidence of the failing candidate, not the
-sharing fix. Odin share-menu/attachment acceptance remains open. Signed gameplay, retained
+sharing fix. The source277c sharing acceptance is recorded below. Signed gameplay, retained
 data, audio, touch, driver and legacy-launch acceptance remains open. The
 retained private Debug app is unchanged. Further Poco logs are deferred until
 the reporter updates; its working-game result remains accepted within scope.
@@ -160,7 +160,13 @@ the reporter updates; its working-game result remains accepted within scope.
 Source `277c9df95bc8d451e3be1c38804edb91ba8837c1` keeps v1.1.0 / code 5 and
 repairs MD-010 by sharing a bounded text attachment through a private read-only
 content provider. [Both CIs and the exact unsigned candidate download passed](android-startup-log-sharing-20261026.md#verified-replacement-build).
-The replacement still needs local protected signing and Odin share-menu/file
-acceptance, followed by the remaining combined signed-candidate checks. This
-does not close MD-010, merge PR #32 or publish a release. Public v1.0.1 and the
-retained private Debug app remain unchanged.
+The replacement passed local protected signing (signed APK SHA-256
+`6ed259e1c3f3b5313834bfd59440b54cb3a31888d58301e6166114159569e029`),
+the expected release certificate and complete unsigned payload checks, then
+Odin ADB `install -r` returned Success. The helper compared archived public
+v1.0.1 / code 4, while the device update replaced the earlier source33 / code 5
+candidate. Frostie confirmed the share menu, readable driver/log attachment and
+cancel/return to game; the 262801-byte export was received and reviewed.
+**MD-010 is resolved on Odin.** The remaining combined signed-candidate checks,
+including retained data, stay open. PR #32 remains unmerged and no release is
+published. Public v1.0.1 and the retained private Debug app remain unchanged.

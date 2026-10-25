@@ -53,4 +53,6 @@ the [sharing repair and pending acceptance](android-startup-log-sharing-20261026
 
 Frostie chose to fix sharing on Odin and include it in the update. Further Poco
 logs are deferred until the reporter updates; do not ask them to repeat this
-test now. Keep MD-010 open until the replacement is checked on device.
+test now. The signed source277c replacement later passed Odin share-menu,
+readable attachment and cancellation/return checks; MD-010 is resolved on Odin.
+No new Poco sharing result is claimed.

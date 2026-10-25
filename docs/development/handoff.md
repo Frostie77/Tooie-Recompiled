@@ -148,8 +148,11 @@ screenshot shows loaded Turnip matching the running game. See the [26 October
 result](poco-turnip-result-20261026.md). Share startup log does nothing on Poco and
 Frostie reproduced it on the signed Odin candidate (MD-010). Fresh Odin logs
 confirm a 791464-byte chooser parcel and `TransactionTooLargeException`. A
-bounded text-attachment/read-only content-URI fix is implemented for the next
-candidate; Odin share-menu and receiving-app acceptance remains open. See the
+bounded text-attachment/read-only content-URI fix passed both CIs in source277c,
+local protected signing (signed SHA-256 `6ed259e1c3f3b5313834bfd59440b54cb3a31888d58301e6166114159569e029`)
+and ADB update Success. Frostie confirmed the share menu, readable driver/log
+attachment and cancel/return to game; MD-010 is resolved on Odin. The received
+262801-byte export was reviewed. Remaining combined release checks stay open. See the
 [sharing record](android-startup-log-sharing-20261026.md). Frostie deferred
 further Poco logs until the reporter updates.
 Detailed touch/audio/persistence and final signed-phone checks remain separate.
