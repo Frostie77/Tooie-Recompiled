@@ -73,7 +73,7 @@ namespace recompui {
             [id](recompui::ContextId context, Element* parent) {
                 auto* page = context.create_element<ConfigPageOptionsMenu>(parent, get_config_ptr(id), true);
                 for (auto &[tab_id, callback] : appended_contents) {
-                    if (tab_id == id) callback(context, page->get_body()->get_left());
+                    if (tab_id == id) callback(context, page->get_options_container());
                 }
             },
             // Can close

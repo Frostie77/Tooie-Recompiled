@@ -66,7 +66,7 @@ public class GraphicsDriverActivity extends Activity {
         button("Restart game to apply selection",this::confirmRestart);
         button("Share startup log",this::share);
         body=page;
-        button("Close",this::finish);
+        button("Close",this::closeSettings);
     }
     private void configureIntent(Intent intent) {
         // The exported recovery entry only opens UI; only the private Activity accepts actions.
@@ -161,6 +161,10 @@ public class GraphicsDriverActivity extends Activity {
         });
     }
     private Intent gameIntent() {return new Intent().setComponent(new ComponentName(this,BanjoTooieSDLActivity.class)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);}
+    private void closeSettings() {
+        if(!busy && DriverRuntime.gamePid(this)>0)bringGame();else if(!busy)finish();
+    }
+    @Override public void onBackPressed() {closeSettings();}
     private void bringGame() {
         if(paused)return;
         try {startActivity(gameIntent());if(this instanceof GraphicsDriverSettingsActivity)finish();}
