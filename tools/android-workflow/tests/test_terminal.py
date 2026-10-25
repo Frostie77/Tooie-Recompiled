@@ -158,7 +158,7 @@ class OneWindow(unittest.TestCase):
         self.assertEqual(self.commands[0][1]['timeout'],5)
 
     def test_bad_marker_input_never_becomes_a_device_command(self):
-        for value in ('0 issue','11 issue','done','save','continue'):
+        for value in ('0 issue','31 issue','01 issue','-1 issue','done','save','continue'):
             self.assertFalse(self.m.handle_live_note(self.item(value), 'Gameplay-01'))
         for value in ('note 1 details','note 1','2 '+'x'*241,'3 bad\x01input'):
             self.assertTrue(self.m.handle_live_note(self.item(value), 'Gameplay-01'))
@@ -238,11 +238,24 @@ class OneWindow(unittest.TestCase):
         self.assertEqual(meta['marker'], 5)
 
     def test_marker_shots_are_bounded_and_all_notes_survive(self):
-        for _ in range(13):
+        for _ in range(33):
             self.m.handle_live_note(self.item('1 visual bug'), 'Demo-01')
-        self.assertEqual(len(self.shots), 10)
-        self.assertEqual(len(self.m.live_events), 13)
-        self.assertIn('limit reached', self.path('Screenshot-Marker-013-Marker').read_text())
+        self.assertEqual(len(self.shots), 30)
+        self.assertEqual(len(self.m.live_events), 33)
+        self.assertIn('limit reached', self.path('Screenshot-Marker-033-Marker').read_text())
+
+    def test_markers_one_through_thirty_and_reused_number_notes(self):
+        for number in range(1, 31):
+            self.assertTrue(self.m.handle_live_note(self.item(str(number) + ' detail'), 'Gameplay-01'))
+        first_thirty = self.m.live_events[-1]['id']
+        self.m.handle_live_note(self.item('note 30 original detail'), 'Gameplay-01')
+        self.assertEqual(self.m.live_events[-1]['target_event_id'], first_thirty)
+        self.m.handle_live_note(self.item('30 a second occurrence'), 'Gameplay-01')
+        second_thirty = self.m.live_events[-1]['id']
+        self.m.handle_live_note(self.item('note 30 more detail'), 'Gameplay-01')
+        self.assertNotEqual(first_thirty, second_thirty)
+        self.assertEqual(self.m.live_events[-1]['target_event_id'], second_thirty)
+        self.assertEqual(len(self.m.live_events), 33)
 
     def test_stale_or_prompt_notes_do_not_capture_images(self):
         item = self.item('2 delayed note')
