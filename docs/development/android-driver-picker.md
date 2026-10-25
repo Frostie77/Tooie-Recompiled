@@ -5,8 +5,10 @@ select/import, Reset to System Default, loaded/selected details and restart
 status. There is no additional settings tab/banner. This remains an isolated
 GPU test candidate. The [Odin manual record](android-driver-picker-odin-20261025.md)
 confirms startup, system/Turnip switching, gameplay, cancellation/resume and
-System Default rollback. The first-launch-only behavior and UI refinements need
-their next device check. No public release is made.
+System Default rollback. First-launch/healthy-reopen behavior, explicit Graphics
+access/return, controller scrolling and clearer values also passed focused 7a
+Odin checks. Recovery and signed-release checks remain open. No public release
+is made.
 
 ## Start and recovery before Vulkan
 
@@ -77,9 +79,11 @@ while the reporter is conducting its optional Turnip comparison.
 
 The driver buttons scroll into view when controller focus moves to them.
 Selected/Loaded/Status values use light blue beside white field labels on both
-the rendered Graphics page and Android startup/recovery screen. These source
-UI follow-ups await a later build/device check (MD-006/MD-007); they are not in
-the installed 4ee candidate used for the current test.
+the rendered Graphics page and Android startup/recovery screen. Frostie accepted
+automatic scrolling and clearer values in the 7a check (MD-006/MD-007). A later
+spacing-only change (MD-009) separates the three rendered Graphics fields with
+24-unit gaps. It is not in the installed 7a APK; Frostie requested no separate
+device retest for it.
 
 Selected and loaded driver values are reported separately. Loaded details come
 from the renderer's actual selected physical device, including the driver ID,
@@ -89,6 +93,11 @@ labelled when no game is active. The render thread reads cached status rather
 than repeatedly reading/hashing files.
 
 ## Next-candidate Odin checks
+
+The 4ee switching and 7a healthy startup/navigation checks are accepted within
+their recorded scope. The matrix below remains for broader candidate/release
+coverage. The current simulated recovery check is paused after the helper's
+startup-status readback mismatch; see the [manual record](android-driver-picker-odin-20261025.md).
 
 - On a fresh test app, confirm the first-launch driver screen appears. After
   starting successfully, close/reopen and confirm it goes directly to the normal

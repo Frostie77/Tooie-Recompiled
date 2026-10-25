@@ -73,14 +73,16 @@ MD-001–MD-005 retain their existing open/deferred statuses.
 ## Driver-picker manual test — 25 October 2026
 
 The [Odin test record](android-driver-picker-odin-20261025.md) retains the exact
-4ee build, positive system-driver/cancellation results and both UI follow-ups.
-These are conversation reports; no marker numbers or capture IDs were supplied.
+4ee driver-switching build and the later 7a startup/Graphics checks. These are
+conversation reports; no marker numbers or capture IDs were supplied.
 
 | ID | Observation / request | Status | Evidence and follow-up |
 |---|---|---|---|
-| MD-006 | Controller focus does not scroll the new Graphics driver buttons into view; touch scrolling is required | Open — source fix implemented, device check pending | Frostie's manual 4ee test. Reuse existing config-option nearest scrolling on focus. Continue the current driver test without another installation. |
-| MD-007 | Give Selected/Loaded/Status values a colour distinct from their white labels | Open — light-blue source styling implemented, appearance check pending | Frostie's request during the same test. Values use #78BEFF on the rendered Graphics and Android startup/recovery screens. |
-| MD-008 | Show driver setup once, then open the normal launcher directly on healthy launches; retain explicit Graphics access and failed-start recovery | Open — saved setup marker/routing implemented, device check pending | Frostie requested this after the accepted 4ee system/Turnip roundtrip. Resetting a driver retains the setup-seen state. |
+| MD-006 | Controller focus does not scroll the new Graphics driver buttons into view; touch scrolling is required | Accepted — focused 7a Odin check passed | Frostie confirmed the page automatically scrolls as driver controls receive focus. |
+| MD-007 | Give Selected/Loaded/Status values a colour distinct from their white labels | Accepted — focused 7a Odin appearance check passed | Source uses light blue #78BEFF; Frostie reported that the values are more distinct. |
+| MD-008 | Show driver setup once, then open the normal launcher directly on healthy launches; retain explicit Graphics access and failed-start recovery | Partly verified — healthy startup/manual access passed; recovery pending | In 7a, first setup appeared, later normal launches went directly to the launcher, and Graphics could reopen driver settings and return with controls working. The recovery fixture stopped at a readback mismatch; see the test record. |
+| MD-009 | Add empty space between Selected, Loaded and Status in Graphics so the details are less crowded | Implemented for the next build; no separate device test requested | Frostie requested this after the 7a appearance check. The three fields now have a dedicated vertical group with 24-unit gaps. This follow-up is not in the installed 7a APK. |
 
-MD-001–MD-005 retain their prior open/deferred status. None of these UI items is
-accepted as fixed on device merely because the source compiles.
+MD-001–MD-005 retain their prior open/deferred status. The acceptance above is
+scoped to Frostie's reported 7a checks. No actual failed-driver recovery result
+or on-device observation of the new MD-009 spacing is claimed.

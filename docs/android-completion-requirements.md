@@ -81,6 +81,10 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
   import/loaded status, deliberate restart, playable controls/sound and System
   Default rollback with ROM reuse. See the
   [manual record](development/android-driver-picker-odin-20261025.md).
+- [x] Focused 7a Odin startup/Graphics checks: first-launch setup, direct normal
+  launcher on reopen, explicit driver-details access and return with controls
+  working, controller focus scrolling and clearer driver values. See the same
+  [manual record](development/android-driver-picker-odin-20261025.md).
 - [x] Configurable floating touch controls accepted on Odin for the next update.
   Frostie confirmed they work and are customizable. The captured overlay and
   native input consumption support this focused result; see the
@@ -122,13 +126,14 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   The focused Odin acceptance above does not complete this matrix; see
   [the touch guide](development/android-touch-controls.md). Verify the next
   signed release separately.
-- [ ] Verify the newer first-launch-only driver setup/direct healthy launch,
-  controller focus scrolling and blue values on device, plus failed-start
-  recovery, broader compatibility and the next signed release. The original
-  system/Turnip roundtrip passed focused Odin testing; see the
-  [manual record](development/android-driver-picker-odin-20261025.md) and
-  [driver guide](development/android-driver-picker.md). Driver controls stay
-  inside Graphics with no additional settings tab/banner.
+- [ ] Finish driver failed-start recovery, setup-state retention after reset/
+  import, broader compatibility and the next signed release. Healthy startup,
+  explicit settings access/return, scrolling and distinct values passed in 7a.
+  The simulated recovery check is paused after a helper readback mismatch; see
+  the [manual record](development/android-driver-picker-odin-20261025.md) and
+  [driver guide](development/android-driver-picker.md). Extra space between the
+  three status fields is implemented for the next build; Frostie requested no
+  separate device test. Driver controls remain inside Graphics.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving

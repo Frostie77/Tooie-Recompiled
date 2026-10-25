@@ -49,6 +49,8 @@ Current Odin testing uses **Manual 60** in Graphics.
 
 **Settings → Graphics** lets you import/select a custom Vulkan driver, reset to
 **System Default**, and view the selected driver, loaded driver and restart status.
+Distinct value colours and space between fields make the details easier to read;
+controller focus automatically scrolls options into view.
 Driver setup appears on first launch. Later healthy launches open the Tooie
 launcher directly using the saved driver; open Graphics to change it. A failed
 startup brings back the driver screen before Vulkan so you can select/reset and
@@ -176,6 +178,8 @@ Poco compatibility test includes these controls, but its system-driver startup
 failure remains unresolved; see the [latest result](docs/development/poco-system-driver-result-20261025.md).
 Custom-driver settings are implemented under Graphics with a pre-Vulkan Android
 startup/recovery screen. Focused Odin system/Turnip switching, gameplay and
-System Default rollback passed. The first-launch-only flow and UI refinements
-await their next device check. See the
+System Default rollback passed. Focused 7a checks also passed for first-launch/
+healthy-reopen routing, explicit Graphics access/return, scrolling and clearer
+values. Extra spacing is implemented for the next build; recovery and the next
+signed-release checks remain open. See the
 [driver-picker record](docs/development/android-driver-picker-odin-20261025.md).

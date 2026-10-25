@@ -18,21 +18,22 @@
   accessible after a failed startup. The system/Turnip switching and rollback
   passed focused Odin checks; Poco compatibility remains experimental. Setup
   appears on first launch or explicit Graphics/recovery entry, with later healthy
-  launches opening the normal launcher directly. This revised flow awaits its
-  next device check. Selected/Loaded/Status values
-  use light blue to distinguish them from their white labels.
+  launches opening the normal launcher directly. First setup, healthy reopen and
+  explicit Graphics access/return passed focused 7a Odin checks. Selected/Loaded/
+  Status values use light blue beside white labels, with extra vertical space
+  between the three fields in the next build. No separate device retest was
+  requested for that spacing-only follow-up. Failed-start recovery remains open.
 
 ### Fixed
 
 - Graphics driver buttons scroll into view when controller focus reaches them,
-  matching existing settings navigation. This source fix awaits its next device
-  check; the completed Odin roundtrip used the original 4ee build.
+  matching existing settings navigation. Frostie confirmed automatic scrolling
+  in the focused 7a Odin check.
 - Brief audio distortion after pressing Android Home and returning to gameplay
   ([#29](https://github.com/Frostie77/Tooie-Recompiled/pull/29)). Focused Odin
   Debug testing passed; verification in a signed public release remains pending.
 
-Further fixes will be collected before the next release. **v1.0.1** remains the
-latest public release.
+The next release is being prepared. **v1.0.1** remains the latest public release.
 
 ## [v1.0.1](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1) — 2026-10-24
 

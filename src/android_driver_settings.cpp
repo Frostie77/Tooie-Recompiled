@@ -48,8 +48,11 @@ public:
         set_gap(12.0f);set_padding_top(24.0f);set_width(100.0f,recompui::Unit::Percent);
         auto context=recompui::get_current_context();
         context.create_element<recompui::Label>(this,"Graphics driver",recompui::LabelStyle::Large);
+        auto* fields=context.create_element<recompui::Element>(this,0,"div");
+        fields->set_display(recompui::Display::Flex);fields->set_flex_direction(recompui::FlexDirection::Column);
+        fields->set_gap(24.0f);fields->set_width(100.0f,recompui::Unit::Percent);
         for(size_t i=0;i<labels.size();i++) {
-            auto* line=context.create_element<recompui::Element>(this,0,"div");
+            auto* line=context.create_element<recompui::Element>(fields,0,"div");
             line->set_display(recompui::Display::Flex);line->set_gap(8.0f);line->set_width(100.0f,recompui::Unit::Percent);
             auto* prefix=context.create_element<recompui::Label>(line,std::string(fieldPrefixes[i]),recompui::LabelStyle::Normal);
             prefix->set_flex_shrink(0.0f);
