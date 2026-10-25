@@ -157,4 +157,7 @@ and [touch-controls guide](docs/development/android-touch-controls.md).
 Phone testing and verification in the next signed release remain open. The
 Poco compatibility test includes these controls, but its system-driver startup
 failure remains unresolved; see the [latest result](docs/development/poco-system-driver-result-20261025.md).
-A user-facing custom-driver picker/reset flow is in progress under Graphics.
+Custom-driver settings are implemented under Graphics with a pre-Vulkan Android
+startup/recovery screen. Focused Odin system-driver/cancellation checks passed;
+custom-driver switching remains under test. See the
+[driver-picker record](docs/development/android-driver-picker-odin-20261025.md).

@@ -44,6 +44,8 @@ gameplay acceptance.
 
 ## Evidence
 
+- [25 October Odin driver-picker checks](android-driver-picker-odin-20261025.md):
+  startup/system-driver/cancellation results and the scrolling/colour follow-ups.
 - [Device compatibility reports](device-compatibility.md): includes Frostie's
   confirmed working v1.0.1 on Pixel 8 Pro.
 - [25 October Poco system-driver result](poco-system-driver-result-20261025.md):

@@ -88,8 +88,12 @@ Graphics, with no additional settings tab/banner and a pre-renderer recovery
 path. Its package/store, Graphics UI and isolated Android recovery path are
 implemented on the separate driver-picker branch. Cold launch stays on the
 Android startup screen until the user presses Start, before SDL/RT64/Vulkan.
-Host importer/native-consumer/JNI/policy and full Java checks pass; the actual
-APK build and device acceptance remain separate. See the
+The 4ee APK passed CI and downloaded-artifact verification. Frostie reports
+startup options, system-driver launcher/gameplay and cancelled-picker controls/
+sound recovery working; custom-driver activation/restart/rollback remain pending.
+The [Odin record](android-driver-picker-odin-20261025.md) retains exact identities
+and MD-006/MD-007: controller focus scrolling and light-blue values are
+implemented for a later build, with device checks still open. See the
 [driver settings guide](android-driver-picker.md). Touch acceptance on Odin is
 separate from Poco Vulkan compatibility.
 

@@ -69,3 +69,17 @@ received at 14:11:34.147 AEDT. Its screenshot and native touch records support
 the positive report. There are no additional notes or unparsed observations
 in that session's three-line journal. No new minor defect was reported;
 MD-001–MD-005 retain their existing open/deferred statuses.
+
+## Driver-picker manual test — 25 October 2026
+
+The [Odin test record](android-driver-picker-odin-20261025.md) retains the exact
+4ee build, positive system-driver/cancellation results and both UI follow-ups.
+These are conversation reports; no marker numbers or capture IDs were supplied.
+
+| ID | Observation / request | Status | Evidence and follow-up |
+|---|---|---|---|
+| MD-006 | Controller focus does not scroll the new Graphics driver buttons into view; touch scrolling is required | Open — source fix implemented, device check pending | Frostie's manual 4ee test. Reuse existing config-option nearest scrolling on focus. Continue the current driver test without another installation. |
+| MD-007 | Give Selected/Loaded/Status values a colour distinct from their white labels | Open — light-blue source styling implemented, appearance check pending | Frostie's request during the same test. Values use #78BEFF on the rendered Graphics and Android startup/recovery screens. |
+
+MD-001–MD-005 retain their prior open/deferred status. Neither new UI item is
+accepted as fixed on device merely because the source compiles.

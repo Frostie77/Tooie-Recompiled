@@ -123,6 +123,10 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   next signed-release verification remain open. There is no additional settings
   tab/banner. See the [test guide](development/android-driver-picker.md). A
   successful build is not a confirmed driver compatibility fix.
+  Focused Odin startup, system-driver gameplay and picker cancellation/resume
+  passed in the [manual test](development/android-driver-picker-odin-20261025.md).
+  Custom-driver restart/rollback remain open; scrolling and blue-value UI
+  follow-ups are implemented for a later build and remain unverified on device.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving

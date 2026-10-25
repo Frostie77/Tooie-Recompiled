@@ -3,7 +3,9 @@
 The driver controls are inside the existing **Settings → Graphics** page:
 select/import, Reset to System Default, loaded/selected details and restart
 status. There is no additional settings tab/banner. This remains an isolated
-GPU test candidate; device acceptance is pending. No public release is made.
+GPU test candidate. The [Odin manual record](android-driver-picker-odin-20261025.md)
+confirms startup, system-driver gameplay and cancellation/resume; custom-driver
+switching and rollback remain pending. No public release is made.
 
 ## Start and recovery before Vulkan
 
@@ -59,6 +61,12 @@ while the reporter is conducting its optional Turnip comparison.
    restart. Save progress, apply pending game settings and choose **Restart game
    to apply selection**. A confirmation explains the loss of unsaved progress.
    Import/select/reset alone never stops the game.
+
+The driver buttons scroll into view when controller focus moves to them.
+Selected/Loaded/Status values use light blue beside white field labels on both
+the rendered Graphics page and Android startup/recovery screen. These source
+UI follow-ups await a later build/device check (MD-006/MD-007); they are not in
+the installed 4ee candidate used for the current test.
 
 Selected and loaded driver values are reported separately. Loaded details come
 from the renderer's actual selected physical device, including the driver ID,

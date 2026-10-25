@@ -7,12 +7,16 @@ import android.content.Intent;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
 import android.graphics.drawable.Icon;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
 import android.os.SystemClock;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -97,6 +101,17 @@ public class GraphicsDriverActivity extends Activity {
         button.setOnClickListener(view->{if(!busy && !paused)action.run();});
     }
     private void schedule() { main.removeCallbacks(poll);if(!paused && !isFinishing())main.postDelayed(poll,1200); }
+    private void showSummary(DriverRuntime.Snapshot snapshot) {
+        SpannableStringBuilder text=new SpannableStringBuilder();
+        for(int i=0;i<3;i++) {
+            String line=snapshot.labels[i];int start=text.length();text.append(line);
+            int divider=line.indexOf(": ");
+            if(divider>=0)text.setSpan(new ForegroundColorSpan(Color.rgb(0x78,0xBE,0xFF)),
+                start+divider+2,text.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            text.append("\n");
+        }
+        text.append(message).append("\n").append(snapshot.error);summary.setText(text);
+    }
     private void refresh(boolean actionCompleted) {
         if(paused || busy || isFinishing())return;
         busy=true;
@@ -108,7 +123,7 @@ public class GraphicsDriverActivity extends Activity {
                 busy=false;if(isFinishing() || isDestroyed())return;
                 current=result;
                 if(result==null){summary.setText("Driver settings unavailable: "+failure);schedule();return;}
-                summary.setText(String.join("\n",result.labels[0],result.labels[1],result.labels[2],message,result.error));
+                showSummary(result);
                 if(!paused && !handled) {
                     handled=true;
                     DriverBootPolicy.Action action=DriverBootPolicy.decide(settingsOnly,result.validSelection,result.attempted,result.ready,result.pid);
