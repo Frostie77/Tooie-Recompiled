@@ -2,8 +2,9 @@
 
 Status: focused manual Odin system/Turnip switching passed in 4ee. First-launch/
 healthy-reopen routing, explicit Graphics access/return, controller scrolling and
-clearer values passed in 7a. The recovery check is paused at a helper readback
-mismatch; actual failed-driver recovery, Poco and signed-release checks remain open.
+clearer values passed in 7a. Recovery awaits a retry with corrected PC-helper
+command handling; the original runtime status is confirmed unchanged. Actual
+failed-driver recovery, Poco and signed-release checks remain open.
 
 ## Exact test build
 
@@ -129,24 +130,56 @@ No new gameplay/audio window, screenshot bundle or complete device log was
 provided for these 7a checks. Retain the earlier 4ee gameplay/sound acceptance
 under its own source.
 
-### Recovery check paused
+### Recovery preparation and ADB command-mode correction
 
 After Frostie exited the app, the pinned
 `prepare_driver_recovery_7a9858da81fe.py` helper from
 `370d359aa95bab7da92c00ef1a6d2d6c9ad78a09` reached the local backup step and
 stopped with `STOP: Startup-status or backup readback mismatch.`
-Its earlier installed-APK check therefore passed, but its status write/backup
-was not fully confirmed. The reported local folder is
-`recovery-check-fa3643c7dc00`. Whether the simulated status was published remains
-unknown until the requested read-only local/device hash and ADB-command
-diagnostics are returned. Keep the app closed while resolving that state;
-do not record a successful recovery test.
+Its earlier installed-APK check passed. The reported local backup folder is
+`recovery-check-fa3643c7dc00`.
 
-The helper is intended to back up diagnostic startup state and change only
-`menu_ready` to false in this exact test app. Even a successful simulated
-incomplete-startup check would not establish an actual Vulkan-driver crash or
-Poco compatibility. Its local atomic-write and 11 rejection controls passed;
-the Android readback failure remains a separate follow-up.
+The subsequent read-only diagnostics establish:
+
+- Device `runtime.json` is 464 bytes, has `menu_ready: true`, and matches the
+  original local backup exactly at SHA-256
+  `8038aaafd0ab62a604a6786620de47671d56b45a23873f9ed8b21665ca83c1f4`.
+  The intended incomplete-startup fixture would instead hash to
+  `c8977d17409c3cc01f24c92a430301746cce1945339fc2aaa30b32334a26d3e8`.
+- Device-computed hashes confirm the original runtime digest. The intended
+  remote backup and staging file do not exist. Their 94/87-byte raw command
+  responses were error output, not partial copies of startup-state files.
+- The same quoted `sh -c` control through `exec-out` returned host status 0
+  with `inaccessible or not found` in stdout. Through `shell`, it returned the
+  expected status 73 and exact `TOOIE_CONTROL` output.
+
+The original helper quoted an already escaped raw-exec argument and treated
+that transport's zero status as command success. The installed runtime marker
+was not changed; there is no failed-driver or successful recovery result here.
+This is a PC-helper defect, not evidence about driver compatibility.
+
+The correction uses `shell` for status reads and the quoted write script.
+Before any state change it checks a multiline command's exact output and
+non-zero remote exit code. Publication must return an explicit completion
+marker; then the existing exact APK, private-file hashes, backup, stopped-game
+and readback guards still apply. Raw output is retained only for the APK bytes.
+The [ADB client source](https://android.googlesource.com/platform/packages/modules/adb/+/refs/heads/main/client/commandline.cpp)
+documents the differing argument handling; the device control above confirms
+the behavior relevant to this check.
+
+The revised local regression models those ADB argument/exit-status rules and
+runs the actual outer and inner shells. It reproduces the same readback failure
+with the unchanged original helper. The correction passes the successful
+publication case plus 15 rejection controls, including misleading raw success,
+lost exit status, bad quoting, unreadable state, partial copy/transfer and
+process/state races. This is host validation; the corrected device preparation
+and subsequent recovery-screen/retry check are still pending.
+
+The helper backs up diagnostic startup state and changes only `menu_ready` to
+false in this exact test app. Even a successful simulated incomplete-startup
+check would not establish an actual Vulkan-driver crash or Poco compatibility.
+Poco's separate raw driver-transfer failure remains a separate investigation;
+this quoted-script diagnostic does not establish its cause.
 
 ### Additional spacing request
 

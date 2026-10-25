@@ -129,8 +129,9 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
 - [ ] Finish driver failed-start recovery, setup-state retention after reset/
   import, broader compatibility and the next signed release. Healthy startup,
   explicit settings access/return, scrolling and distinct values passed in 7a.
-  The simulated recovery check is paused after a helper readback mismatch; see
-  the [manual record](development/android-driver-picker-odin-20261025.md) and
+  The original marker was unchanged after a PC-helper command-mode error;
+  corrected recovery preparation/retry is pending. See the
+  [manual record](development/android-driver-picker-odin-20261025.md) and
   [driver guide](development/android-driver-picker.md). Extra space between the
   three status fields is implemented for the next build; Frostie requested no
   separate device test. Driver controls remain inside Graphics.

@@ -96,8 +96,9 @@ than repeatedly reading/hashing files.
 
 The 4ee switching and 7a healthy startup/navigation checks are accepted within
 their recorded scope. The matrix below remains for broader candidate/release
-coverage. The current simulated recovery check is paused after the helper's
-startup-status readback mismatch; see the [manual record](android-driver-picker-odin-20261025.md).
+coverage. The initial recovery-helper failure was traced to ADB command handling;
+the original device status was unchanged. A corrected preparation/recovery retry
+is pending; see the [manual record](android-driver-picker-odin-20261025.md).
 
 - On a fresh test app, confirm the first-launch driver screen appears. After
   starting successfully, close/reopen and confirm it goes directly to the normal

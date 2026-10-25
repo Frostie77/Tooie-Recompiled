@@ -19,11 +19,12 @@ def prepare(folder, serial, adb_path='adb', runner=subprocess.run):
     def adb(*args, allowed=(0,)):
         result = runner([str(adb_path), '-s', serial, *args], capture_output=True, timeout=60)
         require(result.returncode in allowed,
-                'ADB failed: ' + result.stderr.decode(errors='replace').strip())
+                'ADB exited ' + str(result.returncode) + ': ' +
+                result.stderr.decode(errors='replace').strip())
         return result
 
     def read(name):
-        return adb('exec-out', 'run-as', PACKAGE, 'cat',
+        return adb('shell', 'run-as', PACKAGE, 'cat',
                    'files/vulkan-driver/' + name).stdout
 
     def closed():
@@ -44,6 +45,13 @@ def prepare(folder, serial, adb_path='adb', runner=subprocess.run):
     actual_apk = adb('exec-out', 'run-as', PACKAGE, 'cat', installed).stdout
     require(hashlib.sha256(actual_apk).hexdigest() == APK_SHA, 'Installed test APK differs.')
     closed()
+    # Validate quoting and a non-zero remote status before changing any file.
+    # exec-out escapes its own arguments and does not carry the remote status;
+    # the manually quoted sh -c payload belongs to adb shell instead.
+    probe = adb('shell', 'run-as', PACKAGE, 'sh', '-c',
+                shlex.quote('printf %s TOOIE_RECOVERY_SHELL\nexit 73\n'), allowed=(0, 73))
+    require(probe.returncode == 73 and probe.stdout == b'TOOIE_RECOVERY_SHELL'
+            and not probe.stderr.strip(), 'ADB shell quoting/exit-status control failed.')
     original = {name: read(name) for name in ('boot.json', 'runtime.json', 'setup-seen.json')}
     require(all(0 < len(data) <= 16384 for data in original.values()), 'Unexpected startup-state size.')
     boot, runtime, setup = (json.loads(original[name]) for name in original)
@@ -66,6 +74,7 @@ def prepare(folder, serial, adb_path='adb', runner=subprocess.run):
     remote_backup = 'runtime-before-recovery-' + nonce + '.json'
     temporary = '.runtime-recovery-' + nonce + '.tmp'
     encoded = base64.b64encode(replacement).decode()
+    marker = 'TOOIE_RECOVERY_PREPARED_' + nonce
     script = f'''set -eu
 umask 077
 cd files/vulkan-driver
@@ -97,10 +106,13 @@ set -e
 test "$pid_status" = 1
 test -z "$game_pids"
 mv {temporary} runtime.json
+printf %s {marker}
 '''
     print('Startup-status backup:', backup, flush=True)
     closed()
-    adb('exec-out', 'run-as', PACKAGE, 'sh', '-c', shlex.quote(script))
+    changed = adb('shell', 'run-as', PACKAGE, 'sh', '-c', shlex.quote(script))
+    require(changed.stdout == marker.encode() and not changed.stderr.strip(),
+            'Recovery command did not confirm completion.')
     require(read('runtime.json') == replacement and read(remote_backup) == original['runtime.json'],
             'Startup-status or backup readback mismatch.')
     require(read('boot.json') == original['boot.json']
