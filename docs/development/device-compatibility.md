@@ -1,13 +1,13 @@
 # Android device compatibility reports
 
-Updated: 25 October 2026. These records describe the named builds and tested
+Updated: 26 October 2026. These records describe the named builds and tested
 scope; broader compatibility and a complete playthrough remain open.
 
 | Device | Android / GPU | Build | Recorded result |
 |---|---|---|---|
 | AYN Odin 2 Portal | Android 13 / Adreno 740 | Public v1.0.1 and focused local Debug candidates | Primary test device. Release checks and focused audio/touch acceptance have separate evidence records. |
 | Pixel 8 Pro | Android 17 / Mali-G715 MP7, as reported by Frostie | Public v1.0.1 | Frostie explicitly confirmed that it works on 25 October. This is a successful manual functional report. |
-| Poco X3 Pro | Android 12 / Adreno 640 | Public v1.0.1, earlier 650 experiment and combined c849 GPU/touch test | Startup still exits with the system driver. Optional Turnip test remains pending; see the [25 October result](poco-system-driver-result-20261025.md). |
+| Poco X3 Pro | Android 12 / Adreno 640 | Historical public/c849 system failures; d6 on-device picker with regular Turnip R8 | Reporter confirms the game works; reviewed screenshot shows Turnip loaded and matching the running game. Share startup log fails. See the [26 October result](poco-turnip-result-20261026.md). |
 | Retroid Pocket 5 | Android version pending / Adreno 650 | Original report and offered PR #27 test | Parked pending device details, a fresh log and the existing test result. |
 
 The Pixel report confirms working v1.0.1, rather than only a successful

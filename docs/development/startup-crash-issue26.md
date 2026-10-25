@@ -1,6 +1,6 @@
 # Startup crash investigation — issue #26
 
-Updated: 25 October 2026. **Unresolved; experimental builds are not a confirmed device fix.**
+Updated: 26 October 2026. **Poco/Turnip has a working manual result; stock failures remain recorded and Retroid is parked.**
 
 ## Current priority
 
@@ -10,7 +10,10 @@ failures with v1.0.1 and the previous Actions test. The reporter has now tested
 the combined c849 graphics/touch build and confirmed the same system-driver
 startup exit. Both new logs were reviewed; see the
 [25 October result](poco-system-driver-result-20261025.md). The next controlled
-test is optional Turnip selection in that existing test app.
+test subsequently moved to d6 phone import. The reporter now confirms a working
+game, with loaded Turnip matching the active game in the screenshot; see the
+[26 October result](poco-turnip-result-20261026.md). Sharing fails on Poco and
+Odin (MD-010). Fix it locally for the update; further reporter logs are deferred.
 
 The **Retroid Pocket 5 / Adreno 650** report is **parked pending more data**:
 Android version, a fresh app log and the result of the existing PR #27 test.
@@ -23,7 +26,7 @@ or requires another Retroid test build.
 | Reporter | Device | Confirmed evidence | Status |
 |---|---|---|---|
 | gojera | Retroid Pocket 5, Snapdragon 865 / Adreno 650 | Original black-screen/exit report; [PR #27](https://github.com/Frostie77/Tooie-Recompiled/pull/27) and [Actions run 40041658420](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40041658420) were offered for testing | Parked pending Android version, fresh app log and result of the existing test |
-| dusk-beep | Poco X3 Pro, Android 12, Snapdragon 860 / Adreno 640 | [Follow-up](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747) confirms startup exit with both public v1.0.1 and run 40041658420; supplied [Debug log](https://github.com/user-attachments/files/33901672/banjotooi-debug.log) | Primary active investigation; the c849 system baseline still exits at the same guard; Turnip and Poco touch testing remain pending |
+| dusk-beep | Poco X3 Pro, Android 12, Snapdragon 860 / Adreno 640 | [Follow-up](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747) confirms startup exit with both public v1.0.1 and run 40041658420; supplied [Debug log](https://github.com/user-attachments/files/33901672/banjotooi-debug.log) | Working d6 Turnip game reported and screenshot reviewed; stock failure retained; share logging open as MD-010 |
 
 Frostie says the reporting user can test further builds. Draft messages in chat
 for Frostie to post; do not post issue comments on his behalf. Treat the two
@@ -47,7 +50,7 @@ permanent hardware blacklist or a claim that every possible driver is unsuitable
 Extension enumeration currently does not validate its VkResult/VK_INCOMPLETE
 outcome; the log is not proof of an exhaustively validated extension catalogue.
 
-At current main `6dc376a95fee36ec5be910506a8e6911e9fa1ecf`,
+At the investigated baseline `6dc376a95fee36ec5be910506a8e6911e9fa1ecf`,
 `lib/rt64/src/contrib/plume/plume_vulkan.cpp` checks the actual enabled
 descriptor-indexing features before creating the boundless texture layout.
 Its rejection path logs the reason and calls `std::_Exit(EXIT_FAILURE)`.
@@ -67,8 +70,8 @@ possible test route. The isolated experiment at source `7ecd6430bd66` passed
 CI in [run 40150658088](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40150658088),
 with verified native payloads, guarded private-driver selection and a system
 baseline. A combined test adds the touch controls accepted on Odin at
-`1bc772153fcc`; the Poco user needs those controls too. Neither experiment is
-a confirmed Poco/Retroid fix. The indexing, descriptor, ownership,
+`1bc772153fcc`; the Poco user needs those controls too. Those early CI checks alone established no device
+compatibility. The later d6 test now has the scoped Poco/Turnip result above. The indexing, descriptor, ownership,
 synchronization and timeout guards remain in place. See the
 [combined test instructions](poco-gpu-driver-test.md).
 

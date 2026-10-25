@@ -21,12 +21,13 @@ graphics drivers alongside fixes. Public v1.0.1 remains unchanged until publicat
   verification now binds seven native libraries and compiled process roles,
   with a compatibility alias retaining existing external launcher links,
   with the original v1.0.1 verifier profile retained. Signed-device acceptance
-  and Poco compatibility remain pending.
+  remains pending. A Poco/Turnip working run is now confirmed in the separate d6 test.
 - Experimental custom Vulkan driver import/selection and System Default reset
   under **Graphics**, with selected/loaded details and restart status. A separate
   Android startup/recovery screen opens before Vulkan so driver options remain
   accessible after a failed startup. The system/Turnip switching and rollback
-  passed focused Odin checks; Poco compatibility remains experimental. Setup
+  passed focused Odin checks; a Poco tester also confirms a working game with
+  Turnip in d6. Setup
   appears on first launch or explicit Graphics/recovery entry, with later healthy
   launches opening the normal launcher directly. First setup, healthy reopen and
   explicit Graphics access/return passed focused 7a Odin checks. Selected/Loaded/
@@ -35,6 +36,11 @@ graphics drivers alongside fixes. Public v1.0.1 remains unchanged until publicat
   requested for that spacing-only follow-up. Simulated incomplete-startup recovery,
   System Default reset/retry and normal launcher reopening also passed on Odin.
   Actual failed-driver recovery and signed-release checks remain open.
+
+### Known candidate issue
+
+- Share startup log does nothing on Poco and Odin (MD-010). Fix locally for the
+  update; further Poco logs are deferred until the reporter updates.
 
 ### Fixed
 

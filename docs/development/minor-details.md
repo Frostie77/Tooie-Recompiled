@@ -86,3 +86,9 @@ conversation reports; no marker numbers or capture IDs were supplied.
 MD-001–MD-005 retain their prior open/deferred status. The acceptance above is
 scoped to Frostie's reported 7a checks. No actual failed-driver recovery result
 or on-device observation of the new MD-009 spacing is claimed.
+
+## Log sharing — 26 October 2026
+
+| ID | Observation | Status | Evidence and follow-up |
+|---|---|---|---|
+| MD-010 | Share startup log does nothing; no Android share UI appears | Open — reported on Poco and reproduced on Odin | [Poco result](poco-turnip-result-20261026.md), comment 6398094156; Odin signed v1.1.0 source `33fcd5516c8f`. Diagnose/fix on Odin for the update. Further Poco logs are deferred; the working-game report remains accepted within scope. |

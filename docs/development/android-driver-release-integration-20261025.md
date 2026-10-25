@@ -85,13 +85,14 @@ manifest consumer: unchanged-parent code rejects the new launcher, corrected
 code accepts it and rejects wrong process roles/profile. All six metadata tests pass.
 
 The 1.1.0 artifact download is verified below; local protected signing still needs
-its own result. The combined signed candidate must update v1.0.1 on Odin and retain
+its own result, now supplied below. The combined signed candidate must retain
 ROM/saves/settings/mods while rechecking audio, touch and driver behavior.
 Android 7/8 has host route coverage, not a physical-device result.
 
 The [verified d6 Poco picker test](poco-driver-picker-test-20261025.md) can proceed
 independently. Its phone import avoids the failed c849 PC transfer. Real Poco
-startup recovery, Turnip compatibility/gameplay and touch acceptance remain open.
+startup recovery and detailed touch acceptance remain open; the working Turnip/game
+report is in the [26 October result](poco-turnip-result-20261026.md).
 The accepted Odin 4ee/7a checks keep their original scope and package identities.
 
 ## Verified v1.1.0 candidate — 26 October 2026 (AEDT)
@@ -127,3 +128,24 @@ No protected signing or device installation was performed by these download
 checks. Next: local signing against the previous v1.0.1 APK, then the scoped
 Odin retained-data/audio/touch/driver/legacy-launch checks. Keep PR #32 draft;
 the public README heading and stable feed stay at v1.0.1 until publication.
+
+## Local signing and installation — 26 October 2026
+
+Frostie supplied the local signer verification and replacement-install output
+for Odin serial `7907333f`:
+
+- Source `33fcd5516c8f0b05b9b0ae0399c027e11e2690f1`, version `1.1.0`, code `5`,
+  package `io.github.banjotooierecompiled.release`, driver picker enabled.
+- Signed APK SHA-256 `d6a252a97d44732ce5c3d9e4ebbc05a01847e3472ebbfe0e6241445c024b5005`.
+- Expected protected certificate matched; complete unsigned payload and native/
+  asset provenance passed the local verifier.
+- Previous APK SHA-256 `8e1a89308912b68001d7e2d98dc9f6feb3a43bc8617906645425b2ebc01187b2`,
+  code `4`; direct-update metadata compatible.
+- Windows ADB `install -r` returned **Success**. This supplied terminal result
+  is not an independent installed-APK readback or a data-retention test.
+
+Frostie then reproduced the Poco Share startup log failure on this candidate.
+Track MD-010 and diagnose/fix on Odin for the update. Signed gameplay, retained
+data, audio, touch, driver and legacy-launch acceptance remains open. The
+retained private Debug app is unchanged. Further Poco logs are deferred until
+the reporter updates; its working-game result remains accepted within scope.

@@ -143,8 +143,12 @@ all seven native hashes/Build IDs and JNI/DEX markers were checked. It imports
 the regular tested R8 ZIP on Android, avoiding the failed PC transfer. The older
 c849 source/package stays unchanged. Frostie [posted the d6 phone-import
 instructions](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6397614478)
-on 25 October. The reporter has not yet supplied the d6 result; real failure/
-recovery, Turnip gameplay and phone touch acceptance remain unconfirmed.
+on 25 October. The reporter now confirms a working game with Turnip; the reviewed
+screenshot shows loaded Turnip matching the running game. See the [26 October
+result](poco-turnip-result-20261026.md). Share startup log does nothing on Poco and
+Frostie reproduced it on the signed Odin candidate (MD-010). Fix it on Odin for
+the update; Frostie deferred further Poco logs until the reporter updates.
+Detailed touch/audio/persistence and final signed-phone checks remain separate.
 
 Frostie explicitly deferred updating his retained Odin Debug app until after the
 new release. It remains the accepted locally signed touch/audio build from
@@ -162,7 +166,8 @@ Adreno 650 test from Actions run `40041658420`. Its supplied Debug log ends at
 no descriptor-indexing extension on the recorded discovery path and did not
 enable indexing (the individual features were not queried). The 650-only
 pool-reservation experiment does not address this earlier feature check. No
-Adreno 640 compatibility fix or successful device result is established.
+stock-driver compatibility fix is established. The later d6 Turnip route does
+have the positive manual result recorded above.
 The isolated loader/discovery experiment passed CI at
 `7ecd6430bd6694db99324139b838a9fe37145ea5` (run 40150658088). The combined Poco
 and touch-controls build retains the experimental separate package/data and

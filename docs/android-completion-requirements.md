@@ -76,10 +76,15 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 
 ## Unreleased Debug checks
 
+- [x] Poco reporter confirms the game works with Turnip in the offered d6 test;
+  reviewed screenshot shows Turnip loaded and matching the running game. This is
+  focused manual compatibility acceptance; see the [result](development/poco-turnip-result-20261026.md).
+
 - [x] Normal v1.1.0 / code 5 candidate: clean push/PR CI, real release-signing
   fixture and unsigned export passed at `33fcd5516c8f`. Downloaded candidate and
   Debug artifacts, seven native hashes/Build IDs, assets, driver DEX and bundled
-  helper provenance were verified. Protected signing/device checks remain open;
+  helper provenance were verified. Local protected signing and replacement install
+  passed; functional/data-retention checks remain open;
   see the [integration record](development/android-driver-release-integration-20261025.md).
 
 - [x] Focused Odin driver-picker roundtrip in the separate 4ee GPU test app:
@@ -114,13 +119,10 @@ background/sleep coverage remain open.
 
 ## Still required for full completion
 
-**Next update priorities:** resolve Poco X3 Pro startup compatibility. Its
-verified c849 test includes the touch controls accepted on Odin, but the reporter
-confirms the same system-driver exit. The optional Turnip test and Poco touch
-acceptance remain open; see the [25 October result](development/poco-system-driver-result-20261025.md).
-The next [verified Poco picker test](development/poco-driver-picker-test-20261025.md)
-imports Turnip on the phone instead of using the failed PC transfer. Delivery
-and Poco device results remain pending.
+**Next update priorities:** the Poco/Turnip working run is now accepted within
+its manual scope. Fix Share startup log (MD-010), reproduced on Poco and Odin;
+Frostie chose to diagnose it on Odin and let the reporter send logs after updating.
+See the [26 October result](development/poco-turnip-result-20261026.md).
 The remaining touch matrix and next signed-release checks are still open.
 The Retroid Pocket 5 investigation remains parked pending more data. See the
 [startup-crash record](development/startup-crash-issue26.md).
@@ -149,6 +151,8 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   [driver guide](development/android-driver-picker.md). Extra space between the
   three status fields is implemented for the next build; Frostie requested no
   separate device test. Driver controls remain inside Graphics.
+- [ ] Repair Share startup log (MD-010) on Odin and include the fix in the update;
+  further Poco logs are deferred until the reporter updates.
 - [ ] Verify the combined normal signed release candidate over v1.0.1 / code 4:
   retained ROM/saves/settings/mods, accepted audio/touch behavior, first-launch/
   healthy-reopen driver routing, legacy explicit-launch compatibility alias,

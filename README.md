@@ -64,7 +64,9 @@ Leave it zipped and select it with the driver picker. Turnip is for compatible
 **Adreno** GPUs; Mali devices should use **System Default**. No driver ZIP is
 bundled. The [driver guide](docs/development/android-driver-picker.md) includes
 the checksum and setup details. Odin acceptance covers this tested combination;
-Poco and broader compatibility remain under test.
+A Poco X3 Pro / Android 12 / Adreno 640 tester also reports the game working
+with regular R8 in the separate driver-picker test; see the [result](docs/development/poco-turnip-result-20261026.md).
+Broader compatibility and the final signed release remain under test.
 
 ### Mod support
 
@@ -176,8 +178,9 @@ opacity, movable positions and Auto/On/Off visibility. Configure them under
 **Settings → Touch**. See the [Odin test record](docs/development/android-touch-controls-odin-20261025.md)
 and [touch-controls guide](docs/development/android-touch-controls.md).
 Phone testing and verification in the next signed release remain open. The
-Poco compatibility test includes these controls, but its system-driver startup
-failure remains unresolved; see the [latest result](docs/development/poco-system-driver-result-20261025.md).
+Poco compatibility test includes these controls. Its stock driver failed, but
+the reporter now confirms a working game with Turnip; see the [latest result](docs/development/poco-turnip-result-20261026.md).
+Share startup log currently fails on Poco and Odin and is being addressed for the update.
 Custom-driver settings are implemented under Graphics with a pre-Vulkan Android
 startup/recovery screen. Focused Odin system/Turnip switching, gameplay and
 System Default rollback passed. Focused 7a checks also passed for first-launch/

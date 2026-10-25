@@ -1,12 +1,12 @@
 # Poco X3 Pro: on-device driver-picker test
 
 Prepared 25 October 2026 for issue [#26](https://github.com/Frostie77/Tooie-Recompiled/issues/26).
-Poco compatibility is unconfirmed. Frostie [posted the download/instructions](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6397614478)
+Poco/Turnip now has a [working manual result](poco-turnip-result-20261026.md). Frostie [posted the download/instructions](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6397614478)
 on 25 October. The assistant has not posted an issue reply.
 
 The original c849 logs stop at the system driver's descriptor-indexing feature
 guard. The reporter's subsequent PC staging attempt stopped at a remote SHA-256
-mismatch and reported incomplete files. No successful Turnip run is available.
+mismatch and reported incomplete files. The later d6 phone import now has a working result.
 This test imports through Android's document picker instead of that PC transfer.
 It does not establish the cause of the old script's failure.
 
@@ -17,7 +17,7 @@ It does not establish the cause of the old script's failure.
   GitHub may require sign-in; the artifact expires on 8 November 2026.
 - [Download regular Turnip v26.0.0 R8](https://github.com/K11MCH1/AdrenoToolsDrivers/releases/download/v26.0.0-rc08/Turnip_v26.0.0_R8.zip).
   Leave the driver zipped. This is the regular package accepted on Odin,
-  not an a8xx/Gmem/Sysmem variant. Adreno 640 compatibility remains to test.
+  not an a8xx/Gmem/Sysmem variant. The Poco reporter now confirms this combination works.
 
 | Item | Pinned identity |
 |---|---|
@@ -72,8 +72,9 @@ the Android driver screen remains the recovery route.
 
 ## Result
 
-Instructions were posted by Frostie; all Poco d6 device results are **pending**. Record pre-renderer
-access, real system-driver failure/recovery if observed, import, measured loaded
-driver/backend, launcher/gameplay, touch/audio and reopening. If Turnip fails,
-review its new measured log before changing Vulkan requirements or publishing a
-compatibility claim. The Retroid Pocket 5 investigation remains parked.
+The reporter confirms a working game and supplied a screenshot showing selected/
+loaded Turnip matching the running game. See the [26 October result](poco-turnip-result-20261026.md).
+Share startup log fails on Poco and Odin (MD-010). Frostie chose to fix it on
+Odin for the update; additional reporter logs are deferred until they update.
+Detailed touch/audio/persistence coverage and final signed-phone acceptance
+remain separate. The Retroid Pocket 5 investigation stays parked.
