@@ -85,8 +85,12 @@ those logs, so the next controlled test uses the existing PC staging helper.
 See the [25 October result](poco-system-driver-result-20261025.md).
 The user-facing custom Vulkan driver import/reset interface belongs inside
 Graphics, with no additional settings tab/banner and a pre-renderer recovery
-path. Its package/store core is checkpointed on the separate driver-picker
-branch; UI and device acceptance remain open. Touch acceptance on Odin is
+path. Its package/store, Graphics UI and isolated Android recovery path are
+implemented on the separate driver-picker branch. Cold launch stays on the
+Android startup screen until the user presses Start, before SDL/RT64/Vulkan.
+Host importer/native-consumer/JNI/policy and full Java checks pass; the actual
+APK build and device acceptance remain separate. See the
+[driver settings guide](android-driver-picker.md). Touch acceptance on Odin is
 separate from Poco Vulkan compatibility.
 
 Frostie chose to collect several more fixes before another public release.

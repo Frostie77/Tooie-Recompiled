@@ -117,11 +117,12 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   The focused Odin acceptance above does not complete this matrix; see
   [the touch guide](development/android-touch-controls.md). Verify the next
   signed release separately.
-- [ ] **Next compatibility feature:** add a custom Vulkan driver import/
-  selection UI **inside Graphics**, with no additional settings tab/banner.
-  Include Reset to System Default, loaded/selected details and restart
-  status. Include a pre-renderer selection/reset path for the Poco startup
-  failure. A successful build is not a confirmed driver compatibility fix.
+- [ ] Validate the implemented experimental driver import/selection UI **inside
+  Graphics**, System Default reset, loaded/selected details and restart status.
+  Its Android startup/recovery screen opens before Vulkan; device acceptance and
+  next signed-release verification remain open. There is no additional settings
+  tab/banner. See the [test guide](development/android-driver-picker.md). A
+  successful build is not a confirmed driver compatibility fix.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving

@@ -2,7 +2,7 @@ name: Android APK
 
 on:
   push:
-    branches: [main, feature/android-touch-controls, test/android-turnip-loader, test/android-poco-touch-controls]
+    branches: [main, feature/android-touch-controls, test/android-turnip-loader, test/android-poco-touch-controls, feature/android-driver-picker]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -48,7 +48,7 @@ jobs:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
       TOOIE_CI_ROOT: ${{ github.workspace }}/.ci-android
       TOOIE_ANDROID_TOUCH_TEST: ${{ (github.ref_name == 'feature/android-touch-controls' || github.head_ref == 'feature/android-touch-controls' || (github.event_name == 'workflow_dispatch' && inputs.touch_controls_test)) && '1' || '0' }}
-      TOOIE_ANDROID_DRIVER_TEST: ${{ (github.ref_name == 'test/android-turnip-loader' || github.head_ref == 'test/android-turnip-loader' || github.ref_name == 'test/android-poco-touch-controls' || github.head_ref == 'test/android-poco-touch-controls' || (github.event_name == 'workflow_dispatch' && inputs.gpu_driver_test)) && '1' || '0' }}
+      TOOIE_ANDROID_DRIVER_TEST: ${{ (github.ref_name == 'test/android-turnip-loader' || github.head_ref == 'test/android-turnip-loader' || github.ref_name == 'test/android-poco-touch-controls' || github.head_ref == 'test/android-poco-touch-controls' || github.ref_name == 'feature/android-driver-picker' || github.head_ref == 'feature/android-driver-picker' || (github.event_name == 'workflow_dispatch' && inputs.gpu_driver_test)) && '1' || '0' }}
       TOOIE_RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.prepare_candidate && inputs.version_name || '' }}
       TOOIE_RELEASE_VERSION_CODE: ${{ github.event_name == 'workflow_dispatch' && inputs.prepare_candidate && inputs.version_code || '3' }}
     steps:
@@ -105,6 +105,7 @@ jobs:
             python3 tools/ci/test_verify_android.py
             python3 tools/android-workflow/tests/test_gpu_driver_staging.py
             python3 tools/test_android_vulkan_driver.py --jni-include "$JAVA_HOME/include"
+            python3 tools/test_android_driver_picker.py --android-jar "$ANDROID_HOME/platforms/android-36/android.jar" --jni-include "$JAVA_HOME/include"
             python3 tools/test_touch_debug_preparation.py
             python3 tools/test_android_touch_controls.py --android-jar "$ANDROID_HOME/platforms/android-36/android.jar" --jni-include "$JAVA_HOME/include"
             python3 tools/android-workflow/tests/test_workflow.py

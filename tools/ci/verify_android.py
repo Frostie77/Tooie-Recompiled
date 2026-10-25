@@ -42,13 +42,74 @@ def driver_test_mode():
     return value == "1"
 
 
+def check_driver_java(package):
+    require("classes.dex" in package.namelist(), "APK primary classes.dex is missing")
+    dex = [package.read(name) for name in package.namelist()
+           if re.fullmatch(r"classes(?:[2-9]|[1-9][0-9]+)?\.dex", name)]
+    for marker in (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy",
+                   b"GraphicsDriverActivity", b"GraphicsDriverSettingsActivity", b"showGraphicsDriverSettings",
+                   b"getGraphicsDriverState", b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady"):
+        require(any(marker in data for data in dex), "Driver-picker Java code is missing: " + marker.decode())
+
+
+def check_driver_manifest(xml, package):
+    """Inspect the compiled APK's actual process/export/task roles, not source XML."""
+    lines = xml.splitlines()
+    def blocks(kind):
+        result = []
+        for index, line in enumerate(lines):
+            match = re.match(r"^(\s*)E: " + kind + r"(?:\s|$)", line)
+            if not match:
+                continue
+            indent = len(match[1]); body = []
+            for following in lines[index + 1:]:
+                if following.strip() and len(following) - len(following.lstrip()) <= indent:
+                    break
+                body.append(following)
+            attributes = {}
+            for item in body:
+                attr = re.match(r"^(\s*)A: android:([A-Za-z]+)(?:\([^)]*\))?=(.*)$", item)
+                if attr and len(attr[1]) == indent + 2:
+                    require(attr[2] not in attributes, "duplicate manifest attribute")
+                    value = attr[3]
+                    quoted = re.match(r'"([^"\n]*)"', value)
+                    attributes[attr[2]] = quoted[1] if quoted else re.sub(r"\s+", "", value)
+            result.append((attributes, "\n".join(body)))
+        return result
+    application = blocks("application")
+    require(len(application) == 1 and "process" not in application[0][0], "unexpected application process")
+    activities = blocks("activity")
+    require(len(activities) == 3, "driver test requires exactly three Activity roles")
+    by_name = {attributes.get("name"): (attributes, body) for attributes, body in activities}
+    require(len(by_name) == 3, "duplicate Activity role")
+    prefix = "io.github.banjotooierecompiled."
+    game, launcher, settings = (by_name.get(prefix + name) for name in
+                               ("BanjoTooieSDLActivity", "GraphicsDriverActivity", "GraphicsDriverSettingsActivity"))
+    require(all((game, launcher, settings)), "missing driver Activity role")
+    false, true = "(type0x12)0x0", "(type0x12)0xffffffff"
+    require(game[0].get("exported") == false and game[0].get("process") in (":game", package + ":game") and
+            game[0].get("taskAffinity") == package + ".game", "game process/export/task role differs")
+    require("android.intent.action.MAIN" not in game[1] and "android.intent.category.LAUNCHER" not in game[1],
+            "SDL must not be an external launcher")
+    for role, exported in ((launcher, true), (settings, false)):
+        require(role[0].get("exported") == exported and "process" not in role[0] and
+                role[0].get("taskAffinity") == package + ".drivers" and role[0].get("hardwareAccelerated") == false,
+                "recovery process/export/task role differs")
+    require("android.intent.action.MAIN" in launcher[1] and "android.intent.category.LAUNCHER" in launcher[1],
+            "pre-renderer launcher is missing")
+    require("android.intent.action.MAIN" not in settings[1] and "android.intent.category.LAUNCHER" not in settings[1],
+            "private settings must not be an external launcher")
+
+
 def apk_profile(revision, driver_test):
     require(re.fullmatch(r"[0-9a-f]{40}", revision), "invalid source commit")
     if driver_test:
         return {"package": "io.github.banjotooierecompiled.gputest.g" + revision[:12],
                 "application_label": "Tooie GPU Test " + revision[:12], "min_api": 28,
+                "launcher": "io.github.banjotooierecompiled.GraphicsDriverActivity",
                 "variant": "android-gpu-driver-test", "suffix": "GPU-Test"}
     return {"package": "io.github.banjotooierecompiled", "application_label": "Tooie Recompiled Debug",
+            "launcher": "io.github.banjotooierecompiled.BanjoTooieSDLActivity",
             "min_api": 24, "variant": "debug", "suffix": "Debug"}
 
 
@@ -105,7 +166,7 @@ def check_configuration(source, work, ndk):
         "lib/rt64/src/hle/rt64_present_queue.cpp",
         "lib/rt64/src/render/rt64_transform_processor.cpp")]
     if driver_test:
-        targets.append(source / "src/android_vulkan_driver.cpp")
+        targets += [source / path for path in ("src/android_vulkan_driver.cpp", "src/android_driver_jni.cpp", "src/android_driver_settings.cpp")]
     for target in targets:
         matches = [entry for entry in commands if Path(entry["file"]).resolve() == target.resolve()]
         require(matches, f"missing actual compiler command: {target}")
@@ -168,6 +229,7 @@ def check_apk(source, work, ndk):
         require(len(names) == len(set(names)), "duplicate ZIP entries")
         check_native_entries(names, originals)
         if driver_test:
+            check_driver_java(package)
             require(package.read("assets/program/assets/licenses/Android-NDK-NOTICE.txt") == ndk_notices(ndk),
                     "shared C++ runtime SDK notice differs")
         require({"AndroidManifest.xml", "resources.arsc", "classes.dex"}.issubset(names), "incomplete APK")
@@ -189,6 +251,10 @@ def check_apk(source, work, ndk):
         driver_markers = (b"custom-turnip-test", b"driver-sha256-mismatch", b"event=active mode=")
         require(all(marker in main for marker in driver_markers) if driver_test else
                 all(marker not in main for marker in driver_markers), "driver loader code/variant mismatch")
+        if driver_test:
+            for marker in (b"TooieGraphicsDriver", b"showGraphicsDriverSettings", b"getGraphicsDriverState",
+                           b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady"):
+                require(marker in main, "native driver-picker UI/JNI bridge is missing: " + marker.decode())
         require(b"recomp_on_init" in main, "code-mod startup event registration is missing")
         require(b"Aiming Invert" in main and b"aiming_invert" in main, "saved aiming preference is missing")
         require(b"tooie_aiming_invert" in main, "guest aiming input bridge is missing")
@@ -224,8 +290,11 @@ def check_apk(source, work, ndk):
     badging = subprocess.check_output([str(tools / "aapt"), "dump", "badging", str(apk)], text=True)
     require("package: name='" + profile["package"] + "'" in badging, "Android package identity differs")
     require("application-label:'" + profile["application_label"] + "'" in badging, "Android application label differs")
-    require("launchable-activity: name='io.github.banjotooierecompiled.BanjoTooieSDLActivity'" in badging,
+    require("launchable-activity: name='" + profile["launcher"] + "'" in badging,
             "launch activity differs")
+    if driver_test:
+        xml = subprocess.check_output([str(tools / "aapt"), "dump", "xmltree", str(apk), "AndroidManifest.xml"], text=True)
+        check_driver_manifest(xml, profile["package"])
     require("sdkVersion:'" + str(profile["min_api"]) + "'" in badging and "targetSdkVersion:'35'" in badging, "Android API profile differs")
     require("application-debuggable" in badging, "test APK must support private run-as evidence collection")
     require("uses-permission: name='android.permission.INTERNET'" in badging, "Android update network permission is missing")
@@ -239,6 +308,7 @@ def check_apk(source, work, ndk):
               "variant": profile["variant"], "min_api": profile["min_api"],
               "installation_strategy": "local-resign-debug-update" if variant == "Touch-Debug-Candidate" else "separate-apps",
               "touch_controls": True,
+              "driver_picker": driver_test, "launcher_activity": profile["launcher"],
               "touch_controls_odin_source": "1bc772153fcc7c4192890aa1ce8adf99d6f4ea79",
               "touch_controls_phone_tested": False,
               "apk": filename, "sha256": hashlib.sha256(apk.read_bytes()).hexdigest(),
@@ -258,6 +328,7 @@ def check_apk(source, work, ndk):
     if driver_test:
         shutil.copyfile(source / "tools/android-workflow/stage_gpu_driver.py", output / "stage_gpu_driver.py")
         shutil.copyfile(source / "docs/development/poco-gpu-driver-test.md", output / "GPU-TEST-INSTRUCTIONS.md")
+        shutil.copyfile(source / "docs/development/android-driver-picker.md", output / "DRIVER-SETTINGS-INSTRUCTIONS.md")
     print("PASS: signed Android ARM64 APK, exact native libraries/Build IDs, JNI, assets, icon, name and API profile")
 
 

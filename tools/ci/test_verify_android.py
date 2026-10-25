@@ -16,7 +16,7 @@ from unittest.mock import patch
 import zipfile
 
 from verify_android import (check_update_java, check_touch_java, touch_test_profile,
-                            check_configuration, check_native_entries, apk_profile)
+                            check_configuration, check_native_entries, apk_profile, check_driver_manifest, check_driver_java)
 
 
 class UpdateJavaPackagingTests(unittest.TestCase):
@@ -118,7 +118,7 @@ class DriverVariantPackagingTests(unittest.TestCase):
             with self.subTest(missing=missing), self.assertRaisesRegex(ValueError, "native library"):
                 check_native_entries(["lib/arm64-v8a/" + n for n in names if n != missing], dict.fromkeys(names))
 
-    def configuration(self, mode, cache_mode=None, flags=None, loader_source=True, touch_sources=True):
+    def configuration(self, mode, cache_mode=None, flags=None, loader_source=True, touch_sources=True, driver_ui=True):
         with tempfile.TemporaryDirectory() as temp:
             source = Path(temp) / "source"; work = Path(temp) / "work"; ndk = Path(temp) / "ndk"
             native = work / "native"; native.mkdir(parents=True)
@@ -129,6 +129,7 @@ class DriverVariantPackagingTests(unittest.TestCase):
                        "lib/rt64/src/hle/rt64_present_queue.cpp", "lib/rt64/src/render/rt64_transform_processor.cpp"]
             if touch_sources: targets += ["src/android_touch_input.cpp", "src/android_touch_controls.cpp", "src/android_touch_jni.cpp"]
             if mode == "1" and loader_source: targets += ["src/android_vulkan_driver.cpp"]
+            if mode == "1" and driver_ui: targets += ["src/android_driver_jni.cpp", "src/android_driver_settings.cpp"]
             defines = ["-D" + name + "=0" for name in ("TOOIE_ANDROID_TIMING_TRACE", "TOOIE_ANDROID_GEOMETRY_TRACE", "TOOIE_ANDROID_CORRECTION_TRACE", "TOOIE_VULKAN_QUEUE_ISOLATION_TEST")]
             defines += flags if flags is not None else (["-DTOOIE_ANDROID_DRIVER_TEST=1"] if mode == "1" else [])
             commands = [{"file": str(source / path), "arguments": [str(ndk / "bin/aarch64-linux-android24-clang++"), *defines]} for path in targets]
@@ -139,8 +140,61 @@ class DriverVariantPackagingTests(unittest.TestCase):
     def test_actual_compile_mode_is_checked(self):
         self.configuration("0"); self.configuration("1")
         for mode, options in (("1", {"cache_mode": "OFF"}), ("1", {"flags": []}),
-                              ("0", {"flags": ["-DTOOIE_ANDROID_DRIVER_TEST=1"]}), ("1", {"loader_source": False}), ("1", {"touch_sources": False})):
+                              ("0", {"flags": ["-DTOOIE_ANDROID_DRIVER_TEST=1"]}), ("1", {"loader_source": False}), ("1", {"touch_sources": False}), ("1", {"driver_ui": False})):
             with self.subTest(mode=mode, options=options), self.assertRaises(ValueError): self.configuration(mode, **options)
+
+
+class DriverUiPackagingTests(unittest.TestCase):
+    package = "io.github.banjotooierecompiled.gputest.g" + "a" * 12
+
+    def manifest(self):
+        prefix = "io.github.banjotooierecompiled."
+        lines = ["E: manifest (line=1)", "  E: application (line=2)"]
+        for name, exported, affinity, process, launcher in (
+                ("BanjoTooieSDLActivity", "0x0", ".game", ":game", False),
+                ("GraphicsDriverActivity", "0xffffffff", ".drivers", None, True),
+                ("GraphicsDriverSettingsActivity", "0x0", ".drivers", None, False)):
+            lines += ["    E: activity (line=3)", f'      A: android:name(0x01010003)="{prefix + name}"',
+                      f"      A: android:exported(0x01010010)=(type 0x12){exported}",
+                      f'      A: android:taskAffinity(0x01010012)="{self.package + affinity}"',
+                      "      A: android:hardwareAccelerated(0x010102d3)=(type 0x12)0x0"]
+            if process: lines += [f'      A: android:process(0x01010011)="{process}"']
+            if launcher:
+                lines += ["      E: intent-filter (line=4)", "        E: action (line=5)",
+                          '          A: android:name(0x01010003)="android.intent.action.MAIN"',
+                          "        E: category (line=6)", '          A: android:name(0x01010003)="android.intent.category.LAUNCHER"']
+        return "\n".join(lines)
+
+    def test_compiled_manifest_process_roles(self):
+        xml = self.manifest(); check_driver_manifest(xml, self.package)
+        check_driver_manifest(xml.replace('=":game"', '="' + self.package + ':game"'), self.package)
+        changes = [
+            ("=(type 0x12)0x0", "=(type 0x12)0xffffffff", 1),
+            ('=":game"', '=":other"', 1),
+            (self.package + '.game"', self.package + '.drivers"', 1),
+            ('="io.github.banjotooierecompiled.GraphicsDriverActivity"', '="missing.Activity"', 1),
+            ('      A: android:hardwareAccelerated', '      A: android:process=":game"\n      A: android:hardwareAccelerated', 3),
+            ("      A: android:exported(0x01010010)=(type 0x12)0xffffffff", "      A: android:exported(0x01010010)=(type 0x12)0x0", 1),
+        ]
+        for old, new, count in changes:
+            with self.subTest(change=old), self.assertRaises(ValueError):
+                check_driver_manifest(xml.replace(old, new, count), self.package)
+        for text in ("", xml.replace("A: android:", "unknown: ")):
+            with self.assertRaises(ValueError): check_driver_manifest(text, self.package)
+
+    def test_driver_java_must_be_executable_dex(self):
+        markers = (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy", b"GraphicsDriverActivity",
+                   b"GraphicsDriverSettingsActivity", b"showGraphicsDriverSettings", b"getGraphicsDriverState",
+                   b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady")
+        def check(entries):
+            with io.BytesIO() as stream:
+                with zipfile.ZipFile(stream, "w") as archive:
+                    for name, content in entries.items(): archive.writestr(name, content)
+                with zipfile.ZipFile(stream) as archive: check_driver_java(archive)
+        check({"classes.dex": b"primary", "classes2.dex": b"\0".join(markers)})
+        for missing in markers:
+            with self.subTest(missing=missing), self.assertRaises(ValueError):
+                check({"classes.dex": b"\0".join(m for m in markers if m != missing), "assets/classes2.dex": missing})
 
 
 if __name__ == "__main__":

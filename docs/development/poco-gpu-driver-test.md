@@ -61,6 +61,14 @@ ADB. It requires an explicitly selected device serial and verifies both the
 local and installed APK hashes before changing the test app's driver selection.
 It never installs, launches, uninstalls or clears an app.
 
+## Driver-picker candidates
+
+The original c849 artifact has no in-app picker. New driver-picker candidates
+identify `driver_picker: true` in `build-report.json` and include
+`DRIVER-SETTINGS-INSTRUCTIONS.md`. Their Android startup screen lets you select
+a driver before pressing Start and initializing Vulkan. Follow those instructions
+for the interface; retain the current c849 artifact for its ongoing comparison.
+
 ## First test: system driver
 
 1. Install the exact **GPU-Test** APK supplied with this report. Open **Tooie

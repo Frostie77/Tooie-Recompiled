@@ -113,6 +113,7 @@ final class DriverRuntime {
         String fingerprint=String.valueOf(runtime.getOrDefault("fingerprint",""));
         String selected=snapshot.selected==null?"Invalid selection":snapshot.selected.label();
         String loaded=!active?"No active game":String.valueOf(runtime.getOrDefault("driver_name","Starting…"));
+        if(active && runtime.containsKey("queried") && !Boolean.TRUE.equals(runtime.get("queried")))loaded="Driver properties unavailable";
         if(active && "system".equals(runtime.get("mode"))) loaded="System Default · "+loaded;
         boolean pending=active && snapshot.selected!=null && DriverBootPolicy.restartRequired(snapshot.selected.fingerprint(),fingerprint,true);
         String status=pending?"Restart required to apply selection":!active?"Selected driver applies on next start":fingerprint.isEmpty()?"Starting; driver not measured yet":

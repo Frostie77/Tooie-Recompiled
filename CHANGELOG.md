@@ -12,8 +12,11 @@
 
 ### In development
 
-- A custom Vulkan driver picker/reset interface is planned next. Poco driver
-  compatibility remains experimental; its test APK also includes touch controls.
+- Experimental custom Vulkan driver import/selection and System Default reset
+  under **Graphics**, with selected/loaded details and restart status. A separate
+  Android startup/recovery screen opens before Vulkan so driver options remain
+  accessible after a failed startup. Device acceptance remains pending; Poco
+  driver compatibility is still experimental.
 
 ### Fixed
 

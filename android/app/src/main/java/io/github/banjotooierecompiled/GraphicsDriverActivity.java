@@ -31,6 +31,7 @@ public class GraphicsDriverActivity extends Activity {
     private static final int PICK=4107;
     private final Handler main=new Handler(Looper.getMainLooper());
     private LinearLayout body;
+    private LinearLayout driverOptions;
     private TextView summary;
     private boolean busy,paused=true,handled,pickerRequested,settingsOnly;
     private int pendingAction;
@@ -50,16 +51,21 @@ public class GraphicsDriverActivity extends Activity {
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);
         int pad=(int)(20*getResources().getDisplayMetrics().density);body.setPadding(pad,pad,pad,pad);
         scroll.addView(body);setContentView(scroll);
-        TextView title=new TextView(this);title.setText("Graphics driver");title.setTextSize(24);body.addView(title);
-        TextView help=new TextView(this);help.setText("Choose System Default or import a Mesa Turnip ZIP for a compatible Adreno GPU. Mali devices should use System Default. Changes apply after restarting the game.");body.addView(help);
+        TextView title=new TextView(this);title.setText(settingsOnly?"Graphics driver":"Tooie Recompiled");title.setTextSize(24);body.addView(title);
         summary=new TextView(this);summary.setTextIsSelectable(true);summary.setPadding(0,pad,0,pad);body.addView(summary);
+        button("Start / return to game",this::start);
+        button("Graphics driver options",()->driverOptions.setVisibility(View.VISIBLE));
+        LinearLayout page=body;
+        driverOptions=new LinearLayout(this);driverOptions.setOrientation(LinearLayout.VERTICAL);page.addView(driverOptions);
+        driverOptions.setVisibility(settingsOnly?View.VISIBLE:View.GONE);body=driverOptions;
+        TextView help=new TextView(this);help.setText("Choose System Default or import a Mesa Turnip ZIP for a compatible Adreno GPU. Mali devices should use System Default. Changes apply after restarting the game.");body.addView(help);
         button("Import driver ZIP",this::pick);
         button("Select installed driver",this::choose);
         button("Reset to System Default",()->change(()->DriverRuntime.store(this).reset(),"System Default selected."));
         button("Loaded / selected details",()->{if(current!=null)new AlertDialog.Builder(this).setTitle("Graphics driver details").setMessage(current.labels[3]).setPositiveButton("Close",null).show();});
-        button("Start / return to game",this::start);
         button("Restart game to apply selection",this::confirmRestart);
         button("Share startup log",this::share);
+        body=page;
         button("Close",this::finish);
     }
     private void configureIntent(Intent intent) {
@@ -78,7 +84,9 @@ public class GraphicsDriverActivity extends Activity {
         } catch(RuntimeException unsupported) { android.util.Log.i("TooieDriver","Recovery shortcut is unavailable",unsupported); }
     }
     @Override protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);setIntent(intent);configureIntent(intent);handled=false;refresh(false);
+        super.onNewIntent(intent);setIntent(intent);configureIntent(intent);handled=false;
+        if(driverOptions!=null)driverOptions.setVisibility(settingsOnly?View.VISIBLE:View.GONE);
+        refresh(false);
     }
     @Override protected void onSaveInstanceState(Bundle state) {
         state.putBoolean("picker_requested",pickerRequested);state.putBoolean("handled",handled);super.onSaveInstanceState(state);
@@ -105,10 +113,11 @@ public class GraphicsDriverActivity extends Activity {
                 if(!paused && !handled) {
                     handled=true;
                     DriverBootPolicy.Action action=DriverBootPolicy.decide(settingsOnly,result.validSelection,result.attempted,result.ready,result.pid);
-                    if(action==DriverBootPolicy.Action.START || action==DriverBootPolicy.Action.CONTINUE) {start();return;}
+                    if(action==DriverBootPolicy.Action.CONTINUE) {start();return;}
+                    if(action==DriverBootPolicy.Action.START) {message="Ready. Choose Start or open Graphics driver options before starting Vulkan.";}
                     if(action==DriverBootPolicy.Action.WAIT) {message="Waiting for game startup. Driver selection and reset remain available here.";}
                     if(action==DriverBootPolicy.Action.UNKNOWN) {message="Cannot verify the game process. Close and reopen the test app before restarting it.";}
-                    if(action==DriverBootPolicy.Action.RECOVER && !settingsOnly) {message="The previous startup did not reach the menu. You can import a driver or reset to System Default before trying again.";}
+                    if(action==DriverBootPolicy.Action.RECOVER && !settingsOnly) {driverOptions.setVisibility(View.VISIBLE);message="The previous startup did not reach the menu. You can import a driver or reset to System Default before trying again.";}
                     if(pendingAction==1){pendingAction=0;pick();return;}
                     if(pendingAction==2){pendingAction=0;change(()->DriverRuntime.store(this).reset(),"System Default selected.");return;}
                 }
