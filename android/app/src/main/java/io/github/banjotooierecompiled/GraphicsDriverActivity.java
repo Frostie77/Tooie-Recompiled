@@ -37,7 +37,6 @@ public class GraphicsDriverActivity extends Activity {
     private int pendingAction;
     private DriverRuntime.Snapshot current;
     private String message="";
-    private long launchingAt;
     private int stoppingPid;
     private long stoppingAt;
     private final Runnable poll=()->refresh(false);
@@ -113,17 +112,13 @@ public class GraphicsDriverActivity extends Activity {
                 if(!paused && !handled) {
                     handled=true;
                     DriverBootPolicy.Action action=DriverBootPolicy.decide(settingsOnly,result.validSelection,result.attempted,result.ready,result.pid);
-                    if(action==DriverBootPolicy.Action.CONTINUE) {start();return;}
+                    if(action==DriverBootPolicy.Action.CONTINUE) {message="The game is running. Choose Start / return to game when ready.";}
                     if(action==DriverBootPolicy.Action.START) {message="Ready. Choose Start or open Graphics driver options before starting Vulkan.";}
                     if(action==DriverBootPolicy.Action.WAIT) {message="Waiting for game startup. Driver selection and reset remain available here.";}
                     if(action==DriverBootPolicy.Action.UNKNOWN) {message="Cannot verify the game process. Close and reopen the test app before restarting it.";}
                     if(action==DriverBootPolicy.Action.RECOVER && !settingsOnly) {driverOptions.setVisibility(View.VISIBLE);message="The previous startup did not reach the menu. You can import a driver or reset to System Default before trying again.";}
                     if(pendingAction==1){pendingAction=0;pick();return;}
                     if(pendingAction==2){pendingAction=0;change(()->DriverRuntime.store(this).reset(),"System Default selected.");return;}
-                }
-                if(!paused && launchingAt>0 && result.pid>0 && result.ready) {launchingAt=0;bringGame();return;}
-                if(launchingAt>0 && (result.pid==0 && SystemClock.elapsedRealtime()-launchingAt>1500 || SystemClock.elapsedRealtime()-launchingAt>15000)) {
-                    launchingAt=0;message="Startup did not reach the menu. Review the driver details or share the startup log.";
                 }
                 schedule();
             });
@@ -173,17 +168,17 @@ public class GraphicsDriverActivity extends Activity {
     private void start() {
         if(busy)return;busy=true;
         DriverRuntime.IO.execute(()->{
-            String error="";boolean begin=false;
+            String error="";
             try {
                 int pid=DriverRuntime.gamePid(this);
                 if(pid<0)throw new java.io.IOException("Cannot verify whether the game is running.");
-                if(pid==0) {DriverRuntime.beginAttempt(this);begin=true;}
-            }catch(Exception failure){error=failure.getMessage();}
-            final String failure=error;final boolean newAttempt=begin;
+                if(pid==0) DriverRuntime.beginAttempt(this);
+            }catch(Exception failure){error=String.valueOf(failure.getMessage());}
+            final String failure=error;
             main.post(()->{
                 busy=false;if(paused || isFinishing())return;
                 if(!failure.isEmpty()){message=failure;refresh(false);return;}
-                if(newAttempt)launchingAt=SystemClock.elapsedRealtime();bringGame();schedule();
+                bringGame();schedule();
             });
         });
     }

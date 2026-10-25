@@ -8,7 +8,9 @@ GPU test candidate; device acceptance is pending. No public release is made.
 ## Start and recovery before Vulkan
 
 Opening the experimental app first shows an Android startup screen without
-loading SDL, RT64 or a Vulkan driver. Choose **Start / return to game** to start
+loading SDL, RT64 or a Vulkan driver. Reopening the icon also stays on this
+screen when a game process already exists; it never automatically forwards to
+a potentially black game window. Choose **Start / return to game** to start
 Vulkan, or **Graphics driver options** to import/select/reset first. The full
 rendered game menu and gameplay still require a compatible driver.
 
