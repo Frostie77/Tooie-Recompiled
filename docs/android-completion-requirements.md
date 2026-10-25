@@ -113,7 +113,8 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   [the touch guide](development/android-touch-controls.md). Verify the next
   signed release separately.
 - [ ] **Next compatibility feature:** add a custom Vulkan driver import/
-  selection UI, Reset to System Default, loaded/selected details and restart
+  selection UI **inside Graphics**, with no additional settings tab/banner.
+  Include Reset to System Default, loaded/selected details and restart
   status. Include a pre-renderer selection/reset path for the Poco startup
   failure. A successful build is not a confirmed driver compatibility fix.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
