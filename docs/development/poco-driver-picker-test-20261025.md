@@ -1,8 +1,8 @@
 # Poco X3 Pro: on-device driver-picker test
 
 Prepared 25 October 2026 for issue [#26](https://github.com/Frostie77/Tooie-Recompiled/issues/26).
-Poco compatibility is unconfirmed. Frostie will send the download/instructions;
-the assistant has not posted an issue reply.
+Poco compatibility is unconfirmed. Frostie [posted the download/instructions](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6397614478)
+on 25 October. The assistant has not posted an issue reply.
 
 The original c849 logs stop at the system driver's descriptor-indexing feature
 guard. The reporter's subsequent PC staging attempt stopped at a remote SHA-256
@@ -44,25 +44,21 @@ results do not establish that this d6 APK has run on either device.
    **Tooie GPU Test d6d21c28f262**. Keep v1.0.1 and the older c849 test installed;
    this is another separate app with independent data and a CI signer.
    No local re-signing, uninstall, data clear or PC staging command is needed.
-2. Confirm Android driver setup appears. Try **Start / return to game** with
-   **System Default** for a fresh comparison. If it closes or fails before the
-   Tooie launcher, reopen this test icon. Record whether recovery appears and
-   use **Share startup log** to save the System Default result.
-3. Open **Graphics driver options → Import driver ZIP** and select regular
+2. Confirm Android driver setup appears. Open **Graphics driver options → Import driver ZIP** and select regular
    `Turnip_v26.0.0_R8.zip`. Confirm **Selected** names Mesa Turnip. If import
    fails, report its exact message and share the startup details.
-4. Choose **Start / return to game**. If an earlier game process is still running
+3. Choose **Start / return to game**. If an earlier game process is still running
    and restart is required, use **Restart game to apply selection** and confirm.
    Importing alone does not change a running renderer's driver.
-5. If the launcher opens, select your own supported USA ROM. Under
+4. If the launcher opens, select your own supported USA ROM. Under
    **Settings → Graphics**, check **Loaded** names Turnip and **Status** says the
    selected driver matches the running game. Choose **Settings → Touch → On**
    if needed. Try movement, jumping, simultaneous touches and sound.
-6. Close/reopen and report whether the normal launcher and gameplay work. Check
+5. Close/reopen and report whether the normal launcher and gameplay work. Check
    Home/return audio too. Share the Turnip startup log even if startup fails.
    During a successful run reopen the driver screen through
    **Settings → Graphics → Driver details / restart**; after an exit use the icon.
-7. Attach the two shared texts separately, stating where each attempt stopped
+6. Attach the shared Turnip text, stating where the attempt stopped
    and the visible Selected/Loaded/Status values. A screenshot is useful if
    convenient. Keep the evidence until Frostie has reviewed it.
 
@@ -76,7 +72,7 @@ the Android driver screen remains the recovery route.
 
 ## Result
 
-Test delivery and all Poco device results are **pending**. Record pre-renderer
+Instructions were posted by Frostie; all Poco d6 device results are **pending**. Record pre-renderer
 access, real system-driver failure/recovery if observed, import, measured loaded
 driver/backend, launcher/gameplay, touch/audio and reopening. If Turnip fails,
 review its new measured log before changing Vulkan requirements or publishing a

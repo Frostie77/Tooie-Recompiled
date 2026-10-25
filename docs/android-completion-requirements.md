@@ -1,6 +1,6 @@
 # Tooie Recompiled completion checklist
 
-Updated: 25 October 2026.
+Updated: 26 October 2026.
 
 The goal is a reliable native Android ARM64 release for the Android,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
@@ -76,6 +76,12 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 
 ## Unreleased Debug checks
 
+- [x] Normal v1.1.0 / code 5 candidate: clean push/PR CI, real release-signing
+  fixture and unsigned export passed at `33fcd5516c8f`. Downloaded candidate and
+  Debug artifacts, seven native hashes/Build IDs, assets, driver DEX and bundled
+  helper provenance were verified. Protected signing/device checks remain open;
+  see the [integration record](development/android-driver-release-integration-20261025.md).
+
 - [x] Focused Odin driver-picker roundtrip in the separate 4ee GPU test app:
   startup options, system-driver gameplay, picker cancellation/resume, Turnip
   import/loaded status, deliberate restart, playable controls/sound and System
@@ -147,8 +153,8 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   retained ROM/saves/settings/mods, accepted audio/touch behavior, first-launch/
   healthy-reopen driver routing, legacy explicit-launch compatibility alias,
   System Default/Turnip and startup recovery.
-  Normal-build integration is implemented; unsigned 1.1.0 / code 5 preparation
-  and CI/signing/device results must be recorded separately.
+  CI and unsigned 1.1.0 / code 5 download verification passed. Local protected
+  signing and device results must be recorded separately.
 - [ ] After the new release, update Frostie's retained Odin Debug app with its
   established signer and data preserved. First extend local preparation to seven
   native libraries and attached capture to the `:game` process; generate a new

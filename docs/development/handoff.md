@@ -1,6 +1,6 @@
 # Engineering handoff
 
-Updated: 25 October 2026.
+Updated: 26 October 2026.
 
 Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).
@@ -117,12 +117,14 @@ The release package/signer and API 24 minimum are retained. Android 7/8 bypasses
 the newer store and uses System Default; Android 9+ gets the driver UI/recovery.
 The verifier binds seven native libraries and compiled process roles, retains
 legacy v1.0.1 checks and rejects GPU-test provenance for releases. Host driver,
-touch, Java/JNI, update and release checks pass. Full CI and the combined signed
-candidate still need their own results. Feature-branch pushes prepare an unsigned
+touch, Java/JNI, update and release checks pass. Full v1.1.0 push/PR CI and
+downloaded-candidate verification passed at `33fcd5516c8f0b05b9b0ae0399c027e11e2690f1`;
+the combined locally signed Odin check remains open. Feature-branch pushes prepare an unsigned
 1.1.0 / code 5 candidate after CI's signing fixture passes. Both normal-build CI
 runs passed at source `32142e8ea45877e7abb4e4ab4f192c4e28bcb201`, validating the
 normal package and actual release-signing fixture. Its unsigned 1.0.2 artifact is
-superseded by the selected 1.1.0 feature-update target; rebuild before local signing.
+superseded by the verified 1.1.0 feature-update candidate. Use the new candidate
+and pinned hashes in the [integration record](android-driver-release-integration-20261025.md).
 The feed-preparation helper now validates the new driver launcher/process layout;
 six host metadata tests pass, including an unchanged-parent failing control.
 The 1.1.0 candidate also retains the old SDL launch component as an exported
@@ -139,8 +141,10 @@ The next Poco step is the [verified d6 on-device picker test](poco-driver-picker
 including touch controls and audio. Its successful CI artifact, ZIP/APK digests,
 all seven native hashes/Build IDs and JNI/DEX markers were checked. It imports
 the regular tested R8 ZIP on Android, avoiding the failed PC transfer. The older
-c849 source/package stays unchanged. Frostie will send the instructions; test
-delivery, real failure/recovery and Poco Turnip gameplay remain unconfirmed.
+c849 source/package stays unchanged. Frostie [posted the d6 phone-import
+instructions](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6397614478)
+on 25 October. The reporter has not yet supplied the d6 result; real failure/
+recovery, Turnip gameplay and phone touch acceptance remain unconfirmed.
 
 Frostie explicitly deferred updating his retained Odin Debug app until after the
 new release. It remains the accepted locally signed touch/audio build from

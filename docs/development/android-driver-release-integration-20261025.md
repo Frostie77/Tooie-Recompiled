@@ -84,8 +84,8 @@ The feed generator's new-driver profile is now tested against the actual
 manifest consumer: unchanged-parent code rejects the new launcher, corrected
 code accepts it and rejects wrong process roles/profile. All six metadata tests pass.
 
-Downloaded 1.1.0 artifact verification and local protected signing still need
-their own results. The combined signed candidate must update v1.0.1 on Odin and retain
+The 1.1.0 artifact download is verified below; local protected signing still needs
+its own result. The combined signed candidate must update v1.0.1 on Odin and retain
 ROM/saves/settings/mods while rechecking audio, touch and driver behavior.
 Android 7/8 has host route coverage, not a physical-device result.
 
@@ -93,3 +93,37 @@ The [verified d6 Poco picker test](poco-driver-picker-test-20261025.md) can proc
 independently. Its phone import avoids the failed c849 PC transfer. Real Poco
 startup recovery, Turnip compatibility/gameplay and touch acceptance remain open.
 The accepted Odin 4ee/7a checks keep their original scope and package identities.
+
+## Verified v1.1.0 candidate — 26 October 2026 (AEDT)
+
+[Push CI 40194929894](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40194929894)
+and [PR CI 40194934134](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40194934134)
+passed at source `33fcd5516c8f0b05b9b0ae0399c027e11e2690f1`, including actual
+ARM64/API24 compile commands, APK/compiled alias roles, inherited JNI coverage,
+real ephemeral-key release signing, unsigned payload binding and candidate export.
+
+| Item | Verified identity |
+|---|---|
+| Candidate | [Unsigned artifact 12600020878](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40194929894/artifacts/12600020878) |
+| Candidate ZIP | 14,044,621 bytes; SHA-256 `25e34288d98fa6b00a5b250ba67dd4270906e832a2b2d324f26882b7f49a0543` |
+| Unsigned APK | `Tooie-Recompiled-Android-arm64-33fcd5516c8f-Unsigned.apk` |
+| Unsigned APK SHA-256 | `7e5b68e7410eae94ef04e2003c61a8f912ad87ac412e187e4c5a513052a48456` |
+| Native/Android version | `1.1.0` / code `5` |
+| Release package | `io.github.banjotooierecompiled.release` |
+| Debug artifact | [12599666653](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40194929894/artifacts/12599666653) |
+| Debug ZIP SHA-256 | `02dada7255463e8a8ba0c09cac8eb9dd9a7e5ff73632bd9833e7077cfe32e1ab` |
+| Verified Debug APK SHA-256 | `0c23f15623dae9b94a8be8b6fd79952c01f85e0606f6ed930eb0ae556658dd21` |
+| libmain SHA-256 | `4b59f6da9b72d81e73345c8b4d6665e9e0dfad19419de1f418b899fee15707f1` |
+| libmain Build ID | `c25e76b34783f388a7b84e3f5951e2f2a83fd89d` |
+
+Both downloaded ZIP sizes/digests/CRCs and every listed checksum were verified.
+The reports agree on the exact source, native version, driver/touch features and
+seven-library profile. Candidate native/assets match the verified Debug input;
+every ARM64 library hash/ELF Build ID and driver DEX marker was checked. Bundled
+signer/verifier/public identities/COPYING match source 33 byte-for-byte. The pinned
+protected certificate remains `129f612a7b1b35c120fd84b7d49923da882b626a248f8d55470f7dfd8ce8d0e1`.
+
+No protected signing or device installation was performed by these download
+checks. Next: local signing against the previous v1.0.1 APK, then the scoped
+Odin retained-data/audio/touch/driver/legacy-launch checks. Keep PR #32 draft;
+the public README heading and stable feed stay at v1.0.1 until publication.
