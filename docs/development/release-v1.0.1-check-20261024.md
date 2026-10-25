@@ -59,12 +59,20 @@ the app and Continue. Audio is briefly abnormal for about one second, then
 normal. A full close/relaunch is clean. Background/return remains open because
 of this audio result; sleep/wake has not been separately confirmed.
 
-Read-only inspection found that `src/queued_audio.h` has no application
+Inspection of the v1.0.1 source found that `src/queued_audio.h` has no application
 background/resume reset, while SDL 2.32.10's Android nonblocking event pump
 pauses playback devices. Retained queued audio is a possible lead, not an
 established cause. A matched Home/resume run in Frostie's retained Debug app
 can expose its existing private audio log for driver, queue-depth and decimation
-correlation. No runtime/audio code has been changed for this investigation.
+correlation. That initial inspection made no runtime/audio changes.
+
+A subsequent **unreleased Debug** candidate from [PR #29](https://github.com/Frostie77/Tooie-Recompiled/pull/29)
+passed the focused Home/resume audio check on 24 October. It was re-signed with
+the established Debug key, verified against the exact CI payload and installed
+with `adb install -r`; Frostie then reported the glitch fixed. See the
+[exact test record](history/android-home-resume-audio-20261024.md). No fixed APK
+has been published, and Frostie chose to collect more fixes before the next
+release. This does not change the v1.0.1 result recorded above.
 
 ## Public release and feed
 
@@ -88,8 +96,9 @@ on Odin.
   v1.0.0 feed produced the expected no-newer result; that did not exercise a newer
   release's API lookup. The newer-notice/browser checks are planned for the
   next update.
-- Android background/return and sleep/wake remain open. Broader release/local
-  Debug ROM/save/mod independence, fresh defaults and own-channel updates also
+- Public-release Home/resume acceptance and broader Android background/return
+  and sleep/wake remain open despite the focused unreleased Debug fix. Broader
+  release/local Debug ROM/save/mod independence, fresh defaults and own-channel updates also
   remain separate from the accepted basic settings comparison.
 - Retroid Pocket 5 issue #26 and its separate Adreno 650 experiment are not
   resolved by this candidate. Known Jiggy lines, dialogue shift and intro/demo
