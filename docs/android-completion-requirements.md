@@ -85,6 +85,12 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
   launcher on reopen, explicit driver-details access and return with controls
   working, controller focus scrolling and clearer driver values. See the same
   [manual record](development/android-driver-picker-odin-20261025.md).
+- [x] Focused 7a simulated incomplete-startup recovery: the corrected PC helper
+  verified the installed APK and backed up/marked only its startup status;
+  normal icon launch showed recovery, System Default reset/retry reached the
+  launcher, and exiting/reopening returned directly to the normal launcher.
+  This tests the recovery route, not an actual Vulkan-driver crash. See the same
+  [manual record](development/android-driver-picker-odin-20261025.md).
 - [x] Configurable floating touch controls accepted on Odin for the next update.
   Frostie confirmed they work and are customizable. The captured overlay and
   native input consumption support this focused result; see the
@@ -126,12 +132,11 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   The focused Odin acceptance above does not complete this matrix; see
   [the touch guide](development/android-touch-controls.md). Verify the next
   signed release separately.
-- [ ] Finish driver failed-start recovery, setup-state retention after reset/
-  import, broader compatibility and the next signed release. Healthy startup,
-  explicit settings access/return, scrolling and distinct values passed in 7a.
-  The original marker was unchanged after a PC-helper command-mode error;
-  corrected recovery preparation/retry is pending. See the
-  [manual record](development/android-driver-picker-odin-20261025.md) and
+- [ ] Extend driver checks to an actual Vulkan-driver startup failure, setup-state
+  retention across custom-driver import/reset, broader compatibility and the next
+  signed release. Healthy startup, manual access/return, scrolling, distinct
+  values and simulated incomplete-startup recovery/reset/reopen passed in 7a.
+  See the [manual record](development/android-driver-picker-odin-20261025.md) and
   [driver guide](development/android-driver-picker.md). Extra space between the
   three status fields is implemented for the next build; Frostie requested no
   separate device test. Driver controls remain inside Graphics.

@@ -180,6 +180,7 @@ Custom-driver settings are implemented under Graphics with a pre-Vulkan Android
 startup/recovery screen. Focused Odin system/Turnip switching, gameplay and
 System Default rollback passed. Focused 7a checks also passed for first-launch/
 healthy-reopen routing, explicit Graphics access/return, scrolling and clearer
-values. Extra spacing is implemented for the next build; recovery and the next
-signed-release checks remain open. See the
+values. A simulated incomplete-startup recovery, System Default reset/retry and
+subsequent direct launcher reopen also passed. Extra spacing is implemented for
+the next build; actual failed-driver and signed-release checks remain open. See the
 [driver-picker record](docs/development/android-driver-picker-odin-20261025.md).

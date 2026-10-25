@@ -7,8 +7,9 @@ GPU test candidate. The [Odin manual record](android-driver-picker-odin-20261025
 confirms startup, system/Turnip switching, gameplay, cancellation/resume and
 System Default rollback. First-launch/healthy-reopen behavior, explicit Graphics
 access/return, controller scrolling and clearer values also passed focused 7a
-Odin checks. Recovery and signed-release checks remain open. No public release
-is made.
+Odin checks. Simulated incomplete-startup recovery, System Default reset/retry
+and normal reopening also passed in 7a. Actual failed-driver and signed-release
+checks remain open. No public release is made.
 
 ## Start and recovery before Vulkan
 
@@ -96,9 +97,11 @@ than repeatedly reading/hashing files.
 
 The 4ee switching and 7a healthy startup/navigation checks are accepted within
 their recorded scope. The matrix below remains for broader candidate/release
-coverage. The initial recovery-helper failure was traced to ADB command handling;
-the original device status was unchanged. A corrected preparation/recovery retry
-is pending; see the [manual record](android-driver-picker-odin-20261025.md).
+coverage. The initial recovery-helper failure was corrected. The backed-up
+incomplete-startup fixture then passed normal-icon recovery, System Default
+reset/retry and direct normal-launcher reopen in 7a; see the
+[manual record](android-driver-picker-odin-20261025.md). This is a simulated
+startup failure, not an actual Vulkan-driver crash.
 
 - On a fresh test app, confirm the first-launch driver screen appears. After
   starting successfully, close/reopen and confirm it goes directly to the normal

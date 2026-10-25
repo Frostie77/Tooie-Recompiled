@@ -22,7 +22,9 @@
   explicit Graphics access/return passed focused 7a Odin checks. Selected/Loaded/
   Status values use light blue beside white labels, with extra vertical space
   between the three fields in the next build. No separate device retest was
-  requested for that spacing-only follow-up. Failed-start recovery remains open.
+  requested for that spacing-only follow-up. Simulated incomplete-startup recovery,
+  System Default reset/retry and normal launcher reopening also passed on Odin.
+  Actual failed-driver recovery and signed-release checks remain open.
 
 ### Fixed
 

@@ -2,9 +2,10 @@
 
 Status: focused manual Odin system/Turnip switching passed in 4ee. First-launch/
 healthy-reopen routing, explicit Graphics access/return, controller scrolling and
-clearer values passed in 7a. Recovery awaits a retry with corrected PC-helper
-command handling; the original runtime status is confirmed unchanged. Actual
-failed-driver recovery, Poco and signed-release checks remain open.
+clearer values passed in 7a. The corrected helper then prepared a simulated
+incomplete startup; recovery, System Default reset/retry and a subsequent direct
+normal-launcher reopen passed. Actual failed-driver recovery, Poco and
+signed-release checks remain open.
 
 ## Exact test build
 
@@ -78,7 +79,8 @@ The additional startup-screen request was checked later in 7a, as recorded below
 - **MD-008:** Show driver setup on first launch, explicit Graphics/recovery
   entry or a failed/incomplete startup. Later healthy launches go directly to
   the Tooie launcher. A saved setup marker and guarded automatic routing are
-  implemented. Healthy startup/manual access passed in 7a; recovery is pending.
+  implemented. Healthy startup/manual access and simulated incomplete-startup
+  recovery/reset/reopen passed in 7a; actual driver-crash coverage is separate.
 
 These observations came from conversation during this manual test, not numbered
 capture markers. Do not invent marker IDs or classify them as existing rendering
@@ -154,8 +156,8 @@ The subsequent read-only diagnostics establish:
   expected status 73 and exact `TOOIE_CONTROL` output.
 
 The original helper quoted an already escaped raw-exec argument and treated
-that transport's zero status as command success. The installed runtime marker
-was not changed; there is no failed-driver or successful recovery result here.
+that transport's zero status as command success. This initial attempt left the
+installed runtime marker unchanged and did not complete a recovery test.
 This is a PC-helper defect, not evidence about driver compatibility.
 
 The correction uses `shell` for status reads and the quoted write script.
@@ -172,14 +174,44 @@ runs the actual outer and inner shells. It reproduces the same readback failure
 with the unchanged original helper. The correction passes the successful
 publication case plus 15 rejection controls, including misleading raw success,
 lost exit status, bad quoting, unreadable state, partial copy/transfer and
-process/state races. This is host validation; the corrected device preparation
-and subsequent recovery-screen/retry check are still pending.
+process/state races. The corrected device preparation and focused manual recovery
+result are recorded below.
 
 The helper backs up diagnostic startup state and changes only `menu_ready` to
-false in this exact test app. Even a successful simulated incomplete-startup
-check would not establish an actual Vulkan-driver crash or Poco compatibility.
+false in this exact test app. A simulated incomplete-startup check does not
+establish an actual Vulkan-driver crash or Poco compatibility.
 Poco's separate raw driver-transfer failure remains a separate investigation;
 this quoted-script diagnostic does not establish its cause.
+
+### Corrected recovery fixture and manual acceptance
+
+Frostie ran the corrected helper from
+`9fae3a414bc9783450c988cf8f230b6e2a7d3542`, verified against helper SHA-256
+`d3384cffcdd37b8468eeb7f468975bb931a9533a287b8fc644188dfcb354fdfd`.
+It reported backup folder `recovery-check-f409b8d02ce5` and:
+
+> PASS: exact installed test APK verified; startup status backed up and marked incomplete.
+
+That result follows the helper's exact installed-APK check, multiline shell/
+exit-status control, native hashes, backup and readback checks, and unchanged
+boot/setup-marker checks. It prepares a diagnostic `menu_ready: false` fixture;
+it does not crash Vulkan, replace a driver or clear app data.
+
+The subsequent manual reports complete these additional focused checks:
+
+7. Opening the normal app icon showed the recovery screen and the message
+   **The previous startup did not reach the menu.**
+8. After the requested Reset to System Default and Start / return to game,
+   Frostie reported being at the normal launcher.
+9. After exiting through the launcher and reopening the normal icon, Frostie
+   again reported the normal launcher, without the recovery screen.
+
+The simulated recovery route, reset/retry and return to healthy direct launch
+are accepted on the exact installed 7a APK. No additional gameplay/audio window,
+new screenshot bundle, full log capture or final JSON-state dump was supplied.
+This does not convert the simulation into an actual failed-driver test or prove
+Poco compatibility. The focused test is complete; further device instructions
+belong to the next release-candidate or broader compatibility check.
 
 ### Additional spacing request
 
@@ -190,6 +222,12 @@ source change groups these three fields with 24-unit vertical gaps, leaving
 white labels and light-blue values. It is for the next build, not the installed
 7a APK; no new device appearance result is claimed.
 
-Driver reset/import retaining first-launch setup state, actual failed-driver
-recovery, broader compatibility and the combined signed-release checks remain
-open.
+System Default reset and subsequent direct launcher reopen passed in the
+simulated-recovery sequence. Setup-state retention across custom-driver import/
+reset, actual failed-driver recovery, broader compatibility and combined signed-release
+checks remain open.
+
+The later spacing source at `d6d21c28f26226a65e63e7a3005201b239c5de97`
+passed [Android CI run 40187040532](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40187040532).
+That is a build result, not a new on-device spacing observation; Frostie
+requested no separate device retest for it.

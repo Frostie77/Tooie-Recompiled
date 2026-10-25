@@ -81,7 +81,10 @@ Touch controls are implemented and accepted for the next update on Odin.
 The combined c849 Poco test includes the accepted touch/audio source and guarded
 graphics experiment. The reporter has confirmed the same startup exit with the
 system driver; both new logs were reviewed. Turnip has not been selected in
-those logs, so the next controlled test uses the existing PC staging helper.
+those logs. The reporter's later PC staging attempt stopped at a remote SHA-256
+mismatch; no successful Turnip staging/gameplay result is available. Investigate
+that raw-transfer path separately; the Odin recovery helper's quoted-script
+bug does not establish the cause of the Poco transfer failure.
 See the [25 October result](poco-system-driver-result-20261025.md).
 The user-facing custom Vulkan driver import/reset interface belongs inside
 Graphics, with no additional settings tab/banner and a pre-renderer recovery
@@ -89,22 +92,29 @@ path. Its package/store, Graphics UI and isolated Android recovery path are
 implemented on the separate driver-picker branch. The first launch shows driver setup before SDL/RT64/Vulkan; the requested
 revision remembers setup and sends subsequent healthy launches directly to the
 normal launcher. Explicit Graphics/recovery entry or failed/incomplete startup
-still shows the driver screen. This revised flow awaits its own device check.
+still shows the driver screen. Focused 7a Odin checks now accept first-launch
+setup, healthy direct launcher reopen and explicit Graphics access/return.
 The 4ee APK passed CI and downloaded-artifact verification. Frostie reports
 startup options, system-driver launcher/gameplay, cancelled-picker controls/
 sound recovery, on-device Turnip import, restart/loaded-driver status and playable
 controls/sound working. Reset/restart to System Default and existing-ROM gameplay
 also passed. These are focused manual reports without a fresh app-log capture.
 The [Odin record](android-driver-picker-odin-20261025.md) retains exact identities
-and MD-006/MD-007/MD-008: controller focus scrolling, light-blue values and the
-first-launch-only flow are implemented for a later build, with device checks
-still open. The 6f UI-only candidate passed CI in run 40174117388; it was not
-installed as part of the 4ee test. See the
+and MD-006/MD-007/MD-008. Scrolling and distinct values passed in 7a. A corrected
+PC helper prepared a backed-up incomplete-startup fixture; normal-icon recovery,
+System Default reset/retry and later direct launcher reopen passed. This is
+simulated recovery, not an actual Vulkan-driver crash. The 6f candidate was not
+installed; the later 24-unit spacing follow-up (MD-009) passed Android CI at d6
+but has no separate device test, as Frostie requested. See the
 [driver settings guide](android-driver-picker.md). Touch acceptance on Odin is
 separate from Poco Vulkan compatibility.
 
-Frostie chose to collect several more fixes before another public release.
-Keep the accepted Home/resume audio change under **Unreleased**; public v1.0.1
+Frostie now wants to prepare another release with the accepted audio/touch/driver
+work. Audio PR #29 and touch PR #30 have been merged; driver PR #32 remains draft.
+The driver feature is still gated to GPU-test builds and needs normal release
+integration plus a combined signed-candidate check. The focused Odin test is
+complete and the test app may be closed. Keep these changes **Unreleased**;
+public v1.0.1
 still has the issue. Verify the fix in the next signed release and retain the
 broader audio, sleep/wake and interruption checks.
 
