@@ -256,6 +256,8 @@ if (CMAKE_SYSTEM_NAME MATCHES "Android")
         target_sources(BanjoTooieRecompiled PRIVATE src/android_vulkan_driver.cpp)
         target_compile_definitions(BanjoTooieRecompiled PRIVATE TOOIE_ANDROID_DRIVER_TEST=1)
         target_compile_definitions(rt64 PRIVATE TOOIE_ANDROID_DRIVER_TEST=1)
+        # plume_vulkan.cpp is compiled by plume, not by rt64.
+        target_compile_definitions(plume PRIVATE TOOIE_ANDROID_DRIVER_TEST=1)
         target_link_libraries(BanjoTooieRecompiled PRIVATE adrenotools ${CMAKE_DL_LIBS})
         add_dependencies(BanjoTooieRecompiled main_hook hook_impl file_redirect_hook gsl_alloc_hook)
     endif()
