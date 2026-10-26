@@ -27,8 +27,7 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 - A supported USA ROM in `.z64` format.
 - On-screen touch controls or a physical controller.
 
-The primary test device is the **AYN Odin 2 Portal / Adreno 740**. Frostie also
-confirmed public **v1.0.1 works on Pixel 8 Pro / Android 17 / Mali-G715 MP7**.
+The primary test device is the **AYN Odin 2 Portal / Adreno 740**. The public **v1.0.1 works on Pixel 8 Pro / Android 17 / Mali-G715 MP7**.
 See the [device reports](docs/development/device-compatibility.md) for tested
 scope and unresolved compatibility reports. This project distributes Android
 APKs; Windows and Linux are development hosts.
