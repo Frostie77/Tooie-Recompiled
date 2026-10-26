@@ -8,7 +8,7 @@ and descriptions rather than assuming their severity from a marker number.
 
 | ID | Observation | Status | Evidence |
 |---|---|---|---|
-| MD-001 | Static-like noise in a straight line during the Jiggy challenge | Open — investigating; no confirmed fix | [24 October candidate check](release-candidate-check-20261024.md), original marker 1; Frostie's 26 October description and [captured-image source investigation](jiggy-challenge-lines-investigation-20261026.md). The original log omits the event period and has no picture of the line. Further playtesting remains paused. |
+| MD-001 | Static-like noise in a horizontal straight line during the Jiggy challenge | Open — investigating; no confirmed fix | [24 October candidate check](release-candidate-check-20261024.md), original marker 1; Frostie's 26 October description, horizontal-direction confirmation and [captured-image source investigation](jiggy-challenge-lines-investigation-20261026.md). The original log omits the event period and has no picture of the line. Further playtesting remains paused. |
 | MD-002 | Brief screen shift when dialogue animation begins | Open — investigating; no confirmed fix | [24 October candidate check](release-candidate-check-20261024.md), original marker 2; [26 October investigation](dialogue-screen-shift-investigation-20261026.md) records existing-log limits and two synthetic renderer mechanisms. Further playtesting remains paused. |
 
 ## Required review when evidence is uploaded

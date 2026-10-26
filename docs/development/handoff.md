@@ -88,10 +88,10 @@ same-role camera blending and AUTO aspect classification, using synthetic inputs
 and opposing controls. Neither establishes MD-002's actual cause; no runtime
 fix or new on-device test is claimed. Keep the later MD-004 screen-shaking
 reports separate. The [Jiggy-challenge investigation](jiggy-challenge-lines-investigation-20261026.md)
-records Frostie's clarification that MD-001 looks like static in a straight line,
+records Frostie's clarification that MD-001 looks like static in a horizontal straight line,
 the original capture's missing event-period log/image, and the game's small
 captured-image target and POINT-sampled drawing path. Its cause and repair are
-unconfirmed; line direction/location remains the next clarification. Keep
+unconfirmed; whether it is confined to the puzzle picture remains the next clarification. Keep
 playtesting paused and track the deferred intro/demo stutter separately. Startup
 checks were introduced in v1.0.1; the live main feed now describes verified
 public v1.1.0 / code 5. Frostie confirms older releases detect it manually in

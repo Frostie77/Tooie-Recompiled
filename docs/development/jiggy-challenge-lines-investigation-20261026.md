@@ -21,8 +21,8 @@ There is no invented event ID or screenshot for this report.
 
 On **26 October**, Frostie clarified in conversation: **“they look like static
 in a straight line”**. Retain this as static-like noise along a straight line;
-horizontal versus vertical direction, exact location and whether it flickers
-have not been specified. Do not rewrite it as a confirmed gap between puzzle
+he subsequently confirmed the line is **horizontal**. Its exact location and
+whether it flickers have not been specified. Do not rewrite it as a confirmed gap between puzzle
 pieces, ordinary jigsaw outlines or the unrelated dialogue shift MD-002.
 
 The rechecked source is
@@ -95,9 +95,14 @@ investigation base. No source edit is claimed as a repair for MD-001.
 
 ## Follow-up without requesting a new playthrough now
 
-The next useful clarification is whether the static-like line runs horizontally
-or vertically and whether it lies inside the puzzle picture, at a piece boundary
-or across the surrounding scene. Existing visual evidence would help if already
+The horizontal orientation directs the next source check toward copied-row
+bounds, image stride and vertical texture origins/clamping. Review of the copy
+setup/record and sampling paths does not identify which row or draw produced
+the report; their actual per-draw inputs were not captured.
+
+The next useful clarification is whether the horizontal static-like line lies
+inside the puzzle picture, at a piece boundary or across the surrounding scene.
+Existing visual evidence would help if already
 available. No fresh session is requested while playtesting is paused.
 
 When testing resumes, capture the actual line and its settings before choosing
