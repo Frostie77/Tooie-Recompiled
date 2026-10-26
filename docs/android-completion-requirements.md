@@ -252,8 +252,11 @@ Broad mod compatibility remains a coverage item.
 ## Minor issues deferred beyond the first release
 
 The Jiggy-challenge screen lines (marker 1) and the brief shunt
-when dialogue animation starts (marker 2) as follow-up work after the first
-release. Keep them in known issues.
+when dialogue animation starts (marker 2) remain follow-up work after the first
+release. The [26 October dialogue investigation](development/dialogue-screen-shift-investigation-20261026.md)
+reviews existing evidence and two synthetic renderer mechanisms; the cause and
+gameplay fix remain unconfirmed. Keep both in known issues. Further playthroughs
+are paused at Frostie's request.
 
 ## First Android release milestone
 

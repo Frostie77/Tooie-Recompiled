@@ -81,8 +81,13 @@ see the [device record](device-compatibility.md) for scope.
 ## Current priorities
 
 Further playthroughs are paused at Frostie's request. The updated private Debug
-app and its new pinned recorder are ready for a later session. Track the
-deferred Jiggy-challenge lines, dialogue shift and intro/demo stutter. Startup
+app and its new pinned recorder are ready for a later session. The
+[dialogue-shift investigation](dialogue-screen-shift-investigation-20261026.md)
+reviews the original logs and confirms two possible CPU renderer mechanisms,
+same-role camera blending and AUTO aspect classification, using synthetic inputs
+and opposing controls. Neither establishes MD-002's actual cause; no runtime
+fix or new on-device test is claimed. Keep the later MD-004 screen-shaking
+reports separate. Track the deferred Jiggy-challenge lines and intro/demo stutter. Startup
 checks were introduced in v1.0.1; the live main feed now describes verified
 public v1.1.0 / code 5. Frostie confirms older releases detect it manually in
 Settings → Updates. After the initially absent startup message, he was asked
