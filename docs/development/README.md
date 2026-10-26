@@ -48,6 +48,9 @@ gameplay acceptance.
 
 ## Evidence
 
+- [26 October Jiggy-challenge lines investigation](jiggy-challenge-lines-investigation-20261026.md):
+  static-like straight-line description, original evidence gap and captured-image
+  drawing/sampling source trace; MD-001 remains open.
 - [26 October dialogue screen-shift investigation](dialogue-screen-shift-investigation-20261026.md):
   original evidence review and reproducible production CPU camera/aspect probes;
   MD-002 remains open, with no runtime fix or new playthrough requested.
