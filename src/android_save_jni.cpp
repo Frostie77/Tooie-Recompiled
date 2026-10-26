@@ -35,17 +35,17 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_io_github_banjotooierecompiled_Save
         }
         std::vector<uint8_t> bytes;
         stopped([&] { bytes = id.empty() ? store().current() : store().previous(id); });
-        auto result = env->NewByteArray(bytes.size());
-        if (result) env->SetByteArrayRegion(result, 0, bytes.size(), reinterpret_cast<const jbyte*>(bytes.data()));
+        auto result = env->NewByteArray(static_cast<jsize>(bytes.size()));
+        if (result) env->SetByteArrayRegion(result, 0, static_cast<jsize>(bytes.size()), reinterpret_cast<const jbyte*>(bytes.data()));
         return result;
     } catch (const std::exception& failure) { throw_io(env, failure.what()); return nullptr; }
 }
 extern "C" JNIEXPORT jboolean JNICALL Java_io_github_banjotooierecompiled_SaveTransferController_nativeImport(JNIEnv* env, jclass, jbyteArray payload) {
     try {
-        if (!payload || env->GetArrayLength(payload) != tooie::saves::eeprom_size)
+        if (!payload || env->GetArrayLength(payload) != static_cast<jsize>(tooie::saves::eeprom_size))
             throw std::runtime_error("The backup is not a supported Banjo-Tooie save.");
         std::array<uint8_t, tooie::saves::eeprom_size> bytes;
-        env->GetByteArrayRegion(payload, 0, bytes.size(), reinterpret_cast<jbyte*>(bytes.data()));
+        env->GetByteArrayRegion(payload, 0, static_cast<jsize>(bytes.size()), reinterpret_cast<jbyte*>(bytes.data()));
         if (env->ExceptionCheck()) return false;
         bool synced = false;
         stopped([&] { synced = store().restore(bytes).directory_synced; });

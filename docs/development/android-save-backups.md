@@ -2,6 +2,7 @@
 
 This feature is in development for the next update. It is not part of public
 v1.1.0. Keep on-device acceptance open; Frostie's playtesting is paused.
+Implementation: [PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40).
 
 ## User flow
 
@@ -22,8 +23,8 @@ started, close and reopen the app first.
   pre-import snapshot is kept; later imports do not rotate or overwrite it.
   The picker displays the latest 100 valid-size copies.
 
-The same backup format works between this project's Debug, Release and isolated
-test app channels, and between devices. Each app accesses only its own private
+The backup format is shared by this project's Debug, Release and isolated test
+app channels and is intended for transfers between devices. Each app accesses only its own private
 save folder. Transferring a file is an explicit user action; there is no shared
 save folder or automatic synchronization. The backup contains all slots of the
 USA base game's 16-kilobit EEPROM, not ROMs, mods, app settings or mod-specific
@@ -57,8 +58,8 @@ The state is rechecked at the actual private-storage operation, not just when
 the button is drawn or picker opens.
 
 Before replacement, the native store writes and reads back a private temporary
-file and synchronizes it. Existing primary and fallback files are preserved
-as distinct immutable recovery snapshots, then a same-directory atomic rename
+file and synchronizes it. Distinct existing primary and fallback contents are preserved
+as immutable recovery snapshots, then a same-directory atomic rename
 commits the new primary file. Descriptor-relative operations reject symlinks,
 non-regular files and invalid recovery IDs. Existing unusual files over 1 MiB
 cause a refusal instead of replacement. Smaller damaged originals are retained
@@ -87,10 +88,15 @@ The host suite is:
 python3 tools/test_save_transfer.py
 ```
 
+For JNI execution as required by CI, add
+`--jni-include "$JAVA_HOME/include" --require-jni` using a JDK 17 installation.
+
 It uses disposable directories and synthetic EEPROM bytes, the actual runtime
 `init_saving`/EEPROM read consumer, production backup codec and private-store
 implementation. It also compiles the actual runtime start/guard function bodies
-with minimal game-selection globals to check exclusion. Store checks use
+with minimal game-selection globals to check exclusion. The JNI run loads the
+production native implementation and invokes signatures extracted from the
+real controller, using temporary private storage and `-Xcheck:jni`. Store checks use
 ASan/UBSan; leak scanning is disabled on the host sandbox. Controls cover
 write/sync/rename errors, cancellation before commit, missing and damaged saves,
 fallback reads, symlink/path rejection, immutable recovery and a deliberately

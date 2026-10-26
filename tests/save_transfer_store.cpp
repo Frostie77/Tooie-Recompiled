@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cerrno>
 #include <fstream>
+#include <fcntl.h>
 #include <iostream>
 #include <set>
 #include <sys/stat.h>
@@ -54,7 +55,7 @@ int main(int argc, char** argv) {
     auto p = fixture("normal"); Store store(p);
     assert(store.current() == original); assert(store.restore(imported).directory_synced); assert(store.current() == imported);
     assert(raw(p / "saves" / (std::string(save_filename) + ".bak")) == fallback);
-    auto history = store.history(); assert(history.size() == 2);
+    auto history = store.history(); assert(history.size() == 2); assert(!history.front().fallback);
     bool old_found = false, fallback_found = false;
     for (const auto& item : history) { auto b = store.previous(item.id); old_found |= b == original; fallback_found |= b == fallback; }
     assert(old_found && fallback_found);
@@ -94,6 +95,20 @@ int main(int argc, char** argv) {
     rejects([&] { Store(links).restore(imported); }); assert(Store(p).current() == original);
     auto folder = root / "directory-link"; fs::create_directories(folder); fs::create_symlink(p / "saves", folder / "saves");
     rejects([&] { Store(folder).restore(imported); }); assert(Store(p).current() == original);
+    auto fake_id = std::string("before-import-save-") + std::string(16, '0');
+    fs::create_symlink(p / "saves" / save_filename, p / "save-backups" / fake_id);
+    rejects([&] { Store(p).previous(fake_id); }); assert(Store(p).history().size() == 4);
+    // The visible history stays bounded while all older files remain intact.
+    auto many = fixture("many-backups"); fs::create_directories(many / "save-backups");
+    for (int i = 0; i < 105; ++i) {
+        char token[17]; std::snprintf(token, sizeof(token), "%016x", i);
+        auto name = many / "save-backups" / (std::string("before-import-save-") + token);
+        write(name, original);
+        struct timespec times[2]{{1000 + i,0},{1000 + i,0}}; assert(utimensat(AT_FDCWD, name.c_str(), times, 0) == 0);
+    }
+    auto limited = Store(many).history(); assert(limited.size() == 100);
+    assert(limited.front().time_ms == 1104000 && limited.back().time_ms == 1005000);
+    assert(std::distance(fs::directory_iterator(many / "save-backups"), fs::directory_iterator{}) == 105);
     // The actual runtime loader and EEPROM ABI consume our exported/imported
     // path and bytes. No emulated ROM/game state is invented by this fixture.
     config_path = root / "runtime"; fs::create_directories(config_path); Store(config_path).restore(imported);

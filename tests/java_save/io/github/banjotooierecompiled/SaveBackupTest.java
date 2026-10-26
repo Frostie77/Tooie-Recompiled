@@ -37,7 +37,7 @@ public final class SaveBackupTest {
         ByteArrayOutputStream output = new ByteArrayOutputStream(); AtomicInteger cleanup = new AtomicInteger();
         SaveBackup.writeVerified(save, () -> output, () -> new ByteArrayInputStream(output.toByteArray()), cleanup::incrementAndGet, () -> false);
         assert cleanup.get() == 0 && Arrays.equals(output.toByteArray(), encoded);
-        for (int mode = 0; mode < 6; ++mode) {
+        for (int mode = 0; mode < 7; ++mode) {
             final int failure = mode; cleanup.set(0); output.reset();
             rejects(() -> SaveBackup.writeVerified(save, () -> new FilterOutputStream(output) {
                 @Override public void write(byte[] bytes) throws IOException { if (failure == 0) throw new IOException("disk full"); out.write(bytes); }
@@ -47,7 +47,9 @@ public final class SaveBackupTest {
                 if (failure == 3) throw new IOException("readback failed");
                 byte[] bytes = output.toByteArray(); if (failure == 4) bytes[2111] ^= 1;
                 if (failure == 5) { byte[] different = save.clone(); different[0] ^= 1; bytes = SaveBackup.encode(different); }
-                return new ByteArrayInputStream(bytes);
+                return new ByteArrayInputStream(bytes) {
+                    @Override public void close() throws IOException { if (failure == 6) throw new IOException("readback close failed"); }
+                };
             }, cleanup::incrementAndGet, () -> false));
             assert cleanup.get() == 1;
         }

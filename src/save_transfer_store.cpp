@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <optional>
+#include <memory>
 #include <random>
 #include <stdexcept>
 #include <sys/stat.h>
@@ -127,21 +128,28 @@ std::vector<Backup> Store::history() const {
     Directory base(root), backups(base.value, "save-backups", false);
     std::vector<Backup> result;
     if (backups.value < 0) return result;
-    DIR* stream = fdopendir(dup(backups.value));
+    FD duplicate(fcntl(backups.value, F_DUPFD_CLOEXEC, 0));
+    if (duplicate.value < 0) fail("Could not list recovery backups.");
+    auto close_directory = [](DIR* directory) { closedir(directory); };
+    std::unique_ptr<DIR, decltype(close_directory)> stream(fdopendir(duplicate.value), close_directory);
     if (!stream) fail("Could not list recovery backups.");
-    while (dirent* entry = readdir(stream)) {
+    duplicate.value = -1; // fdopendir now owns the descriptor.
+    auto newer = [](const Backup& a, const Backup& b) {
+        return a.time_ms != b.time_ms ? a.time_ms > b.time_ms : a.id > b.id;
+    };
+    for (;;) {
+        errno = 0;
+        dirent* entry = readdir(stream.get());
+        if (!entry) { if (errno) fail("Could not list recovery backups."); break; }
         std::string id(entry->d_name);
         struct stat info{};
         if (!valid_id(id) || fstatat(backups.value, id.c_str(), &info, AT_SYMLINK_NOFOLLOW) ||
             !S_ISREG(info.st_mode) || info.st_size != eeprom_size) continue;
         result.push_back({id, int64_t(info.st_mtim.tv_sec) * 1000 + info.st_mtim.tv_nsec / 1000000,
                           id.starts_with("before-import-fallback-")});
+        if (result.size() > 100) { std::sort(result.begin(), result.end(), newer); result.pop_back(); }
     }
-    closedir(stream);
-    std::sort(result.begin(), result.end(), [](const Backup& a, const Backup& b) {
-        return a.time_ms != b.time_ms ? a.time_ms > b.time_ms : a.id > b.id;
-    });
-    if (result.size() > 100) result.resize(100);
+    std::sort(result.begin(), result.end(), newer);
     return result;
 }
 ImportResult Store::restore(std::span<const uint8_t> payload) const {
@@ -156,8 +164,8 @@ ImportResult Store::restore(std::span<const uint8_t> payload) const {
     Pending prepared(saves.value, ".save-import-");
     prepared.write(payload);
     if (checkpoint) checkpoint(Stage::Prepared);
-    if (old) save_recovery(backups.value, "before-import-save-", *old);
     if (fallback && (!old || *fallback != *old)) save_recovery(backups.value, "before-import-fallback-", *fallback);
+    if (old) save_recovery(backups.value, "before-import-save-", *old);
     if (checkpoint) checkpoint(Stage::RecoveryWritten);
     if (checkpoint) checkpoint(Stage::BeforeCommit);
     if (renameat(saves.value, prepared.name.c_str(), saves.value, save_filename))

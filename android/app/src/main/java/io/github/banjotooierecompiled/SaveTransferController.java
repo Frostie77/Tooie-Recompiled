@@ -94,13 +94,13 @@ final class SaveTransferController {
                 for (int i = 0; i < entries.length(); ++i) {
                     JSONObject item = entries.getJSONObject(i);
                     ids[i] = item.getString("id");
-                    labels[i] = DateFormat.getDateTimeInstance().format(new Date(item.getLong("time"))) +
-                        (item.optBoolean("fallback") ? " · fallback copy" : " · previous save");
+                    labels[i] = (item.optBoolean("fallback") ? "Recovery copy · " : "Previous save · ") +
+                        DateFormat.getDateTimeInstance().format(new Date(item.getLong("time")));
                 }
                 activity.runOnUiThread(() -> {
                     if (!live() || cancelled.get()) return;
                     if (ids.length == 0) { finish("No earlier save copies are available yet."); return; }
-                    dialog = new AlertDialog.Builder(activity).setTitle("Export an earlier save")
+                    dialog = new AlertDialog.Builder(activity).setTitle("Copies kept before imports")
                         .setItems(labels, (d, which) -> { dialog = null; prepareExport(ids[which]); })
                         .setNegativeButton("Cancel", (d, which) -> finish(null)).setOnCancelListener(d -> finish(null)).create();
                     dialog.show();
@@ -131,6 +131,7 @@ final class SaveTransferController {
             finish("The file picker returned no usable document. Please try again."); return true;
         }
         if (request == CREATE) {
+            message("Exporting and verifying save backup…");
             byte[] payload = exportPayload; exportPayload = null;
             background(() -> {
                 try {
@@ -142,6 +143,7 @@ final class SaveTransferController {
                 } catch (IOException | RuntimeException failure) { failed(failure); }
             });
         } else {
+            message("Checking save backup…");
             background(() -> {
                 try {
                     byte[] payload;

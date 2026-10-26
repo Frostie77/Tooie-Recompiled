@@ -314,9 +314,13 @@ replies and issue closures.
 ## Save backup transfer work — 26 October 2026
 
 Frostie approved developing user-controlled export/import while playtesting is
-paused. The [save-backup guide](android-save-backups.md) records the implementation,
+paused. [PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40) and the
+[save-backup guide](android-save-backups.md) record the implementation,
 format, storage transaction and required disposable-data acceptance. The controls
 belong under General; no additional settings tab is added. This feature is
 unreleased and does not change v1.1.0/code 5, the live update feed or the installed
 Odin apps. Host fixtures and CI results must remain distinct from device save
-restoration. Do not tick off full save recovery or request a new playthrough now.
+restoration. The host store/codec, actual runtime EEPROM consumer, start/transfer
+exclusion and real JNI checks pass; real Android/SDL Java sources compile against
+SDK 36. Android CI and disposable-data device acceptance remain separate.
+Do not tick off full save recovery or request a new playthrough now.

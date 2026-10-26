@@ -209,9 +209,11 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   playthroughs are paused at Frostie's request; the old 1bc recorder is historical.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
+  Host import-to-runtime-EEPROM readback is covered by the new save-transfer
+  suite; Android/provider and real progress restoration remain deferred.
 - [ ] Add and test user-controlled save export/import for recovery and moving
-  progress between devices or app channels. Implementation and host coverage
-  are in progress; [the guide](development/android-save-backups.md) records the
+  progress between devices or app channels. Implemented in [PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40);
+  host store/codec/runtime/JNI checks pass. [The guide](development/android-save-backups.md) records the
   file-picker flow, stopped-game guard and recovery copies. Keep this unchecked
   until disposable-data Android restoration is accepted. Playtesting remains paused.
 - [ ] Complete broader coexistence checks for the public release and retained
