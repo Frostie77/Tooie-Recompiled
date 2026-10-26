@@ -75,6 +75,51 @@ class UpdateMetadata(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "signature"):
                 prepare_update.metadata(self.apk, self.verification, self.root)
 
+    def test_driver_release_uses_its_actual_launcher_and_process_roles(self):
+        release = prepare_update.release
+        self.report.update(driver_picker=True, version_name="1.1.0", version_code=5)
+        self.identity.update(version_name="1.1.0", version_code=5, badging=(
+            "sdkVersion:'24'\ntargetSdkVersion:'35'\napplication-label:'Tooie Recompiled'\n"
+            "launchable-activity: name='" + release.DRIVER_ACTIVITY + "'\n"))
+        lines = ["E: manifest (line=1)", "  E: application (line=2)"]
+        for name, exported, suffix, process, launcher in (
+                ("BanjoTooieGameActivity", "0x0", ".game", ":game", False),
+                ("GraphicsDriverActivity", "0xffffffff", ".drivers", None, True),
+                ("GraphicsDriverSettingsActivity", "0x0", ".drivers", None, False)):
+            lines += ["    E: activity (line=3)",
+                      f'      A: android:name="{release.DEVELOPMENT_PACKAGE}.{name}"',
+                      f"      A: android:exported=(type 0x12){exported}",
+                      f'      A: android:taskAffinity="{release.PACKAGE + suffix}"',
+                      "      A: android:hardwareAccelerated=(type 0x12)0x0"]
+            if process: lines += [f'      A: android:process="{process}"']
+            if launcher:
+                lines += ["      E: intent-filter (line=4)", "        E: action (line=5)",
+                          '          A: android:name="android.intent.action.MAIN"',
+                          "        E: category (line=6)", '          A: android:name="android.intent.category.LAUNCHER"']
+        lines += ["    E: activity-alias (line=7)",
+                  f'      A: android:name="{release.ACTIVITY}"',
+                  f'      A: android:targetActivity="{release.DRIVER_ACTIVITY}"',
+                  '      A: android:exported=(type 0x12)0xffffffff',
+                  '      A: android:enabled=(type 0x12)0xffffffff']
+        lines += ['    E: provider (line=8)',
+                  f'      A: android:name="{release.DEVELOPMENT_PACKAGE}.StartupLogProvider"',
+                  f'      A: android:authorities="{release.PACKAGE}.startup-logs"',
+                  '      A: android:exported=(type 0x12)0x0',
+                  '      A: android:grantUriPermissions=(type 0x12)0xffffffff']
+        xml = "\n".join(lines)
+        self.verification.write_text(json.dumps(self.report))
+        with patch.object(release, "apk_identity", return_value=self.identity), patch.object(release, "run_tool", return_value=xml):
+            result = prepare_update.metadata(self.apk, self.verification, self.root)
+            self.assertEqual((result['release_tag'], result['version_code']), ('v1.1.0', 5))
+        for changed in (xml.replace('android:process=":game"', 'android:process=":other"'), ""):
+            with patch.object(release, "apk_identity", return_value=self.identity), patch.object(release, "run_tool", return_value=changed):
+                with self.assertRaises(ValueError): prepare_update.metadata(self.apk, self.verification, self.root)
+        self.report['driver_picker'] = False
+        self.verification.write_text(json.dumps(self.report))
+        with patch.object(release, "apk_identity", return_value=self.identity), patch.object(release, "run_tool", return_value=xml):
+            with self.assertRaisesRegex(ValueError, 'launch activity'):
+                prepare_update.metadata(self.apk, self.verification, self.root)
+
 
 if __name__ == "__main__":
     unittest.main()

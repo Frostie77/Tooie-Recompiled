@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "dependencies": [
+    {
+      "name": "libadrenotools",
+      "repository": "https://github.com/bylaws/libadrenotools",
+      "commit": "8fae8ce254dfc1344527e05301e43f37dea2df80",
+      "license": "BSD-2-Clause"
+    },
+    {
+      "name": "liblinkernsbypass",
+      "repository": "https://github.com/bylaws/liblinkernsbypass",
+      "commit": "aa3975893d83ef1bc84c321ec60c65fbf1287887",
+      "license": "BSD-2-Clause"
+    },
+    {
+      "name": "PicoSHA2",
+      "repository": "https://github.com/okdshin/PicoSHA2",
+      "commit": "161cb3fc4170fa7a3eca9e582cebd27cc4d1fe29",
+      "license": "MIT"
+    }
+  ],
+  "files": [
+    {
+      "path": "lib/adrenotools/CMakeLists.txt",
+      "git_blob_sha1": "16c60923028fd51039a0a3ec4f4df7a5af2e4de7"
+    },
+    {
+      "path": "lib/adrenotools/LICENSE",
+      "git_blob_sha1": "a8f664a745e96b3994e7bae2d72e6c98d457885e"
+    },
+    {
+      "path": "lib/adrenotools/README.md",
+      "git_blob_sha1": "b265f4c8b162dfaf5b15d01986e8ee30de837e97"
+    },
+    {
+      "path": "lib/adrenotools/build_asm.sh",
+      "git_blob_sha1": "b53d25c1baedd32a2377737adbf9540239bebc0d"
+    },
+    {
+      "path": "lib/adrenotools/gen/bcenabler_patch.h",
+      "git_blob_sha1": "3909a25ca12b6b437c7c7a16b2f0d03350ac3ea6"
+    },
+    {
+      "path": "lib/adrenotools/include/adrenotools/bcenabler.h",
+      "git_blob_sha1": "3d3a76e7d50afbb287e507da9cc799fde333ffa4"
+    },
+    {
+      "path": "lib/adrenotools/include/adrenotools/driver.h",
+      "git_blob_sha1": "f81e8fe34dae38dee68118e8f8af38c2552975f8"
+    },
+    {
+      "path": "lib/adrenotools/include/adrenotools/priv.h",
+      "git_blob_sha1": "742d24f247ec6a97d3672b2c51f4db77becc8506"
+    },
+    {
+      "path": "lib/adrenotools/src/bcenabler.cpp",
+      "git_blob_sha1": "1deb41df4061978a5c0e48c50d7203c5c26a6bf1"
+    },
+    {
+      "path": "lib/adrenotools/src/bcenabler_patch.s",
+      "git_blob_sha1": "8766e7880d73fc6a6fb23481d2a2aeceac5fd55a"
+    },
+    {
+      "path": "lib/adrenotools/src/driver.cpp",
+      "git_blob_sha1": "4ddee4aaa4050ef045949f398ddc006af3310f14"
+    },
+    {
+      "path": "lib/adrenotools/src/hook/CMakeLists.txt",
+      "git_blob_sha1": "ebff0639d7b54e052ccaae109958f4fa5d72acca"
+    },
+    {
+      "path": "lib/adrenotools/src/hook/file_redirect_hook.c",
+      "git_blob_sha1": "aa3b6d2f2d3951a828a3f05a6fca442be4eb9115"
+    },
+    {
+      "path": "lib/adrenotools/src/hook/gsl_alloc_hook.c",
+      "git_blob_sha1": "07f332d9b522e1ddfc8f070a42bd6fd527e53f40"
+    },
+    {
+      "path": "lib/adrenotools/src/hook/hook_impl.cpp",
+      "git_blob_sha1": "50e79a946b80e5f9654798b65ba378f476d5faec"
+    },
+    {
+      "path": "lib/adrenotools/src/hook/hook_impl.h",
+      "git_blob_sha1": "2ce2471e1d780efed1e7dfbbd5da78be31542a5e"
+    },
+    {
+      "path": "lib/adrenotools/src/hook/hook_impl_params.h",
+      "git_blob_sha1": "8a3bd1673e18912d34f976afcc61164faeb38e8f"
+    },
+    {
+      "path": "lib/adrenotools/src/hook/kgsl.h",
+      "git_blob_sha1": "6d4d93d6af7cc399cd1b1b0010a5c13ce1e766ca"
+    },
+    {
+      "path": "lib/adrenotools/src/hook/main_hook.c",
+      "git_blob_sha1": "067537f3246cb77aa064bf1836b5b3a33af95355"
+    },
+    {
+      "path": "lib/adrenotools/lib/linkernsbypass/CMakeLists.txt",
+      "git_blob_sha1": "c2e92b04228ec6ff4f8c66af308bb02867960a63"
+    },
+    {
+      "path": "lib/adrenotools/lib/linkernsbypass/LICENSE",
+      "git_blob_sha1": "a8f664a745e96b3994e7bae2d72e6c98d457885e"
+    },
+    {
+      "path": "lib/adrenotools/lib/linkernsbypass/README.md",
+      "git_blob_sha1": "264f23a39a8d7a31df4792688b78c308a040194e"
+    },
+    {
+      "path": "lib/adrenotools/lib/linkernsbypass/android_linker_ns.cpp",
+      "git_blob_sha1": "3bd58992c26bb185196d723841e8a56f4dbdd386"
+    },
+    {
+      "path": "lib/adrenotools/lib/linkernsbypass/android_linker_ns.h",
+      "git_blob_sha1": "77ec4005a54048e3f2eef482268317c2aa7a5af6"
+    },
+    {
+      "path": "lib/adrenotools/lib/linkernsbypass/elf_soname_patcher.cpp",
+      "git_blob_sha1": "db619ab534f33ba4b1dc7f70dbfcb09f73298333"
+    },
+    {
+      "path": "lib/adrenotools/lib/linkernsbypass/elf_soname_patcher.h",
+      "git_blob_sha1": "0b2c186ffcf7eb1929345c68c9f8bf0ba63d767d"
+    },
+    {
+      "path": "lib/picosha2/picosha2.h",
+      "git_blob_sha1": "ef965e65232f20d1bda14c9b87165f6640024d3f"
+    },
+    {
+      "path": "lib/picosha2/LICENSE",
+      "git_blob_sha1": "b6658bbc98a5b198a49fce48bc2aec7283bef62a"
+    }
+  ]
+}

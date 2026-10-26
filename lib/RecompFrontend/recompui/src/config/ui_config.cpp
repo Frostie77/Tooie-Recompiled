@@ -16,6 +16,7 @@ struct PendingTab {
 };
 static std::vector<PendingTab> pending_tabs;
 static bool loaded_configs = false;
+static std::vector<std::pair<std::string, recompui::tab_callbacks::create_contents_t>> appended_contents;
 
 namespace recompui {
     static recompui::TabbedModal *config_modal = nullptr;
@@ -56,6 +57,12 @@ namespace recompui {
         });
     }
 
+    void config::append_tab_contents(const std::string &id, tab_callbacks::create_contents_t create_contents) {
+        if (loaded_configs || !create_contents) throw std::runtime_error("Register page contents before finalize().");
+        get_config_ptr(id);
+        appended_contents.emplace_back(id, std::move(create_contents));
+    }
+
     recomp::config::Config &config::create_config_tab(const std::string &name, const std::string &id, bool requires_confirmation) {
         configs.push_back(std::make_pair(id, recomp::config::Config(name, id, requires_confirmation)));
         recomp::config::Config &new_config = configs.back().second;
@@ -64,7 +71,10 @@ namespace recompui {
             id,
             // Create contents
             [id](recompui::ContextId context, Element* parent) {
-                context.create_element<ConfigPageOptionsMenu>(parent, get_config_ptr(id), true);
+                auto* page = context.create_element<ConfigPageOptionsMenu>(parent, get_config_ptr(id), true);
+                for (auto &[tab_id, callback] : appended_contents) {
+                    if (tab_id == id) callback(context, page->get_options_container());
+                }
             },
             // Can close
             [id, name](TabCloseContext close_context) {

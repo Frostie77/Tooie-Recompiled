@@ -1,6 +1,6 @@
-Tooie Recompiled: bundled font notices
+Tooie Recompiled: bundled font and optional driver-helper notices
 
-These notices cover the listed fonts only. They do not license the game,
+These notices cover only the components listed here. They do not license the game,
 launcher artwork, interface icons or linked libraries. The project's GPL text
 and each dependency's notices remain separate. No font file was modified.
 
@@ -47,3 +47,15 @@ Suplexmentary Comic NC
 
 Notice sources and the remaining distribution review are documented in
 docs/development/release.md in the source repository.
+
+Optional experimental Android driver helpers (not enabled in normal builds)
+  libadrenotools and liblinkernsbypass: Copyright 2021 Billy Laws.
+  BSD-2-Clause; full texts: licenses/libadrenotools-BSD-2-Clause.txt and
+  licenses/liblinkernsbypass-BSD-2-Clause.txt.
+  Sources: https://github.com/bylaws/libadrenotools
+           https://github.com/bylaws/liblinkernsbypass
+  PicoSHA2: MIT; full text and copyright: licenses/PicoSHA2-MIT.txt.
+  Source: https://github.com/okdshin/PicoSHA2
+  Exact source commits/blobs: tools/ci/android-driver-vendor.json.
+  GPU-test packages additionally include the NDK's NOTICE alongside their
+  shared C++ runtime. The driver itself is supplied separately by the tester.

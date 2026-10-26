@@ -50,6 +50,9 @@
 #if defined(__ANDROID__)
 #include "touch_input.h"
 #include "android_touch_controls.h"
+#if defined(TOOIE_ANDROID_VULKAN_DRIVERS) && TOOIE_ANDROID_VULKAN_DRIVERS
+#include "android_driver_settings.h"
+#endif
 #endif
 #include "android_updates.h"
 #include "launcher_layout.h"
@@ -260,6 +263,9 @@ void initialize_config() {
     tooie::updates::register_options(recompui::config::get_general_config());
 #if defined(__ANDROID__)
     tooie::touch::register_options();
+#if defined(TOOIE_ANDROID_VULKAN_DRIVERS) && TOOIE_ANDROID_VULKAN_DRIVERS
+    tooie::android::gpu::register_settings();
+#endif
 #endif
     recompui::config::finalize();
 }
@@ -484,6 +490,9 @@ void initialize_launcher_menu(recompui::LauncherMenu* menu) {
         recompui::get_current_context().create_element<LauncherArtwork>(background, menu);
     }
     tooie::updates::launcher_created();
+#if defined(__ANDROID__) && defined(TOOIE_ANDROID_VULKAN_DRIVERS) && TOOIE_ANDROID_VULKAN_DRIVERS
+    tooie::android::gpu::recordMenuReady();
+#endif
 }
 
 static int tooie_recomp_main(int argc, char** argv) {

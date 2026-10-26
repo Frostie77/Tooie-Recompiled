@@ -16,11 +16,30 @@ PACKAGE = DEVELOPMENT_PACKAGE + ".release"
 # Application IDs differ; the existing Java/JNI class namespace does not.
 ACTIVITY = DEVELOPMENT_PACKAGE + ".BanjoTooieSDLActivity"
 LIBRARIES = {"libmain.so", "libSDL2.so"}
+DRIVER_ACTIVITY = DEVELOPMENT_PACKAGE + ".GraphicsDriverActivity"
+DRIVER_LIBRARIES = LIBRARIES | {"libmain_hook.so", "libhook_impl.so", "libfile_redirect_hook.so",
+                              "libgsl_alloc_hook.so", "libc++_shared.so"}
 
 
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def libraries_for(report):
+    picker = report.get("driver_picker", False)
+    require(isinstance(picker, bool), "Invalid driver-picker build profile")
+    require(report.get("variant") != "android-gpu-driver-test" and
+            not str(report.get("package", "")).startswith(DEVELOPMENT_PACKAGE + ".gputest."),
+            "Isolated GPU tests cannot become release candidates")
+    libraries = DRIVER_LIBRARIES if picker else LIBRARIES
+    require(isinstance(report.get("libraries"), dict) and set(report["libraries"]) == libraries,
+            "Build report native library profile differs")
+    return libraries
+
+
+def launcher_for(report):
+    return DRIVER_ACTIVITY if report.get("driver_picker") is True else ACTIVITY
 
 
 def digest(data):
@@ -71,18 +90,21 @@ def apk_identity(apk, tools):
                                                   signer_dn, re.I))}
 
 
-def check_release_manifest(identity, apk, tools, expected_version, expected_code):
+def check_release_manifest(identity, apk, tools, expected_version, expected_code, driver_picker=False):
     require(identity["package"] == PACKAGE, "Android package identity differs")
     require(identity["version_name"] == expected_version and identity["version_code"] == expected_code,
             "Candidate Android version differs")
     badging = identity["badging"]
     require(one(r"^application-label:'([^']*)'", badging, "application label", re.M) == "Tooie Recompiled",
             "Android application label differs")
-    require(one(r"^launchable-activity: name='([^']+)'", badging, "launch activity", re.M) == ACTIVITY,
+    activity = DRIVER_ACTIVITY if driver_picker else ACTIVITY
+    require(one(r"^launchable-activity: name='([^']+)'", badging, "launch activity", re.M) == activity,
             "Android launch activity differs")
     require("sdkVersion:'24'" in badging and "targetSdkVersion:'35'" in badging, "Android API profile differs")
     require(not re.search(r"^application-debuggable\b", badging, re.M), "Candidate is debuggable")
     xml = run_tool(tools / "aapt", "dump", "xmltree", apk, "AndroidManifest.xml")
+    if driver_picker:
+        check_driver_manifest(xml, PACKAGE)
     for attribute in ("debuggable", "testOnly"):
         values = re.findall(r"A: android:" + attribute + r"(?:\([^)]*\))?=\(type 0x12\)(0x[0-9a-fA-F]+)", xml)
         require(len(values) <= 1 and all(int(value, 16) == 0 for value in values),
@@ -91,11 +113,88 @@ def check_release_manifest(identity, apk, tools, expected_version, expected_code
         require(mentions == len(values), f"Unrecognised {attribute} manifest encoding")
 
 
+def check_driver_java(package):
+    require("classes.dex" in package.namelist(), "APK primary classes.dex is missing")
+    dex = [package.read(name) for name in package.namelist()
+           if re.fullmatch(r"classes(?:[2-9]|[1-9][0-9]+)?\.dex", name)]
+    for marker in (b"DriverPackage", b"DriverStore", b"DriverRuntime", b"DriverBootPolicy", b"shared-startup-logs", b"StartupLogProvider",
+                   b"GraphicsDriverActivity", b"GraphicsDriverSettingsActivity", b"BanjoTooieGameActivity", b"showGraphicsDriverSettings",
+                   b"getGraphicsDriverState", b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady"):
+        require(any(marker in data for data in dex), "Driver-picker Java code is missing: " + marker.decode())
+
+
+def check_driver_manifest(xml, package):
+    """Inspect the compiled APK's actual process/export/task roles, not source XML."""
+    lines = xml.splitlines()
+    def blocks(kind):
+        result = []
+        for index, line in enumerate(lines):
+            match = re.match(r"^(\s*)E: " + kind + r"(?:\s|$)", line)
+            if not match:
+                continue
+            indent = len(match[1]); body = []
+            for following in lines[index + 1:]:
+                if following.strip() and len(following) - len(following.lstrip()) <= indent:
+                    break
+                body.append(following)
+            attributes = {}
+            for item in body:
+                attr = re.match(r"^(\s*)A: android:([A-Za-z]+)(?:\([^)]*\))?=(.*)$", item)
+                if attr and len(attr[1]) == indent + 2:
+                    require(attr[2] not in attributes, "duplicate manifest attribute")
+                    value = attr[3]
+                    quoted = re.match(r'"([^"\n]*)"', value)
+                    attributes[attr[2]] = quoted[1] if quoted else re.sub(r"\s+", "", value)
+            result.append((attributes, "\n".join(body), index))
+        return result
+    application = blocks("application")
+    require(len(application) == 1 and "process" not in application[0][0], "unexpected application process")
+    activities = blocks("activity")
+    require(len(activities) == 3, "driver support requires exactly three Activity roles")
+    by_name = {attributes.get("name"): (attributes, body, index) for attributes, body, index in activities}
+    require(len(by_name) == 3, "duplicate Activity role")
+    prefix = "io.github.banjotooierecompiled."
+    game, launcher, settings = (by_name.get(prefix + name) for name in
+                               ("BanjoTooieGameActivity", "GraphicsDriverActivity", "GraphicsDriverSettingsActivity"))
+    require(all((game, launcher, settings)), "missing driver Activity role")
+    false, true = "(type0x12)0x0", "(type0x12)0xffffffff"
+    require(game[0].get("exported") == false and game[0].get("process") in (":game", package + ":game") and
+            game[0].get("taskAffinity") == package + ".game", "game process/export/task role differs")
+    require("android.intent.action.MAIN" not in game[1] and "android.intent.category.LAUNCHER" not in game[1],
+            "SDL must not be an external launcher")
+    for role, exported in ((launcher, true), (settings, false)):
+        require(role[0].get("exported") == exported and "process" not in role[0] and
+                role[0].get("taskAffinity") == package + ".drivers" and role[0].get("hardwareAccelerated") == false,
+                "recovery process/export/task role differs")
+    require("android.intent.action.MAIN" in launcher[1] and "android.intent.category.LAUNCHER" in launcher[1],
+            "pre-renderer launcher is missing")
+    require("android.intent.action.MAIN" not in settings[1] and "android.intent.category.LAUNCHER" not in settings[1],
+            "private settings must not be an external launcher")
+    aliases = blocks("activity-alias")
+    require(len(aliases) == 1, "the established launch component must be retained exactly once")
+    alias, body, alias_index = aliases[0]
+    require(alias.get("name") == prefix + "BanjoTooieSDLActivity" and
+            alias.get("targetActivity") == prefix + "GraphicsDriverActivity" and
+            alias.get("exported") == true and alias.get("enabled") == true and "process" not in alias,
+            "legacy launch alias must enter the pre-renderer router")
+    require(launcher[2] < alias_index, "legacy alias target must be declared before its alias")
+    require("android.intent.action.MAIN" not in body and "android.intent.category.LAUNCHER" not in body,
+            "legacy alias must not add a duplicate launcher icon")
+    providers = blocks("provider")
+    require(len(providers) == 1, "startup log requires exactly one narrow provider")
+    provider = providers[0][0]
+    require(provider.get("name") == prefix + "StartupLogProvider" and
+            provider.get("authorities") == package + ".startup-logs" and
+            provider.get("exported") == false and provider.get("grantUriPermissions") == true and
+            provider.get("enabled", true) == true and "process" not in provider,
+            "startup-log provider authority/permission/process role differs")
+
+
 def is_signature_entry(name):
     return bool(re.fullmatch(r"META-INF/(?:MANIFEST\.MF|[^/]+\.(?:SF|RSA|DSA|EC))", name, re.I))
 
 
-def archive(apk):
+def archive(apk, libraries=LIBRARIES):
     package = zipfile.ZipFile(apk)
     try:
         entries = package.infolist()
@@ -110,8 +209,8 @@ def archive(apk):
         require({"classes.dex", "AndroidManifest.xml", "resources.arsc"} <= set(names),
                 "Incomplete APK")
         libs = {name for name in names if name.startswith("lib/") and not name.endswith("/")}
-        require(libs == {"lib/arm64-v8a/" + name for name in LIBRARIES},
-                "Expected only the two Android ARM64 native libraries")
+        require(libs == {"lib/arm64-v8a/" + name for name in libraries},
+                "Android ARM64 native library inventory differs")
         require(package.testzip() is None, "APK CRC failure")
         return package
     except Exception:
@@ -120,8 +219,11 @@ def archive(apk):
 
 
 def check_payload(candidate, built, report, native_version):
-    with archive(candidate) as candidate_zip, archive(built) as built_zip:
-        for name in LIBRARIES:
+    libraries = libraries_for(report)
+    with archive(candidate, libraries) as candidate_zip, archive(built, libraries) as built_zip:
+        if report.get("driver_picker") is True:
+            check_driver_java(candidate_zip)
+        for name in libraries:
             entry = "lib/arm64-v8a/" + name
             data = candidate_zip.read(entry)
             require(len(data) >= 20 and data[:6] == b"\x7fELF\x02\x01" and
@@ -157,8 +259,7 @@ def verify(candidate, built, build_report, tools, expected_version, expected_cod
     require(isinstance(report, dict), "Build report must be a JSON object")
     require(report["source_commit"] == source_commit, "Build report belongs to a different source commit")
     require(report["native_version"] == expected_version, "Native and Android release versions must agree")
-    require(isinstance(report.get("libraries"), dict) and set(report["libraries"]) == LIBRARIES,
-            "Build report must identify both native libraries")
+    libraries_for(report)
     require(all(isinstance(item, dict) and isinstance(item.get("sha256"), str)
                 for item in report["libraries"].values()), "Malformed native library build report")
     # Inspect stable private copies, so all SDK/ZIP checks use the same bytes.
@@ -175,7 +276,8 @@ def verify(candidate, built, build_report, tools, expected_version, expected_cod
         identity = apk_identity(candidate_copy, tools)
         require(identity["certificate_sha256"] == expected_certificate, "Unexpected release signing certificate")
         require(not identity["debug_certificate"], "A debug certificate is not a protected release signing identity")
-        check_release_manifest(identity, candidate_copy, tools, expected_version, expected_code)
+        check_release_manifest(identity, candidate_copy, tools, expected_version, expected_code,
+                               report.get("driver_picker") is True)
         check_payload(candidate_copy, built_copy, report, expected_version)
         previous_result = None
         if previous is not None:
@@ -191,7 +293,8 @@ def verify(candidate, built, build_report, tools, expected_version, expected_cod
         return {"source_commit": source_commit, "apk_sha256": digest(candidate_copy.read_bytes()),
                 "version_name": expected_version, "version_code": expected_code,
                 "certificate_sha256": expected_certificate, "package": PACKAGE,
-                "development_package": DEVELOPMENT_PACKAGE, "activity": ACTIVITY,
+                "development_package": DEVELOPMENT_PACKAGE, "activity": launcher_for(report),
+                "driver_picker": report.get("driver_picker", False),
                 "installation_strategy": "separate-apps", "shared_app_data": False,
                 "native_libraries_and_assets_match_verified_build": True,
                 "all_unsigned_payload_matches": report.get("artifact_kind") == "unsigned-release-candidate",

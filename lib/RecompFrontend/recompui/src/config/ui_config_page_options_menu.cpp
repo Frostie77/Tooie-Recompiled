@@ -164,7 +164,8 @@ void ConfigPageOptionsMenu::render_config_options() {
     body_left->set_position(Position::Relative);
     body_left->set_height(100.0f, Unit::Percent);
     {
-        auto body_left_scroll = context.create_element<Element>(body_left, 0, "div", false);
+        options_container = context.create_element<Element>(body_left, 0, "div", false);
+        auto *body_left_scroll = options_container;
         body_left_scroll->set_display(Display::Block);
         body_left_scroll->set_width(100.0f, Unit::Percent);
         body_left_scroll->set_min_height(100.0f, Unit::Percent);

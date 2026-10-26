@@ -52,12 +52,25 @@ checks. These checks do not execute on an Android GPU. The complete local
 investigation suite remains separate.
 
 Before upload, the verifier checks actual NDK ARM64/API24 compile commands, ZIP
-integrity, both packaged native libraries against the exact built or NDK
-`--strip-unneeded` output, matching ELF Build IDs, all three JNI exports,
+integrity, all packaged native libraries against the exact built or NDK
+`--strip-unneeded` output, matching ELF Build IDs, required JNI exports,
 the native CI version stamp, DEX presence, every packaged asset and launcher
 icon's pixels. Android tools verify the signature, package identity, label,
 launch activity and SDK profile. Update checks also verify the packaged Internet
 permission and Java/native bridge entry points. A failed check prevents the APK artifact step.
+
+For the upcoming driver-enabled update, native builds enable
+`TOOIE_ANDROID_VULKAN_DRIVERS` and use one shared C++ runtime. All Android variants
+package seven verified ARM64 libraries: `main`, `SDL2`, four libadrenotools hooks
+and `c++_shared`, with their notices. The compiled manifest is checked for a
+software-rendered Java launcher/recovery process and a private `:game` process.
+An exported compatibility alias preserves the old SDL launch component and sends
+existing ES-DE/shortcut links through recovery; its target/order/export state
+and absence of a duplicate launcher filter are checked in the compiled manifest.
+Android 9+ exposes the driver controls; Android 7/8 bypasses the newer Java
+driver store and uses System Default. The normal APK minimum remains API 24.
+`TOOIE_ANDROID_DRIVER_TEST=1` now chooses only the separate, source-specific test
+identity and API 28 minimum. A GPU-test report cannot become a release candidate.
 
 The report identifies the checked-out commit. On a pull request, this is GitHub's
 temporary merge commit, so the result also exercises integration with the base.
@@ -99,6 +112,11 @@ The native and Android names agree. A separate unsigned
 artifact includes checksums and local signing helpers; the normal debug artifact
 remains available. No private key is sent to CI. Follow the
 [candidate/signing guide](docs/development/release.md) before using its output.
+
+Pushes to `feature/android-driver-picker` also prepare an unsigned **1.1.0 / code 5**
+candidate for review, alongside the normal Debug artifact, after the real
+Gradle/signing fixture passes. Explicit GPU or touch tests do not export a
+release candidate. No release is signed with Frostie's key or published by CI.
 
 ## Startup update checks
 

@@ -33,7 +33,7 @@ def prepare(unsigned, built, build_report, tools, source_commit, version_code, o
     version = report["native_version"]
     require(re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?", version),
             "Invalid native version")
-    require(set(report["libraries"]) == release.LIBRARIES, "Expected both native libraries in the build report")
+    release.libraries_for(report)
     with tempfile.TemporaryDirectory(prefix="tooie-unsigned-check-") as temp:
         root = Path(temp)
         unsigned_copy, built_copy = root / "unsigned.apk", root / "built.apk"
@@ -42,12 +42,13 @@ def prepare(unsigned, built, build_report, tools, source_commit, version_code, o
         require(release.digest(built_copy.read_bytes()) == report["sha256"], "Verified build APK hash differs")
         require_unsigned(unsigned_copy, tools)
         identity = release.manifest_identity(unsigned_copy, tools)
-        release.check_release_manifest(identity, unsigned_copy, tools, version, version_code)
+        release.check_release_manifest(identity, unsigned_copy, tools, version, version_code,
+                                       report.get("driver_picker") is True)
         release.check_payload(unsigned_copy, built_copy, report, version)
         name = "Tooie-Recompiled-Android-arm64-" + source_commit[:12] + "-Unsigned.apk"
         result = {**report, "artifact_kind": "unsigned-release-candidate", "apk": name,
                   "package": release.PACKAGE, "application_label": "Tooie Recompiled",
-                  "development_package": release.DEVELOPMENT_PACKAGE, "activity": release.ACTIVITY,
+                  "development_package": release.DEVELOPMENT_PACKAGE, "activity": release.launcher_for(report),
                   "installation_strategy": "separate-apps", "shared_app_data": False,
                   "sha256": release.digest(unsigned_copy.read_bytes()), "version_name": version,
                   "version_code": version_code, "verified_debug_apk_sha256": report["sha256"],
@@ -71,9 +72,12 @@ def prepare(unsigned, built, build_report, tools, source_commit, version_code, o
             "This is the separate release app: " + release.PACKAGE + "\n"
             "The existing debug app remains " + release.DEVELOPMENT_PACKAGE + ".\n"
             "Both can stay installed. Saves, settings, mods and imported ROMs are\n"
-            "private to each app; the release starts with its own data. No transfer\n"
-            "or replacement of the debug installation is performed.\n\n"
-            "For a fresh-install candidate, in Ubuntu run:\n"
+            "private to each app. An update keeps the existing release app's data;\n"
+            "a fresh release install starts with its own data. No Debug data is transferred.\n"
+            "Data preservation still needs its separate on-device update check.\n\n"
+            "For an update, verify against your previous signed release APK:\n"
+            "  python3 sign_candidate.py --previous-apk /absolute/path/to/previous-release.apk\n\n"
+            "For a fresh release install only, in Ubuntu run:\n"
             "  python3 sign_candidate.py --new-install\n\n"
             "The default key stays at ~/.local/share/tooie-recompiled/signing/tooie-release.p12.\n"
             "Enter the key password only in the local signing prompt. Never upload the key.\n"

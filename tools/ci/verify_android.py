@@ -14,6 +14,9 @@ import zipfile
 from pathlib import Path
 from PIL import Image
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "release"))
+from verify_apk import check_driver_java, check_driver_manifest
+
 
 def require(condition, message):
     if not condition:
@@ -36,6 +39,41 @@ def check_touch_java(package):
     for marker in (b"TouchControlsView", b"TouchControllerModel", b"showTouchControlsSettings",
                    b"nativeStatus", b"nativeSubmit", b"nativeCancel", b"nativeMenu"):
         require(any(marker in data for data in dex.values()), "Touch-control Java code is missing: " + marker.decode())
+def driver_test_mode():
+    value = os.environ.get("TOOIE_ANDROID_DRIVER_TEST", "0")
+    require(value in ("0", "1"), "invalid TOOIE_ANDROID_DRIVER_TEST")
+    return value == "1"
+
+
+
+def apk_profile(revision, driver_test):
+    require(re.fullmatch(r"[0-9a-f]{40}", revision), "invalid source commit")
+    if driver_test:
+        return {"package": "io.github.banjotooierecompiled.gputest.g" + revision[:12],
+                "application_label": "Tooie GPU Test " + revision[:12], "min_api": 28,
+                "launcher": "io.github.banjotooierecompiled.GraphicsDriverActivity",
+                "variant": "android-gpu-driver-test", "suffix": "GPU-Test"}
+    return {"package": "io.github.banjotooierecompiled", "application_label": "Tooie Recompiled Debug",
+            "launcher": "io.github.banjotooierecompiled.GraphicsDriverActivity",
+            "min_api": 24, "variant": "debug", "suffix": "Debug"}
+
+
+def check_native_entries(names, originals):
+    require({name for name in names if name.startswith("lib/") and not name.endswith("/")} ==
+            {"lib/arm64-v8a/" + name for name in originals},
+            "unexpected or missing packaged native library/ABI")
+
+
+def ndk_notices(ndk):
+    paths = sorted(p for p in ndk.glob("NOTICE*") if p.is_file())
+    require(paths, "NDK runtime/toolchain notices are missing")
+    return b"\n".join(p.name.encode() + b"\n" + p.read_bytes() for p in paths)
+
+
+def write_ndk_notices(source, work, ndk):
+    path = work / "package/app/src/main/assets/program/assets/licenses/Android-NDK-NOTICE.txt"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(ndk_notices(ndk))
 
 
 def check_update_java(package):
@@ -56,9 +94,13 @@ def check_update_java(package):
 
 
 def check_configuration(source, work, ndk):
+    driver_test_mode()  # The flag chooses the isolated identity, never feature compilation.
     cache = (work / "native/CMakeCache.txt").read_text()
     require("TOOIE_ANDROID_RUNTIME:BOOL=ON" in cache, "Android library target is disabled")
     require("TOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE:BOOL=OFF" in cache, "allocation probe must be OFF")
+    require("TOOIE_ANDROID_VULKAN_DRIVERS:BOOL=ON" in cache,
+            "graphics driver support must be enabled in every Android variant")
+    require("ANDROID_STL:STRING=c++_shared" in cache, "driver support requires one shared C++ runtime")
     require(re.search(r"^ANDROID_ABI:(?:STRING|UNINITIALIZED)=arm64-v8a$", cache, re.M), "wrong target ABI")
     commands = json.loads((work / "native/compile_commands.json").read_text())
     targets = [source / p for p in (
@@ -67,12 +109,16 @@ def check_configuration(source, work, ndk):
         "lib/rt64/src/contrib/plume/plume_vulkan.cpp",
         "lib/rt64/src/hle/rt64_present_queue.cpp",
         "lib/rt64/src/render/rt64_transform_processor.cpp")]
+    targets += [source / path for path in ("src/android_vulkan_driver.cpp", "src/android_driver_jni.cpp", "src/android_driver_settings.cpp")]
     for target in targets:
         matches = [entry for entry in commands if Path(entry["file"]).resolve() == target.resolve()]
         require(matches, f"missing actual compiler command: {target}")
         for entry in matches:
             args = entry.get("arguments") or shlex.split(entry["command"])
             joined = " ".join(args)
+            driver_values = [arg for arg in args if arg.startswith("-DTOOIE_ANDROID_VULKAN_DRIVERS")]
+            require(driver_values == ["-DTOOIE_ANDROID_VULKAN_DRIVERS=1"],
+                    f"wrong driver loader compilation mode: {target}")
             require(str(ndk) in args[0] and "aarch64" in joined and "android24" in joined,
                     f"not an NDK ARM64/API24 command: {target}")
             for name in ("TOOIE_ANDROID_TIMING_TRACE", "TOOIE_ANDROID_GEOMETRY_TRACE",
@@ -100,8 +146,14 @@ def build_id(readelf, path):
 
 def check_apk(source, work, ndk):
     check_configuration(source, work, ndk)
+    driver_test = driver_test_mode()
     revision = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
-    package_name, application_label, variant = touch_test_profile(revision)
+    profile = apk_profile(revision, driver_test)
+    _, _, touch_variant = touch_test_profile(revision)
+    require(not (driver_test and touch_variant == "Touch-Debug-Candidate"), "GPU and local Debug test identities cannot be combined")
+    if touch_variant == "Touch-Debug-Candidate":
+        profile.update(variant=touch_variant, suffix=touch_variant)
+    variant = profile["suffix"]
     apk = work / "package/app/build/outputs/apk/debug/app-debug.apk"
     toolbin = ndk / "toolchains/llvm/prebuilt/linux-x86_64/bin"
     verify = work / "verify"
@@ -109,14 +161,18 @@ def check_apk(source, work, ndk):
     version = (work / "logs/version.txt").read_text().strip()
     originals = {"libmain.so": work / "native/libmain.so",
                  "libSDL2.so": work / "prefixes/sdl/lib/libSDL2.so"}
+    originals.update({name: work / "native" / name for name in
+                      ("libmain_hook.so", "libhook_impl.so", "libfile_redirect_hook.so", "libgsl_alloc_hook.so")})
+    originals["libc++_shared.so"] = toolbin.parent / "sysroot/usr/lib/aarch64-linux-android/libc++_shared.so"
     libraries = {}
     with zipfile.ZipFile(apk) as package:
         require(package.testzip() is None, "APK ZIP CRC failure")
         names = package.namelist()
         require(len(names) == len(set(names)), "duplicate ZIP entries")
-        require({name for name in names if name.startswith("lib/") and not name.endswith("/")} ==
-                {"lib/arm64-v8a/libmain.so", "lib/arm64-v8a/libSDL2.so"},
-                "unexpected or missing packaged native library/ABI")
+        check_native_entries(names, originals)
+        check_driver_java(package)
+        require(package.read("assets/program/assets/licenses/Android-NDK-NOTICE.txt") == ndk_notices(ndk),
+                "shared C++ runtime SDK notice differs")
         require({"AndroidManifest.xml", "resources.arsc", "classes.dex"}.issubset(names), "incomplete APK")
         require(not any(name.lower().endswith((".z64", ".v64", ".n64", ".exe")) for name in names),
                 "unexpected ROM or desktop binary in APK")
@@ -133,6 +189,11 @@ def check_apk(source, work, ndk):
             libraries[name] = {"sha256": hashlib.sha256(data).hexdigest(),
                                "build_id": build_id(toolbin / "llvm-readelf", packed)}
         main = (verify / "libmain.so").read_bytes()
+        driver_markers = (b"custom-turnip-test", b"driver-sha256-mismatch", b"event=active mode=")
+        require(all(marker in main for marker in driver_markers), "driver loader code is missing")
+        for marker in (b"TooieGraphicsDriver", b"showGraphicsDriverSettings", b"getGraphicsDriverState",
+                       b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady"):
+            require(marker in main, "native driver-picker UI/JNI bridge is missing: " + marker.decode())
         require(b"recomp_on_init" in main, "code-mod startup event registration is missing")
         require(b"Aiming Invert" in main and b"aiming_invert" in main, "saved aiming preference is missing")
         require(b"tooie_aiming_invert" in main, "guest aiming input bridge is missing")
@@ -166,20 +227,28 @@ def check_apk(source, work, ndk):
     tools = sdk / "build-tools/36.0.0"
     subprocess.run([str(tools / "apksigner"), "verify", "--verbose", str(apk)], check=True)
     badging = subprocess.check_output([str(tools / "aapt"), "dump", "badging", str(apk)], text=True)
-    require("package: name='" + package_name + "'" in badging, "Android package identity differs")
-    require("application-label:'" + application_label + "'" in badging, "Android debug application label differs")
-    require("launchable-activity: name='io.github.banjotooierecompiled.BanjoTooieSDLActivity'" in badging,
+    require("package: name='" + profile["package"] + "'" in badging, "Android package identity differs")
+    require("application-label:'" + profile["application_label"] + "'" in badging, "Android application label differs")
+    require("launchable-activity: name='" + profile["launcher"] + "'" in badging,
             "launch activity differs")
-    require("sdkVersion:'24'" in badging and "targetSdkVersion:'35'" in badging, "Android API profile differs")
+    xml = subprocess.check_output([str(tools / "aapt"), "dump", "xmltree", str(apk), "AndroidManifest.xml"], text=True)
+    check_driver_manifest(xml, profile["package"])
+    require("sdkVersion:'" + str(profile["min_api"]) + "'" in badging and "targetSdkVersion:'35'" in badging, "Android API profile differs")
+    require("application-debuggable" in badging, "test APK must support private run-as evidence collection")
     require("uses-permission: name='android.permission.INTERNET'" in badging, "Android update network permission is missing")
     require("android.permission.REQUEST_INSTALL_PACKAGES" not in badging, "Release-page checks must not request package-install permission")
     output = work / "artifacts"
     output.mkdir(exist_ok=True)
-    filename = "Tooie-Recompiled-Android-arm64-" + revision[:12] + "-" + variant + ".apk"
+    filename = "Tooie-Recompiled-Android-arm64-" + revision[:12] + "-" + profile["suffix"] + ".apk"
     shutil.copyfile(apk, output / filename)
     report = {"source_commit": revision, "native_version": version,
-              "package": package_name, "application_label": application_label, "variant": variant,
+              "package": profile["package"], "application_label": profile["application_label"],
+              "variant": profile["variant"], "min_api": profile["min_api"],
               "installation_strategy": "local-resign-debug-update" if variant == "Touch-Debug-Candidate" else "separate-apps",
+              "touch_controls": True,
+              "driver_picker": True, "driver_picker_min_api": 28, "launcher_activity": profile["launcher"],
+              "touch_controls_odin_source": "1bc772153fcc7c4192890aa1ce8adf99d6f4ea79",
+              "touch_controls_phone_tested": False,
               "apk": filename, "sha256": hashlib.sha256(apk.read_bytes()).hexdigest(),
               "ndk": ndk.name, "libraries": libraries, "signing": "CI debug key; not a release/update signing identity",
               "device_tested": False}
@@ -194,10 +263,14 @@ def check_apk(source, work, ndk):
     (output / "SHA256SUMS").write_text(report["sha256"] + "  " + filename + "\n")
     if variant == "Touch-Debug-Candidate":
         shutil.copyfile(source / "docs/development/android-touch-controls.md", output / "TOUCH-TEST-INSTRUCTIONS.md")
+    if driver_test:
+        shutil.copyfile(source / "tools/android-workflow/stage_gpu_driver.py", output / "stage_gpu_driver.py")
+        shutil.copyfile(source / "docs/development/poco-gpu-driver-test.md", output / "GPU-TEST-INSTRUCTIONS.md")
+        shutil.copyfile(source / "docs/development/android-driver-picker.md", output / "DRIVER-SETTINGS-INSTRUCTIONS.md")
     print("PASS: signed Android ARM64 APK, exact native libraries/Build IDs, JNI, assets, icon, name and API profile")
 
 
 if __name__ == "__main__":
     command, source, work, ndk = sys.argv[1:]
-    action = {"configuration": check_configuration, "apk": check_apk}[command]
+    action = {"configuration": check_configuration, "apk": check_apk, "notices": write_ndk_notices}[command]
     action(Path(source).resolve(), Path(work).resolve(), Path(ndk).resolve())

@@ -1,8 +1,10 @@
 # Configurable Android touch controls
 
-Status: source prototype; **not accepted on a device yet**. Frostie will test
-on his Odin 2 Portal. Phone-only controls are a priority for the next update;
-no public release is authorized by this branch.
+Status: **accepted for the next update after a focused Odin 2 Portal Debug
+test on 25 October 2026**. Frostie confirmed operation and customization; the
+[capture review](android-touch-controls-odin-20261025.md) records the exact build,
+all markers and evidence limits. Phone and next signed-release checks remain
+open. Public v1.0.1 has not changed.
 
 ## Controls and settings
 
@@ -45,12 +47,14 @@ focus-loss suppression, stale submissions, UI-only MENU events and settings
 exception cleanup. Candidate ZIP/source/payload/capture binding and missing
 DEX entry-point controls pass host regressions.
 
-These are host checks, not evidence that the Android overlay is visible over
-Vulkan or comfortable/correct in gameplay. Android native compilation, APK
-verification and actual Odin/phone acceptance remain required. The accepted
+Android native compilation, APK verification and the local signing fixture
+passed in Actions run 40155243972. Frostie's subsequent Odin capture shows the
+overlay over gameplay and ten native input-consumer records. His manual report
+accepts operation and customization for the next update. Broader per-control,
+persistence, lifecycle, phone and signed-release acceptance remain required. The accepted
 Home/resume audio fix from source `1b735c08a7d1` is retained as this branch's base.
 
-## Odin acceptance still required
+## Odin acceptance and remaining coverage
 
 Frostie chose to **update his established Debug app**. The candidate keeps
 package `io.github.banjotooierecompiled`, Android version `0.1.0-android` / code 1
@@ -76,7 +80,8 @@ For evidence, `Runtime touch-overlay` state changes appear in logcat. A bounded
 `Runtime touch-input` record in the private runtime log identifies touch input
 actually consumed by the player-1 callback, with its merged values. These
 records help distinguish Java visibility from gameplay consumption; neither
-replaces the manual acceptance checks below.
+replaces the remaining detailed checks below. The focused Odin result is
+recorded separately rather than marking every case complete.
 
 1. Confirm Auto hides the controls when Android detects the Odin's built-in
    pad; choose On to show them, then Off and Auto to check hiding/restoration.
@@ -107,7 +112,8 @@ driver import/reset flow should also be reachable before renderer startup,
 since the Poco currently cannot reach Graphics settings with its stock driver.
 
 Frostie explicitly set the order: **finish and test touch controls first, then
-implement the custom-driver interface**. That next interface should show
+implement the custom-driver interface**. The focused Odin test is now accepted.
+The Poco compatibility APK must also include the controls. The next interface should show
 selected versus loaded driver, offer import/select and Reset to System Default,
 and explain when a restart is required. Keep a pre-renderer recovery path for
 devices such as the Poco. The screenshot is a UI reference, not a successful

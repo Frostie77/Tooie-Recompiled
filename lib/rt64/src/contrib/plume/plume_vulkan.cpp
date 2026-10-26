@@ -11,6 +11,11 @@
 #define VOLK_IMPLEMENTATION 
 
 #include "plume_vulkan.h"
+#include "plume_vulkan_enumeration.h"
+#if defined(__ANDROID__) && defined(TOOIE_ANDROID_VULKAN_DRIVERS) && TOOIE_ANDROID_VULKAN_DRIVERS
+#include "../../../../../src/android_vulkan_driver.h"
+#include "../../../../../src/android_driver_settings.h"
+#endif
 #if defined(__ANDROID__)
 #include "../../../../../src/android_presentation_lifecycle.h"
 #include "plume_vulkan_clear_shaders.h"
@@ -58,6 +63,14 @@ static_assert(sizeof(VkDescriptorSetAllocateInfo) == 40 && offsetof(VkDescriptor
 
 namespace plume {
     namespace {
+        void logVulkanEnumeration(const char* kind, bool complete, VkResult result, unsigned attempts, size_t count) {
+            char record[256];
+            std::snprintf(record, sizeof(record),
+                "Vulkan extension enumeration: event=%s complete=%u result=%d attempts=%u count=%zu",
+                kind, unsigned(complete), int(result), attempts, count);
+            tooie_android_debug_log(record);
+        }
+
         auto &buildStages() {
             static thread_local tooie::diagnostics::StageWindow<4> stages("vulkan-build",
                 {"image", "graphics", "compute", "framebuffer"});
@@ -5402,15 +5415,18 @@ namespace plume {
 
         this->renderInterface = renderInterface;
 
-        uint32_t deviceCount = 0;
-        vkEnumeratePhysicalDevices(renderInterface->instance, &deviceCount, nullptr);
-        if (deviceCount == 0) {
+        std::vector<VkPhysicalDevice> physicalDevices;
+        VkResult deviceEnumerationResult;
+        unsigned deviceEnumerationAttempts;
+        const bool devicesComplete = enumerateVulkanProperties<VkPhysicalDevice>([&](auto* count, auto* data) {
+                return vkEnumeratePhysicalDevices(renderInterface->instance, count, data);
+            }, physicalDevices, deviceEnumerationResult, deviceEnumerationAttempts);
+        logVulkanEnumeration("physical-devices", devicesComplete, deviceEnumerationResult, deviceEnumerationAttempts, physicalDevices.size());
+        if (!devicesComplete || physicalDevices.empty()) {
             fprintf(stderr, "Unable to find devices that support Vulkan.\n");
             return;
         }
-        
-        std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
-        vkEnumeratePhysicalDevices(renderInterface->instance, &deviceCount, physicalDevices.data());
+        const auto deviceCount = physicalDevices.size();
 
         uint32_t currentDeviceTypeScore = 0;
         uint32_t deviceTypeScoreTable[] = {
@@ -5455,11 +5471,19 @@ namespace plume {
         }
 
         // Check for extensions.
-        uint32_t extensionCount;
-        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
-
-        std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-        vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
+        std::vector<VkExtensionProperties> availableExtensions;
+        VkResult extensionEnumerationResult;
+        unsigned extensionEnumerationAttempts;
+        const bool extensionsComplete = enumerateVulkanProperties<VkExtensionProperties>([&](auto* count, auto* data) {
+                return vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, count, data);
+            }, availableExtensions, extensionEnumerationResult, extensionEnumerationAttempts);
+        logVulkanEnumeration("device", extensionsComplete, extensionEnumerationResult, extensionEnumerationAttempts, availableExtensions.size());
+        if (!extensionsComplete) {
+            fprintf(stderr, "Vulkan device-extension enumeration failed: result=%d attempts=%u.\n",
+                int(extensionEnumerationResult), extensionEnumerationAttempts);
+            return;
+        }
+        const auto extensionCount = availableExtensions.size();
 
         std::unordered_set<std::string> missingRequiredExtensions = RequiredDeviceExtensions;
         std::unordered_set<std::string> supportedOptionalExtensions;
@@ -5586,6 +5610,24 @@ namespace plume {
             unsigned(driverProperties.driverID), physicalDeviceProperties.driverVersion, driverProperties.driverName, driverProperties.driverInfo,
             unsigned(driverPropertiesFound), androidDescriptorPoolQualification(physicalDeviceProperties, driverProperties));
         tooie_android_debug_log(driverRecord);
+#if defined(TOOIE_ANDROID_VULKAN_DRIVERS) && TOOIE_ANDROID_VULKAN_DRIVERS
+        const auto& selectedDriver = tooie::android::gpu::selectedDriver();
+        const bool acceptedBackend = tooie::android::gpu::acceptBackend(selectedDriver.mode,
+            driverPropertiesFound, unsigned(driverProperties.driverID), unsigned(VK_DRIVER_ID_MESA_TURNIP));
+        char backendRecord[256];
+        std::snprintf(backendRecord, sizeof(backendRecord),
+            "Android Vulkan driver: event=active mode=%s queried=%u driverID=%u accepted=%u",
+            selectedDriver.mode == tooie::android::gpu::Mode::Custom ? "custom-turnip-test" : "system",
+            unsigned(driverPropertiesFound), unsigned(driverProperties.driverID), unsigned(acceptedBackend));
+        tooie_android_debug_log(backendRecord);
+        tooie::android::gpu::recordBackend(driverPropertiesFound,unsigned(driverProperties.driverID),
+            physicalDeviceProperties.deviceName,driverProperties.driverName,driverProperties.driverInfo,
+            physicalDeviceProperties.driverVersion,acceptedBackend);
+        if (!acceptedBackend) {
+            fprintf(stderr, "Requested custom driver did not activate Mesa Turnip; refusing silent stock fallback.\n");
+            return;
+        }
+#endif
         if (descriptorIndexingFound) {
             descriptorIndexingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
             VkPhysicalDeviceProperties2 indexingProperties = {};
@@ -6198,7 +6240,20 @@ namespace plume {
 #else
     VulkanInterface::VulkanInterface() {
 #endif
-        VkResult res = volkInitialize();
+        VkResult res = VK_ERROR_INITIALIZATION_FAILED;
+#if defined(__ANDROID__) && defined(TOOIE_ANDROID_VULKAN_DRIVERS) && TOOIE_ANDROID_VULKAN_DRIVERS
+        const auto& selectedDriver = tooie::android::gpu::selectedDriver();
+        if (!tooie::android::gpu::initialize(selectedDriver,
+                [&] { res = volkInitialize(); return res == VK_SUCCESS; },
+                [](void* entry) { volkInitializeCustom(reinterpret_cast<PFN_vkGetInstanceProcAddr>(entry)); },
+                [] { return vkCreateInstance != nullptr && vkEnumerateInstanceExtensionProperties != nullptr; })) {
+            fprintf(stderr, "Selected Android Vulkan loader could not initialize; reason=%s.\n", selectedDriver.error.c_str());
+            return;
+        }
+        res = VK_SUCCESS;
+#else
+        res = volkInitialize();
+#endif
         if (res != VK_SUCCESS) {
             fprintf(stderr, "volkInitialize failed with error code 0x%X.\n", res);
             return;
@@ -6222,11 +6277,19 @@ namespace plume {
 #   endif
 
         // Check for extensions.
-        uint32_t extensionCount;
-        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-
-        std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
+        std::vector<VkExtensionProperties> availableExtensions;
+        VkResult extensionEnumerationResult;
+        unsigned extensionEnumerationAttempts;
+        const bool extensionsComplete = enumerateVulkanProperties<VkExtensionProperties>([](auto* count, auto* data) {
+                return vkEnumerateInstanceExtensionProperties(nullptr, count, data);
+            }, availableExtensions, extensionEnumerationResult, extensionEnumerationAttempts);
+        logVulkanEnumeration("instance", extensionsComplete, extensionEnumerationResult, extensionEnumerationAttempts, availableExtensions.size());
+        if (!extensionsComplete) {
+            fprintf(stderr, "Vulkan instance-extension enumeration failed: result=%d attempts=%u.\n",
+                int(extensionEnumerationResult), extensionEnumerationAttempts);
+            return;
+        }
+        const auto extensionCount = availableExtensions.size();
 
         std::unordered_set<std::string> requiredExtensions = RequiredInstanceExtensions;
         std::unordered_set<std::string> supportedOptionalExtensions;

@@ -44,6 +44,24 @@ gameplay acceptance.
 
 ## Evidence
 
+- [26 October working Poco/Turnip result](poco-turnip-result-20261026.md): reviewed
+  screenshot and manual acceptance; Share startup log failure MD-010 is reproduced on Odin.
+- [26 October startup-log sharing repair](android-startup-log-sharing-20261026.md):
+  confirmed oversized chooser transaction; signed 277c Odin share-menu, readable
+  attachment and cancel/return acceptance passed (MD-010 resolved on Odin).
+
+- [Poco on-device driver-picker test](poco-driver-picker-test-20261025.md):
+  verified download, regular R8 import, touch controls and requested diagnostics;
+  a working Turnip result is recorded below; log sharing needs repair.
+- [25 October Odin driver-picker checks](android-driver-picker-odin-20261025.md):
+  startup/system-driver/cancellation results and the scrolling/colour follow-ups.
+- [Device compatibility reports](device-compatibility.md): includes Frostie's
+  confirmed working v1.0.1 on Pixel 8 Pro.
+- [25 October Poco system-driver result](poco-system-driver-result-20261025.md):
+  both supplied logs, their overlap and the pending optional Turnip test.
+- [25 October Odin touch-controls acceptance](android-touch-controls-odin-20261025.md):
+  exact installed build, complete marker accounting and remaining phone coverage.
+
 [PR #14](https://github.com/Frostie77/Tooie-Recompiled/pull/14) records executable
 mod and texture/aiming results. Captured sessions and Frostie's later manual
 checks retain their separate attribution.

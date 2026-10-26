@@ -2,14 +2,50 @@
 
 ## Unreleased
 
+Target: **v1.1.0 / Android version code 5**, adding touch controls and custom
+graphics drivers alongside fixes. Public v1.0.1 remains unchanged until publication.
+
+### Added
+
+- Configurable Android touch controls with a floating stick, N64 buttons,
+  multi-touch, independent sizes, opacity, saved positions and Auto/On/Off
+  visibility under **Settings → Touch**. Frostie accepted the focused Odin
+  Debug customization test. The locally signed v1.1.0 candidate also passed
+  simultaneous on-screen movement/jump on Odin; the wider touch matrix remains
+  open.
+
+### Graphics drivers
+
+- Optional Mesa Turnip ZIP import/selection and System Default reset under
+  **Graphics**, with measured Selected/Loaded/Status and an explicit restart to
+  apply changes. Values use light blue beside white labels, with more space
+  between fields.
+- Driver setup/recovery opens before Vulkan on Android 9+. Setup appears on
+  first launch, explicit Graphics entry or a failed startup; later healthy
+  launches open the normal launcher directly. Android 7/8 retains System Default.
+- Existing ES-DE/shortcut launch components remain compatible. The signed Odin
+  candidate passed Turnip R8 play, System Default reset/restart and a cold launch
+  through the original component to the normal launcher. The Poco reporter also
+  confirms a working Turnip game in the separate d6 test. Actual failed-driver
+  recovery and broader device coverage remain separate from the accepted
+  simulated incomplete-startup recovery check.
+
 ### Fixed
 
+- Share startup log now sends a text-file attachment, avoiding the oversized
+  Android share-menu request (MD-010), with temporary read-only access and
+  preparation/error feedback. The signed v1.1.0 candidate passed the Odin share
+  menu, readable attachment and cancellation/return checks. Poco sharing retest
+  remains deferred.
+- Graphics driver buttons scroll into view when controller focus reaches them,
+  matching existing settings navigation. Frostie confirmed automatic scrolling
+  in the focused 7a Odin check.
 - Brief audio distortion after pressing Android Home and returning to gameplay
   ([#29](https://github.com/Frostie77/Tooie-Recompiled/pull/29)). Focused Odin
-  Debug testing passed; verification in a signed public release remains pending.
+  Debug testing and the locally signed v1.1.0 candidate's Home/reopen/continue
+  sound/control check passed.
 
-Further fixes will be collected before the next release. **v1.0.1** remains the
-latest public release.
+The next release is being prepared. **v1.0.1** remains the latest public release.
 
 ## [v1.0.1](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1) — 2026-10-24
 

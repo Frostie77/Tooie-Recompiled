@@ -30,6 +30,27 @@ The stable feed now records v1.0.1 / code 4. Follow the [update guide](update-pl
 for future releases. Documentation/feed commits do not change the selected APK
 source or require a new build/signature.
 
+## v1.1.0 candidate accepted on Odin
+
+The planned focused signed-Odin checks passed on app source
+`277c9df95bc8d451e3be1c38804edb91ba8837c1`, version **1.1.0 / code 5**,
+signed APK SHA-256
+`6ed259e1c3f3b5313834bfd59440b54cb3a31888d58301e6166114159569e029`.
+The expected release certificate and complete unsigned payload matched; both
+CIs and the downloaded artifact checks passed. Frostie reported retained save
+progress and graphics/sound/control settings, working installed mods, normal
+Home-return sound/controls, simultaneous touch movement/jump, repaired log
+sharing/cancel return, Turnip R8 play and System Default reset/restart. A cold
+start through the original documented component reached GraphicsDriverActivity
+and then the normal launcher without driver confirmation. See the
+[scoped signed record](android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).
+
+PR #32 is ready for review/merge and release preparation. Documentation commits
+do not change the tested app source or signed APK. Public v1.0.1, the stable
+feed and the retained Debug installation remain unchanged until their respective
+publication/update steps. Broader device, gameplay and actual driver-failure
+coverage and the existing distribution review remain separate.
+
 ## Bundled notices
 
 The launcher buttons use the exact Suplexmentary Comic NC font from the accepted
@@ -84,6 +105,14 @@ deferred.
 
 ## Version and signing
 
+Use [Semantic Versioning 2.0.0](https://semver.org/): compatible bug fixes increment
+PATCH, compatible features increment MINOR (resetting PATCH), and breaking changes
+increment MAJOR (resetting MINOR/PATCH). For this Android app, preserve existing
+ROM/save/settings compatibility, supported Android behavior and documented launch
+components when calling an update compatible. The touch/driver feature update
+targets **v1.1.0**, rather than a bug-fix-only v1.0.2. Android's integer code is
+independent and advances from public code 4 to **5** for this release.
+
 Frostie selected separate release and debug apps:
 
 | App | Android application ID | Launcher label |
@@ -97,10 +126,19 @@ with this packaging. The release installs alongside it and starts with its own
 ROM import, saves, settings and mods. No uninstall, signing-key migration or
 automatic data transfer is part of this plan.
 
-Both variants keep the Java/JNI activity class
-`io.github.banjotooierecompiled.BanjoTooieSDLActivity`. A release launcher must
-use the full component
-`io.github.banjotooierecompiled.release/io.github.banjotooierecompiled.BanjoTooieSDLActivity`.
+The v1.0.1 launch component
+`io.github.banjotooierecompiled.release/io.github.banjotooierecompiled.BanjoTooieSDLActivity`
+remains available as an exported compatibility alias to `GraphicsDriverActivity`.
+Existing ES-DE/shortcut components therefore enter the pre-Vulkan router, as does
+the normal app icon. The private `BanjoTooieGameActivity` inherits the original
+SDL/JNI class in `:game`; its native method namespace stays unchanged. Android's
+[activity-alias contract](https://developer.android.com/guide/topics/manifest/activity-alias-element)
+defines the redirect; the signed source277c Odin cold-start command now confirms
+that the original address enters GraphicsDriverActivity and continues to the
+normal launcher without a driver prompt.
+The application ID, protected signer and private data directory do not change.
+Android 9+ gets setup/recovery and custom drivers; Android 7/8 keeps System Default
+without entering the newer store. The manifest minimum remains API 24.
 
 Development defaults remain Android version code `1` / name `0.1.0-android`.
 For a candidate, Gradle accepts explicit `-PtooieVersionCode=…` and
@@ -147,7 +185,10 @@ For future candidates, open **Actions → Android APK → Run workflow**, select
 the reviewed source branch, enable `prepare_candidate`, and set the candidate
 version name/code. The first preview used `0.1.0-preview.1` / `2`; the published
 font-corrected release uses **`1.0.0` / `3`**. Future releases need a version
-code greater than `4`; do not reuse the 1.0.0 workflow defaults for a new release.
+code greater than `4`. Workflow defaults are now **1.1.0 / code 5**; pushes to the
+driver feature branch also export that unsigned candidate after the build and
+signing fixture pass. Keep the README latest-release heading and stable feed at
+v1.0.1 until the new release is actually published.
 Keep the existing protected release key and the separate Debug app. The native
 stamp and Android version use the same supplied name.
 
@@ -163,6 +204,14 @@ non-debuggable ARM64 APK, build report, checksums, public identities, GPL text
 and local signing helpers. Export verifies the release manifest and exact native
 libraries/assets against the already verified debug build. The ordinary debug
 artifact and Ubuntu playtesting workflow remain available.
+
+Driver-enabled reports bind all seven ARM64 libraries, compiled three-Activity
+process/export/task roles and driver entry points in executable DEX. The verifier
+retains support for the original two-library v1.0.1 profile. Isolated GPU-test
+provenance is rejected for release preparation. Same-key update metadata has a
+host fixture. The signed Odin candidate update chain now has confirmed retained
+save progress/settings and working installed mods; its exact scope is in the
+signed record above.
 
 Extract the candidate artifact on the PC and open Ubuntu in that directory.
 For the update from the installed code-2 release candidate, run the helper with

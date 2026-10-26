@@ -25,10 +25,12 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 - Android 7.0 / API 24 or newer, with a 64-bit ARM processor.
 - A compatible Vulkan GPU with the features required by RT64.
 - A supported USA ROM in `.z64` format.
-- A physical controller; testing currently uses the Odin 2 Portal's controls.
+- A physical controller for v1.0.1. The next update adds configurable touch controls.
 
-The tested device is the **AYN Odin 2 Portal / Adreno 740**. Compatibility with
-other Android hardware remains unverified. This project distributes Android
+The primary test device is the **AYN Odin 2 Portal / Adreno 740**. Frostie also
+confirmed public **v1.0.1 works on Pixel 8 Pro / Android 17 / Mali-G715 MP7**.
+See the [device reports](docs/development/device-compatibility.md) for tested
+scope and unresolved compatibility reports. This project distributes Android
 APKs; Windows and Linux are development hosts.
 
 ## Features
@@ -42,6 +44,29 @@ future launches.
 
 Configure graphics, input mappings and audio through the launcher menus.
 Current Odin testing uses **Manual 60** in Graphics.
+
+### Custom graphics drivers (next update)
+
+On **Android 9 or newer**, **Settings → Graphics** lets you import/select a custom Vulkan driver, reset to
+**System Default**, and view the selected driver, loaded driver and restart status.
+Distinct value colours and space between fields make the details easier to read;
+controller focus automatically scrolls options into view.
+Driver setup appears on first launch. Later healthy launches open the Tooie
+launcher directly using the saved driver; open Graphics to change it. A failed
+startup brings back the driver screen before Vulkan so you can select/reset and
+retry.
+
+Android 7/8 retain the existing System Default startup path and API 24 minimum.
+
+The exact driver tested successfully on **Odin 2 Portal** is
+[**Mesa Turnip v26.0.0 R8 — download ZIP**](https://github.com/K11MCH1/AdrenoToolsDrivers/releases/download/v26.0.0-rc08/Turnip_v26.0.0_R8.zip).
+Leave it zipped and select it with the driver picker. Turnip is for compatible
+**Adreno** GPUs; Mali devices should use **System Default**. No driver ZIP is
+bundled. The [driver guide](docs/development/android-driver-picker.md) includes
+the checksum and setup details. Odin acceptance covers this tested combination;
+A Poco X3 Pro / Android 12 / Adreno 640 tester also reports the game working
+with regular R8 in the separate driver-picker test; see the [result](docs/development/poco-turnip-result-20261026.md).
+Broader compatibility and the final signed release remain under test.
 
 ### Mod support
 
@@ -147,8 +172,25 @@ Banjo: Recompiled team and unaffiliated with Nintendo, Rare or Microsoft.
 
 ## Unreleased touch-controls work
 
-Configurable Android on-screen controls are being developed for phone play:
-independent button/joystick sizes, opacity, movable positions and Auto/On/Off
-visibility. Odin and phone acceptance remain open; see the
-[touch-controls test guide](docs/development/android-touch-controls.md).
-A user-facing custom-driver picker/reset flow is next after touch controls.
+Configurable Android on-screen controls are accepted on Odin 2 Portal for the
+next update: a floating stick, N64 buttons, independent button/joystick sizes,
+opacity, movable positions and Auto/On/Off visibility. Configure them under
+**Settings → Touch**. See the [Odin test record](docs/development/android-touch-controls-odin-20261025.md)
+and [touch-controls guide](docs/development/android-touch-controls.md).
+The locally signed v1.1.0 candidate also passed simultaneous on-screen movement
+and jumping on Odin. Broader touch/phone coverage remains open. The
+Poco compatibility test includes these controls. Its stock driver failed, but
+the reporter now confirms a working game with Turnip; see the [latest result](docs/development/poco-turnip-result-20261026.md).
+Share startup log uses a text attachment in the next update. The signed candidate
+passed Odin's share-menu, readable attachment and cancel/return checks; see the
+[sharing record](docs/development/android-startup-log-sharing-20261026.md#odin-signed-candidate-acceptance).
+Custom-driver settings are implemented under Graphics with a pre-Vulkan Android
+startup/recovery screen. Focused Odin system/Turnip switching, gameplay and
+System Default rollback passed. Focused 7a checks also passed for first-launch/
+healthy-reopen routing, explicit Graphics access/return, scrolling and clearer
+values. A simulated incomplete-startup recovery, System Default reset/retry and
+subsequent direct launcher reopen also passed. The signed v1.1.0 candidate now
+also passes Turnip play, System Default reset/restart, retained saves/settings
+and working mods, plus a cold launch through the original shortcut component
+straight to the normal launcher. Actual failed-driver and broader device checks
+remain open. See the [signed acceptance record](docs/development/android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).

@@ -1,6 +1,6 @@
 # Tooie Recompiled completion checklist
 
-Updated: 24 October 2026.
+Updated: 26 October 2026.
 
 The goal is a reliable native Android ARM64 release for the Android,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
@@ -70,9 +70,43 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
   on device, including controller navigation and deferral during gameplay;
   planned for the next update.
 - [x] Published v1.0.1, verified both public assets and advanced the stable feed.
+- [x] Additional device confirmation: Frostie reports public v1.0.1 works on
+  Pixel 8 Pro / Android 17 / Mali-G715 MP7. This is a manual functional result;
+  see the [device record](development/device-compatibility.md).
 
 ## Unreleased Debug checks
 
+- [x] Poco reporter confirms the game works with Turnip in the offered d6 test;
+  reviewed screenshot shows Turnip loaded and matching the running game. This is
+  focused manual compatibility acceptance; see the [result](development/poco-turnip-result-20261026.md).
+
+- [x] Normal v1.1.0 / code 5 candidate: clean push/PR CI, real release-signing
+  fixture and unsigned export passed at `33fcd5516c8f`. Downloaded candidate and
+  Debug artifacts, seven native hashes/Build IDs, assets, driver DEX and bundled
+  helper provenance were verified. Local protected signing and replacement install
+  passed; functional/data-retention checks remain open;
+  see the [integration record](development/android-driver-release-integration-20261025.md).
+
+- [x] Focused Odin driver-picker roundtrip in the separate 4ee GPU test app:
+  startup options, system-driver gameplay, picker cancellation/resume, Turnip
+  import/loaded status, deliberate restart, playable controls/sound and System
+  Default rollback with ROM reuse. See the
+  [manual record](development/android-driver-picker-odin-20261025.md).
+- [x] Focused 7a Odin startup/Graphics checks: first-launch setup, direct normal
+  launcher on reopen, explicit driver-details access and return with controls
+  working, controller focus scrolling and clearer driver values. See the same
+  [manual record](development/android-driver-picker-odin-20261025.md).
+- [x] Focused 7a simulated incomplete-startup recovery: the corrected PC helper
+  verified the installed APK and backed up/marked only its startup status;
+  normal icon launch showed recovery, System Default reset/retry reached the
+  launcher, and exiting/reopening returned directly to the normal launcher.
+  This tests the recovery route, not an actual Vulkan-driver crash. See the same
+  [manual record](development/android-driver-picker-odin-20261025.md).
+- [x] Configurable floating touch controls accepted on Odin for the next update.
+  Frostie confirmed they work and are customizable. The captured overlay and
+  native input consumption support this focused result; see the
+  [25 October record](development/android-touch-controls-odin-20261025.md).
+  The Poco compatibility test must include these controls too.
 - [x] Home/resume audio fix: CI passed, the APK was locally re-signed with the
   established Debug key and `adb install -r` returned Success. Frostie reported
   the brief audio glitch fixed after the requested Home/reopen test on Odin.
@@ -85,25 +119,63 @@ background/sleep coverage remain open.
 
 ## Still required for full completion
 
+**Next update priorities:** the Poco/Turnip working run is now accepted within
+its manual scope. Share startup log (MD-010) is now resolved on Odin in the signed
+277c candidate: share menu, readable attachment and cancel/return passed. The
+reporter can send logs after updating; further Poco sharing tests remain deferred.
+See the [26 October result](development/poco-turnip-result-20261026.md).
+The remaining touch matrix and next signed-release checks are still open.
+The Retroid Pocket 5 investigation remains parked pending more data. See the
+[startup-crash record](development/startup-crash-issue26.md).
+
 - [ ] Complete the adventure through the credits, covering major areas,
   transformations, mechanics and optional activities.
 - [ ] Verify representative uninterrupted 20–30-minute sessions, with correct
   gameplay speed, graphics, camera behavior and sound. Record frame pacing,
   input delay, thermal behavior and memory trends; check for progressive slowdown.
-- [ ] Verify the accepted Home/resume audio fix in the next signed public release.
-  The focused local Debug check above does not complete broader lifecycle testing.
+- [x] Verify the accepted Home/resume audio fix in the next signed release candidate.
+  Frostie confirmed normal sound and controls after Home/reopen/continue on the
+  locally signed source277c candidate. Broader lifecycle/sleep/wake testing stays
+  open; see the [signed checkpoint](development/android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).
 - [ ] Complete broader audio checks.
 - [ ] Verify controller navigation throughout menus, gameplay and egg/first-person
   aiming, plus remapping, reconnecting and saved preferences.
-- [ ] **Next update priority: configurable floating touch controls.** Verify the
-  analog stick and all N64 buttons, simultaneous touches, independent button/
-  joystick sizes, opacity, saved movable positions and Auto/On/Off visibility.
-  Frostie will test On and built-in-pad Auto hiding on Odin. Source/host checks
-  do not complete this item; see [the touch guide](development/android-touch-controls.md).
-- [ ] **After touch controls are sorted:** add a custom Vulkan driver import/
-  selection UI, Reset to System Default, loaded/selected details and restart
-  status. Include a pre-renderer selection/reset path for the Poco startup
-  failure. A successful build is not a confirmed driver compatibility fix.
+- [ ] Extend touch-control coverage to phones, all buttons and aiming, sustained
+  simultaneous touches, size/opacity extremes, saved positions after restart,
+  Auto/On/Off during gameplay, interruptions and physical-pad coexistence.
+  The focused Odin acceptance above does not complete this matrix; see
+  [the touch guide](development/android-touch-controls.md). Verify the next
+  signed release separately. The source277c signed Odin candidate now passes
+  simultaneous on-screen movement/jump; the rest of this matrix remains open.
+- [ ] Extend driver checks to an actual Vulkan-driver startup failure, setup-state
+  retention across custom-driver import/reset, broader compatibility and the next
+  signed release on further devices. Source277c signed Odin switching/reset and
+  cold startup through the original component now pass. Healthy startup, manual access/return, scrolling, distinct
+  values and simulated incomplete-startup recovery/reset/reopen passed in 7a.
+  See the [manual record](development/android-driver-picker-odin-20261025.md) and
+  [driver guide](development/android-driver-picker.md). Extra space between the
+  three status fields is implemented for the next build; Frostie requested no
+  separate device test. Driver controls remain inside Graphics.
+- [x] Verify the Share startup log attachment fix (MD-010) on Odin for the update.
+  Signed source277c passed local protected signing and ADB installation. Frostie
+  confirmed the share menu, readable driver/log attachment and cancellation/
+  return to game; the 262801-byte export was received and reviewed. Further Poco
+  logs are deferred until the reporter updates. See the
+  [sharing record](development/android-startup-log-sharing-20261026.md#odin-signed-candidate-acceptance).
+- [x] Complete the planned focused v1.1.0 / code 5 signed Odin checks.
+  Source277c passed protected signing/payload verification and installation.
+  Existing save progress and graphics/sound/control settings were retained;
+  installed mods are working. Home-return sound/controls, simultaneous touch
+  movement/jump, share-menu/readable attachment/cancel return, Turnip R8 play and
+  System Default reset/restart passed. The original launch component cold-started
+  through the new router and continued straight to the normal launcher. These
+  are scoped manual results in the
+  [signed checkpoint](development/android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint),
+  including the actual update chain; broader coverage remains open above.
+- [ ] After the new release, update Frostie's retained Odin Debug app with its
+  established signer and data preserved. First extend local preparation to seven
+  native libraries and attached capture to the `:game` process; generate a new
+  pinned capture launcher. The current touch/audio Debug stays installed until then.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving

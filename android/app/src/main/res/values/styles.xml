@@ -5,4 +5,8 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:colorAccent">#C08040</item>
     </style>
+    <style name="DriverSettingsTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#151820</item>
+        <item name="android:colorAccent">#C08040</item>
+    </style>
 </resources>

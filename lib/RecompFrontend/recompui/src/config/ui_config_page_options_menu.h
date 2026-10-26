@@ -15,6 +15,7 @@ namespace recompui {
 
         std::vector<ConfigOptionElement*> config_option_elements;
         Element *description_container = nullptr;
+        Element *options_container = nullptr;
         std::string description_option_id = "";
         Button *apply_button = nullptr;
 
@@ -38,6 +39,7 @@ namespace recompui {
             recomp::config::Config *config,
             bool is_internal = false
         );
+        Element *get_options_container() { return options_container; }
         virtual ~ConfigPageOptionsMenu() = default;
     };
 } // namespace recompui

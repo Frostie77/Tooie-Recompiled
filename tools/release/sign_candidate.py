@@ -43,7 +43,7 @@ def sign(candidate_dir, tools, keystore, identities, output, previous=None):
         shutil.copyfile(candidate_dir / name, unsigned)
         require(release.digest(unsigned.read_bytes()) == report["sha256"], "Unsigned candidate hash differs")
         release.check_release_manifest(release.manifest_identity(unsigned, tools), unsigned, tools,
-                                       report["version_name"], report["version_code"])
+                                       report["version_name"], report["version_code"], report.get("driver_picker") is True)
         stable_report = root / "build-report.json"
         stable_report.write_text(json.dumps(report), encoding="utf-8")
         # Inherit the local terminal for apksigner's password prompt. No password
