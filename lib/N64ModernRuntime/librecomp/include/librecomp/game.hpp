@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <filesystem>
+#include <functional>
 
 #include "recomp.h"
 #include "rsp.hpp"
@@ -132,6 +133,9 @@ namespace recomp {
     bool flashram_allowed();
 
     void start_game(const std::u8string& game_id, const std::string& game_mode_id);
+    // Serializes a short private-storage transaction against start_game.
+    // The callback must not call back into game-selection APIs.
+    bool with_game_stopped(const std::function<void()>& operation);
     std::u8string current_game_id();
     std::string current_mod_game_id();
 }

@@ -138,7 +138,7 @@ static void persistence() {
     using namespace recomp::config;
     auto c = make_config(); CHECK(c.load_config());
     const auto& option = c.get_option("aiming_invert");
-    CHECK(option.name == "Aiming Invert" && !option.hidden && option.type == ConfigOptionType::Bool);
+    CHECK(option.name == "Invert Aiming y-axis" && !option.hidden && option.type == ConfigOptionType::Bool);
     CHECK(!std::get<bool>(c.get_option_value("aiming_invert")));
     c.update_option_value("joystick_deadzone", 0.27); c.update_option_value("rumble_strength", 60.0);
     c.update_option_value("aiming_invert", true); CHECK(c.save_config());
@@ -169,5 +169,5 @@ int main(int argc, char** argv) {
     CHECK(argc == 2); config_path = argv[1]; std::filesystem::create_directories(config_path);
     bridge_abi(); consumers(); persistence();
     std::printf("PASS: %u actual generated aiming/first-person cases: signed/neutral Y, independent X, walking and mode gates, parent-equivalent OFF, RAM/ABI restoration\n", scenarios);
-    std::puts("PASS: production General config defaults, visible Aiming Invert, immediate changes, ON/OFF disk reload, existing values, invalid/missing keys and temporary cancellation");
+    std::puts("PASS: production General config defaults, visible Invert Aiming y-axis, immediate changes, ON/OFF disk reload, existing values, invalid/missing keys and temporary cancellation");
 }

@@ -21,8 +21,9 @@ The retained private Debug app is now updated from 1bc to source
 `6f3e5de0e04b9846b47be42f86b9606b19f49cd4`, using the established Debug signer.
 Local SDK verification passed, ADB replacement returned Success, and Frostie
 confirmed his save and settings are intact. See the [Debug update record](android-debug-refresh-odin-20261026.md).
-Further playthroughs are paused at Frostie's request; use the new pinned recorder
-in that record when he is ready to resume.
+No new extended retained Debug playthrough is recorded; use the new pinned
+recorder for that session. The later focused save-backup acceptance is recorded
+below.
 
 ## Accepted work
 
@@ -80,8 +81,9 @@ see the [device record](device-compatibility.md) for scope.
 
 ## Current priorities
 
-Further playthroughs are paused at Frostie's request. The updated private Debug
-app and its new pinned recorder are ready for a later session. Track the
+Focused save-backup acceptance on Odin has passed; see the record below. No
+new extended retained Debug playthrough is recorded, and its pinned recorder
+is ready for the next session. Track the
 deferred Jiggy-challenge lines, dialogue shift and intro/demo stutter. Startup
 checks were introduced in v1.0.1; the live main feed now describes verified
 public v1.1.0 / code 5. Frostie confirms older releases detect it manually in
@@ -93,8 +95,10 @@ version/device and cause of the initial absence remain unspecified; no updater
 code change was required. Later, View Release/browser return, controller
 navigation and gameplay deferral remain open;
 see the
-[update guide](update-plan.md). Background/sleep, save export/import, multi-mod
-combinations and broader gameplay/lifecycle/device coverage remain open.
+[update guide](update-plan.md). Background/sleep, cross-device/app-channel save
+transfers, multi-mod combinations and broader gameplay/lifecycle/device coverage
+remain open. In-app save export/import and recovery passed in the isolated Odin
+app described below.
 Broader release/local Debug ROM/save/mod independence, fresh defaults and
 own-channel updates remain separate from the passed basic settings comparison.
 The Poco X3 Pro / Android 12 / Adreno 640 reporter now has working gameplay
@@ -218,9 +222,9 @@ manual `playing`, markers 1–30, repeated events/follow-up notes and `save`.
 The seven-library profile and private `:game` PID path passed host consumer and
 exact-parent controls; private-file/foreground queries still use the package.
 No fresh on-device capture output, installed-APK readback or new marker session
-was supplied with the manual update confirmation. Frostie is not ready for
-another playthrough; leave those checks deferred. If a recorder is still
-running, `save` ends it and retains the evidence before normal app closure.
+was supplied with that manual update confirmation. The later focused
+save-backup acceptance below does not supply a new retained Debug marker session.
+If a recorder is still running, `save` ends it and retains the evidence before normal app closure.
 See the [workflow guide](../../tools/android-workflow/README.md).
 
 Issue #26 also has a [Poco X3 Pro report](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747):
@@ -310,3 +314,51 @@ another test. The historical c849 system-driver failure preceded the successful
 d6 on-device driver import; the old PC helper is not a pending test instruction.
 The Retroid report remains parked pending more data. Frostie handles reporter
 replies and issue closures.
+
+## Save backup transfer work — 26 October 2026
+
+Frostie approved user-controlled export/import and resumed focused testing.
+[PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40) and the
+[save-backup guide](android-save-backups.md#odin-acceptance--26-october-2026)
+record the implementation, storage contract and accepted disposable-data result.
+Controls remain under General with no additional settings tab. The feature is
+unreleased; public v1.1.0/code 5 and its live feed are unchanged.
+
+The isolated app from source `410532de5c4212329e47827d8d4a6e75fecbc484`
+was installed successfully. Its [CI run 96](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40310631085)
+passed. The normal retained Debug and Release apps were outside the test target.
+Host store/codec, runtime EEPROM consumption, start/transfer exclusion, JNI and
+SDK 36 Java checks passed separately from the following manual Odin acceptance:
+
+- Empty-save feedback, all three actions and the running-game guard worked.
+- Exports A and B reported verified; PC validation checked format/checksum and
+  confirmed their payloads differed after creating one and then two save slots.
+- Picker cancellation and valid-import confirmation cancellation returned normally;
+  both slots remained after cancellation. A damaged copy was rejected, with
+  wording Frostie confirmed as correct and acceptable.
+- Importing A restored only the original save; it loaded into gameplay.
+- Exporting the pre-import Previous save copy and importing it restored both
+  slots; loading the second save reached normal gameplay.
+
+The checklist now accepts focused in-app export/import and recovery on Odin.
+Cross-device/app-channel transfers, other document providers and the broader
+navigation/device matrix remain open. The same guide preserves build identities,
+export hashes and evidence limits. Frostie handles merges and issue closures.
+
+### Requested settings presentation
+
+After accepting the storage behavior, Frostie requested these changes for the
+same next update:
+
+- Name the General section and Android manager **Save Management**; its action
+  button is **Manage saves…**.
+- Place the **Touch** tab between **Controls** and **Sound**.
+- Put **(App settings, ROMs and mods are separate.)** in parentheses in the save
+  description.
+- Use this exact launcher instruction: "Use this feature at the Launcher Screen.
+  If you are already in-game. Save and Exit then reopen the App."
+- Rename **Aiming Invert** to **Invert Aiming y-axis**, preserving the
+  `aiming_invert` preference and runtime behavior.
+
+The accepted disposable-save results above remain tied to source `410532de5c42`;
+they do not establish on-device acceptance of these later presentation changes.
