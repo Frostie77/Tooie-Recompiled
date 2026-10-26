@@ -9,8 +9,8 @@ Checked boxes describe the tested scope; the project is not fully complete.
 [Tooie Recompiled v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) was published on
 **26 October 2026 (AEDT)** with Android version code **5**. Its tag targets the
 verified main build; both public downloads match the tested signed APK and
-checksum. This revision prepares the v1.1.0 stable-feed entry for deployment on
-`main`; see the [publication record](development/release-v1.1.0-check-20261026.md).
+checksum. Frostie merged PR #34, and the live `main` feed now describes
+v1.1.0 / code 5; see the [publication record](development/release-v1.1.0-check-20261026.md).
 
 The earlier [v1.0.1 release](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1)
 was published on **24 October 2026 (AEDT)** with code **4**. Its historical
@@ -70,9 +70,10 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 - [x] Offline startup remained normal and the manual check showed a recoverable
   error explaining that play can continue.
 - [x] Manual checks recovered after Wi-Fi was restored.
-- [ ] Observe a real newer-version notice, Later, View Release and browser return
-  on device, including controller navigation and deferral during gameplay;
-  still awaiting a physical-device check with the newer published release.
+- [ ] Observe the automatic startup newer-version notice, Later, View Release
+  and browser return, including controller navigation and gameplay deferral.
+  The 26 October follow-up confirms manual newer-release detection, but reports
+  no startup message; the automatic path still needs a targeted check.
 - [x] Published v1.0.1, verified both public assets and advanced the stable feed.
 - [x] Additional device confirmation: Frostie reports public v1.0.1 works on
   Pixel 8 Pro / Android 17 / Mali-G715 MP7. This is a manual functional result;
@@ -87,10 +88,15 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 - [x] Reuse the exact Odin-tested signed APK after binding it to the byte-identical
   main unsigned build and rerunning local SDK package/payload verification.
 - [x] Publish instructions for Share startup log and the tested Turnip download.
-- [x] Prepare and validate the v1.1.0 stable-feed entry with the production update
-  checker: public v1.0.1/code4 is eligible, v1.1.0/code5 is current. Merging this
-  metadata change deploys that entry to the main feed; on-device notification/
-  browser-return acceptance remains separate.
+- [x] Validate and deploy the v1.1.0 stable feed through merged PR #34; the raw
+  main-feed URL serves code 5. Host consumer checks confirm code 4 is eligible
+  and code 5 is current.
+- [x] Manual newer-release detection: Frostie confirms older installed releases
+  show the available update under Settings → Updates. Exact older versions,
+  device and capture were not supplied in this follow-up.
+- [ ] Confirm the automatic startup message. Frostie reports no message on opening
+  the older app; the saved automatic-check setting, cache age and cold-start
+  state still need checking. Later/View Release/browser return remain open.
 
 See the [release record](development/release-v1.1.0-check-20261026.md) for exact identities
 and the scope of the signed Odin results. Issue closures remain Frostie's job.
@@ -225,8 +231,10 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   checklist. Distribution review remains a separate open item.
 - [x] Obtain Frostie's explicit publication approval for the first Android
   release as **1.0.0**. Final project-completion sign-off remains separate.
-- [ ] Complete the remaining on-device updater flow: a real newer-version offer,
+- [ ] Complete the remaining on-device updater flow: automatic startup offer,
   Later, View Release/browser return, controller navigation and notice deferral.
+  Manual detection of the newer public release passed on 26 October, while
+  Frostie reported no automatic startup message.
   The v1.0.1 candidate's manual checks, Off-preference persistence, offline startup
   and recovery passed as recorded above. Host tests cover the other branches;
   see the [update guide](development/update-plan.md). Published v1.0.0 predates
