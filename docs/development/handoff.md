@@ -97,9 +97,13 @@ fix is claimed. Keep the later MD-004 screen-shaking reports separate. The
 [Jiggy-challenge investigation](jiggy-challenge-lines-investigation-20261026.md)
 records Frostie's clarification that MD-001 looks like static in a horizontal
 straight line, the original capture's missing event-period log/image, and the
-game's small captured-image target and POINT-sampled drawing path. Its cause
-and repair are unconfirmed; whether it is confined to the puzzle picture
-remains the next clarification. Track the deferred intro/demo stutter separately. Startup
+game's small captured-image target and POINT-sampled drawing path. On 27 October
+he located it usually near the top left, reaching about halfway across and
+disappearing/reappearing quickly. That later extent refines his initial
+whole-screen description. Its cause and repair remain unconfirmed; next capture
+the whole displayed frame with the line visible and retain its graphics settings.
+No new image or measured per-draw state is available. Track the deferred
+intro/demo stutter separately. Startup
 checks were introduced in v1.0.1; the live main feed now describes verified
 public v1.1.0 / code 5. Frostie confirms older releases detect it manually in
 Settings → Updates. After the initially absent startup message, he was asked

@@ -267,8 +267,10 @@ when dialogue animation starts (marker 2) remain follow-up work after the first
 release. The [26 October dialogue investigation](development/dialogue-screen-shift-investigation-20261026.md)
 reviews existing evidence and two synthetic renderer mechanisms; the cause and
 gameplay fix remain unconfirmed. The [Jiggy-challenge investigation](development/jiggy-challenge-lines-investigation-20261026.md)
-records the static-like straight-line description and captured-image sampling
-path; MD-001 also remains unresolved. Keep both in known issues. Focused Save
+records the captured-image sampling path and Frostie's latest description:
+static-like horizontal noise, usually near the top left, extending about halfway
+across and disappearing/reappearing quickly. These are conversation details;
+MD-001 also remains unresolved. Keep both in known issues. Focused Save
 Management/settings testing has resumed and passed; no new graphics-defect
 capture is recorded.
 

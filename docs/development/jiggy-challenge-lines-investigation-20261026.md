@@ -22,9 +22,24 @@ There is no invented event ID or screenshot for this report.
 
 On **26 October**, Frostie clarified in conversation: **“they look like static
 in a straight line”**. Retain this as static-like noise along a straight line;
-he subsequently confirmed the line is **horizontal**. Its exact location and
-whether it flickers have not been specified. Do not rewrite it as a confirmed gap between puzzle
-pieces, ordinary jigsaw outlines or the unrelated dialogue shift MD-002.
+he subsequently confirmed the line is **horizontal**.
+
+On **27 October**, he supplied these further details, in order:
+
+| Order | Literal clarification |
+|---|---|
+| 1 | “it crosses the whole screen” |
+| 2 | “typically the top left side of the screen” |
+| 3 | “it goes about halfway across then dissapears and reappers quickly” |
+
+Use the latest description for follow-up: **a static-like horizontal line,
+usually near the top left, extending about halfway across and disappearing and
+reappearing quickly**. The later half-width estimate refines the initial
+whole-screen description; do not retain full width as an established dimension.
+These are conversation reports, not a newly captured frame. Exact coordinates,
+duration and overlap with the puzzle picture versus the surrounding scene remain
+unmeasured. Do not rewrite the report as a confirmed gap between puzzle pieces,
+ordinary jigsaw outlines or the unrelated dialogue shift MD-002.
 
 The rechecked source is
 `Tooie-af97304f201a-Release-Check-20261024-002120-9d5fcf94-Share.zip`,
@@ -101,17 +116,26 @@ bounds, image stride and vertical texture origins/clamping. Review of the copy
 setup/record and sampling paths does not identify which row or draw produced
 the report; their actual per-draw inputs were not captured.
 
-The next useful clarification is whether the horizontal static-like line lies
-inside the puzzle picture, at a piece boundary or across the surrounding scene.
-Existing visual evidence would help if already available.
+The 27 October report adds approximate position, extent and rapid recurrence.
+The next useful evidence is a capture of the whole displayed frame while the
+line is visible, retaining enough surrounding scene to locate it. Do not limit
+capture to the puzzle picture. Position and flicker alone do not establish a
+texture-copy fault, synchronization defect or display tearing.
 
-For the next focused graphics test, capture the actual line and its settings before choosing
-one controlled comparison. If confined to the captured picture, compare native
-versus increased internal resolution, retaining the same driver, texture/mod
-state and other settings. Then inspect the affected draw's texture origin,
-stride, bounds and copy/replacement route. A changed picture alone would narrow
-the path; it would not identify a general filtering fix. Preserve the original
-save and avoid changing several settings together.
+For the next focused graphics test, use the installed Debug build's matching
+recorder and add a marker when the line appears. A single marker screenshot can
+miss a rapidly disappearing line; a screenshot without the line does not
+disprove the report. Retain the reported event and settings even if the image
+misses it. A short recording can help if available.
+
+Capture the actual line and its settings before choosing one controlled
+comparison. If confined to the captured picture, compare native versus increased
+internal resolution, retaining the same driver, texture/mod state and other
+settings. Then inspect the affected draw's texture origin, stride, bounds and
+copy/replacement route. If the line extends into the surrounding scene, include
+the full-frame render-target, viewport/scissor and presentation paths in the
+investigation. These are conditional investigation paths, not demonstrated
+causes. Preserve the original save and avoid changing several settings together.
 
 Do not apply a global half-texel, filtering, coordinate-clamp, framebuffer or
 MSAA change solely from the written symptom. MD-001 and all other marker
