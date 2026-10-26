@@ -6,6 +6,20 @@ Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).
 Use the current repository refs and workflow profile for exact source identities.
 
+## Current release
+
+[v1.1.0 / code 5](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) is published and GitHub marks it as
+latest stable. Tag source is `0b0acfa54d2f689d6febb4dee29710fdde9fbb80`.
+The public APK is the exact tested signed APK, SHA-256 `6ed259e1c3f3b5313834bfd59440b54cb3a31888d58301e6166114159569e029`;
+both public downloads were independently verified. This change prepares the
+README/changelog/checklist and v1.1.0 feed for main deployment. See the
+[publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
+reporter replies; do not close issues as part of release work.
+
+The retained Debug app still needs its deferred update: first extend its local
+signing helper to seven libraries and attached capture to the `:game` PID.
+Its accepted 1bc capture command remains valid until that APK is replaced.
+
 ## Accepted work
 
 Odin evidence covers startup, selected gameplay routes, the previously failing
@@ -51,7 +65,7 @@ was supplied. See the [exact test record](history/android-home-resume-audio-2026
 
 The configurable touch controls from source `1bc772153fcc7c4192890aa1ce8adf99d6f4ea79`
 passed focused Odin Debug acceptance on 25 October. Frostie confirmed they work
-and are customizable, and requested inclusion in the next update. The verified
+and are customizable. They are now included in v1.1.0. The verified
 installed APK, complete uploaded marker review, overlay screenshot and native
 input-consumer records are in the [acceptance record](android-touch-controls-odin-20261025.md).
 Broader phone, persistence, all-button and lifecycle checks remain open.
@@ -64,33 +78,36 @@ see the [device record](device-compatibility.md) for scope.
 
 Continue post-release playtesting through the established Debug app. Track the
 deferred Jiggy-challenge lines, dialogue shift and intro/demo stutter. Startup
-checks are published in v1.0.1 and the stable feed points to its verified APK.
+checks were introduced in v1.0.1; the feed in this revision advances to verified
+public v1.1.0 / code 5.
 A real newer notice, Later, browser return, controller navigation and notice
-deferral remain on-device checks planned for the next update; see the
+deferral remain on-device checks after the v1.1.0 feed is deployed; see the
 [update guide](update-plan.md). Background/sleep, save export/import, multi-mod
 combinations and broader gameplay/lifecycle/device coverage remain open.
 Broader release/local Debug ROM/save/mod independence, fresh defaults and
 own-channel updates remain separate from the passed basic settings comparison.
-The primary startup-crash investigation is the Poco X3 Pro / Android 12 /
-Adreno 640 report in issue #26. Frostie has parked the Retroid Pocket 5 report
-and existing Adreno 650 experiment pending more data (Android version, fresh
-app log and the result of the existing test). Both remain unresolved; do not
-infer one device's cause or success from the other.
+The Poco X3 Pro / Android 12 / Adreno 640 reporter now has working gameplay
+with Turnip in the d6 test; no stock-driver compatibility fix is established.
+Frostie has parked the Retroid Pocket 5 report and existing Adreno 650 experiment
+pending more data. The initial Redmi Pad 2 report also needs Android/build
+identity and logs; no v1.1.0 result is recorded. Keep each device's evidence
+separate and leave reporter replies and issue closures to Frostie.
 
-Touch controls are implemented and accepted for the next update on Odin.
-The combined c849 Poco test includes the accepted touch/audio source and guarded
-graphics experiment. The reporter has confirmed the same startup exit with the
-system driver; both new logs were reviewed. Turnip has not been selected in
-those logs. The reporter's later PC staging attempt stopped at a remote SHA-256
-mismatch; no successful Turnip staging/gameplay result is available. Investigate
-that raw-transfer path separately; the Odin recovery helper's quoted-script
-bug does not establish the cause of the Poco transfer failure.
+Touch controls are implemented and published in v1.1.0 after focused Odin acceptance.
+The earlier combined c849 Poco test included the accepted touch/audio source
+and guarded graphics experiment. Its system-driver logs repeated the startup
+exit without a Turnip selection. A subsequent PC staging attempt stopped at a
+remote SHA-256 mismatch. The later d6 on-device import bypassed that transfer
+and produced the working Turnip result recorded below. The Odin recovery
+helper's quoted-script bug did not establish the cause of the PC transfer
+failure.
 See the [25 October result](poco-system-driver-result-20261025.md).
 The user-facing custom Vulkan driver import/reset interface belongs inside
 Graphics, with no additional settings tab/banner and a pre-renderer recovery
 path. Its package/store, Graphics UI and isolated Android recovery path are
-implemented on the separate driver-picker branch. The first launch shows driver setup before SDL/RT64/Vulkan; the requested
-revision remembers setup and sends subsequent healthy launches directly to the
+implemented and merged through the driver-picker branch. The first launch shows
+driver setup before SDL/RT64/Vulkan; the saved setup sends subsequent healthy
+launches directly to the
 normal launcher. Explicit Graphics/recovery entry or failed/incomplete startup
 still shows the driver screen. Focused 7a Odin checks now accept first-launch
 setup, healthy direct launcher reopen and explicit Graphics access/return.
@@ -109,8 +126,8 @@ but has no separate device test, as Frostie requested. See the
 [driver settings guide](android-driver-picker.md). Touch acceptance on Odin is
 separate from Poco Vulkan compatibility.
 
-Frostie now wants to prepare another release with the accepted audio/touch/driver
-work. Audio PR #29 and touch PR #30 have been merged; driver PR #32 remains draft.
+Frostie published v1.1.0 with the accepted audio/touch/driver work. Audio PR #29,
+touch PR #30 and driver PR #32 have been merged.
 Normal-build integration now enables `TOOIE_ANDROID_VULKAN_DRIVERS` in Android
 Debug/release, while the GPU-test flag controls only the separate identity.
 The release package/signer and API 24 minimum are retained. Android 7/8 bypasses
@@ -119,25 +136,26 @@ The verifier binds seven native libraries and compiled process roles, retains
 legacy v1.0.1 checks and rejects GPU-test provenance for releases. Host driver,
 touch, Java/JNI, update and release checks pass. Full v1.1.0 push/PR CI and
 downloaded-candidate verification passed at `33fcd5516c8f0b05b9b0ae0399c027e11e2690f1`;
-the combined locally signed Odin check remains open. Feature-branch pushes prepare an unsigned
-1.1.0 / code 5 candidate after CI's signing fixture passes. Both normal-build CI
+the later combined signed Odin check and publication are recorded above. During
+integration, feature-branch pushes prepared an unsigned 1.1.0 / code 5 candidate
+after CI's signing fixture passed. Both normal-build CI
 runs passed at source `32142e8ea45877e7abb4e4ab4f192c4e28bcb201`, validating the
 normal package and actual release-signing fixture. Its unsigned 1.0.2 artifact is
-superseded by the verified 1.1.0 feature-update candidate. Use the new candidate
-and pinned hashes in the [integration record](android-driver-release-integration-20261025.md).
+superseded by the verified 1.1.0 build. Exact candidate identities and pinned
+hashes remain in the [integration record](android-driver-release-integration-20261025.md).
 The feed-preparation helper now validates the new driver launcher/process layout;
 six host metadata tests pass, including an unchanged-parent failing control.
 The 1.1.0 candidate also retains the old SDL launch component as an exported
 alias to the pre-Vulkan router, preserving ES-DE/shortcut links. The private
-game subclass inherits the existing JNI namespace. Verify the compatibility
-alias in the signed Odin candidate; this route has not yet been exercised on device.
+game subclass inherits the existing JNI namespace. The compatibility
+alias in the signed Odin candidate was verified by the cold-start command and
+Frostie's confirmation of direct normal-launcher entry.
 The focused Odin test is
-complete and the test app may be closed. Keep these changes **Unreleased**;
-public v1.0.1
-still has the issue. Verify the fix in the next signed release and retain the
-broader audio, sleep/wake and interruption checks.
+complete. The audio fix passed the signed Odin
+Home-return check and is published in v1.1.0. Retain the broader audio,
+sleep/wake and interruption checks.
 
-The next Poco step is the [verified d6 on-device picker test](poco-driver-picker-test-20261025.md),
+The Poco reporter used the [verified d6 on-device picker test](poco-driver-picker-test-20261025.md),
 including touch controls and audio. Its successful CI artifact, ZIP/APK digests,
 all seven native hashes/Build IDs and JNI/DEX markers were checked. It imports
 the regular tested R8 ZIP on Android, avoiding the failed PC transfer. The older
@@ -145,14 +163,16 @@ c849 source/package stays unchanged. Frostie [posted the d6 phone-import
 instructions](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6397614478)
 on 25 October. The reporter now confirms a working game with Turnip; the reviewed
 screenshot shows loaded Turnip matching the running game. See the [26 October
-result](poco-turnip-result-20261026.md). Share startup log does nothing on Poco and
-Frostie reproduced it on the signed Odin candidate (MD-010). Fresh Odin logs
+result](poco-turnip-result-20261026.md). Share startup log did nothing in that
+Poco build, and Frostie reproduced the failure on the earlier signed Odin
+candidate (MD-010). Fresh Odin logs
 confirm a 791464-byte chooser parcel and `TransactionTooLargeException`. A
 bounded text-attachment/read-only content-URI fix passed both CIs in source277c,
 local protected signing (signed SHA-256 `6ed259e1c3f3b5313834bfd59440b54cb3a31888d58301e6166114159569e029`)
 and ADB update Success. Frostie confirmed the share menu, readable driver/log
 attachment and cancel/return to game; MD-010 is resolved on Odin. The received
-262801-byte export was reviewed. Remaining combined release checks stay open. See the
+262801-byte export was reviewed. The completed combined release checks are
+recorded below. See the
 [sharing record](android-startup-log-sharing-20261026.md). Frostie deferred
 further Poco logs until the reporter updates.
 On the same signed source277c candidate, Frostie confirmed intact existing save
@@ -164,10 +184,9 @@ graphics during a short play check, followed by successful System Default
 reset/restart and gameplay. ADB cold-started the original SDL component through
 GraphicsDriverActivity; Frostie confirmed the normal launcher appeared without
 driver confirmation. Installed release mods are working. The planned focused
-signed-Odin checks are complete; PR #32 is ready for review/merge and v1.1.0 /
-code 5 release preparation. Broader gameplay/touch/phone and actual failed-driver
-coverage remain separate. No public release or stable-feed change is made by
-this acceptance record.
+signed-Odin checks are complete; PR #32 is merged and v1.1.0 / code 5 is public.
+Broader gameplay/touch/phone and actual failed-driver coverage remain separate.
+The publication record above supersedes the earlier release-preparation status.
 
 Frostie explicitly deferred updating his retained Odin Debug app until after the
 new release. It remains the accepted locally signed touch/audio build from
@@ -259,9 +278,9 @@ The declared 56-minute-35-second window kept its original PID present at all
 frames and character rendering remain open as MD-003 through MD-005; repeated
 marker 1 and both unparsed inputs are retained with distinct references.
 
-See the [issue #26 investigation](startup-crash-issue26.md) before proposing
-another test to the Poco reporter. The verified c849 test has now failed its
-system-driver baseline at the same indexing guard, before the earlier 650 pool
-experiment can help. The existing APK supports the pending optional Turnip
-comparison through its PC helper. The Retroid report is parked pending more
-data. Draft replies for Frostie to post; no new public release is authorized.
+See the [issue #26 investigation](startup-crash-issue26.md) and
+[working Poco Turnip result](poco-turnip-result-20261026.md) before proposing
+another test. The historical c849 system-driver failure preceded the successful
+d6 on-device driver import; the old PC helper is not a pending test instruction.
+The Retroid report remains parked pending more data. Frostie handles reporter
+replies and issue closures.

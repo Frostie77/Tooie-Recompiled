@@ -4,7 +4,7 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 [N64Recomp](https://github.com/N64Recomp/N64Recomp) and
 [RT64](https://github.com/rt64/rt64).
 
-## Latest Release - [v1.0.1](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1)
+## Latest Release - [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0)
 
 **You must supply your own supported Banjo-Tooie (USA) ROM. No ROM is included.**
 
@@ -25,7 +25,7 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 - Android 7.0 / API 24 or newer, with a 64-bit ARM processor.
 - A compatible Vulkan GPU with the features required by RT64.
 - A supported USA ROM in `.z64` format.
-- A physical controller for v1.0.1. The next update adds configurable touch controls.
+- On-screen touch controls or a physical controller.
 
 The primary test device is the **AYN Odin 2 Portal / Adreno 740**. Frostie also
 confirmed public **v1.0.1 works on Pixel 8 Pro / Android 17 / Mali-G715 MP7**.
@@ -45,7 +45,14 @@ future launches.
 Configure graphics, input mappings and audio through the launcher menus.
 Current Odin testing uses **Manual 60** in Graphics.
 
-### Custom graphics drivers (next update)
+### Touch controls
+
+Configure the floating joystick and N64 buttons under **Settings → Touch**.
+Adjust button/joystick sizes, opacity and positions, and choose Auto/On/Off
+visibility. Built-in gamepad users can hide the overlay. See the
+[touch-controls guide](docs/development/android-touch-controls.md).
+
+### Custom graphics drivers
 
 On **Android 9 or newer**, **Settings → Graphics** lets you import/select a custom Vulkan driver, reset to
 **System Default**, and view the selected driver, loaded driver and restart status.
@@ -66,7 +73,8 @@ bundled. The [driver guide](docs/development/android-driver-picker.md) includes
 the checksum and setup details. Odin acceptance covers this tested combination;
 A Poco X3 Pro / Android 12 / Adreno 640 tester also reports the game working
 with regular R8 in the separate driver-picker test; see the [result](docs/development/poco-turnip-result-20261026.md).
-Broader compatibility and the final signed release remain under test.
+The public v1.1.0 APK is identical to the Odin-tested signed candidate; see the
+[release record](docs/development/release-v1.1.0-check-20261026.md). Broader compatibility remains under test.
 
 ### Mod support
 
@@ -84,9 +92,9 @@ compatibility limits.
 first-person looking. The saved preference defaults Off; walking, horizontal
 input and the regular camera retain their behavior.
 
-### Update checks (v1.0.1)
+### Update checks
 
-**v1.0.1** adds background startup update checks and
+Since **v1.0.1**, the release app includes background startup update checks and
 **Settings → Updates** for manual checks and a saved automatic-check toggle.
 Newer compatible releases offer **View Release / Later**; the release page
 provides the APK to download and install. Offline checks leave the app usable.
@@ -97,8 +105,10 @@ Version 1.0.0 needs one manual APK update to gain the checker. See the
 ## Getting started
 
 1. Install the Android APK from the release's **Assets**.
-2. Open **Tooie Recompiled**, choose **Select ROM** and select the supported ROM.
-3. Choose **Start Game**. Configure any mods before starting the game.
+2. On Android 9+, choose **System Default** or import a compatible driver on the
+   first startup screen, then select **Start / return to game**.
+3. In the launcher, choose **Select ROM** and select the supported ROM.
+4. Choose **Start Game**. Configure any mods before starting the game.
 
 See [setup and ROM requirements](docs/getting-started.md) for details.
 
@@ -130,16 +140,23 @@ compatible releases. **View Release** opens the matching GitHub release;
 download the APK from Assets and install it as an update to keep your progress.
 Downloads and installation remain manual.
 
+### How do I share a startup log?
+
+On Android 9+, reproduce the problem, then open **Settings → Graphics → Driver
+details / restart** and select **Share startup log**. Save or send the `.txt`
+attachment and add it to your GitHub issue/comment with your device model,
+Android version, game version and what happened. If startup closes, reopen the
+app and look for **Graphics driver options → Share startup log** on the recovery
+screen. See the [release notes](docs/development/release-notes-v1.1.0.md).
+
 ## Known issues
 
 - Minor visual lines during the Jiggy challenge.
 - A brief screen shift when dialogue animation begins.
 - Intro/demo stutter and animation cadence still need further work.
-- Brief audio distortion after returning from Android Home in v1.0.1. A fix
-  passed focused Odin Debug testing; see [Unreleased](CHANGELOG.md#unreleased).
-- Startup crashes have been reported on Retroid Pocket 5 / Adreno 650 and
-  Poco X3 Pro / Android 12 / Adreno 640;
-  see [issue #26](https://github.com/Frostie77/Tooie-Recompiled/issues/26).
+- Startup compatibility reports for Retroid Pocket 5 / Adreno 650 and Redmi Pad
+  2 / Mali-G57 MC2 need further investigation. The Poco X3 Pro reporter obtained
+  a working game with Turnip. See the [device reports](docs/development/device-compatibility.md).
 - A complete playthrough and broad Android compatibility have not been verified.
 
 Report reproducible problems through
@@ -170,27 +187,3 @@ retain their own terms; distribution review is part of release preparation.
 Maintained by **Frostie**. This is an unofficial fan project, independent of the
 Banjo: Recompiled team and unaffiliated with Nintendo, Rare or Microsoft.
 
-## Unreleased touch-controls work
-
-Configurable Android on-screen controls are accepted on Odin 2 Portal for the
-next update: a floating stick, N64 buttons, independent button/joystick sizes,
-opacity, movable positions and Auto/On/Off visibility. Configure them under
-**Settings → Touch**. See the [Odin test record](docs/development/android-touch-controls-odin-20261025.md)
-and [touch-controls guide](docs/development/android-touch-controls.md).
-The locally signed v1.1.0 candidate also passed simultaneous on-screen movement
-and jumping on Odin. Broader touch/phone coverage remains open. The
-Poco compatibility test includes these controls. Its stock driver failed, but
-the reporter now confirms a working game with Turnip; see the [latest result](docs/development/poco-turnip-result-20261026.md).
-Share startup log uses a text attachment in the next update. The signed candidate
-passed Odin's share-menu, readable attachment and cancel/return checks; see the
-[sharing record](docs/development/android-startup-log-sharing-20261026.md#odin-signed-candidate-acceptance).
-Custom-driver settings are implemented under Graphics with a pre-Vulkan Android
-startup/recovery screen. Focused Odin system/Turnip switching, gameplay and
-System Default rollback passed. Focused 7a checks also passed for first-launch/
-healthy-reopen routing, explicit Graphics access/return, scrolling and clearer
-values. A simulated incomplete-startup recovery, System Default reset/retry and
-subsequent direct launcher reopen also passed. The signed v1.1.0 candidate now
-also passes Turnip play, System Default reset/restart, retained saves/settings
-and working mods, plus a cold launch through the original shortcut component
-straight to the normal launcher. Actual failed-driver and broader device checks
-remain open. See the [signed acceptance record](docs/development/android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).

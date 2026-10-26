@@ -3,7 +3,9 @@
 The startup checker is included in public **v1.0.1 / code 4**. Its focused Odin
 checks passed as described below; remaining notice/browser checks are separate.
 Version 1.0.0 predates this code and needs one manual APK update to gain it.
-The stable feed now describes the verified public v1.0.1 APK.
+The feed in this revision describes public **v1.1.0 / code 5**, published on
+26 October 2026 (AEDT). Its actual APK/checksum downloads and tag were verified;
+see the [v1.1.0 publication record](release-v1.1.0-check-20261026.md).
 
 ## Player behavior
 
@@ -119,10 +121,14 @@ CI additionally compiles the actual ARM64 UI/bridge and checks the packaged
 network permission, DEX entry points and native strings.
 
 The initial v1.0.0 entry was independently regenerated from its actual signed
-APK using Android SDK signature/manifest checks. The current v1.0.1 entry binds
-the exact APK to its local SDK signing report, independent packaged-manifest
-inspection and the public GitHub asset's matching size/digest. See the
+APK using SDK signature/manifest checks. The v1.0.1 entry has its own
 [publication record](release-v1.0.1-check-20261024.md#public-release-and-feed).
+The v1.1.0 entry is composed from the SDK-verified package and matching public
+APK metadata, with exact tag/source, signer, name, size and digest checks. The
+production parser/checker, identical to public v1.0.1, passed 96 regression
+assertions plus the real published-release JSON: code 4 sees v1.1.0 available;
+code 5 is current. This is host consumer validation, not an on-device prompt or
+browser-return test.
 Host fixtures cover newer/equal/older codes; invalid channels, identities and
 assets; minimum API/ABI; offline/retry; ETags; throttling; malformed, oversized
 and deeply nested data; concurrent requests; and duplicate-notice deferral.

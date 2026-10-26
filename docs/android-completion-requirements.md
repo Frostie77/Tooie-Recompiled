@@ -2,15 +2,19 @@
 
 Updated: 26 October 2026.
 
-The goal is a reliable native Android ARM64 release for the Android,
+The goal is a reliable native Android ARM64 release,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
 Checked boxes describe the tested scope; the project is not fully complete.
 
-[Tooie Recompiled v1.0.1](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1)
-was published on **24 October 2026 (AEDT)** with Android version code **4**.
-Its tag matches the tested source; both public asset digests match the verified
-signed upload. The stable feed now identifies v1.0.1. Focused Odin results are
-recorded [below](#v101-release-checks).
+[Tooie Recompiled v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) was published on
+**26 October 2026 (AEDT)** with Android version code **5**. Its tag targets the
+verified main build; both public downloads match the tested signed APK and
+checksum. This revision prepares the v1.1.0 stable-feed entry for deployment on
+`main`; see the [publication record](development/release-v1.1.0-check-20261026.md).
+
+The earlier [v1.0.1 release](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1)
+was published on **24 October 2026 (AEDT)** with code **4**. Its historical
+acceptance is recorded [below](#v101-release-checks).
 
 [Tooie Recompiled v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/Banjo-Tooie)
 was published on **24 October 2026 (AEDT)** with Android version code **3**.
@@ -68,13 +72,30 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 - [x] Manual checks recovered after Wi-Fi was restored.
 - [ ] Observe a real newer-version notice, Later, View Release and browser return
   on device, including controller navigation and deferral during gameplay;
-  planned for the next update.
+  still awaiting a physical-device check with the newer published release.
 - [x] Published v1.0.1, verified both public assets and advanced the stable feed.
 - [x] Additional device confirmation: Frostie reports public v1.0.1 works on
   Pixel 8 Pro / Android 17 / Mali-G715 MP7. This is a manual functional result;
   see the [device record](development/device-compatibility.md).
 
-## Unreleased Debug checks
+## v1.1.0 publication checks
+
+- [x] Publish the stable v1.1.0 release and tag at verified main source
+  `0b0acfa54d2f689d6febb4dee29710fdde9fbb80`, Android code 5.
+- [x] Verify the public APK and SHA256SUMS by independent download: APK
+  `6ed259e1…`, 14362262 bytes; exact checksum-file content/digest matched.
+- [x] Reuse the exact Odin-tested signed APK after binding it to the byte-identical
+  main unsigned build and rerunning local SDK package/payload verification.
+- [x] Publish instructions for Share startup log and the tested Turnip download.
+- [x] Prepare and validate the v1.1.0 stable-feed entry with the production update
+  checker: public v1.0.1/code4 is eligible, v1.1.0/code5 is current. Merging this
+  metadata change deploys that entry to the main feed; on-device notification/
+  browser-return acceptance remains separate.
+
+See the [release record](development/release-v1.1.0-check-20261026.md) for exact identities
+and the scope of the signed Odin results. Issue closures remain Frostie's job.
+
+## Development and compatibility checks
 
 - [x] Poco reporter confirms the game works with Turnip in the offered d6 test;
   reviewed screenshot shows Turnip loaded and matching the running game. This is
@@ -84,8 +105,8 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
   fixture and unsigned export passed at `33fcd5516c8f`. Downloaded candidate and
   Debug artifacts, seven native hashes/Build IDs, assets, driver DEX and bundled
   helper provenance were verified. Local protected signing and replacement install
-  passed; functional/data-retention checks remain open;
-  see the [integration record](development/android-driver-release-integration-20261025.md).
+  passed. That early candidate was superseded by the accepted source277c and
+  byte-identical published main build; see the [integration record](development/android-driver-release-integration-20261025.md).
 
 - [x] Focused Odin driver-picker roundtrip in the separate 4ee GPU test app:
   startup options, system-driver gameplay, picker cancellation/resume, Turnip
@@ -102,20 +123,19 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
   launcher, and exiting/reopening returned directly to the normal launcher.
   This tests the recovery route, not an actual Vulkan-driver crash. See the same
   [manual record](development/android-driver-picker-odin-20261025.md).
-- [x] Configurable floating touch controls accepted on Odin for the next update.
+- [x] Configurable floating touch controls accepted on Odin for v1.1.0.
   Frostie confirmed they work and are customizable. The captured overlay and
   native input consumption support this focused result; see the
   [25 October record](development/android-touch-controls-odin-20261025.md).
-  The Poco compatibility test must include these controls too.
+  The offered d6 Poco compatibility test includes these controls.
 - [x] Home/resume audio fix: CI passed, the APK was locally re-signed with the
   established Debug key and `adb install -r` returned Success. Frostie reported
   the brief audio glitch fixed after the requested Home/reopen test on Odin.
   This is focused manual Debug acceptance, without a fresh audio log or recording;
   see the [test record](development/history/android-home-resume-audio-20261024.md).
 
-Frostie chose to collect more fixes before publishing another release. Public
-v1.0.1 still contains the Home/resume issue; signed-release acceptance and broader
-background/sleep coverage remain open.
+The audio/touch/driver update is now published as v1.1.0. Focused signed Odin
+acceptance passed; broader background/sleep and full-game coverage remain open.
 
 ## Still required for full completion
 
@@ -124,7 +144,7 @@ its manual scope. Share startup log (MD-010) is now resolved on Odin in the sign
 277c candidate: share menu, readable attachment and cancel/return passed. The
 reporter can send logs after updating; further Poco sharing tests remain deferred.
 See the [26 October result](development/poco-turnip-result-20261026.md).
-The remaining touch matrix and next signed-release checks are still open.
+The remaining touch/phone matrix and actual failed-driver recovery remain open.
 The Retroid Pocket 5 investigation remains parked pending more data. See the
 [startup-crash record](development/startup-crash-issue26.md).
 

@@ -30,7 +30,7 @@ The stable feed now records v1.0.1 / code 4. Follow the [update guide](update-pl
 for future releases. Documentation/feed commits do not change the selected APK
 source or require a new build/signature.
 
-## v1.1.0 candidate accepted on Odin
+## v1.1.0 published release and Odin acceptance
 
 The planned focused signed-Odin checks passed on app source
 `277c9df95bc8d451e3be1c38804edb91ba8837c1`, version **1.1.0 / code 5**,
@@ -45,11 +45,15 @@ start through the original documented component reached GraphicsDriverActivity
 and then the normal launcher without driver confirmation. See the
 [scoped signed record](android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).
 
-PR #32 is ready for review/merge and release preparation. Documentation commits
-do not change the tested app source or signed APK. Public v1.0.1, the stable
-feed and the retained Debug installation remain unchanged until their respective
-publication/update steps. Broader device, gameplay and actual driver-failure
-coverage and the existing distribution review remain separate.
+PR #32 was merged, and the main release build at
+`0b0acfa54d2f689d6febb4dee29710fdde9fbb80` produced an identical unsigned APK.
+After fresh local SDK verification against the main report, Frostie published
+v1.1.0 on **26 October 2026 (AEDT)**. The public tag matches that main source;
+the public APK is 14362262 bytes with the signed hash above. Both public
+downloads and GitHub's latest-stable designation were independently verified.
+See the [publication record](release-v1.1.0-check-20261026.md). The stable metadata in this
+revision targets v1.1.0. The retained Debug update, broader device/gameplay and
+actual driver-failure coverage and existing distribution review remain separate.
 
 ## Bundled notices
 
