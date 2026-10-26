@@ -249,6 +249,8 @@ The main Debug APK SHA-256 is
 `ee754177dc5d088e00d93b2b685a173fc464e40f4232a9eabc8a32c3033da6b7`;
 it is a separate CI-signed development artifact.
 
-Public release preparation is in progress. The stable feed and Latest Release
-heading remain v1.0.1 until publication. Frostie handles issue closures; do not
-close issues as part of release preparation.
+Frostie subsequently reran local SDK verification against the main build report
+and prepared the public upload. He published v1.1.0 on 26 October 2026 (AEDT).
+The public tag targets main source0b, and the public APK/checksum bytes match
+the staged files exactly. See the [publication record](release-v1.1.0-check-20261026.md).
+Frostie handles issue closures; do not close issues as part of release work.

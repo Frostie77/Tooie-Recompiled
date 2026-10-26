@@ -2,8 +2,10 @@
 
 ## Unreleased
 
-Target: **v1.1.0 / Android version code 5**, adding touch controls and custom
-graphics drivers alongside fixes. Public v1.0.1 remains unchanged until publication.
+## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
+
+Android version code **5**. Adds touch controls and custom graphics drivers
+alongside audio, navigation and startup-log sharing fixes.
 
 ### Added
 
@@ -53,8 +55,6 @@ graphics drivers alongside fixes. Public v1.0.1 remains unchanged until publicat
 4. Attach that file to your GitHub issue or comment, along with your device model, Android version, game version and a short description of what happened.
 
 If the game closes during startup, reopen the app and look for **Graphics driver options → Share startup log** on the startup/recovery screen. The file includes graphics-driver details and the recent startup log.
-
-The next release is being prepared. **v1.0.1** remains the latest public release.
 
 ## [v1.0.1](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1) — 2026-10-24
 
