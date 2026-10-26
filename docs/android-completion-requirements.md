@@ -263,8 +263,14 @@ Broad mod compatibility remains a coverage item.
 ## Minor issues deferred beyond the first release
 
 The Jiggy-challenge screen lines (marker 1) and the brief shunt
-when dialogue animation starts (marker 2) as follow-up work after the first
-release. Keep them in known issues.
+when dialogue animation starts (marker 2) remain follow-up work after the first
+release. The [26 October dialogue investigation](development/dialogue-screen-shift-investigation-20261026.md)
+reviews existing evidence and two synthetic renderer mechanisms; the cause and
+gameplay fix remain unconfirmed. The [Jiggy-challenge investigation](development/jiggy-challenge-lines-investigation-20261026.md)
+records the static-like straight-line description and captured-image sampling
+path; MD-001 also remains unresolved. Keep both in known issues. Focused Save
+Management/settings testing has resumed and passed; no new graphics-defect
+capture is recorded.
 
 ## First Android release milestone
 

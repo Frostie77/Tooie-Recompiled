@@ -17,13 +17,14 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The retained private Debug app is now updated from 1bc to source
-`6f3e5de0e04b9846b47be42f86b9606b19f49cd4`, using the established Debug signer.
-Local SDK verification passed, ADB replacement returned Success, and Frostie
-confirmed his save and settings are intact. See the [Debug update record](android-debug-refresh-odin-20261026.md).
-No new extended retained Debug playthrough is recorded; use the new pinned
-recorder for that session. The later focused save-backup acceptance is recorded
-below.
+The retained private Debug app now uses snapshot `fae511cc166c` (same Git tree
+as branch source `d6cb2289f06b`), signed with the established Debug certificate.
+Build 99 and local certificate/payload verification passed; `adb install -r`
+returned Success. Frostie confirmed existing save/settings retention and all
+five requested settings presentation changes. Signed APK SHA-256:
+`b2719ddd1080f10dbbfe287774879a239f4f331d264b445d22839be0171ec180`.
+See [PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40) for the focused
+manual acceptance. No new extended marker playthrough is recorded.
 
 ## Accepted work
 
@@ -81,10 +82,24 @@ see the [device record](device-compatibility.md) for scope.
 
 ## Current priorities
 
-Focused save-backup acceptance on Odin has passed; see the record below. No
-new extended retained Debug playthrough is recorded, and its pinned recorder
-is ready for the next session. Track the
-deferred Jiggy-challenge lines, dialogue shift and intro/demo stutter. Startup
+Focused Save Management acceptance and the updated retained Debug app passed
+Frostie's Odin checks. The installed Debug snapshot is `fae511cc166c` (same tree
+as `d6cb2289f06b`); existing progress/settings and all five requested presentation
+changes were accepted. The current recorder is
+`$HOME/.local/share/tooie-recompiled/candidates/touch-fae511cc166c-c2782ebd/capture-touch.sh`.
+No new extended marker playthrough is recorded.
+
+The [dialogue-shift investigation](dialogue-screen-shift-investigation-20261026.md)
+reviews the original logs and confirms two possible CPU renderer mechanisms,
+same-role camera blending and AUTO aspect classification, using synthetic inputs
+and opposing controls. Neither establishes MD-002's actual cause; no runtime
+fix is claimed. Keep the later MD-004 screen-shaking reports separate. The
+[Jiggy-challenge investigation](jiggy-challenge-lines-investigation-20261026.md)
+records Frostie's clarification that MD-001 looks like static in a horizontal
+straight line, the original capture's missing event-period log/image, and the
+game's small captured-image target and POINT-sampled drawing path. Its cause
+and repair are unconfirmed; whether it is confined to the puzzle picture
+remains the next clarification. Track the deferred intro/demo stutter separately. Startup
 checks were introduced in v1.0.1; the live main feed now describes verified
 public v1.1.0 / code 5. Frostie confirms older releases detect it manually in
 Settings → Updates. After the initially absent startup message, he was asked
@@ -214,10 +229,10 @@ The exact source, APK hashes and candidate folder are in the
 The current recorder command is:
 
 ```bash
-"$HOME/.local/share/tooie-recompiled/candidates/touch-6f3e5de0e04b-585453a0/capture-touch.sh"
+"$HOME/.local/share/tooie-recompiled/candidates/touch-fae511cc166c-c2782ebd/capture-touch.sh"
 ```
 
-This replaces the old 1bc recorder for the newly installed APK. It retains
+This current recorder replaces the historical 1bc and 6f3e recorders. It retains
 manual `playing`, markers 1–30, repeated events/follow-up notes and `save`.
 The seven-library profile and private `:game` PID path passed host consumer and
 exact-parent controls; private-file/foreground queries still use the package.
@@ -360,5 +375,6 @@ same next update:
 - Rename **Aiming Invert** to **Invert Aiming y-axis**, preserving the
   `aiming_invert` preference and runtime behavior.
 
-The accepted disposable-save results above remain tied to source `410532de5c42`;
-they do not establish on-device acceptance of these later presentation changes.
+The disposable-save restoration results remain tied to source `410532de5c42`.
+Frostie subsequently accepted all five presentation changes on the retained
+Debug update from `fae511cc166c`, with his existing save and settings intact.
