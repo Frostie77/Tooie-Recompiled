@@ -76,6 +76,21 @@ with regular R8 in the separate driver-picker test; see the [result](docs/develo
 The public v1.1.0 APK is identical to the Odin-tested signed candidate; see the
 [release record](docs/development/release-v1.1.0-check-20261026.md). Broader compatibility remains under test.
 
+### Share startup log
+
+On **Android 9 or newer**, export graphics-driver details and the recent startup
+log as a `.txt` attachment to help diagnose problems.
+
+1. Reproduce the problem.
+2. Open **Settings → Graphics → Driver details / restart** and select
+   **Share startup log**.
+3. Choose an app to save or send the **.txt attachment**.
+4. Attach the file to your GitHub issue or comment with your device model,
+   Android version, game version and a short description of what happened.
+
+If the game closes during startup, reopen the app and look for
+**Graphics driver options → Share startup log** on the startup/recovery screen.
+
 ### Mod support
 
 Import compatible Tooie `.nrm` mods, RT64 `.rtz` texture packs and supported
@@ -142,12 +157,8 @@ Downloads and installation remain manual.
 
 ### How do I share a startup log?
 
-On Android 9+, reproduce the problem, then open **Settings → Graphics → Driver
-details / restart** and select **Share startup log**. Save or send the `.txt`
-attachment and add it to your GitHub issue/comment with your device model,
-Android version, game version and what happened. If startup closes, reopen the
-app and look for **Graphics driver options → Share startup log** on the recovery
-screen. See the [release notes](docs/development/release-notes-v1.1.0.md).
+Follow the [Share startup log instructions](#share-startup-log) under Features.
+See the [release notes](docs/development/release-notes-v1.1.0.md) for more details.
 
 ## Known issues
 
