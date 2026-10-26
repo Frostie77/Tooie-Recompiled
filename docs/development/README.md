@@ -39,6 +39,8 @@ and migration must be verified. Current CI success is separate from device
 gameplay acceptance.
 
 - [Changelog](../../CHANGELOG.md): public release changes through v1.0.1.
+- [v1.1.0 release description draft](release-notes-v1.1.0.md): feature summary,
+  tested Turnip download and user instructions for sharing a startup log.
 - [v1.0.1 release and Odin checks](release-v1.0.1-check-20261024.md): exact signed
   APK identity, manually reported results and remaining notice/browser checks.
 

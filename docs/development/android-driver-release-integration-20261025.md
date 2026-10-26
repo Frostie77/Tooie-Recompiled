@@ -223,3 +223,32 @@ v1.0.1-to-277c install remain outside this session's acceptance. The actual
 retained-data result used the previously recorded candidate update chain.
 Publication and the stable-feed switch are still pending; the retained private
 Debug update remains deferred until after release.
+
+## Main release build — identical unsigned APK
+
+After Frostie merged PR #32, main source
+`0b0acfa54d2f689d6febb4dee29710fdde9fbb80` passed the manual release-profile
+[CI run 40250889594](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40250889594)
+(job `121342381950`), with v1.1.0 / code 5 and both test-app flags disabled.
+
+The [main unsigned candidate](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40250889594/artifacts/12620513110)
+is 14,047,378 bytes, ZIP SHA-256
+`512fe1d0abe52f9ea28ce4f9e64c52591bf47a15baece56d7c0e59b4ae8ada95`.
+Its APK SHA-256 is
+`c49fe3361a42484b4077017fbde599fa0347a84bf460107ab9a44d948be6c06e`,
+**identical to the complete unsigned APK from the tested source277c candidate**.
+Both main ZIPs, checksums, source/version/package, all seven native hashes/Build
+IDs, native/assets and source-matched bundled helpers were independently checked.
+
+The already-tested protected-key-signed APK, SHA-256
+`6ed259e1c3f3b5313834bfd59440b54cb3a31888d58301e6166114159569e029`,
+can therefore be reused. Bind its local package verification to the new main
+build report before staging the final public filename and SHA256SUMS; no new
+signing or device acceptance is required for the identical unsigned payload.
+The main Debug APK SHA-256 is
+`ee754177dc5d088e00d93b2b685a173fc464e40f4232a9eabc8a32c3033da6b7`;
+it is a separate CI-signed development artifact.
+
+Public release preparation is in progress. The stable feed and Latest Release
+heading remain v1.0.1 until publication. Frostie handles issue closures; do not
+close issues as part of release preparation.
