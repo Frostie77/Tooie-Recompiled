@@ -199,13 +199,14 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   are scoped manual results in the
   [signed checkpoint](development/android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint),
   including the actual update chain; broader coverage remains open above.
-- [ ] After the new release, update Frostie's retained Odin Debug app with its
-  established signer and data preserved. Local preparation now supports the
-  seven-library profile and attached `:game` capture, with markers 1–30 retained
-  and host consumer/parent controls passing. Normal CI packages the pinned tools
-  and runs the temporary-key signing fixture. The new CI artifact, local signing,
-  install and device capture are still pending; the current touch/audio Debug
-  stays installed until then. See the [workflow guide](../tools/android-workflow/README.md).
+- [x] After v1.1.0, update Frostie's retained Odin Debug app using its established
+  signer. The source-6f3e CI artifact and local SDK/payload checks passed; ADB
+  replacement returned Success and Frostie confirmed save/settings intact.
+  See the [Debug update record](development/android-debug-refresh-odin-20261026.md).
+- [ ] When Frostie resumes playtesting, obtain a fresh capture from the new pinned
+  recorder, including installed-APK readback and actual `:game` PID attachment.
+  Host/CI checks passed, but no new on-device recording was supplied. Further
+  playthroughs are paused at Frostie's request; the old 1bc recorder is historical.
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving
