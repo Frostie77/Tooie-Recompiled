@@ -203,14 +203,25 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   signer. The source-6f3e CI artifact and local SDK/payload checks passed; ADB
   replacement returned Success and Frostie confirmed save/settings intact.
   See the [Debug update record](development/android-debug-refresh-odin-20261026.md).
-- [ ] When Frostie resumes playtesting, obtain a fresh capture from the new pinned
-  recorder, including installed-APK readback and actual `:game` PID attachment.
-  Host/CI checks passed, but no new on-device recording was supplied. Further
-  playthroughs are paused at Frostie's request; the old 1bc recorder is historical.
-- [ ] Test save-backup restoration using disposable test data. A successful backup
-  alone does not establish recovery; preserve the original progress throughout.
-- [ ] Add and test user-controlled save export/import for recovery and moving
-  progress between devices or app channels; this is later completion work.
+- [ ] Obtain a fresh retained Debug capture from the new pinned recorder,
+  including installed-APK readback and actual `:game` PID attachment. Host/CI
+  checks passed, but no new marker recording was supplied. The focused
+  save-backup test below used a separate app; the old 1bc recorder is historical.
+- [x] Test save-backup restoration using disposable data in the separate Odin
+  test app from `410532de5c42`. Importing A restored only the first save and it
+  loaded into gameplay; exporting and importing the earlier recovery copy
+  restored both slots and the second save loaded into normal gameplay. Frostie
+  confirmed these results on 26 October 2026; retained Debug/Release progress
+  was outside the test target. See the [acceptance record](development/android-save-backups.md#odin-acceptance--26-october-2026).
+- [x] Add and test user-controlled base-game save export/import for recovery.
+  The next-update feature is named **Save Management** under General settings.
+  [PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40) passed host
+  store/codec/runtime/JNI and Android CI checks. Focused Odin checks covered
+  verified exports, no-save feedback, cancellation, damaged-file rejection,
+  the running-game guard and real save restoration. This is unreleased work.
+- [ ] Verify save transfers between devices and between Debug, Release and test
+  app channels. They share the backup format, but the accepted Odin test
+  exported and imported within one isolated app.
 - [ ] Complete broader coexistence checks for the public release and retained
   local Debug app: independent ROM imports, saves and mods across restarts and
   updates. Basic settings separation passed; each app retains its own
@@ -257,8 +268,9 @@ release. The [26 October dialogue investigation](development/dialogue-screen-shi
 reviews existing evidence and two synthetic renderer mechanisms; the cause and
 gameplay fix remain unconfirmed. The [Jiggy-challenge investigation](development/jiggy-challenge-lines-investigation-20261026.md)
 records the static-like straight-line description and captured-image sampling
-path; MD-001 also remains unresolved. Keep both in known issues. Further playthroughs
-are paused at Frostie's request.
+path; MD-001 also remains unresolved. Keep both in known issues. Focused Save
+Management/settings testing has resumed and passed; no new graphics-defect
+capture is recorded.
 
 ## First Android release milestone
 
@@ -286,8 +298,10 @@ and the selected GitHub-download update passed for saves and settings:
 - [x] Obtain Frostie's explicit publication approval for **1.0.0**, Android
   version code **3**.
 
-Full-adventure and broader-device coverage, longer-session acceptance, save
-export/import and the remaining startup-notice checks remain full-completion milestones.
+Full-adventure and broader-device coverage, longer-session acceptance,
+cross-device/app-channel save transfers and the remaining startup-notice checks
+remain full-completion milestones. Focused in-app save export/import and recovery
+passed on Odin on 26 October 2026 as recorded above.
 Version 1.0.0 does not declare the full project scope complete.
 
 Release packaging and notice preparation passed [PR #17](https://github.com/Frostie77/Tooie-Recompiled/pull/17).

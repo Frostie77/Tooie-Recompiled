@@ -4,7 +4,9 @@ MD-002 remains **open: no confirmed cause or gameplay fix**. Review of the
 existing captures and a production CPU probe establishes two possible renderer
 mechanisms, but neither is identified in the recorded dialogue event. No app
 behavior, graphics defaults, release version or installed APK is changed by
-this investigation. Frostie's playtesting remains paused.
+this investigation. Frostie later resumed focused Save Management and settings
+checks on the updated Debug app; no new capture of this graphics defect is
+recorded.
 
 ## Original dialogue observation
 

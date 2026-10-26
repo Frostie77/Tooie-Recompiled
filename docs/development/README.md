@@ -17,6 +17,8 @@ changing generated code, runtime behavior or dependencies.
 - [Mod import, transactions and runtime integration](mod-support.md).
 - [Android ROM selection and private import](rom-selection.md).
 - [Startup update design and release identity](update-plan.md).
+- [Android save backup transfer](android-save-backups.md): General settings,
+  bounded file format, stopped-game transaction and pending device acceptance.
 - [Investigation history](history/README.md): rendering, guest code, timing,
   mods and branding findings.
 

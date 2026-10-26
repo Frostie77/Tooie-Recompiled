@@ -27,8 +27,7 @@ A native **Banjo-Tooie port for Android ARM64**, built with
 - A supported USA ROM in `.z64` format.
 - On-screen touch controls or a physical controller.
 
-The primary test device is the **AYN Odin 2 Portal / Adreno 740**. Frostie also
-confirmed public **v1.0.1 works on Pixel 8 Pro / Android 17 / Mali-G715 MP7**.
+The primary test device is the **AYN Odin 2 Portal / Adreno 740**. The public **v1.0.1 works on Pixel 8 Pro / Android 17 / Mali-G715 MP7**.
 See the [device reports](docs/development/device-compatibility.md) for tested
 scope and unresolved compatibility reports. This project distributes Android
 APKs; Windows and Linux are development hosts.
@@ -51,6 +50,25 @@ Configure the floating joystick and N64 buttons under **Settings → Touch**.
 Adjust button/joystick sizes, opacity and positions, and choose Auto/On/Off
 visibility. Built-in gamepad users can hide the overlay. See the
 [touch-controls guide](docs/development/android-touch-controls.md).
+In the next update, the Touch tab sits between Controls and Sound.
+
+### Save Management (next update)
+
+At the launcher, open **Settings → General → Save Management → Manage saves**
+to export or import all base-game save slots through Android's file
+picker. Exports are read back and verified. Imports check the file and ask before
+replacing progress in all slots, keeping earlier save copies for recovery.
+If already in-game, save and exit, then reopen the app before using this feature.
+
+To recover replaced progress, choose **Export an earlier save**, export the
+retained copy, then select it with **Import save backup**. Keep an exported
+`.tooiesave` file somewhere independent of the app.
+
+Focused export, cancellation, damaged-file rejection, import and recovery tests
+passed on Odin 2 Portal using disposable saves. This feature is for the next
+update and is not included in public v1.1.0. See the
+[save-backup guide](docs/development/android-save-backups.md) for scope and the
+test record; transfers between devices or app channels remain untested.
 
 ### Custom graphics drivers
 
@@ -101,11 +119,13 @@ The executable Tooie Mod Check example and BT Reloaded UI pack have passed
 focused Odin checks. See the [mod guide](docs/mods.md) for installation and
 compatibility limits.
 
-### Aiming Invert
+### Invert Aiming y-axis
 
-**Settings → General → Aiming Invert** changes vertical egg aiming and
+**Settings → General → Invert Aiming y-axis** changes vertical egg aiming and
 first-person looking. The saved preference defaults Off; walking, horizontal
-input and the regular camera retain their behavior.
+input and the regular camera retain their behavior. This is called **Aiming
+Invert** in public v1.1.0; the next update renames the label and retains the saved
+preference.
 
 ### Update checks
 

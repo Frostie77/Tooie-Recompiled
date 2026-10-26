@@ -2,8 +2,9 @@
 
 MD-001 remains **open: cause and fix unconfirmed**. The original capture was
 rechecked, and the challenge's captured-image drawing path was traced in source.
-No game code, graphics defaults or installed APK changed. Playtesting remains
-paused at Frostie's request.
+This investigation changes no game code, graphics defaults or installed APK.
+Frostie later resumed focused Save Management and settings checks; no new
+capture of this graphics defect is recorded.
 
 ## Observation and evidence boundary
 
@@ -102,10 +103,9 @@ the report; their actual per-draw inputs were not captured.
 
 The next useful clarification is whether the horizontal static-like line lies
 inside the puzzle picture, at a piece boundary or across the surrounding scene.
-Existing visual evidence would help if already
-available. No fresh session is requested while playtesting is paused.
+Existing visual evidence would help if already available.
 
-When testing resumes, capture the actual line and its settings before choosing
+For the next focused graphics test, capture the actual line and its settings before choosing
 one controlled comparison. If confined to the captured picture, compare native
 versus increased internal resolution, retaining the same driver, texture/mod
 state and other settings. Then inspect the affected draw's texture origin,

@@ -10,7 +10,7 @@ std::atomic<bool> aiming_invert{false};
 
 void tooie::input::add_aiming_option(recomp::config::Config& config) {
     config.add_bool_option(
-        "aiming_invert", "Aiming Invert",
+        "aiming_invert", "Invert Aiming y-axis",
         "Reverses up and down when aiming eggs or looking in first person. "
         "Walking and the regular camera controls stay the same.", false);
     aiming_invert.store(false, std::memory_order_relaxed);

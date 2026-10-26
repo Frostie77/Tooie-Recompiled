@@ -17,12 +17,14 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The retained private Debug app is now updated from 1bc to source
-`6f3e5de0e04b9846b47be42f86b9606b19f49cd4`, using the established Debug signer.
-Local SDK verification passed, ADB replacement returned Success, and Frostie
-confirmed his save and settings are intact. See the [Debug update record](android-debug-refresh-odin-20261026.md).
-Further playthroughs are paused at Frostie's request; use the new pinned recorder
-in that record when he is ready to resume.
+The retained private Debug app now uses snapshot `fae511cc166c` (same Git tree
+as branch source `d6cb2289f06b`), signed with the established Debug certificate.
+Build 99 and local certificate/payload verification passed; `adb install -r`
+returned Success. Frostie confirmed existing save/settings retention and all
+five requested settings presentation changes. Signed APK SHA-256:
+`b2719ddd1080f10dbbfe287774879a239f4f331d264b445d22839be0171ec180`.
+See [PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40) for the focused
+manual acceptance. No new extended marker playthrough is recorded.
 
 ## Accepted work
 
@@ -80,19 +82,24 @@ see the [device record](device-compatibility.md) for scope.
 
 ## Current priorities
 
-Further playthroughs are paused at Frostie's request. The updated private Debug
-app and its new pinned recorder are ready for a later session. The
-[dialogue-shift investigation](dialogue-screen-shift-investigation-20261026.md)
+Focused Save Management acceptance and the updated retained Debug app passed
+Frostie's Odin checks. The installed Debug snapshot is `fae511cc166c` (same tree
+as `d6cb2289f06b`); existing progress/settings and all five requested presentation
+changes were accepted. The current recorder is
+`$HOME/.local/share/tooie-recompiled/candidates/touch-fae511cc166c-c2782ebd/capture-touch.sh`.
+No new extended marker playthrough is recorded.
+
+The [dialogue-shift investigation](dialogue-screen-shift-investigation-20261026.md)
 reviews the original logs and confirms two possible CPU renderer mechanisms,
 same-role camera blending and AUTO aspect classification, using synthetic inputs
 and opposing controls. Neither establishes MD-002's actual cause; no runtime
-fix or new on-device test is claimed. Keep the later MD-004 screen-shaking
-reports separate. The [Jiggy-challenge investigation](jiggy-challenge-lines-investigation-20261026.md)
-records Frostie's clarification that MD-001 looks like static in a horizontal straight line,
-the original capture's missing event-period log/image, and the game's small
-captured-image target and POINT-sampled drawing path. Its cause and repair are
-unconfirmed; whether it is confined to the puzzle picture remains the next clarification. Keep
-playtesting paused and track the deferred intro/demo stutter separately. Startup
+fix is claimed. Keep the later MD-004 screen-shaking reports separate. The
+[Jiggy-challenge investigation](jiggy-challenge-lines-investigation-20261026.md)
+records Frostie's clarification that MD-001 looks like static in a horizontal
+straight line, the original capture's missing event-period log/image, and the
+game's small captured-image target and POINT-sampled drawing path. Its cause
+and repair are unconfirmed; whether it is confined to the puzzle picture
+remains the next clarification. Track the deferred intro/demo stutter separately. Startup
 checks were introduced in v1.0.1; the live main feed now describes verified
 public v1.1.0 / code 5. Frostie confirms older releases detect it manually in
 Settings → Updates. After the initially absent startup message, he was asked
@@ -103,8 +110,10 @@ version/device and cause of the initial absence remain unspecified; no updater
 code change was required. Later, View Release/browser return, controller
 navigation and gameplay deferral remain open;
 see the
-[update guide](update-plan.md). Background/sleep, save export/import, multi-mod
-combinations and broader gameplay/lifecycle/device coverage remain open.
+[update guide](update-plan.md). Background/sleep, cross-device/app-channel save
+transfers, multi-mod combinations and broader gameplay/lifecycle/device coverage
+remain open. In-app save export/import and recovery passed in the isolated Odin
+app described below.
 Broader release/local Debug ROM/save/mod independence, fresh defaults and
 own-channel updates remain separate from the passed basic settings comparison.
 The Poco X3 Pro / Android 12 / Adreno 640 reporter now has working gameplay
@@ -220,17 +229,17 @@ The exact source, APK hashes and candidate folder are in the
 The current recorder command is:
 
 ```bash
-"$HOME/.local/share/tooie-recompiled/candidates/touch-6f3e5de0e04b-585453a0/capture-touch.sh"
+"$HOME/.local/share/tooie-recompiled/candidates/touch-fae511cc166c-c2782ebd/capture-touch.sh"
 ```
 
-This replaces the old 1bc recorder for the newly installed APK. It retains
+This current recorder replaces the historical 1bc and 6f3e recorders. It retains
 manual `playing`, markers 1–30, repeated events/follow-up notes and `save`.
 The seven-library profile and private `:game` PID path passed host consumer and
 exact-parent controls; private-file/foreground queries still use the package.
 No fresh on-device capture output, installed-APK readback or new marker session
-was supplied with the manual update confirmation. Frostie is not ready for
-another playthrough; leave those checks deferred. If a recorder is still
-running, `save` ends it and retains the evidence before normal app closure.
+was supplied with that manual update confirmation. The later focused
+save-backup acceptance below does not supply a new retained Debug marker session.
+If a recorder is still running, `save` ends it and retains the evidence before normal app closure.
 See the [workflow guide](../../tools/android-workflow/README.md).
 
 Issue #26 also has a [Poco X3 Pro report](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747):
@@ -320,3 +329,52 @@ another test. The historical c849 system-driver failure preceded the successful
 d6 on-device driver import; the old PC helper is not a pending test instruction.
 The Retroid report remains parked pending more data. Frostie handles reporter
 replies and issue closures.
+
+## Save backup transfer work — 26 October 2026
+
+Frostie approved user-controlled export/import and resumed focused testing.
+[PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40) and the
+[save-backup guide](android-save-backups.md#odin-acceptance--26-october-2026)
+record the implementation, storage contract and accepted disposable-data result.
+Controls remain under General with no additional settings tab. The feature is
+unreleased; public v1.1.0/code 5 and its live feed are unchanged.
+
+The isolated app from source `410532de5c4212329e47827d8d4a6e75fecbc484`
+was installed successfully. Its [CI run 96](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40310631085)
+passed. The normal retained Debug and Release apps were outside the test target.
+Host store/codec, runtime EEPROM consumption, start/transfer exclusion, JNI and
+SDK 36 Java checks passed separately from the following manual Odin acceptance:
+
+- Empty-save feedback, all three actions and the running-game guard worked.
+- Exports A and B reported verified; PC validation checked format/checksum and
+  confirmed their payloads differed after creating one and then two save slots.
+- Picker cancellation and valid-import confirmation cancellation returned normally;
+  both slots remained after cancellation. A damaged copy was rejected, with
+  wording Frostie confirmed as correct and acceptable.
+- Importing A restored only the original save; it loaded into gameplay.
+- Exporting the pre-import Previous save copy and importing it restored both
+  slots; loading the second save reached normal gameplay.
+
+The checklist now accepts focused in-app export/import and recovery on Odin.
+Cross-device/app-channel transfers, other document providers and the broader
+navigation/device matrix remain open. The same guide preserves build identities,
+export hashes and evidence limits. Frostie handles merges and issue closures.
+
+### Requested settings presentation
+
+After accepting the storage behavior, Frostie requested these changes for the
+same next update:
+
+- Name the General section and Android manager **Save Management**; its action
+  button is **Manage saves…**.
+- Place the **Touch** tab between **Controls** and **Sound**.
+- Put **(App settings, ROMs and mods are separate.)** in parentheses in the save
+  description.
+- Use this exact launcher instruction: "Use this feature at the Launcher Screen.
+  If you are already in-game. Save and Exit then reopen the App."
+- Rename **Aiming Invert** to **Invert Aiming y-axis**, preserving the
+  `aiming_invert` preference and runtime behavior.
+
+The disposable-save restoration results remain tied to source `410532de5c42`.
+Frostie subsequently accepted all five presentation changes on the retained
+Debug update from `fae511cc166c`, with his existing save and settings intact.

@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Added
+
+- **Save Management** under **Settings → General**, with backup export/import
+  available before **Start Game**. Export all base-game save slots to a verified
+  `.tooiesave` file, or import a backup after file checks and confirmation. **Export an earlier
+  save** lets you export and restore a copy kept before a replacement. Focused
+  export, cancelled/damaged import, restoration and recovery checks passed on
+  Odin 2 Portal with disposable saves on 26 October 2026. See the
+  [guide](docs/development/android-save-backups.md) for instructions and tested
+  scope; transfers between devices or app channels remain untested.
+
+### Changed
+
+- Move the **Touch** settings tab between **Controls** and **Sound**.
+- Rename **Aiming Invert** to **Invert Aiming y-axis**, retaining the saved
+  preference and existing aiming behavior.
+- Clarify Save Management with a parenthesised note that app settings, ROMs and
+  mods are separate, plus instructions to use it at the launcher after saving
+  and exiting any running game and reopening the app.
+
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
 
 Android version code **5**. Adds touch controls and custom graphics drivers

@@ -195,7 +195,7 @@ def check_apk(source, work, ndk):
                        b"recordGraphicsDriverSelection", b"recordGraphicsDriverBackend", b"recordGraphicsMenuReady"):
             require(marker in main, "native driver-picker UI/JNI bridge is missing: " + marker.decode())
         require(b"recomp_on_init" in main, "code-mod startup event registration is missing")
-        require(b"Aiming Invert" in main and b"aiming_invert" in main, "saved aiming preference is missing")
+        require(b"Invert Aiming y-axis" in main and b"aiming_invert" in main, "saved aiming preference is missing")
         require(b"tooie_aiming_invert" in main, "guest aiming input bridge is missing")
         for marker in (b"automatic_update_checks", b"getUpdateState", b"requestUpdateCheck", b"canShowUpdateNotice", b"openUpdateRelease"):
             require(marker in main, "Android update UI/JNI bridge is missing: " + marker.decode())
