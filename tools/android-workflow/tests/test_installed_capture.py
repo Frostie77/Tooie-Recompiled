@@ -42,15 +42,16 @@ class InstalledCapture(unittest.TestCase):
         native.extend(self.version.encode())
         self.native = bytes(native)
         self.apk = self.area / 'signed.apk'
+        self.app = {'lib/arm64-v8a/libmain.so': self.native, 'lib/arm64-v8a/libSDL2.so': b'fixture-sdl',
+                    'classes.dex': b'fixture-dex', 'AndroidManifest.xml': b'fixture-manifest'}
         with zipfile.ZipFile(self.apk, 'w') as archive:
-            archive.writestr('lib/arm64-v8a/libmain.so', self.native)
-            archive.writestr('classes.dex', b'fixture-dex')
-            archive.writestr('AndroidManifest.xml', b'fixture-manifest')
+            for name, value in self.app.items(): archive.writestr(name, value)
         self.sha = capture.digest(self.apk.read_bytes())
         self.receipt = {'source_commit': self.source, 'apk_sha256': self.sha,
                         'certificate_sha256': self.cert, 'all_unsigned_payload_matches': True}
         self.report = {'source_commit': self.source, 'native_version': self.version,
-                       'libraries': {'libmain.so': {'sha256': capture.digest(self.native), 'build_id': 'b' * 40}}}
+                       'libraries': {name.rsplit('/', 1)[-1]: {'sha256': capture.digest(value), 'build_id': 'b' * 40}
+                                     for name, value in self.app.items() if name.startswith('lib/')}}
         self.receipt_path, self.report_path = self.area / 'verification.json', self.area / 'build-report.json'
         self.receipt_path.write_text(json.dumps(self.receipt))
         self.report_path.write_text(json.dumps(self.report))
@@ -70,6 +71,32 @@ class InstalledCapture(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def driver_profile(self):
+        self.report['driver_picker'] = True
+        for name in ('libmain_hook.so', 'libhook_impl.so', 'libfile_redirect_hook.so',
+                     'libgsl_alloc_hook.so', 'libc++_shared.so'):
+            value = ('fixture-' + name).encode()
+            self.app['lib/arm64-v8a/' + name] = value
+            self.report['libraries'][name] = {'sha256': capture.digest(value), 'build_id': 'b' * 40}
+        with zipfile.ZipFile(self.apk, 'w') as archive:
+            for name, value in self.app.items(): archive.writestr(name, value)
+        self.sha = capture.digest(self.apk.read_bytes())
+        self.receipt['apk_sha256'] = self.args.expect_sha256 = self.sha
+        self.receipt_path.write_text(json.dumps(self.receipt))
+        self.report_path.write_text(json.dumps(self.report))
+
+    def test_driver_local_checks_bind_every_packaged_library(self):
+        self.driver_profile()
+        capture.verify_local(self.c, self.args)
+        del self.report['libraries']['libhook_impl.so']
+        self.report_path.write_text(json.dumps(self.report))
+        with self.assertRaisesRegex(RuntimeError, 'Incomplete CI native-library inventory'):
+            capture.verify_local(self.c, self.args)
+        self.report['driver_picker'] = False
+        self.report_path.write_text(json.dumps(self.report))
+        with self.assertRaisesRegex(RuntimeError, 'native-library inventory'):
+            capture.verify_local(self.c, self.args)
 
     def test_real_local_apk_checks_use_expected_source_and_signer(self):
         receipt, report, build_id, _, _ = capture.verify_local(self.c, self.args)
@@ -172,6 +199,13 @@ class InstalledCapture(unittest.TestCase):
         self.assertEqual(len(summary['user_markers']), 1500)
 
     def test_installed_entrypoint_attaches_and_packages_all_markers(self):
+        self.assert_entrypoint_attaches_and_packages_all_markers()
+
+    def test_driver_entrypoint_attaches_to_game_while_router_runs(self):
+        self.driver_profile()
+        self.assert_entrypoint_attaches_and_packages_all_markers()
+
+    def assert_entrypoint_attaches_and_packages_all_markers(self):
         self.c.ADB, self.c.SERIAL = 'fixture-adb', 'fixture-device'
         operations = []
         def adb(*args, **kwargs):
@@ -186,12 +220,15 @@ class InstalledCapture(unittest.TestCase):
             elif args[-1].startswith('date '): payload = '2026-10-24 21:30:00'
             elif args[-1].startswith('dumpsys activity '):
                 payload = 'mResumedActivity: ActivityRecord{abc u0 io.github.banjotooierecompiled/.BanjoTooieSDLActivity t1}'
+            elif args[-1].startswith('pidof '):
+                process = args[-1].split()[1].rstrip(';')
+                pid = 4321 if self.report.get('driver_picker') and process == self.c.PKG else 1234
+                payload = str(pid) + '\n\nTOOIE_PIDOF_RC=0\n'
             elif args[-1].startswith('log -p i -t TooieUserMark '): payload = ''
             else: raise AssertionError('Unexpected device operation: ' + repr(args))
             return subprocess.CompletedProcess(args, 0, payload.encode(), b'')
         self.c.adb = adb
         self.c.start_capture = lambda start: None
-        self.c.pids = lambda name: (1234,)
         self.c.prompt = lambda message: 'playing'
         self.c.screenshot = lambda label: None
         self.c.stop_capture = lambda: None
@@ -219,6 +256,12 @@ class InstalledCapture(unittest.TestCase):
             upload, summary = workflow.package_evidence(evidence, {'identity': {'commit': self.source}})
         self.assertEqual(code, 0)
         self.assertEqual(summary['original_pid'], '1234')
+        expected_process = self.c.PKG + (':game' if self.report.get('driver_picker') else '')
+        self.assertEqual(self.c.PROCESS_NAME, expected_process)
+        pid_queries = [op[-1] for op in operations if op[-1].startswith('pidof ')]
+        self.assertTrue(pid_queries)
+        self.assertTrue(all(op.startswith('pidof ' + expected_process + ';') for op in pid_queries))
+        self.assertIn('process_name=' + expected_process, Path(str(self.c.prefix) + '-Attached-Process.txt').read_text())
         self.assertEqual(summary['source_commit'], self.source)
         self.assertEqual(len(self.c.live_events), 31)
         self.assertTrue(all(op[0] not in ('install', 'uninstall') for op in operations))
@@ -244,9 +287,11 @@ class InstalledCapture(unittest.TestCase):
         self.c.ADB, self.c.SERIAL = 'fixture-adb', 'fixture-device'
         self.c.attempted = True
         self.c.original_pid = 1234
+        self.c.PROCESS_NAME = self.c.PKG + ':game'
         self.c.capture_start = '2026-10-24 21:30:00'
         self.c.baseline = b'old log\n'
-        delta = b'Runtime audio: mono_us=123 pid=1234 tid=2 event=window\n'
+        delta = (b'Runtime audio: mono_us=123 pid=1234 tid=2 event=window\n'
+                 b'Runtime audio: mono_us=124 pid=4321 tid=2 event=router\n')
         self.c.CAPTURE_SCOPE_OVERRIDE = 'Installed capture\n'
         self.c.TIMING_SCOPE_OVERRIDE = 'Available diagnostics only\n'
         calls = []
@@ -271,6 +316,23 @@ class InstalledCapture(unittest.TestCase):
         self.assertEqual(Path(prefix + '-Logcat-Dump.txt').read_bytes(), b'fixture app Logcat dump\n')
         self.assertEqual(list(self.area.glob('*-read-error.txt')), [])
         self.assertEqual(len(calls), 8)
+        self.assertTrue(any(op[-1] == 'pidof ' + self.c.PKG + ':game' for op in calls))
+        self.assertTrue(any(op[-1] == 'run-as ' + self.c.PKG + ' cat files/data/banjotooi-debug.log' for op in calls))
+        self.assertEqual(Path(prefix + '-Runtime-audio.txt').read_bytes(), delta.splitlines(keepends=True)[0])
+
+    def test_live_router_cannot_hide_missing_original_game_process(self):
+        self.c.PROCESS_NAME = self.c.PKG + ':game'
+        self.c.original_pid = 1234
+        queries = []
+        def adb(*args, **kwargs):
+            queries.append(args[-1])
+            payload = b'\nTOOIE_PIDOF_RC=1\n' if ':game;' in args[-1] else b'4321\nTOOIE_PIDOF_RC=0\n'
+            return subprocess.CompletedProcess(args, 0, payload, b'')
+        self.c.adb = adb
+        with self.assertRaisesRegex(RuntimeError, 'original PID'):
+            self.c.require_original_process('Game-Ended')
+        self.assertIn(self.c.PKG + ':game;', queries[0])
+        self.assertIn('state=original-absent', Path(str(self.c.prefix) + '-Game-Ended-Assessment.txt').read_text())
 
     def test_marker_budget_failure_preserves_raw_and_produces_no_partial_share(self):
         prefix = 'Tooie-' + self.source[:12] + '-Budget-Test'

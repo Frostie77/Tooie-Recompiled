@@ -252,7 +252,7 @@ def check_apk(source, work, ndk):
               "apk": filename, "sha256": hashlib.sha256(apk.read_bytes()).hexdigest(),
               "ndk": ndk.name, "libraries": libraries, "signing": "CI debug key; not a release/update signing identity",
               "device_tested": False}
-    if variant == "Touch-Debug-Candidate":
+    if not driver_test:
         capture_sources={"capture_installed.py":source/"tools/android-workflow/capture_installed.py",
                          "collector.py":source/"tools/android-workflow/templates/collector.py",
                          "tooie.py":source/"tools/android-workflow/tooie.py"}

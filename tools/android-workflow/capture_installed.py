@@ -14,6 +14,9 @@ import uuid
 import zipfile
 
 HERE = Path(__file__).resolve().parent
+LEGACY_LIBRARIES = {'libmain.so', 'libSDL2.so'}
+DRIVER_LIBRARIES = LEGACY_LIBRARIES | {'libmain_hook.so', 'libhook_impl.so',
+    'libfile_redirect_hook.so', 'libgsl_alloc_hook.so', 'libc++_shared.so'}
 
 
 def load_module(name, path):
@@ -77,6 +80,9 @@ def verify_local(c, args):
         require(re.fullmatch('[0-9a-f]{' + str(length) + '}', value), 'Invalid expected identity.')
     receipt = json.loads(args.verification.read_text())
     report = json.loads(args.build_report.read_text())
+    driver_picker = report.get('driver_picker', False)
+    require(type(driver_picker) is bool, 'Invalid driver-picker profile.')
+    expected_libraries = DRIVER_LIBRARIES if driver_picker else LEGACY_LIBRARIES
     require(receipt['source_commit'] == report['source_commit'] == args.expect_source,
             'Source identity differs from the selected build.')
     require(receipt['apk_sha256'] == args.expect_sha256 and
@@ -88,8 +94,11 @@ def verify_local(c, args):
     with zipfile.ZipFile(args.apk) as archive:
         require(archive.testzip() is None and len(archive.namelist()) == len(set(archive.namelist())),
                 'Invalid APK archive.')
-        libraries = {name.rsplit('/', 1)[-1]: value for name, value in report['libraries'].items()}
-        require('libmain.so' in libraries, 'Missing CI native-library identity.')
+        libraries = report['libraries']
+        require(set(libraries) == expected_libraries, 'Incomplete CI native-library inventory.')
+        packaged = {name for name in archive.namelist() if name.startswith('lib/') and name.endswith('.so')}
+        require(packaged == {'lib/arm64-v8a/' + name for name in expected_libraries},
+                'Packaged native-library inventory differs from the selected profile.')
         for name, identity in libraries.items():
             require(name == Path(name).name and name.endswith('.so'), 'Invalid library name.')
             require(digest(archive.read('lib/arm64-v8a/' + name)) == identity['sha256'],
@@ -166,6 +175,7 @@ def observe_installed(c):
 def installed_main(c, args):
     require(sys.stdin.isatty(), 'Run in the interactive Ubuntu terminal.')
     receipt, report, build_id, signature, manifest = verify_local(c, args)
+    c.PROCESS_NAME = c.PKG + (':game' if report.get('driver_picker', False) else '')
     c.SHA = c.NATIVE_SOURCE = args.expect_source
     c.HASH, c.BUILD_ID = args.expect_sha256, build_id
     c.APK, c.REPORT = args.apk, args.build_report
@@ -175,6 +185,7 @@ def installed_main(c, args):
     c.prefix = c.DOWNLOADS / ('Tooie-' + c.SHA[:12] + '-Installed-Debug-Odin-' + stamp)
     c.save('Identity', 'commit=' + c.SHA + '\nhash=' + c.HASH + '\nbuild_id=' + build_id +
            '\nserial=' + c.SERIAL + '\ncapture_mode=attach-to-installed-debug\n' +
+           'process_name=' + c.PROCESS_NAME + '\n' +
            'capture_tool_revision=' + args.tool_revision + '\n')
     c.save('Build-Report', json.dumps(report, indent=2) + '\n')
     c.save('Signing-Verification', json.dumps(receipt, indent=2) + '\n')
@@ -209,7 +220,7 @@ def installed_main(c, args):
         print('Use playing when ready. Numbered notes can also be entered in this terminal.', flush=True)
     c.save('User-Playing-Confirmation', 'The user typed playing; exact input receipt is in the input journal.\n')
     active = c.pids('Attached-Process-PIDs')
-    require(len(active) == 1, 'A unique Debug process could not be confirmed.')
+    require(len(active) == 1, 'A unique Debug game process could not be confirmed.')
     c.original_pid = active[0]
     foreground = c.text(c.adb('shell', '-T', 'dumpsys activity activities', name='Attached-Process-Foreground'))
     resumed = [line for line in foreground.splitlines()
@@ -217,7 +228,8 @@ def installed_main(c, args):
     require(resumed and all(re.search(r'\s' + re.escape(c.PKG) + r'/', line) for line in resumed),
             'Debug foreground could not be confirmed; no automatic launch was attempted.')
     c.save('Original-Launch-PID', str(c.original_pid) + '\n')
-    c.save('Attached-Process', 'Existing unique package PID plus foreground after manual playing confirmation. '
+    c.save('Attached-Process', 'process_name=' + c.PROCESS_NAME + '\npid=' + str(c.original_pid) + '\n' +
+           'Existing unique game-process PID plus package foreground after manual playing confirmation. '
            'No launch command was sent.\n')
     print('Recording until save. Use 1–30, optionally followed by a short description.', flush=True)
     print('Reuse numbers freely. Use note 30 DETAILS to annotate the latest marker 30. '
@@ -246,7 +258,7 @@ def main(argv=None):
     c.CAPTURE_SCOPE_OVERRIDE = (
         'ATTACH TO INSTALLED DEBUG: exact local APK hash, expected certificate and CI native-library '
         'hashes checked, then installed base.apk hash matched. User manually opens the app and declares '
-        'playing; gameplay observation requires a unique existing package PID and foreground. '
+        'playing; gameplay observation requires a unique existing game-process PID and package foreground. '
         'Inspect User-Playing-Confirmation and Attached-Process to see whether those steps were reached. No installation, automatic '
         'launch, forced stop, game input or settings change. Capture continues until save, interruption '
         'or loss of the original process. Every marker and follow-up note is retained; the first 30 fresh '

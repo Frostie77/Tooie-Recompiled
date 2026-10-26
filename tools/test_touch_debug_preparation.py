@@ -47,8 +47,8 @@ class CandidateChecks(unittest.TestCase):
     def write(self, extra=None):
         apk = zipped(self.app)
         self.report["sha256"] = preparation.digest(apk)
-        self.report["libraries"] = {name: {"sha256": preparation.digest(self.app["lib/arm64-v8a/" + name])}
-                                    for name in ("libmain.so", "libSDL2.so")}
+        self.report["libraries"] = {name.rsplit("/", 1)[-1]: {"sha256": preparation.digest(value)}
+                                    for name, value in self.app.items() if name.startswith("lib/arm64-v8a/")}
         self.entries = {self.filename: apk, "build-report.json": json.dumps(self.report), **self.tools, **(extra or {})}
         self.path.write_bytes(zipped(self.entries))
         return preparation.digest(self.path.read_bytes())
@@ -104,6 +104,76 @@ class CandidateChecks(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "library set"):
             self.load()
 
+    def driver_profile(self):
+        self.report["driver_picker"] = True
+        for name in ("libmain_hook.so", "libhook_impl.so", "libfile_redirect_hook.so",
+                     "libgsl_alloc_hook.so", "libc++_shared.so"):
+            self.app["lib/arm64-v8a/" + name] = ("fixture-" + name).encode()
+
+    def test_driver_candidate_accepts_complete_seven_library_profile(self):
+        self.driver_profile()
+        self.write()
+        report, apk, _ = self.load()
+        self.assertEqual(len(report["libraries"]), 7)
+        self.assertEqual(preparation.payload(apk), {name: preparation.digest(value) for name, value in self.app.items()})
+
+    def test_normal_debug_artifact_uses_the_same_verified_local_update_path(self):
+        self.driver_profile()
+        self.report['variant'] = 'debug'
+        self.filename = 'Tooie-Recompiled-Android-arm64-' + SOURCE[:12] + '-Debug.apk'
+        self.report['apk'] = self.filename
+        self.write()
+        report, _, tools = self.load()
+        self.assertEqual(report['variant'], 'debug')
+        self.assertEqual(len(report['libraries']), 7)
+        self.assertEqual(tools, self.tools)
+        self.report['apk'] = self.filename.replace('-Debug.apk', '-GPU-Test.apk')
+        self.write()
+        with self.assertRaisesRegex(ValueError, 'APK filename'):
+            self.load()
+
+    def test_driver_inventory_cannot_be_missing_extra_or_assigned_to_legacy_profile(self):
+        self.driver_profile()
+        original = self.app.copy()
+        for change in ("missing", "extra", "legacy", "wrong-abi"):
+            self.app = original.copy()
+            self.report["driver_picker"] = True
+            if change == "missing": del self.app["lib/arm64-v8a/libhook_impl.so"]
+            elif change == "extra": self.app["lib/arm64-v8a/unreported.so"] = b"extra"
+            elif change == "legacy": self.report["driver_picker"] = False
+            else: self.app["lib/x86/libhook_impl.so"] = b"wrong-abi"
+            self.write()
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, "library set"):
+                self.load()
+
+    def test_each_driver_library_must_match_its_reported_hash(self):
+        self.driver_profile()
+        self.write()
+        report = self.report.copy()
+        for name in ("libmain_hook.so", "libhook_impl.so", "libfile_redirect_hook.so",
+                     "libgsl_alloc_hook.so", "libc++_shared.so"):
+            changed = zipped({**self.app, "lib/arm64-v8a/" + name: b"changed-native-code"})
+            self.entries[self.filename] = changed
+            self.entries["build-report.json"] = json.dumps({**report, "sha256": preparation.digest(changed)})
+            self.path.write_bytes(zipped(self.entries))
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "Native library differs"):
+                self.load()
+
+    def test_driver_flag_must_be_boolean_and_report_inventory_complete(self):
+        self.driver_profile()
+        for flag in ("true", 1, None):
+            self.report["driver_picker"] = flag
+            self.write()
+            with self.subTest(flag=flag), self.assertRaisesRegex(ValueError, "driver-picker profile"):
+                self.load()
+        self.report["driver_picker"] = True
+        self.write()
+        del self.report["libraries"]["libc++_shared.so"]
+        self.entries["build-report.json"] = json.dumps(self.report)
+        self.path.write_bytes(zipped(self.entries))
+        with self.assertRaisesRegex(ValueError, "Incomplete native library report"):
+            self.load()
+
     def test_signature_metadata_is_excluded_but_code_and_resources_are_bound(self):
         original = zipped(self.app)
         signed = zipped({**self.app, "META-INF/CERT.RSA": b"signature", "META-INF/CERT.SF": b"signature",
@@ -116,7 +186,7 @@ class CandidateChecks(unittest.TestCase):
 def integration(work, tools):
     artifacts = work / "artifacts"
     report = json.loads((artifacts / "build-report.json").read_text())
-    preparation.require(report["variant"] == "Touch-Debug-Candidate", "Expected real touch candidate")
+    preparation.require(report["variant"] in ("debug", "Touch-Debug-Candidate"), "Expected real Debug candidate")
     with tempfile.TemporaryDirectory(prefix="tooie-touch-signing-fixture-") as temp:
         area = Path(temp)
         key = area / "debug.keystore"

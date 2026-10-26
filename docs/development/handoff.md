@@ -17,8 +17,11 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The retained Debug app still needs its deferred update: first extend its local
-signing helper to seven libraries and attached capture to the `:game` PID.
+The retained Debug app still needs its deferred update. This revision extends
+local signing to the seven-library driver profile and attached capture to the
+`:game` PID. Normal CI Debug artifacts now include the pinned signing/capture
+tools and run the ephemeral-key signing fixture. Host consumer/marker checks
+pass; the new CI artifact, local signing and Odin update remain pending.
 Its accepted 1bc capture command remains valid until that APK is replaced.
 
 ## Accepted work
@@ -199,10 +202,17 @@ Frostie explicitly deferred updating his retained Odin Debug app until after the
 new release. It remains the accepted locally signed touch/audio build from
 `1bc772153fcc`; its pinned `touch-1bc772153fcc-52ef9836/capture-touch.sh` remains
 the playthrough command, with manual `playing`, markers 1–30 and `save`.
-Before that later Debug update, extend the local touch-signing helper from its
-two-library profile to the new seven-library profile and make attached capture
-track the private `:game` PID while retaining the package for file/foreground
-queries. Do not reuse that old capture launcher for a newly updated Debug APK.
+The signing helper now accepts normal CI Debug and legacy touch-candidate
+artifacts, checking the exact two- or seven-library profile. Attached capture
+tracks the private `:game` PID for the driver-enabled build while retaining the
+package for private-file/foreground queries. Normal CI packages the recorder
+with source-bound hashes and checks local signing using a temporary test key.
+Host fixtures cover simultaneous launcher/game processes, missing game PID,
+original-PID log correlation and markers 1–30. Exact parent controls fail at
+the old library rejection and incorrect launcher-PID selection. CI's real APK
+signing fixture and the new Odin installation/capture remain pending; no new
+device pass is claimed. See the [workflow guide](../../tools/android-workflow/README.md).
+Do not reuse the old capture launcher for a newly updated Debug APK.
 
 Issue #26 also has a [Poco X3 Pro report](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747):
 Android 12, Snapdragon 860 / Adreno 640, crashing with both v1.0.1 and the
