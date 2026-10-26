@@ -48,6 +48,9 @@ gameplay acceptance.
 
 ## Evidence
 
+- [26 October Odin Debug update](android-debug-refresh-odin-20261026.md): verified build, established
+  local signer, successful replacement and manually confirmed save/settings;
+  new recorder command, with further playthroughs paused.
 - [26 October working Poco/Turnip result](poco-turnip-result-20261026.md): reviewed
   screenshot and manual acceptance; Share startup log failure MD-010 is reproduced on Odin.
 - [26 October startup-log sharing repair](android-startup-log-sharing-20261026.md):
