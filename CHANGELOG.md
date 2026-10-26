@@ -5,10 +5,13 @@
 ### Added
 
 - Save backup export/import under **Settings → General**, available before
-  gameplay starts. The `.tooiesave` format includes game identity and a payload
-  checksum; exports are read back, imports require confirmation and preserve
-  earlier save copies for recovery. Host verification and Android/device
-  acceptance are recorded separately in the [guide](docs/development/android-save-backups.md).
+  **Start Game**. Export all base-game save slots to a verified `.tooiesave` file,
+  or import a backup after file checks and confirmation. **Export an earlier
+  save** lets you export and restore a copy kept before a replacement. Focused
+  export, cancelled/damaged import, restoration and recovery checks passed on
+  Odin 2 Portal with disposable saves on 26 October 2026. See the
+  [guide](docs/development/android-save-backups.md) for instructions and tested
+  scope; transfers between devices or app channels remain untested.
 
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
 

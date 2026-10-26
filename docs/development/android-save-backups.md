@@ -1,7 +1,9 @@
 # Android save backup transfer
 
-This feature is in development for the next update. It is not part of public
-v1.1.0. Keep on-device acceptance open; Frostie's playtesting is paused.
+This feature is for the next update and is not part of public v1.1.0. Focused
+save export/import and recovery acceptance passed on Odin 2 Portal on
+26 October 2026 using disposable data in a separate test app. Broader transfer
+and provider coverage is recorded below.
 Implementation: [PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40).
 
 ## User flow
@@ -24,9 +26,9 @@ started, close and reopen the app first.
   The picker displays the latest 100 valid-size copies.
 
 The backup format is shared by this project's Debug, Release and isolated test
-app channels and is intended for transfers between devices. Each app accesses only its own private
-save folder. Transferring a file is an explicit user action; there is no shared
-save folder or automatic synchronization. The backup contains all slots of the
+app channels and is intended for transfers between devices. Each app accesses
+only its own private save folder. Transferring a file is an explicit user action;
+there is no shared save folder or automatic synchronization. The backup contains all slots of the
 USA base game's 16-kilobit EEPROM, not ROMs, mods, app settings or mod-specific
 alternate save files. Emulator/other-port raw files are not accepted by this
 initial format, and the bytes are not swapped or converted.
@@ -104,9 +106,53 @@ missing recovery-copy mutation. Provider fixtures cover truncation, wrong game,
 wrong version, checksum damage, oversized/endless input, cancellation,
 write/flush/close failures and failed/mismatching export readback.
 
-Host tests and a CI build do not establish Android provider interaction,
-controller/touch dialog behavior or actual in-game progress after importing.
-Those checks must use disposable data in an isolated test app when Frostie is
-ready. Leave the retained Odin Debug and public Release saves untouched now.
-Broader save-backup restoration remains a completion item until that functional
-acceptance is supplied.
+Host tests and CI are separate from the focused Android file-picker and
+in-game checks recorded below.
+
+## Odin acceptance — 26 October 2026
+
+Trent completed this test on his Odin 2 Portal using disposable progress in the
+separate test app, with Downloads selected in Android's file picker. The retained
+normal Debug and public Release apps were outside the test target.
+
+- Source: `410532de5c4212329e47827d8d4a6e75fecbc484`.
+- Isolated [CI build 96](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40310631085)
+  passed host regressions, native compilation and APK verification.
+- Package: `io.github.banjotooierecompiled.gputest.g410532de5c42`.
+- APK SHA-256: `18ebf2f7126996659d5a775eb1749f5bc9f1befe6ea46554a6e30cf265aa852c`.
+- Artifact ZIP SHA-256: `0e151ca63ee27695c508c45cfa5917b0456665cb1bb73a3ee7696744ea421e76`.
+
+| Check | Observed result |
+|---|---|
+| Fresh app | All three actions appeared; exporting reported no saved progress. |
+| Running-game guard | Manage save backups was disabled during gameplay. |
+| Export A and B | Both reported exported and verified. A was exported after creating one save; B after creating a second save in another slot. |
+| PC readback | Both exported files had the expected 2,112-byte format, game identity and payload checksum. Their EEPROM payloads differed. |
+| Picker cancellation | Cancelling returned normally to the app. |
+| Damaged import | A copy of A with one changed payload byte was rejected. Trent confirmed the rejection wording was correct and acceptable. |
+| Confirmation cancellation | Cancelling a valid A import returned normally; the next game start still showed both test saves. |
+| Confirmed import of A | The app reported successful import. The game showed only the first save, with the second slot empty; the first save loaded into normal gameplay. |
+| Earlier-save recovery | The pre-import Previous save copy exported and verified. Importing that exported copy restored both test slots, and the second save loaded into normal gameplay. |
+
+Original export A SHA-256:
+`e53a9a78b8fde50fb42c5f6b973e6adfc3e9ba8e5d3592cefd4e97f8ab1a3854`.
+Original export B SHA-256:
+`17a25185edb6099479658888307f7ca11f6e793f96f8be6121e5b52afd0b6b15`.
+
+The PC copies remain with Trent in candidate folder
+`save-backups-410532de5c42-37d0c67e`, subfolder `save-file-check-1bb8f86f`.
+No save bytes were uploaded to the repository. The restoration and gameplay
+results are Trent's manual reports, supplemented by the supplied Ubuntu
+format/checksum validation output; no new marker capture or video was supplied.
+The recovered export was accepted by the app and loaded by the game, but its
+bytes were not independently compared with original export B.
+
+## Remaining coverage
+
+Transfers between devices or between Debug/Release/test app channels are not yet
+accepted. Only the local Downloads provider was exercised; cloud-provider and
+other-provider behavior remain untested. A separate touch/gamepad dialog-focus
+matrix, process-interruption/power-loss checks on hardware and a signed release
+integration check are not established by this session. Host failure controls and
+recovery-history tests remain evidence for those tested code paths, rather than
+claims that these wider device scenarios passed.
