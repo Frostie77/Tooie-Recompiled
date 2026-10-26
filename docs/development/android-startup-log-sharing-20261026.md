@@ -149,6 +149,8 @@ This resolves the focused sharing/cancel/return check. Frostie subsequently
 confirmed retained save progress and graphics/sound/control settings, normal
 Home-return sound/controls, and simultaneous on-screen movement/jump on the same
 signed candidate; see the [functional checkpoint](android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).
-Broader gameplay/touch, applicable mods, final driver roundtrip/routing/recovery
-and legacy-launch checks remain open. Poco sharing retest remains deferred;
+The subsequent signed Turnip/System Default switching, original-component cold
+startup to the normal launcher, and installed-mod checks also passed. Planned
+focused Odin acceptance is complete; broader gameplay/touch/phone and actual
+failed-driver recovery remain separate. Poco sharing retest remains deferred;
 its accepted working-game report is unchanged. No release has been published.

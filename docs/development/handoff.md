@@ -159,9 +159,15 @@ On the same signed source277c candidate, Frostie confirmed intact existing save
 progress and graphics/sound/control settings, normal sound/controls after
 Home/reopen/continue, and simultaneous on-screen movement/jump. See the
 [signed functional checkpoint](android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).
-Broader gameplay/touch, applicable mod retention, final driver roundtrip/routing,
-legacy launch and signed-phone checks remain open. Next test the custom-driver
-route in the release app.
+Frostie then confirmed Turnip R8 selection/restart and normal movement/sound/
+graphics during a short play check, followed by successful System Default
+reset/restart and gameplay. ADB cold-started the original SDL component through
+GraphicsDriverActivity; Frostie confirmed the normal launcher appeared without
+driver confirmation. Installed release mods are working. The planned focused
+signed-Odin checks are complete; PR #32 is ready for review/merge and v1.1.0 /
+code 5 release preparation. Broader gameplay/touch/phone and actual failed-driver
+coverage remain separate. No public release or stable-feed change is made by
+this acceptance record.
 
 Frostie explicitly deferred updating his retained Odin Debug app until after the
 new release. It remains the accepted locally signed touch/audio build from

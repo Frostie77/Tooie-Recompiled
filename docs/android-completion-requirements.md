@@ -149,7 +149,8 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   simultaneous on-screen movement/jump; the rest of this matrix remains open.
 - [ ] Extend driver checks to an actual Vulkan-driver startup failure, setup-state
   retention across custom-driver import/reset, broader compatibility and the next
-  signed release. Healthy startup, manual access/return, scrolling, distinct
+  signed release on further devices. Source277c signed Odin switching/reset and
+  cold startup through the original component now pass. Healthy startup, manual access/return, scrolling, distinct
   values and simulated incomplete-startup recovery/reset/reopen passed in 7a.
   See the [manual record](development/android-driver-picker-odin-20261025.md) and
   [driver guide](development/android-driver-picker.md). Extra space between the
@@ -161,16 +162,16 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   return to game; the 262801-byte export was received and reviewed. Further Poco
   logs are deferred until the reporter updates. See the
   [sharing record](development/android-startup-log-sharing-20261026.md#odin-signed-candidate-acceptance).
-- [ ] Verify the combined normal signed release candidate over v1.0.1 / code 4:
-  retained ROM/saves/settings/mods, accepted audio/touch behavior, first-launch/
-  healthy-reopen driver routing, legacy explicit-launch compatibility alias,
-  System Default/Turnip and startup recovery.
-  CI and unsigned 1.1.0 / code 5 download verification passed. Local protected
-  signing, installation and focused sharing checks passed on source277c.
+- [x] Complete the planned focused v1.1.0 / code 5 signed Odin checks.
+  Source277c passed protected signing/payload verification and installation.
   Existing save progress and graphics/sound/control settings were retained;
-  Home-return sound/controls and simultaneous touch movement/jump passed. The
-  final driver/legacy-launch and applicable mod checks remain open; see the
-  [signed checkpoint](development/android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).
+  installed mods are working. Home-return sound/controls, simultaneous touch
+  movement/jump, share-menu/readable attachment/cancel return, Turnip R8 play and
+  System Default reset/restart passed. The original launch component cold-started
+  through the new router and continued straight to the normal launcher. These
+  are scoped manual results in the
+  [signed checkpoint](development/android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint),
+  including the actual update chain; broader coverage remains open above.
 - [ ] After the new release, update Frostie's retained Odin Debug app with its
   established signer and data preserved. First extend local preparation to seven
   native libraries and attached capture to the `:game` process; generate a new

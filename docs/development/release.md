@@ -30,6 +30,27 @@ The stable feed now records v1.0.1 / code 4. Follow the [update guide](update-pl
 for future releases. Documentation/feed commits do not change the selected APK
 source or require a new build/signature.
 
+## v1.1.0 candidate accepted on Odin
+
+The planned focused signed-Odin checks passed on app source
+`277c9df95bc8d451e3be1c38804edb91ba8837c1`, version **1.1.0 / code 5**,
+signed APK SHA-256
+`6ed259e1c3f3b5313834bfd59440b54cb3a31888d58301e6166114159569e029`.
+The expected release certificate and complete unsigned payload matched; both
+CIs and the downloaded artifact checks passed. Frostie reported retained save
+progress and graphics/sound/control settings, working installed mods, normal
+Home-return sound/controls, simultaneous touch movement/jump, repaired log
+sharing/cancel return, Turnip R8 play and System Default reset/restart. A cold
+start through the original documented component reached GraphicsDriverActivity
+and then the normal launcher without driver confirmation. See the
+[scoped signed record](android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).
+
+PR #32 is ready for review/merge and release preparation. Documentation commits
+do not change the tested app source or signed APK. Public v1.0.1, the stable
+feed and the retained Debug installation remain unchanged until their respective
+publication/update steps. Broader device, gameplay and actual driver-failure
+coverage and the existing distribution review remain separate.
+
 ## Bundled notices
 
 The launcher buttons use the exact Suplexmentary Comic NC font from the accepted
@@ -112,7 +133,9 @@ Existing ES-DE/shortcut components therefore enter the pre-Vulkan router, as doe
 the normal app icon. The private `BanjoTooieGameActivity` inherits the original
 SDL/JNI class in `:game`; its native method namespace stays unchanged. Android's
 [activity-alias contract](https://developer.android.com/guide/topics/manifest/activity-alias-element)
-defines the redirect; signed-device acceptance still needs to exercise it.
+defines the redirect; the signed source277c Odin cold-start command now confirms
+that the original address enters GraphicsDriverActivity and continues to the
+normal launcher without a driver prompt.
 The application ID, protected signer and private data directory do not change.
 Android 9+ gets setup/recovery and custom drivers; Android 7/8 keeps System Default
 without entering the newer store. The manifest minimum remains API 24.
@@ -186,8 +209,9 @@ Driver-enabled reports bind all seven ARM64 libraries, compiled three-Activity
 process/export/task roles and driver entry points in executable DEX. The verifier
 retains support for the original two-library v1.0.1 profile. Isolated GPU-test
 provenance is rejected for release preparation. Same-key update metadata has a
-host fixture; retaining real v1.0.1 data still needs the signed candidate checked
-on Odin.
+host fixture. The signed Odin candidate update chain now has confirmed retained
+save progress/settings and working installed mods; its exact scope is in the
+signed record above.
 
 Extract the candidate artifact on the PC and open Ubuntu in that directory.
 For the update from the installed code-2 release candidate, run the helper with

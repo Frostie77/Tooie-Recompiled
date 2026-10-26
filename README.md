@@ -189,6 +189,8 @@ startup/recovery screen. Focused Odin system/Turnip switching, gameplay and
 System Default rollback passed. Focused 7a checks also passed for first-launch/
 healthy-reopen routing, explicit Graphics access/return, scrolling and clearer
 values. A simulated incomplete-startup recovery, System Default reset/retry and
-subsequent direct launcher reopen also passed. Extra spacing is implemented for
-the next build; actual failed-driver and signed-release checks remain open. See the
-[driver-picker record](docs/development/android-driver-picker-odin-20261025.md).
+subsequent direct launcher reopen also passed. The signed v1.1.0 candidate now
+also passes Turnip play, System Default reset/restart, retained saves/settings
+and working mods, plus a cold launch through the original shortcut component
+straight to the normal launcher. Actual failed-driver and broader device checks
+remain open. See the [signed acceptance record](docs/development/android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).

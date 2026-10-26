@@ -14,29 +14,21 @@ graphics drivers alongside fixes. Public v1.0.1 remains unchanged until publicat
   simultaneous on-screen movement/jump on Odin; the wider touch matrix remains
   open.
 
-### In development
+### Graphics drivers
 
-- Enable driver support in normal Debug/release candidates while retaining the
-  release package, protected signing/update path and API 24 minimum. Android 9+
-  gets the picker/recovery screen; Android 7/8 retains System Default. Candidate
-  verification now binds seven native libraries and compiled process roles,
-  with a compatibility alias retaining existing external launcher links,
-  with the original v1.0.1 verifier profile retained. Signed-device acceptance
-  remains pending. A Poco/Turnip working run is now confirmed in the separate d6 test.
-- Experimental custom Vulkan driver import/selection and System Default reset
-  under **Graphics**, with selected/loaded details and restart status. A separate
-  Android startup/recovery screen opens before Vulkan so driver options remain
-  accessible after a failed startup. The system/Turnip switching and rollback
-  passed focused Odin checks; a Poco tester also confirms a working game with
-  Turnip in d6. Setup
-  appears on first launch or explicit Graphics/recovery entry, with later healthy
-  launches opening the normal launcher directly. First setup, healthy reopen and
-  explicit Graphics access/return passed focused 7a Odin checks. Selected/Loaded/
-  Status values use light blue beside white labels, with extra vertical space
-  between the three fields in the next build. No separate device retest was
-  requested for that spacing-only follow-up. Simulated incomplete-startup recovery,
-  System Default reset/retry and normal launcher reopening also passed on Odin.
-  Actual failed-driver recovery and signed-release checks remain open.
+- Optional Mesa Turnip ZIP import/selection and System Default reset under
+  **Graphics**, with measured Selected/Loaded/Status and an explicit restart to
+  apply changes. Values use light blue beside white labels, with more space
+  between fields.
+- Driver setup/recovery opens before Vulkan on Android 9+. Setup appears on
+  first launch, explicit Graphics entry or a failed startup; later healthy
+  launches open the normal launcher directly. Android 7/8 retains System Default.
+- Existing ES-DE/shortcut launch components remain compatible. The signed Odin
+  candidate passed Turnip R8 play, System Default reset/restart and a cold launch
+  through the original component to the normal launcher. The Poco reporter also
+  confirms a working Turnip game in the separate d6 test. Actual failed-driver
+  recovery and broader device coverage remain separate from the accepted
+  simulated incomplete-startup recovery check.
 
 ### Fixed
 

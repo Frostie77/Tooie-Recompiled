@@ -169,8 +169,8 @@ candidate. Frostie confirmed the share menu, readable driver/log attachment and
 cancel/return to game; the 262801-byte export was received and reviewed.
 **MD-010 is resolved on Odin.** The signed functional checkpoint below records
 additional save/settings, Home-return audio/controls and touch acceptance; the
-remaining driver, legacy-launch and applicable mod checks stay open. PR #32 remains unmerged and no release is
-published. Public v1.0.1 and the retained private Debug app remain unchanged.
+driver, legacy-launch and installed-mod checks also passed as recorded below.
+PR #32 remains unmerged and no release is published. Public v1.0.1 and the retained private Debug app remain unchanged.
 
 ## Signed Odin functional checkpoint
 
@@ -185,12 +185,41 @@ Frostie confirmed these requested manual checks after installation and sharing:
 | Inspect the previously saved graphics, sound and control settings | Settings remain as left |
 | During play, press Android Home, reopen the release app and continue | Sound and controls return normally; no brief audio distortion reported |
 | Turn touch controls On and use the screen to move and jump simultaneously | Both work |
+| Import the tested Turnip R8 ZIP in the release app | Selection and restart-required status confirmed |
+| Apply the selection by restarting, then play for about a minute | Driver swapped over; movement, sound and graphics reported normal |
+| Reset to System Default, restart and inspect status/gameplay | Requested System Default/matching-status check confirmed; gameplay works |
+| Inspect installed release mods after the update | Present/enabled and working as reported |
 
 These are conversation-reported checks for this signed candidate. No fresh
 installed-APK readback, audio recording or marker session was supplied. The
 touch check covers simultaneous stick/A use; the wider all-button/aiming/phone,
-layout-extreme and interruption matrix remains separate. No installed-mod
-inventory/retention result was supplied. Final signed System Default/Turnip
-switching, restart/reopen routing, actual driver-failure recovery and the legacy
-explicit-launch alias remain open. Next test the custom-driver route in the
-release app without changing the retained Debug installation.
+layout-extreme and interruption matrix remains separate. Driver switching is
+Frostie's manual report after the requested restart/status checks; no new
+backend log or verbatim Loaded/Status values were supplied. The tested R8 is
+the regular ZIP recorded in the driver guide. Mod names/version inventory were
+not supplied; retain the report that the installed mods are working.
+
+### Original launch component and cold startup
+
+Frostie ran this exact release-app command after saving progress:
+
+```bash
+/mnt/c/Users/Trent/AppData/Local/Android/Sdk/platform-tools/adb.exe -s 7907333f shell am start -S -W -n \
+  io.github.banjotooierecompiled.release/io.github.banjotooierecompiled.BanjoTooieSDLActivity
+```
+
+ADB reported `Status: ok`, `LaunchState: COLD`, and Activity
+`io.github.banjotooierecompiled.release/io.github.banjotooierecompiled.GraphicsDriverActivity`.
+Frostie then confirmed that it continued straight to the normal game launcher
+without driver confirmation. This exercises the original documented component
+through the actual Android alias/router on a cold start after System Default
+reset. It is not an independent test of each frontend's own configuration.
+
+**The planned focused signed-Odin checks are complete.** PR #32 is ready for
+review/merge and v1.1.0 / code 5 release preparation. The tested app source and
+signed hash above remain unchanged by documentation commits. Broader gameplay,
+touch/phone, actual failed-driver recovery and a separate fresh direct public
+v1.0.1-to-277c install remain outside this session's acceptance. The actual
+retained-data result used the previously recorded candidate update chain.
+Publication and the stable-feed switch are still pending; the retained private
+Debug update remains deferred until after release.
