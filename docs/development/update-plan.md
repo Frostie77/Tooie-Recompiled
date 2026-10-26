@@ -3,8 +3,9 @@
 The startup checker is included in public **v1.0.1 / code 4**. Its focused Odin
 checks passed as described below; remaining notice/browser checks are separate.
 Version 1.0.0 predates this code and needs one manual APK update to gain it.
-The feed in this revision describes public **v1.1.0 / code 5**, published on
-26 October 2026 (AEDT). Its actual APK/checksum downloads and tag were verified;
+The live main feed describes public **v1.1.0 / code 5**, published on
+26 October 2026 (AEDT). PR #34 is merged and its raw feed URL was checked.
+The actual APK/checksum downloads and tag were verified;
 see the [v1.1.0 publication record](release-v1.1.0-check-20261026.md).
 
 ## Player behavior
@@ -141,11 +142,25 @@ after Wi-Fi returned. Frostie also reported the existing save, settings and
 installed mods retained. These are manual confirmations without a new capture;
 see the [exact candidate and evidence limits](release-v1.0.1-check-20261024.md).
 
-A real newer-version notice, Later, View Release/browser return, controller
-navigation and notice deferral still need device acceptance. The no-newer result
-checks the older-feed path; it does not test the newer release-by-tag lookup.
-Keep using Debug for gameplay investigation. The earlier public v1.0.0 upgrade
-is a separate saves/settings check.
+On 26 October, after PR #34 deployed the v1.1.0 feed, Frostie confirmed that
+older installed releases detect the update in **Settings → Updates**. He
+initially reported no automatic message on opening the app. After being asked
+to confirm **Check automatically at startup** is On, completely close/reopen
+the older release and wait at the launcher for 15 seconds, he confirmed:
+“ah yes the message appears now”. Manual newer-release detection and automatic
+startup-message display are accepted as manual functional reports. The exact
+older version/device and a fresh capture were not supplied.
+
+The initial absence was not diagnosed: a saved Off preference, a fresh cached
+older result or an already-running process are possible paths in the code.
+No updater code change was required for the successful follow-up. Startup
+checks can reuse metadata for six hours, while manual checks refresh it;
+automatic checks are requested once per process.
+
+Later, View Release/browser return, controller navigation and gameplay
+deferral remain open device checks. Keep using Debug
+for gameplay investigation. The earlier public v1.0.0 upgrade is a separate
+saves/settings check.
 
 ## Primary references
 

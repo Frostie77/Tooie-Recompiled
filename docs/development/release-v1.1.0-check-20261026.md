@@ -71,8 +71,11 @@ reports retain their own scopes; publication does not resolve every device.
 
 This repository change advances `updates/android-stable.json` to the exact
 published v1.1.0 APK only after publication. It retains schema 1, the established
-release package/certificate, ARM64 and API 24. Merging the change into main
-deploys the new entry at the app's configured feed URL.
+release package/certificate, ARM64 and API 24. Frostie merged
+[PR #34](https://github.com/Frostie77/Tooie-Recompiled/pull/34) at
+`0ac232ea03e7f63757490da6bc76f31f51f1c64e`; the app's raw main-feed URL was
+checked and serves this code-5 entry. The feed still identifies the APK's
+actual source `0b0acfa54d2f689d6febb4dee29710fdde9fbb80`.
 
 The production UpdateManifest and UpdateClient are byte-identical source blobs
 to those in public v1.0.1. Compiled against the pinned official Android SDK 36
@@ -81,9 +84,25 @@ regressions. A temporary consumer check using the new feed and actual public
 release API response confirmed **code 4 → available** with the canonical v1.1.0
 release page, and **code 5 → current**.
 
-This is host update-consumer validation, not on-device notice/Later/View Release/
-browser-return acceptance. Automatic checks reuse a fresh cache for six hours;
-a manual Settings → Updates check refreshes metadata, subject to rate limits.
+These are host update-consumer results, separate from device acceptance.
+Automatic checks reuse a fresh cache for six hours; a manual Settings → Updates
+check refreshes metadata, subject to rate limits.
+
+### Post-publication update report
+
+Frostie confirmed that older installed releases detect the update in
+Settings → Updates, initially without an automatic message on opening the app.
+After being asked to confirm **Check automatically at startup** is On,
+completely close/reopen the older release and wait at the launcher for
+15 seconds, he confirmed: “ah yes the message appears now”. Manual newer-release
+detection and automatic startup-message display are accepted as scoped manual
+reports, without a fresh capture or exact older version/device identity.
+
+The cause of the initial absence was not isolated. A saved Off preference,
+a cached older result or an already-running process remain possible code paths;
+no updater code change was needed for the successful follow-up. Later,
+View Release/browser return, controller navigation and gameplay deferral remain
+open. See the [update guide](update-plan.md).
 
 The README latest-release link, changelog, completion checklist, release guide,
 device reports and handoff are updated in the same change. The release notes

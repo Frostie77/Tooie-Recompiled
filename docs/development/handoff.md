@@ -11,8 +11,9 @@ Use the current repository refs and workflow profile for exact source identities
 [v1.1.0 / code 5](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) is published and GitHub marks it as
 latest stable. Tag source is `0b0acfa54d2f689d6febb4dee29710fdde9fbb80`.
 The public APK is the exact tested signed APK, SHA-256 `6ed259e1c3f3b5313834bfd59440b54cb3a31888d58301e6166114159569e029`;
-both public downloads were independently verified. This change prepares the
-README/changelog/checklist and v1.1.0 feed for main deployment. See the
+both public downloads were independently verified. Frostie merged PR #34;
+the README/changelog/checklist and v1.1.0 feed are on main, and the raw feed URL
+serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
@@ -78,10 +79,16 @@ see the [device record](device-compatibility.md) for scope.
 
 Continue post-release playtesting through the established Debug app. Track the
 deferred Jiggy-challenge lines, dialogue shift and intro/demo stutter. Startup
-checks were introduced in v1.0.1; the feed in this revision advances to verified
-public v1.1.0 / code 5.
-A real newer notice, Later, browser return, controller navigation and notice
-deferral remain on-device checks after the v1.1.0 feed is deployed; see the
+checks were introduced in v1.0.1; the live main feed now describes verified
+public v1.1.0 / code 5. Frostie confirms older releases detect it manually in
+Settings → Updates. After the initially absent startup message, he was asked
+to confirm the startup-check toggle and completely close/reopen the older app;
+he then confirmed the message appears. Manual newer-release detection and
+startup-message display are accepted without a fresh capture. The exact older
+version/device and cause of the initial absence remain unspecified; no updater
+code change was required. Later, View Release/browser return, controller
+navigation and gameplay deferral remain open;
+see the
 [update guide](update-plan.md). Background/sleep, save export/import, multi-mod
 combinations and broader gameplay/lifecycle/device coverage remain open.
 Broader release/local Debug ROM/save/mod independence, fresh defaults and
