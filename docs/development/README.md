@@ -54,8 +54,9 @@ gameplay acceptance.
   static-like straight-line description, original evidence gap and captured-image
   drawing/sampling source trace; MD-001 remains open.
 - [26 October dialogue screen-shift investigation](dialogue-screen-shift-investigation-20261026.md):
-  original evidence review and reproducible production CPU camera/aspect probes;
-  MD-002 remains open, with no runtime fix or new playthrough requested.
+  original evidence review, production CPU camera/aspect probes and the 27 October
+  game-camera request/update trace with a generated-code host probe. MD-002 remains
+  open; Frostie deferred device testing to 28 October.
 - [26 October Odin Debug update](android-debug-refresh-odin-20261026.md): verified build, established
   local signer, successful replacement and manually confirmed save/settings;
   new recorder command, with further playthroughs paused.

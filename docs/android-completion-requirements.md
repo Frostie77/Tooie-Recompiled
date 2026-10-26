@@ -265,8 +265,10 @@ Broad mod compatibility remains a coverage item.
 The Jiggy-challenge screen lines (marker 1) and the brief shunt
 when dialogue animation starts (marker 2) remain follow-up work after the first
 release. The [26 October dialogue investigation](development/dialogue-screen-shift-investigation-20261026.md)
-reviews existing evidence and two synthetic renderer mechanisms; the cause and
-gameplay fix remain unconfirmed. The [Jiggy-challenge investigation](development/jiggy-challenge-lines-investigation-20261026.md)
+reviews existing evidence and two synthetic renderer mechanisms. Its 27 October
+follow-up traces the game camera controller and verifies instant/gradual branches
+with a host probe; the actual cause and gameplay fix remain unconfirmed. The
+[Jiggy-challenge investigation](development/jiggy-challenge-lines-investigation-20261026.md)
 records the captured-image sampling path and Frostie's latest description:
 static-like horizontal noise, usually near the top left, extending about halfway
 across and disappearing/reappearing quickly. These are conversation details;

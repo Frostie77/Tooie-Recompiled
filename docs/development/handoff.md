@@ -92,8 +92,14 @@ No new extended marker playthrough is recorded.
 The [dialogue-shift investigation](dialogue-screen-shift-investigation-20261026.md)
 reviews the original logs and confirms two possible CPU renderer mechanisms,
 same-role camera blending and AUTO aspect classification, using synthetic inputs
-and opposing controls. Neither establishes MD-002's actual cause; no runtime
-fix is claimed. Keep the later MD-004 screen-shaking reports separate. The
+and opposing controls. The 27 October follow-up traces the game's dialogue-camera
+request/update paths. A new host probe executes nine retained generated functions
+and distinguishes immediate endpoint selection from controlled gradual movement;
+selector changes, pending bytes and sticky modifiers are individually insufficient
+as universal cut signals. Modifier 50 motion and the complete state machine remain
+outside the probe's scope. Neither investigation establishes MD-002's actual
+cause; no runtime fix is claimed. Frostie deferred device playtesting to 28 October.
+Keep the later MD-004 screen-shaking reports separate. The
 [Jiggy-challenge investigation](jiggy-challenge-lines-investigation-20261026.md)
 records Frostie's clarification that MD-001 looks like static in a horizontal
 straight line, the original capture's missing event-period log/image, and the
