@@ -133,8 +133,10 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
 - [ ] Verify representative uninterrupted 20–30-minute sessions, with correct
   gameplay speed, graphics, camera behavior and sound. Record frame pacing,
   input delay, thermal behavior and memory trends; check for progressive slowdown.
-- [ ] Verify the accepted Home/resume audio fix in the next signed public release.
-  The focused local Debug check above does not complete broader lifecycle testing.
+- [x] Verify the accepted Home/resume audio fix in the next signed release candidate.
+  Frostie confirmed normal sound and controls after Home/reopen/continue on the
+  locally signed source277c candidate. Broader lifecycle/sleep/wake testing stays
+  open; see the [signed checkpoint](development/android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).
 - [ ] Complete broader audio checks.
 - [ ] Verify controller navigation throughout menus, gameplay and egg/first-person
   aiming, plus remapping, reconnecting and saved preferences.
@@ -143,7 +145,8 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   Auto/On/Off during gameplay, interruptions and physical-pad coexistence.
   The focused Odin acceptance above does not complete this matrix; see
   [the touch guide](development/android-touch-controls.md). Verify the next
-  signed release separately.
+  signed release separately. The source277c signed Odin candidate now passes
+  simultaneous on-screen movement/jump; the rest of this matrix remains open.
 - [ ] Extend driver checks to an actual Vulkan-driver startup failure, setup-state
   retention across custom-driver import/reset, broader compatibility and the next
   signed release. Healthy startup, manual access/return, scrolling, distinct
@@ -163,8 +166,11 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   healthy-reopen driver routing, legacy explicit-launch compatibility alias,
   System Default/Turnip and startup recovery.
   CI and unsigned 1.1.0 / code 5 download verification passed. Local protected
-  signing, installation and focused sharing checks passed on source277c; the
-  other signed-device checks remain open.
+  signing, installation and focused sharing checks passed on source277c.
+  Existing save progress and graphics/sound/control settings were retained;
+  Home-return sound/controls and simultaneous touch movement/jump passed. The
+  final driver/legacy-launch and applicable mod checks remain open; see the
+  [signed checkpoint](development/android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).
 - [ ] After the new release, update Frostie's retained Odin Debug app with its
   established signer and data preserved. First extend local preparation to seven
   native libraries and attached capture to the `:game` process; generate a new

@@ -167,6 +167,30 @@ Odin ADB `install -r` returned Success. The helper compared archived public
 v1.0.1 / code 4, while the device update replaced the earlier source33 / code 5
 candidate. Frostie confirmed the share menu, readable driver/log attachment and
 cancel/return to game; the 262801-byte export was received and reviewed.
-**MD-010 is resolved on Odin.** The remaining combined signed-candidate checks,
-including retained data, stay open. PR #32 remains unmerged and no release is
+**MD-010 is resolved on Odin.** The signed functional checkpoint below records
+additional save/settings, Home-return audio/controls and touch acceptance; the
+remaining driver, legacy-launch and applicable mod checks stay open. PR #32 remains unmerged and no release is
 published. Public v1.0.1 and the retained private Debug app remain unchanged.
+
+## Signed Odin functional checkpoint
+
+On the same locally signed source `277c9df95bc8d451e3be1c38804edb91ba8837c1`
+(v1.1.0 / code 5; signed APK SHA-256
+`6ed259e1c3f3b5313834bfd59440b54cb3a31888d58301e6166114159569e029`),
+Frostie confirmed these requested manual checks after installation and sharing:
+
+| Check | Reported result |
+|---|---|
+| Load the existing release save and inspect previous progress | Progress is intact |
+| Inspect the previously saved graphics, sound and control settings | Settings remain as left |
+| During play, press Android Home, reopen the release app and continue | Sound and controls return normally; no brief audio distortion reported |
+| Turn touch controls On and use the screen to move and jump simultaneously | Both work |
+
+These are conversation-reported checks for this signed candidate. No fresh
+installed-APK readback, audio recording or marker session was supplied. The
+touch check covers simultaneous stick/A use; the wider all-button/aiming/phone,
+layout-extreme and interruption matrix remains separate. No installed-mod
+inventory/retention result was supplied. Final signed System Default/Turnip
+switching, restart/reopen routing, actual driver-failure recovery and the legacy
+explicit-launch alias remain open. Next test the custom-driver route in the
+release app without changing the retained Debug installation.

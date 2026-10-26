@@ -177,7 +177,8 @@ next update: a floating stick, N64 buttons, independent button/joystick sizes,
 opacity, movable positions and Auto/On/Off visibility. Configure them under
 **Settings → Touch**. See the [Odin test record](docs/development/android-touch-controls-odin-20261025.md)
 and [touch-controls guide](docs/development/android-touch-controls.md).
-Phone testing and verification in the next signed release remain open. The
+The locally signed v1.1.0 candidate also passed simultaneous on-screen movement
+and jumping on Odin. Broader touch/phone coverage remains open. The
 Poco compatibility test includes these controls. Its stock driver failed, but
 the reporter now confirms a working game with Turnip; see the [latest result](docs/development/poco-turnip-result-20261026.md).
 Share startup log uses a text attachment in the next update. The signed candidate

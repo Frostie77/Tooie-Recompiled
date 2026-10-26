@@ -10,8 +10,9 @@ graphics drivers alongside fixes. Public v1.0.1 remains unchanged until publicat
 - Configurable Android touch controls with a floating stick, N64 buttons,
   multi-touch, independent sizes, opacity, saved positions and Auto/On/Off
   visibility under **Settings → Touch**. Frostie accepted the focused Odin
-  Debug test and customization for the next update; phone and signed-release
-  verification remain pending.
+  Debug customization test. The locally signed v1.1.0 candidate also passed
+  simultaneous on-screen movement/jump on Odin; the wider touch matrix remains
+  open.
 
 ### In development
 
@@ -49,7 +50,8 @@ graphics drivers alongside fixes. Public v1.0.1 remains unchanged until publicat
   in the focused 7a Odin check.
 - Brief audio distortion after pressing Android Home and returning to gameplay
   ([#29](https://github.com/Frostie77/Tooie-Recompiled/pull/29)). Focused Odin
-  Debug testing passed; verification in a signed public release remains pending.
+  Debug testing and the locally signed v1.1.0 candidate's Home/reopen/continue
+  sound/control check passed.
 
 The next release is being prepared. **v1.0.1** remains the latest public release.
 

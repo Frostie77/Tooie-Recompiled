@@ -145,7 +145,10 @@ invented. The receipt and user's reading report establish actual attachment
 delivery, rather than accepting the share menu alone.
 
 **MD-010 is resolved on Odin in the locally signed source277c candidate.**
-This is focused sharing/cancel/return acceptance, not full gameplay/audio/touch,
-save/settings/mod retention, final driver roundtrip or legacy-launch acceptance.
-Those remaining release checks stay open. Poco sharing retest remains deferred;
+This resolves the focused sharing/cancel/return check. Frostie subsequently
+confirmed retained save progress and graphics/sound/control settings, normal
+Home-return sound/controls, and simultaneous on-screen movement/jump on the same
+signed candidate; see the [functional checkpoint](android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).
+Broader gameplay/touch, applicable mods, final driver roundtrip/routing/recovery
+and legacy-launch checks remain open. Poco sharing retest remains deferred;
 its accepted working-game report is unchanged. No release has been published.

@@ -155,7 +155,13 @@ attachment and cancel/return to game; MD-010 is resolved on Odin. The received
 262801-byte export was reviewed. Remaining combined release checks stay open. See the
 [sharing record](android-startup-log-sharing-20261026.md). Frostie deferred
 further Poco logs until the reporter updates.
-Detailed touch/audio/persistence and final signed-phone checks remain separate.
+On the same signed source277c candidate, Frostie confirmed intact existing save
+progress and graphics/sound/control settings, normal sound/controls after
+Home/reopen/continue, and simultaneous on-screen movement/jump. See the
+[signed functional checkpoint](android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint).
+Broader gameplay/touch, applicable mod retention, final driver roundtrip/routing,
+legacy launch and signed-phone checks remain open. Next test the custom-driver
+route in the release app.
 
 Frostie explicitly deferred updating his retained Odin Debug app until after the
 new release. It remains the accepted locally signed touch/audio build from
