@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- Save backup export/import under **Settings → General**, available before
+  gameplay starts. The `.tooiesave` format includes game identity and a payload
+  checksum; exports are read back, imports require confirmation and preserve
+  earlier save copies for recovery. Host verification and Android/device
+  acceptance are recorded separately in the [guide](docs/development/android-save-backups.md).
+
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
 
 Android version code **5**. Adds touch controls and custom graphics drivers

@@ -52,6 +52,15 @@ Adjust button/joystick sizes, opacity and positions, and choose Auto/On/Off
 visibility. Built-in gamepad users can hide the overlay. See the
 [touch-controls guide](docs/development/android-touch-controls.md).
 
+### Save backups — in development
+
+The next update is adding **Settings → General → Save backups** for exporting
+and importing all base-game save slots through Android's file picker, including
+transfers between Debug and Release or another device. Imports require
+confirmation and preserve earlier save copies; exports are read back and verified.
+Use before **Start Game**. This is not included in public v1.1.0, and device
+acceptance is pending. See the [save-backup guide](docs/development/android-save-backups.md).
+
 ### Custom graphics drivers
 
 On **Android 9 or newer**, **Settings → Graphics** lets you import/select a custom Vulkan driver, reset to

@@ -576,6 +576,13 @@ void recomp::start_game(const std::u8string& game_id, const std::string& game_mo
     mods::set_latest_game_mode_id(game_mode_id);
 }
 
+bool recomp::with_game_stopped(const std::function<void()>& operation) {
+    std::lock_guard<std::mutex> lock(current_game_mutex);
+    if (game_status.load() != GameStatus::None) return false;
+    operation();
+    return true;
+}
+
 bool ultramodern::is_game_started() {
     return game_status.load() != GameStatus::None;
 }

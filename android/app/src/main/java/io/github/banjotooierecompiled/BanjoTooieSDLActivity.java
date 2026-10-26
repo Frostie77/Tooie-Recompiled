@@ -45,6 +45,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     private volatile boolean presentationResumed;
     private volatile boolean updateWindowFocused;
     private TouchControlsView touchControls;
+    private SaveTransferController saveTransfers;
     private final WindowSnapshotLog windowSnapshotLog = new WindowSnapshotLog();
     private final ViewTreeObserver.OnGlobalLayoutListener windowLayoutObserver = () -> traceWindow("layout");
 
@@ -153,6 +154,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
         Log.i(TAG, "Data path: " + dataDir.getAbsolutePath());
 
         AndroidUpdates.get(this);
+        saveTransfers = new SaveTransferController(this);
         if (!SDLActivity.mBrokenLibraries && mLayout != null) {
             touchControls = new TouchControlsView(this);
             mLayout.addView(touchControls, new android.view.ViewGroup.LayoutParams(
@@ -168,6 +170,13 @@ public class BanjoTooieSDLActivity extends SDLActivity {
                 touchControls.showSettings();
         });
     }
+
+    public void showSaveBackups() {
+        runOnUiThread(() -> { if (saveTransfers != null && !romPickerDestroyed) saveTransfers.show(); });
+    }
+    boolean hasPendingDocuments() { return pendingRomRequest != 0 || pendingModRequest != 0; }
+    void saveTransferLeaving() { presentationLifecycle(1); }
+    void saveTransferReturned() { if (presentationResumed) presentationLifecycle(2); applyImmersiveFullscreen(); }
 
     public void showGraphicsDriverSettings(int action) {
         if(!DriverRuntime.enabled(this))return;
@@ -192,7 +201,8 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     public String getUpdateState() { return AndroidUpdates.get(this).snapshotJson(); }
 
     public boolean canShowUpdateNotice() {
-        return !romPickerDestroyed && presentationResumed && updateWindowFocused && pendingRomRequest == 0 && pendingModRequest == 0;
+        return !romPickerDestroyed && presentationResumed && updateWindowFocused && pendingRomRequest == 0 && pendingModRequest == 0 &&
+            (saveTransfers == null || !saveTransfers.isBusy());
     }
 
     public void openUpdateRelease() {
@@ -218,7 +228,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
                 nativeFileDialogResult(request, 2, null, "ROM selection is unavailable while the application is closing.");
                 return;
             }
-            if (pendingRomRequest != 0 || pendingModRequest != 0) {
+            if (pendingRomRequest != 0 || pendingModRequest != 0 || (saveTransfers != null && saveTransfers.isBusy())) {
                 nativeFileDialogResult(request, 1, null, null);
                 return;
             }
@@ -248,7 +258,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
                 nativeModFileDialogResult(request, 2, null, "Mod selection is unavailable while the application is closing.");
                 return;
             }
-            if (pendingRomRequest != 0 || pendingModRequest != 0) {
+            if (pendingRomRequest != 0 || pendingModRequest != 0 || (saveTransfers != null && saveTransfers.isBusy())) {
                 nativeModFileDialogResult(request, 1, null, null);
                 return;
             }
@@ -319,6 +329,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (saveTransfers != null && saveTransfers.receive(requestCode, resultCode, data)) return;
         if (requestCode == UPDATE_RELEASE_REQUEST) {
             if (presentationResumed) presentationLifecycle(2);
             applyImmersiveFullscreen();
@@ -376,6 +387,7 @@ public class BanjoTooieSDLActivity extends SDLActivity {
             if (observer.isAlive()) observer.removeOnGlobalLayoutListener(windowLayoutObserver);
         }
         romPickerDestroyed = true;
+        if (saveTransfers != null) saveTransfers.dispose();
         romImportCancelled.set(true);
         modImportCancelled.set(true);
         if (pendingRomRequest != 0) {

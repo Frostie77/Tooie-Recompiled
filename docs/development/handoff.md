@@ -310,3 +310,13 @@ another test. The historical c849 system-driver failure preceded the successful
 d6 on-device driver import; the old PC helper is not a pending test instruction.
 The Retroid report remains parked pending more data. Frostie handles reporter
 replies and issue closures.
+
+## Save backup transfer work — 26 October 2026
+
+Frostie approved developing user-controlled export/import while playtesting is
+paused. The [save-backup guide](android-save-backups.md) records the implementation,
+format, storage transaction and required disposable-data acceptance. The controls
+belong under General; no additional settings tab is added. This feature is
+unreleased and does not change v1.1.0/code 5, the live update feed or the installed
+Odin apps. Host fixtures and CI results must remain distinct from device save
+restoration. Do not tick off full save recovery or request a new playthrough now.

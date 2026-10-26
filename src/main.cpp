@@ -45,6 +45,7 @@
 
 #include "queued_audio.h"
 #include "mod_support.h"
+#include "android_save_transfer.h"
 #include "mod_runtime.h"
 #include "aiming_controls.h"
 #if defined(__ANDROID__)
@@ -261,6 +262,7 @@ void initialize_config() {
     recompui::config::create_sound_tab();
     recompui::config::create_mods_tab();
     tooie::updates::register_options(recompui::config::get_general_config());
+    tooie::saves::register_options();
 #if defined(__ANDROID__)
     tooie::touch::register_options();
 #if defined(TOOIE_ANDROID_VULKAN_DRIVERS) && TOOIE_ANDROID_VULKAN_DRIVERS

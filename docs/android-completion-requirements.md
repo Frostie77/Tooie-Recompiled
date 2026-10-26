@@ -210,7 +210,10 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving
-  progress between devices or app channels; this is later completion work.
+  progress between devices or app channels. Implementation and host coverage
+  are in progress; [the guide](development/android-save-backups.md) records the
+  file-picker flow, stopped-game guard and recovery copies. Keep this unchecked
+  until disposable-data Android restoration is accepted. Playtesting remains paused.
 - [ ] Complete broader coexistence checks for the public release and retained
   local Debug app: independent ROM imports, saves and mods across restarts and
   updates. Basic settings separation passed; each app retains its own

@@ -114,6 +114,7 @@ set(SOURCES
     ${CMAKE_SOURCE_DIR}/src/recomp_api.cpp
     ${CMAKE_SOURCE_DIR}/src/aiming_controls.cpp
     ${CMAKE_SOURCE_DIR}/src/android_updates.cpp
+    ${CMAKE_SOURCE_DIR}/src/android_save_transfer.cpp
     ${CMAKE_SOURCE_DIR}/src/android_updates_jni.cpp
     ${CMAKE_SOURCE_DIR}/src/register_overlays.cpp
     ${CMAKE_SOURCE_DIR}/src/rom_decompression.cpp
@@ -253,7 +254,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Android")
     add_compile_definitions("RT64_SDL_WINDOW_VULKAN")
     target_include_directories(BanjoTooieRecompiled PRIVATE ${SDL2_INCLUDE_DIRS})
     target_link_libraries(BanjoTooieRecompiled PRIVATE SDL2::SDL2 android log vulkan)
-    target_sources(BanjoTooieRecompiled PRIVATE src/android_touch_input.cpp src/android_touch_controls.cpp src/android_touch_jni.cpp)
+    target_sources(BanjoTooieRecompiled PRIVATE src/android_touch_input.cpp src/android_touch_controls.cpp src/android_touch_jni.cpp src/save_transfer_store.cpp src/android_save_jni.cpp)
     if (TOOIE_ANDROID_VULKAN_DRIVERS)
         set(BUILD_SHARED_LIBS OFF)
         add_subdirectory(lib/adrenotools ${CMAKE_BINARY_DIR}/adrenotools)
