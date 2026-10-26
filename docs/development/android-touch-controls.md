@@ -20,6 +20,9 @@ Settings → Touch → Configure touch controls offers:
   save and Reset/Reset positions to restore defaults. Mode, sizes, opacity and
   positions are saved in the app's private preferences.
 
+In the next update, the Touch tab appears between Controls and Sound. Existing
+touch preferences and the Configure touch controls flow are retained.
+
 The overlay provides a floating analog stick, A/B, Z, L/R, Start, four C
 buttons, D-pad and a separate MENU action. Multiple pointers may hold movement
 and buttons together. Moving the stick to the other side also moves its

@@ -344,3 +344,21 @@ The checklist now accepts focused in-app export/import and recovery on Odin.
 Cross-device/app-channel transfers, other document providers and the broader
 navigation/device matrix remain open. The same guide preserves build identities,
 export hashes and evidence limits. Frostie handles merges and issue closures.
+
+### Requested settings presentation
+
+After accepting the storage behavior, Frostie requested these changes for the
+same next update:
+
+- Name the General section and Android manager **Save Management**; its action
+  button is **Manage saves…**.
+- Place the **Touch** tab between **Controls** and **Sound**.
+- Put **(App settings, ROMs and mods are separate.)** in parentheses in the save
+  description.
+- Use this exact launcher instruction: "Use this feature at the Launcher Screen.
+  If you are already in-game. Save and Exit then reopen the App."
+- Rename **Aiming Invert** to **Invert Aiming y-axis**, preserving the
+  `aiming_invert` preference and runtime behavior.
+
+The accepted disposable-save results above remain tied to source `410532de5c42`;
+they do not establish on-device acceptance of these later presentation changes.

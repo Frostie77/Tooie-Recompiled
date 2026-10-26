@@ -20,7 +20,7 @@ void show_manager() {
     if (env->ExceptionCheck()) env->ExceptionClear();
     if (type) env->DeleteLocalRef(type);
     if (activity) env->DeleteLocalRef(activity);
-    if (failed) recompui::message_box("Save backups are unavailable. Please restart the app and try again.");
+    if (failed) recompui::message_box("Save Management is unavailable. Please restart the app and try again.");
 }
 class SaveButton : public recompui::Button {
 protected:
@@ -46,14 +46,14 @@ public:
         set_display(recompui::Display::Flex); set_flex_direction(recompui::FlexDirection::Column);
         set_gap(12.0f); set_padding_top(24.0f); set_width(100.0f, recompui::Unit::Percent);
         auto context = recompui::get_current_context();
-        context.create_element<recompui::Label>(this, "Save backups", recompui::LabelStyle::Large);
+        context.create_element<recompui::Label>(this, "Save Management", recompui::LabelStyle::Large);
         context.create_element<recompui::Label>(this,
-            "Back up or transfer all base-game save slots. App settings, ROMs and mods are separate.", recompui::LabelStyle::Small);
-        button = context.create_element<SaveButton>(this, "Manage save backups…", recompui::ButtonStyle::Secondary, recompui::ButtonSize::Medium);
+            "Back up or transfer all base-game save slots. (App settings, ROMs and mods are separate.)", recompui::LabelStyle::Small);
+        button = context.create_element<SaveButton>(this, "Manage saves…", recompui::ButtonStyle::Secondary, recompui::ButtonSize::Medium);
         button->add_pressed_callback(show_manager);
         button->set_enabled(!ultramodern::is_game_started());
         context.create_element<recompui::Label>(this,
-            "Use before Start Game. If already playing, close and reopen the app first.", recompui::LabelStyle::Small);
+            "Use this feature at the Launcher Screen. If you are already in-game. Save and Exit then reopen the App.", recompui::LabelStyle::Small);
         queue_update();
     }
 };

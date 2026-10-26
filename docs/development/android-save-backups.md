@@ -1,4 +1,4 @@
-# Android save backup transfer
+# Android Save Management
 
 This feature is for the next update and is not part of public v1.1.0. Focused
 save export/import and recovery acceptance passed on Odin 2 Portal on
@@ -8,9 +8,13 @@ Implementation: [PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40).
 
 ## User flow
 
-Open **Settings → General → Save backups → Manage save backups** before
-**Start Game**. No additional settings tab is added. If gameplay has already
-started, close and reopen the app first.
+Open **Settings → General → Save Management → Manage saves** at the launcher,
+before **Start Game**. No additional settings tab is added. If gameplay has
+already started, save and exit, then reopen the app first.
+
+The description separates the scope note as **(App settings, ROMs and mods are
+separate.)** The launcher instruction reads: "Use this feature at the Launcher
+Screen. If you are already in-game. Save and Exit then reopen the App."
 
 - **Export current save**: choose a destination in Android's file picker. The
   app writes a `.tooiesave` backup, closes it, then reopens and verifies it
@@ -110,6 +114,9 @@ Host tests and CI are separate from the focused Android file-picker and
 in-game checks recorded below.
 
 ## Odin acceptance — 26 October 2026
+
+This acceptance used the original Save backups labels. The later Save Management
+rename and presentation changes are separate from the tested storage behavior.
 
 Trent completed this test on his Odin 2 Portal using disposable progress in the
 separate test app, with Downloads selected in Android's file picker. The retained

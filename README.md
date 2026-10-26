@@ -51,13 +51,15 @@ Configure the floating joystick and N64 buttons under **Settings → Touch**.
 Adjust button/joystick sizes, opacity and positions, and choose Auto/On/Off
 visibility. Built-in gamepad users can hide the overlay. See the
 [touch-controls guide](docs/development/android-touch-controls.md).
+In the next update, the Touch tab sits between Controls and Sound.
 
-### Save backups (next update)
+### Save Management (next update)
 
-Before **Start Game**, open **Settings → General → Save backups → Manage save
-backups** to export or import all base-game save slots through Android's file
+At the launcher, open **Settings → General → Save Management → Manage saves**
+to export or import all base-game save slots through Android's file
 picker. Exports are read back and verified. Imports check the file and ask before
 replacing progress in all slots, keeping earlier save copies for recovery.
+If already in-game, save and exit, then reopen the app before using this feature.
 
 To recover replaced progress, choose **Export an earlier save**, export the
 retained copy, then select it with **Import save backup**. Keep an exported
@@ -118,11 +120,13 @@ The executable Tooie Mod Check example and BT Reloaded UI pack have passed
 focused Odin checks. See the [mod guide](docs/mods.md) for installation and
 compatibility limits.
 
-### Aiming Invert
+### Invert Aiming y-axis
 
-**Settings → General → Aiming Invert** changes vertical egg aiming and
+**Settings → General → Invert Aiming y-axis** changes vertical egg aiming and
 first-person looking. The saved preference defaults Off; walking, horizontal
-input and the regular camera retain their behavior.
+input and the regular camera retain their behavior. This is called **Aiming
+Invert** in public v1.1.0; the next update renames the label and retains the saved
+preference.
 
 ### Update checks
 

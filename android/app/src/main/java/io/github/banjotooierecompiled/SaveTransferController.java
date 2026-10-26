@@ -58,7 +58,7 @@ final class SaveTransferController {
         if (!live() || busy || activity.hasPendingDocuments()) return;
         if (!nativeCanTransfer()) { message("Close and reopen the app, then transfer saves before Start Game."); return; }
         busy = true; cancelled.set(false);
-        dialog = new AlertDialog.Builder(activity).setTitle("Save backups")
+        dialog = new AlertDialog.Builder(activity).setTitle("Save Management")
             .setItems(new String[]{"Export current save", "Import save backup", "Export an earlier save"}, (d, which) -> {
                 dialog = null;
                 if (which == 0) prepareExport(null);
@@ -157,7 +157,7 @@ final class SaveTransferController {
     private void confirmImport(byte[] payload) {
         if (!nativeCanTransfer()) { finish("The game has started. Reopen the app before importing a save."); return; }
         dialog = new AlertDialog.Builder(activity).setTitle("Replace all save slots?")
-            .setMessage("This Tooie backup will replace this app’s base-game progress in all save slots. Earlier save copies will be kept and can be exported from Save backups.")
+            .setMessage("This Tooie backup will replace this app’s base-game progress in all save slots. Earlier save copies will be kept and can be exported from Save Management.")
             .setNegativeButton("Cancel", (d, which) -> finish(null))
             .setPositiveButton("Import save", (d, which) -> {
                 dialog = null;

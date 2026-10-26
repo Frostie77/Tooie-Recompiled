@@ -214,6 +214,7 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   confirmed these results on 26 October 2026; retained Debug/Release progress
   was outside the test target. See the [acceptance record](development/android-save-backups.md#odin-acceptance--26-october-2026).
 - [x] Add and test user-controlled base-game save export/import for recovery.
+  The next-update feature is named **Save Management** under General settings.
   [PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40) passed host
   store/codec/runtime/JNI and Android CI checks. Focused Odin checks covered
   verified exports, no-save feedback, cancellation, damaged-file rejection,
