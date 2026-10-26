@@ -143,23 +143,22 @@ installed mods retained. These are manual confirmations without a new capture;
 see the [exact candidate and evidence limits](release-v1.0.1-check-20261024.md).
 
 On 26 October, after PR #34 deployed the v1.1.0 feed, Frostie confirmed that
-older installed releases detect the update in **Settings → Updates**, but no
-automatic message appeared when opening the app. This accepts manual newer-
-release detection, not automatic prompt display, Later or browser return. The
-exact older version/device, saved automatic-check setting, cache age, cold-start
-state and a fresh capture were not provided.
+older installed releases detect the update in **Settings → Updates**. He
+initially reported no automatic message on opening the app. After being asked
+to confirm **Check automatically at startup** is On, completely close/reopen
+the older release and wait at the launcher for 15 seconds, he confirmed:
+“ah yes the message appears now”. Manual newer-release detection and automatic
+startup-message display are accepted as manual functional reports. The exact
+older version/device and a fresh capture were not supplied.
 
-The production checker explains several possible paths, without establishing
-which caused this report: a saved Off preference still permits manual checks;
-a startup check can reuse a result for six hours; and automatic checks are
-requested once per process. Manual results do not trigger the startup prompt.
-First confirm **Check automatically at startup** is On, then completely close
-and reopen the older release and stay at the launcher for 15 seconds. The
-successful manual check has refreshed its update metadata, subject to server
-throttling. Record whether the prompt appears before changing the updater.
+The initial absence was not diagnosed: a saved Off preference, a fresh cached
+older result or an already-running process are possible paths in the code.
+No updater code change was required for the successful follow-up. Startup
+checks can reuse metadata for six hours, while manual checks refresh it;
+automatic checks are requested once per process.
 
-Automatic startup notice, Later, View Release/browser return, controller
-navigation and gameplay deferral remain open device checks. Keep using Debug
+Later, View Release/browser return, controller navigation and gameplay
+deferral remain open device checks. Keep using Debug
 for gameplay investigation. The earlier public v1.0.0 upgrade is a separate
 saves/settings check.
 

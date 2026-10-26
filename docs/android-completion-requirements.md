@@ -70,10 +70,9 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 - [x] Offline startup remained normal and the manual check showed a recoverable
   error explaining that play can continue.
 - [x] Manual checks recovered after Wi-Fi was restored.
-- [ ] Observe the automatic startup newer-version notice, Later, View Release
-  and browser return, including controller navigation and gameplay deferral.
-  The 26 October follow-up confirms manual newer-release detection, but reports
-  no startup message; the automatic path still needs a targeted check.
+- [ ] Complete Later, View Release/browser return, controller navigation and
+  gameplay deferral checks. The 26 October follow-up confirms both manual
+  newer-release detection and the automatic startup message; see below.
 - [x] Published v1.0.1, verified both public assets and advanced the stable feed.
 - [x] Additional device confirmation: Frostie reports public v1.0.1 works on
   Pixel 8 Pro / Android 17 / Mali-G715 MP7. This is a manual functional result;
@@ -94,9 +93,11 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 - [x] Manual newer-release detection: Frostie confirms older installed releases
   show the available update under Settings → Updates. Exact older versions,
   device and capture were not supplied in this follow-up.
-- [ ] Confirm the automatic startup message. Frostie reports no message on opening
-  the older app; the saved automatic-check setting, cache age and cold-start
-  state still need checking. Later/View Release/browser return remain open.
+- [x] Automatic startup message: after being asked to confirm the startup-check
+  toggle and completely close/reopen the older release, Frostie confirmed that
+  the message appears. This is a manual report without a fresh capture; the
+  cause of the initially absent message was not isolated.
+- [ ] Complete Later/View Release/browser return and the wider notice-flow checks.
 
 See the [release record](development/release-v1.1.0-check-20261026.md) for exact identities
 and the scope of the signed Odin results. Issue closures remain Frostie's job.
@@ -231,10 +232,10 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   checklist. Distribution review remains a separate open item.
 - [x] Obtain Frostie's explicit publication approval for the first Android
   release as **1.0.0**. Final project-completion sign-off remains separate.
-- [ ] Complete the remaining on-device updater flow: automatic startup offer,
-  Later, View Release/browser return, controller navigation and notice deferral.
-  Manual detection of the newer public release passed on 26 October, while
-  Frostie reported no automatic startup message.
+- [ ] Complete the remaining on-device updater flow: Later, View Release/browser
+  return, controller navigation and notice deferral. Manual newer-release
+  detection and automatic startup-message display passed in Frostie's
+  26 October follow-up.
   The v1.0.1 candidate's manual checks, Off-preference persistence, offline startup
   and recovery passed as recorded above. Host tests cover the other branches;
   see the [update guide](development/update-plan.md). Published v1.0.0 predates

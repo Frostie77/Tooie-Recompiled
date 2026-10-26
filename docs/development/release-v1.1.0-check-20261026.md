@@ -90,16 +90,19 @@ check refreshes metadata, subject to rate limits.
 
 ### Post-publication update report
 
-Frostie then confirmed that older installed releases detect the update in
-Settings → Updates, but no automatic message appeared on opening the app.
-Manual newer-release detection is accepted. Automatic startup prompt display,
-Later, View Release and browser return remain open. The exact older versions,
-device, saved startup-check toggle, cache age, cold-start state and a fresh
-capture were not supplied. Saved Off, a cached older result or an already-
-running process are possible explanations from the code, not diagnosed causes.
-The next focused check is the saved **Check automatically at startup** toggle
-and a complete close/reopen of the older release after its manual refresh,
-waiting at the launcher. See the [update guide](update-plan.md).
+Frostie confirmed that older installed releases detect the update in
+Settings → Updates, initially without an automatic message on opening the app.
+After being asked to confirm **Check automatically at startup** is On,
+completely close/reopen the older release and wait at the launcher for
+15 seconds, he confirmed: “ah yes the message appears now”. Manual newer-release
+detection and automatic startup-message display are accepted as scoped manual
+reports, without a fresh capture or exact older version/device identity.
+
+The cause of the initial absence was not isolated. A saved Off preference,
+a cached older result or an already-running process remain possible code paths;
+no updater code change was needed for the successful follow-up. Later,
+View Release/browser return, controller navigation and gameplay deferral remain
+open. See the [update guide](update-plan.md).
 
 The README latest-release link, changelog, completion checklist, release guide,
 device reports and handoff are updated in the same change. The release notes

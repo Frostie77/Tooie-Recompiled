@@ -81,11 +81,13 @@ Continue post-release playtesting through the established Debug app. Track the
 deferred Jiggy-challenge lines, dialogue shift and intro/demo stutter. Startup
 checks were introduced in v1.0.1; the live main feed now describes verified
 public v1.1.0 / code 5. Frostie confirms older releases detect it manually in
-Settings → Updates, but reports no automatic startup message. Exact older
-version/device, automatic-check preference, cache age and full-process restart
-were not recorded. Confirm the saved startup-check toggle and retry a cold
-launcher start after the successful manual refresh. Automatic prompt display,
-Later, browser return, controller navigation and gameplay deferral remain open;
+Settings → Updates. After the initially absent startup message, he was asked
+to confirm the startup-check toggle and completely close/reopen the older app;
+he then confirmed the message appears. Manual newer-release detection and
+startup-message display are accepted without a fresh capture. The exact older
+version/device and cause of the initial absence remain unspecified; no updater
+code change was required. Later, View Release/browser return, controller
+navigation and gameplay deferral remain open;
 see the
 [update guide](update-plan.md). Background/sleep, save export/import, multi-mod
 combinations and broader gameplay/lifecycle/device coverage remain open.
