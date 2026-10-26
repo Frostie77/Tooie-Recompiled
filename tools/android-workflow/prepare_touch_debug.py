@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify a CI touch Debug ZIP, sign locally, and prepare a pinned capture launcher.
+"""Verify a CI Debug candidate ZIP, sign locally, and prepare a pinned capture launcher.
 
 This helper never installs, launches, uninstalls or clears an app. The key stays
 on the maintainer's PC. Only the existing Debug package/version is accepted.
@@ -17,7 +17,9 @@ import uuid
 import zipfile
 
 DEBUG_CERT="548bdb3c2702e830f61695c6d701da9c021a48af4b72566209fba0b518be2836"
-TOOL_REVISION="f5cb8aa4185dc752095df9c33c71789264ea1401"
+LEGACY_LIBRARIES={"libmain.so","libSDL2.so"}
+DRIVER_LIBRARIES=LEGACY_LIBRARIES|{"libmain_hook.so","libhook_impl.so",
+                                "libfile_redirect_hook.so","libgsl_alloc_hook.so","libc++_shared.so"}
 
 
 def require(ok,message):
@@ -44,16 +46,20 @@ def load_candidate(path,expected_zip,source):
         require(all(n and Path(n).name==n and not any(c in n for c in ("/","\\",":")) and n not in (".","..") for n in names),"Unsafe candidate paths")
         require(sum(i.file_size for i in bundle.infolist())<=100*1024*1024,"Unexpected candidate size")
         report=json.loads(bundle.read("build-report.json"))
+        variants={"debug":"Debug","Touch-Debug-Candidate":"Touch-Debug-Candidate"}
         require(report["source_commit"]==source and report["package"]=="io.github.banjotooierecompiled" and
-                report["variant"]=="Touch-Debug-Candidate","Wrong source or candidate app identity")
-        expected="Tooie-Recompiled-Android-arm64-"+source[:12]+"-Touch-Debug-Candidate.apk"
+                report["variant"] in variants,"Wrong source or candidate app identity")
+        expected="Tooie-Recompiled-Android-arm64-"+source[:12]+"-"+variants[report["variant"]]+".apk"
         require(report["apk"]==expected,"Unexpected candidate APK filename")
         apk=bundle.read(expected);require(digest(apk)==report["sha256"],"Candidate APK digest differs from build report")
+        driver_picker=report.get("driver_picker",False)
+        require(type(driver_picker) is bool,"Invalid driver-picker profile")
+        libraries=DRIVER_LIBRARIES if driver_picker else LEGACY_LIBRARIES
         with zipfile.ZipFile(io.BytesIO(apk)) as app:
             require(len(app.namelist())==len(set(app.namelist())),"Duplicate APK entries")
             libs={n for n in app.namelist() if n.startswith("lib/") and n.endswith(".so")}
-            require(libs=={"lib/arm64-v8a/libmain.so","lib/arm64-v8a/libSDL2.so"},"Wrong native library set")
-            require(set(report["libraries"])=={"libmain.so","libSDL2.so"},"Incomplete native library report")
+            require(libs=={"lib/arm64-v8a/"+name for name in libraries},"Wrong native library set")
+            require(set(report["libraries"])==libraries,"Incomplete native library report")
             for name,info in report["libraries"].items():require(digest(app.read("lib/arm64-v8a/"+name))==info["sha256"],"Native library differs: "+name)
             require(report["native_version"].encode() in app.read("lib/arm64-v8a/libmain.so"),"Native version stamp missing")
         tools={}
@@ -107,7 +113,7 @@ def main(argv=None):
     command=[sys.executable,str(capture/"capture_installed.py"),"--apk",str(signed),"--verification",str(verification),
              "--build-report",str(folder/"build-report.json"),"--build-tools",str(args.build_tools),"--downloads",str(args.downloads),
              "--expect-source",args.expect_source,"--expect-sha256",receipt["apk_sha256"],"--expect-cert",args.expect_cert,
-             "--adb",args.adb,"--serial",args.serial,"--state",str(folder/"capture-state"),"--tool-revision",TOOL_REVISION]
+             "--adb",args.adb,"--serial",args.serial,"--state",str(folder/"capture-state"),"--tool-revision",args.expect_source]
     check="from pathlib import Path; import hashlib,sys; expected="+repr(expected_tools)+"; changed=any(hashlib.sha256(Path(p).read_bytes()).hexdigest()!=h for p,h in expected.items()); sys.exit('Capture tools changed; stop and reverify' if changed else 0)"
     launcher=folder/"capture-touch.sh";launcher.write_text("#!/bin/sh\n"+shlex.join([sys.executable,"-c",check])+" || exit 1\nexec "+shlex.join(command)+"\n");launcher.chmod(0o700)
     require(signed.read_bytes()==data,"Signed APK changed during verification")

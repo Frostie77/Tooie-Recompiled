@@ -1,5 +1,26 @@
 # Tooie Recompiled Android workflow
 
+## Prepare a private Debug update
+
+Normal CI Debug artifacts include `prepare_touch_debug.py`, the three pinned
+capture tools and their hashes in `build-report.json`. The helper's historical
+filename also supports normal `Debug.apk` artifacts; the optional
+`Touch-Debug-Candidate` profile remains compatible. No special workflow checkbox
+is needed for a normal Debug update. GPU-test and release packages are rejected.
+
+Verify the exact CI ZIP hash and source, then run the included helper with those
+expected identities and the existing local Debug keystore. It checks the full
+two-library legacy or seven-library driver profile, re-signs locally, verifies
+the established Debug certificate and complete unsigned payload, and prepares
+`capture-touch.sh`. It does not install or launch anything. The capture-tool
+revision is the source commit recorded by that artifact, not an older fixed pin.
+
+After the separately requested `adb install -r` update, use the newly prepared
+launcher for playtests. Driver-enabled builds track the private `:game` PID;
+legacy builds track the package process. Private-log reads and foreground checks
+continue to use the package, and evidence records the selected process name.
+A surviving launcher process cannot stand in for an exited game process.
+
 ## Record an already installed Debug build
 
 `capture_installed.py` verifies a locally signed CI APK and its signing/CI JSON

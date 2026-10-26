@@ -200,9 +200,12 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   [signed checkpoint](development/android-driver-release-integration-20261025.md#signed-odin-functional-checkpoint),
   including the actual update chain; broader coverage remains open above.
 - [ ] After the new release, update Frostie's retained Odin Debug app with its
-  established signer and data preserved. First extend local preparation to seven
-  native libraries and attached capture to the `:game` process; generate a new
-  pinned capture launcher. The current touch/audio Debug stays installed until then.
+  established signer and data preserved. Local preparation now supports the
+  seven-library profile and attached `:game` capture, with markers 1–30 retained
+  and host consumer/parent controls passing. Normal CI packages the pinned tools
+  and runs the temporary-key signing fixture. The new CI artifact, local signing,
+  install and device capture are still pending; the current touch/audio Debug
+  stays installed until then. See the [workflow guide](../tools/android-workflow/README.md).
 - [ ] Test save-backup restoration using disposable test data. A successful backup
   alone does not establish recovery; preserve the original progress throughout.
 - [ ] Add and test user-controlled save export/import for recovery and moving

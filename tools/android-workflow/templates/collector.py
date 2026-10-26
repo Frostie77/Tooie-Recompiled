@@ -25,6 +25,7 @@ ADB = os.environ.get('TOOIE_ADB', 'adb')
 READELF = Path.home() / 'Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'
 SERIAL = '7907333f'
 PKG = 'io.github.banjotooierecompiled'
+PROCESS_NAME = None  # Attach mode selects :game for the driver-enabled app.
 MARKER = Path.home() / 'projects/tooie-tools/odin-runs' / (SHA + '-task-delivery-timing-' + HASH[:12] + '.started')
 prefix = None
 reader = None
@@ -105,8 +106,11 @@ def parse_pids(result):
     require(bool(values) == (marker[1] == '0'), 'Inconsistent pidof result.')
     return values
 
+def process_name():
+    return PROCESS_NAME or PKG
+
 def pids(name=None, timeout=30):
-    cmd = f'pidof {PKG}; result=$?; printf "\\nTOOIE_PIDOF_RC=%s\\n" "$result"'
+    cmd = f'pidof {shlex.quote(process_name())}; result=$?; printf "\\nTOOIE_PIDOF_RC=%s\\n" "$result"'
     return parse_pids(adb('shell', '-T', cmd, name=name, timeout=timeout))
 
 def sample_pids(name, timeout=30):
@@ -1015,7 +1019,7 @@ def collect():
     delta = None
     if attempted:
         reads = [
-            ('Final-PIDs', ('shell', '-T', f'pidof {PKG}')),
+            ('Final-PIDs', ('shell', '-T', f'pidof {shlex.quote(process_name())}')),
             ('End-Device-Time', ('shell', '-T', 'date')),
             ('FullLog', ('shell', '-T', f'run-as {PKG} cat files/data/banjotooi-debug.log')),
             ('Display-State', ('shell', '-T', 'dumpsys display')),

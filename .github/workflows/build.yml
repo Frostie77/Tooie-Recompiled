@@ -12,7 +12,7 @@ on:
         type: boolean
         default: false
       touch_controls_test:
-        description: 'Build a touch-controls Debug candidate for local signing (not a release candidate)'
+        description: 'Build a separately named Debug playtest candidate (normal Debug also supports local signing)'
         type: boolean
         default: false
       prepare_candidate:
@@ -160,8 +160,8 @@ jobs:
             --integration-work .ci-android \
             --build-tools "$ANDROID_HOME/build-tools/36.0.0"
 
-      - name: Check touch Debug local signing with an ephemeral test certificate
-        if: env.TOOIE_ANDROID_TOUCH_TEST == '1'
+      - name: Check Debug local signing with an ephemeral test certificate
+        if: env.TOOIE_ANDROID_DRIVER_TEST != '1'
         run: |
           python3 tools/test_touch_debug_preparation.py \
             --integration-work .ci-android \
