@@ -9,7 +9,7 @@ and descriptions rather than assuming their severity from a marker number.
 | ID | Observation | Status | Evidence |
 |---|---|---|---|
 | MD-001 | Static-like horizontal line during the Jiggy challenge, usually near the top left, reaching about halfway across and disappearing/reappearing quickly | Open — investigating; no confirmed fix | [24 October candidate check](release-candidate-check-20261024.md), original marker 1; Frostie's 26 October description/orientation and 27 October position, extent and flicker clarification are retained in the [source investigation](jiggy-challenge-lines-investigation-20261026.md). The later half-width estimate refines his initial whole-screen description. The original log omits the event period and has no picture of the line; no new capture of the defect is recorded. |
-| MD-002 | Brief screen shift when dialogue animation begins | Open — investigating; no confirmed fix | [24 October candidate check](release-candidate-check-20261024.md), original marker 2; [investigation and 27 October follow-up](dialogue-screen-shift-investigation-20261026.md) retain the log limits, two synthetic renderer mechanisms, actual game camera request/update trace and host probe. Immediate/gradual paths differ; no universal cut signal or actual-event cause is confirmed. Device testing is deferred to 28 October; no new capture of this defect is recorded. |
+| MD-002 | Brief screen shift when dialogue animation begins; reported while the view compresses on entry | Open — investigating; no confirmed fix | [24 October candidate check](release-candidate-check-20261024.md), original marker 2; [investigation](dialogue-screen-shift-investigation-20261026.md) and [27 October three-marker capture](dialogue-capture-odin-20261027.md). New E01–E03 report the jump with Original active; screenshots show letterboxed dialogue and Android surface records stay 1920×1080. Motion and per-frame viewport/camera inputs remain unmeasured; no matched Expand result or actual-event cause is confirmed. |
 
 ## Required review when evidence is uploaded
 
@@ -39,6 +39,22 @@ screenshots do not establish motion or audio quality.
 
 No entries for a future playtest have been invented. Populate the session
 review and backlog after its actual evidence and details are supplied.
+
+## Focused dialogue capture — 27 October 2026
+
+The [session review](dialogue-capture-odin-20261027.md) accounts for all three
+events from session `b25862ab`: E01/marker 1
+`0f5519f2058248569e0dbb8cac2991fb`, E02/marker 2
+`6e0af61e12d04927b8d91b7c1d297929`, and E03/marker 3
+`c5e0f40c41ab42bc96e22da19bdf5af5`. Exact receipt times, literal descriptions,
+three PNG identities, acknowledged deliveries and the raw-journal reconciliation
+are retained there. There are zero follow-up/orphan notes. E03's concatenated
+description is one event, not two.
+
+Associate these reports and Frostie's accompanying compression-at-entry
+observation with MD-002 for follow-up; neither the screenshots nor host receipt
+times establish motion or a shared measured cause. No Jiggy static-line event
+is present in this upload. MD-001 and MD-003–MD-005 remain open.
 
 ## Installed Debug playtest — 24 October 2026
 

@@ -2,12 +2,14 @@
 #include "render/rt64_projection_processor.h"
 #include "probe_queue.h"
 #include "producer.h"
+#include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 
 #define REQUIRE(x) do {if (!(x)) {std::fprintf(stderr,"FAIL %d: %s\n",__LINE__,#x);std::exit(1);}} while (0)
 using namespace RT64;
+extern "C" std::atomic<uint32_t> g_bt_rt64_proj_adjusted_other;
 
 // The CPU path must never create/upload GPU buffers in this fixture.
 void BufferUploader::submit(RenderWorker *, const std::vector<Upload> &) { REQUIRE(false); }
@@ -60,10 +62,11 @@ static void fill(Workload &w, float x, uint32_t id, uint32_t flags, bool widerPa
     p.scissorRect = FixedRect(4, 4, 1276, 956);
 }
 
-struct Result {float viewX, focalX; bool mapped;};
+struct Result {float viewX, focalX; bool mapped, adjusted;};
 static Result probe(const char *name, float currentX, float weight, bool widerPair = false,
                     uint32_t flags = kProjectionGroupFlags,
-                    uint32_t id = kGameplayProjectionId) {
+                    uint32_t id = kGameplayProjectionId,
+                    float aspectRatioScale = 4.0f / 3.0f) {
     WorkloadQueue q{};
     fill(q.workloads[0], 0, kGameplayProjectionId, kProjectionGroupFlags, false);
     fill(q.workloads[1], currentX, id, flags, widerPair);
@@ -82,14 +85,17 @@ static Result probe(const char *name, float currentX, float weight, bool widerPa
     params.prevFrame = &previous;
     params.curFrame = &current;
     params.curFrameWeight = weight;
-    params.aspectRatioScale = 4.0f / 3.0f;
+    params.aspectRatioScale = aspectRatioScale;
+    const uint32_t adjustedBefore = g_bt_rt64_proj_adjusted_other.load(std::memory_order_relaxed);
     processor.process(params);
     const auto &d = q.workloads[1].drawData;
     Result result{d.modViewTransforms[1][3][0], d.modProjTransforms[1][0][0],
-                  current.frameMap.workloads[1].viewProjections[1].mapped};
+                  current.frameMap.workloads[1].viewProjections[1].mapped,
+                  g_bt_rt64_proj_adjusted_other.load(std::memory_order_relaxed) != adjustedBefore};
     REQUIRE(std::isfinite(result.viewX) && std::isfinite(result.focalX));
-    std::printf("{\"case\":\"%s\",\"view_x\":%.6f,\"focal_x\":%.6f,\"mapped\":%s}\n",
-                name, result.viewX, result.focalX, result.mapped ? "true" : "false");
+    std::printf("{\"case\":\"%s\",\"view_x\":%.6f,\"focal_x\":%.6f,\"mapped\":%s,\"aspect_adjusted\":%s}\n",
+                name, result.viewX, result.focalX, result.mapped ? "true" : "false",
+                result.adjusted ? "true" : "false");
     return result;
 }
 
@@ -111,5 +117,16 @@ int main() {
     REQUIRE(near(probe("wider_pair_one_pixel_margin", 0, .25f, true).focalX, 1));
     const uint32_t forceAdjust = (kProjectionGroupFlags & ~(3U << 20)) | (G_EX_ASPECT_ADJUST << 20);
     REQUIRE(near(probe("explicit_aspect_control", 0, .25f, true, forceAdjust).focalX, .75f));
+    // Original mode sets target aspect equal to source aspect. The consumer's
+    // classification still changes, but reciprocal scale 1 cannot change focal X.
+    const auto originalNarrow = probe("original_covers_pair_width", 0, .25f, false,
+                                      kProjectionGroupFlags, kGameplayProjectionId, 1);
+    const auto originalWide = probe("original_wider_pair", 0, .25f, true,
+                                    kProjectionGroupFlags, kGameplayProjectionId, 1);
+    REQUIRE(originalNarrow.adjusted && !originalWide.adjusted);
+    REQUIRE(near(originalNarrow.focalX, 1) && near(originalWide.focalX, 1));
+    const auto originalCut = probe("original_same_role_cut", 100, .25f, false,
+                                   kProjectionGroupFlags, kGameplayProjectionId, 1);
+    REQUIRE(originalCut.mapped && near(originalCut.viewX, 25) && near(originalCut.focalX, 1));
     std::puts("PASS: synthetic mechanisms and opposing controls exercised production CPU consumers; MD-002 cause remains unconfirmed.");
 }

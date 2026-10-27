@@ -4,9 +4,10 @@ MD-002 remains **open: no confirmed cause or gameplay fix**. Review of the
 existing captures and a production CPU probe establishes two possible renderer
 mechanisms, but neither is identified in the recorded dialogue event. No app
 behavior, graphics defaults, release version or installed APK is changed by
-this investigation. Frostie later resumed focused Save Management and settings
-checks on the updated Debug app; no new capture of this graphics defect is
-recorded.
+this investigation. Frostie later resumed focused checks on the updated Debug
+app. The [27 October dialogue capture](dialogue-capture-odin-20261027.md) now
+adds three Original-mode reports and letterboxed images; its per-frame motion,
+camera and viewport inputs remain unmeasured.
 
 ## Original dialogue observation
 
@@ -124,12 +125,37 @@ and current projection endpoints, so interpolation alone does not smooth a
 change in that decision. Forcing adjustment globally is not an accepted fix;
 other projections may intentionally use narrower viewports.
 
-All eight cases and their explicit assertions passed with no ASan/UBSan report.
+The original eight cases and their explicit assertions passed with no ASan/UBSan report.
 These are measurements of CPU behavior, not observed gameplay acceptance.
+
+### Original-mode controls after the 27 October capture
+
+The [new three-marker Odin capture](dialogue-capture-odin-20261027.md) records
+Original before all three reported dialogue jumps. Frostie associates the shunt
+with the game view compressing on entry; all images show letterboxed dialogue,
+while the recorded Android surface remains 1920 × 1080. The visible movement
+and the game's per-frame viewport/camera inputs are not captured.
+
+In [WorkloadQueue::threadConfigurationUpdate](../../lib/rt64/src/hle/rt64_workload_queue.cpp),
+Original sets target aspect equal to source aspect, producing aspect scale 1.
+Three added production CPU controls retain that scale:
+
+| Synthetic case | Actual AUTO decision | Focal X | View X |
+|---|---|---:|---:|
+| Projection covers framebuffer width | adjust | 1 | 0 |
+| Aggregate framebuffer bounds wider by one-pixel margins | skip | 1 | 0 |
+| Abrupt same-role view change 0→100, weight 0.25 | adjust | 1 | 25 |
+
+The decision difference is read from the actual processor's diagnostic counter.
+All **eleven** cases passed under ASan/UBSan, leak detection disabled. This
+narrows the earlier hypothesis: switching only that reciprocal aspect factor
+cannot change focal X at scale 1. It does not rule out other viewport/scissor,
+matrix-split or camera-transition behavior. The current capture does not show
+which occurred; MD-002 remains open.
 
 ## Game dialogue-camera paths — 27 October follow-up
 
-Frostie deferred the next playtest until **28 October** and authorized source
+Frostie initially deferred the next playtest until **28 October** and authorized source
 work in the meantime. The generated game code exposes useful request and update
 points, but a universal camera-cut signal has not been established.
 
@@ -250,8 +276,11 @@ the mechanisms. A visual comparison alone cannot prove either cause; correlate
 it with the state/renderer measurements above. They must not be treated as
 universal fixes or conflated with unrelated screen shaking. Existing
 `TOOIE_TRACE_PROJ` tracing is off by default and was not present in these captures.
-The current recorder does not enable that detailed trace. Frostie plans to
-resume testing on 28 October; no device action is needed for this source probe.
+The current recorder does not enable that detailed trace. The prior plan to
+resume testing on 28 October was superseded by the supplied 27 October focused
+capture. All three new markers and the compression-at-entry follow-up are
+recorded in the [session review](dialogue-capture-odin-20261027.md). The Original
+leg now has reports; a matched Expand comparison remains unrecorded.
 
 Until that distinction or the game's camera-cut semantics is established,
 retain MD-002 as open and leave the production camera/aspect policy unchanged.

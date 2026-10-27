@@ -268,13 +268,19 @@ release. The [26 October dialogue investigation](development/dialogue-screen-shi
 reviews existing evidence and two synthetic renderer mechanisms. Its 27 October
 follow-up traces the game camera controller and verifies instant/gradual branches
 with a host probe; the actual cause and gameplay fix remain unconfirmed. The
+[27 October focused capture](development/dialogue-capture-odin-20261027.md)
+adds three Original-mode marker reports and the user's compression-at-dialogue-entry
+observation. Letterboxed screenshots and stable Android surface records narrow
+the next check to the internal view transition; motion/per-frame inputs and a
+matched Expand comparison remain missing. Three additional Original-scale CPU
+controls bring the projection probe to eleven cases without establishing a fix. The
 [Jiggy-challenge investigation](development/jiggy-challenge-lines-investigation-20261026.md)
 records the captured-image sampling path and Frostie's latest description:
 static-like horizontal noise, usually near the top left, extending about halfway
 across and disappearing/reappearing quickly. These are conversation details;
 MD-001 also remains unresolved. Keep both in known issues. Focused Save
-Management/settings testing has resumed and passed; no new graphics-defect
-capture is recorded.
+Management/settings testing has resumed and passed; the new graphics reports
+remain open follow-up work.
 
 ## First Android release milestone
 

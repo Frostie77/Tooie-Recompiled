@@ -87,7 +87,13 @@ Frostie's Odin checks. The installed Debug snapshot is `fae511cc166c` (same tree
 as `d6cb2289f06b`); existing progress/settings and all five requested presentation
 changes were accepted. The current recorder is
 `$HOME/.local/share/tooie-recompiled/candidates/touch-fae511cc166c-c2782ebd/capture-touch.sh`.
-No new extended marker playthrough is recorded.
+The [27 October focused dialogue capture](dialogue-capture-odin-20261027.md)
+contains three reviewed marker events and no follow-up/orphan notes. It records
+Original before all three reports; the user associates the shunt with the game
+view compressing on dialogue entry. Images show letterboxed dialogue; Android
+surface records remain 1920×1080. No motion/per-frame camera or viewport trace
+is available. A matched Expand result and the requested separate Jiggy capture
+remain pending.
 
 The [dialogue-shift investigation](dialogue-screen-shift-investigation-20261026.md)
 reviews the original logs and confirms two possible CPU renderer mechanisms,
@@ -98,7 +104,10 @@ and distinguishes immediate endpoint selection from controlled gradual movement;
 selector changes, pending bytes and sticky modifiers are individually insufficient
 as universal cut signals. Modifier 50 motion and the complete state machine remain
 outside the probe's scope. Neither investigation establishes MD-002's actual
-cause; no runtime fix is claimed. Frostie deferred device playtesting to 28 October.
+cause; no runtime fix is claimed. Three added Original-scale RT64 controls pass:
+AUTO classification changes but its scale-1 factor leaves focal X unchanged;
+the same-role camera-cut control still blends. The earlier 28 October test plan
+is superseded by the received 27 October capture.
 Keep the later MD-004 screen-shaking reports separate. The
 [Jiggy-challenge investigation](jiggy-challenge-lines-investigation-20261026.md)
 records Frostie's clarification that MD-001 looks like static in a horizontal
