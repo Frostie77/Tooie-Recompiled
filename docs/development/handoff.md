@@ -27,8 +27,15 @@ This second candidate is unsuccessful for MD-005; its host mesh-edge cases are
 not a device fix. The prior [build-108 review](character-limb-check-odin-20261027.md)
 retains its failed CPU-vertex result, both markers/four inputs and native images.
 The latest follow-up also records MD-011 opening-logo vertical jitter and MD-012
-HUD Placement having no visible effect. No fresh build-109 Share ZIP/config
-readback or broad save/settings/gameplay acceptance is supplied.
+HUD Placement having no visible effect. The [21:57 capture review](graphics-capture-odin-20261027-215735.md) now recovers
+raw records confirming the option changes and new consumer activity. It stopped
+at the playing prompt (no attached gameplay window, markers or screenshots), so
+no broad save/settings/gameplay acceptance follows. Frostie subsequently reports
+a crash, then says the next run did not crash. Its [complete 22:27 review](graphics-check-odin-20261027-222732.md)
+retains 14 events/18 raw inputs and six images: Split Up succeeds this run,
+standalone-Kazooie wing separation remains, and E13/E14 are explicitly excluded
+as moves learned later. The prior Split Up freeze stays open; this new successful
+run does not establish its cause or a fix.
 
 The [build-107 review](graphics-check-odin-20261027.md) retains two scoped
 static/dialogue passes intended for the next update, plus its six events/eight
@@ -98,6 +105,13 @@ rejects the second limb candidate at both Manual 60 and Display; Original is fin
 Keep MD-005 open and PR #41 draft. The constructed mesh-edge cases pass, but
 cannot stand in for the actual NPC. Next trace that draw's vertex/bone inputs,
 ownership/matching, weights and rendered outputs before another policy change.
+The later [22:27 session](graphics-check-odin-20261027-222732.md) adds standalone
+Kazooie wing reports at Display with target 120; no higher-framerate limb pass is
+established. An [optional input observer](graphics-input-diagnostics-20261027.md)
+is now implemented, off unless explicitly requested by a private file. It records
+bounded actual selected matrix/vertex/projection/origin inputs. ASan/UBSan host
+controls and 327 simulated collector checks pass; ARM64 build and diagnostic
+delivery remain pending. No input-code change is needed for excluded E13/E14.
 The broader Display playthrough and measured pacing/delivery remain open.
 
 Track the two new reports separately: **MD-011** opening-logo rapid vertical
@@ -115,8 +129,9 @@ closes issues; no new release or publication is requested.
 
 The current installed-build recorder is
 `$HOME/.local/share/tooie-recompiled/candidates/touch-6da2a897867b-f8fc022a/capture-touch.sh`.
-The reviewed build-108 session ended on `save`; no new build-109 capture has
-been supplied yet. Each replacement Debug build requires its own generated
+The first build-109 upload ended at the playing prompt. The later 22:27 upload
+has a verified attached gameplay window and original PID 20423, ended on `save`;
+all 14 events/18 inputs and six images have been reviewed. Each replacement Debug build requires its own generated
 recorder and receipt. Earlier Original dialogue/Jiggy captures remain failing
 source evidence; later scoped passes do not erase them.
 

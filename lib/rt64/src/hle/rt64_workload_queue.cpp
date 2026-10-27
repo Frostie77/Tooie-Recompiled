@@ -9,6 +9,10 @@
 
 #include "rt64_present_queue.h"
 
+#if defined(__ANDROID__)
+#include "render/rt64_scene_diagnostics.h"
+#endif
+
 #define ENABLE_HIGH_RESOLUTION_RENDERER 1
 
 namespace RT64 {
@@ -352,6 +356,26 @@ namespace RT64 {
             transformProcessor.upload(transformParams);
             uploadTransforms = true;
         }
+
+#if defined(__ANDROID__)
+        // Explicit opt-in diagnostic copies, while the workload mutex still
+        // owns all current/previous CPU inputs. No renderer state is changed.
+        static thread_local sceneDiagnostics::Window sceneWindow;
+        const uint64_t sceneSample = tooie::diagnostics::monotonicUs();
+        if (sceneWindow.due(sceneSample)) {
+            for (uint32_t index : curFrame.workloads) {
+                const auto *map = processTransforms && index < curFrame.frameMap.workloads.size() &&
+                    curFrame.frameMap.workloads[index].mapped ? &curFrame.frameMap.workloads[index] : nullptr;
+                const auto *before = map && map->prevWorkloadIndex < workloads.size() ? &workloads[map->prevWorkloadIndex] : nullptr;
+                sceneDiagnostics::Context context;
+                context.sample = sceneSample; context.weight = curFrameWeight; context.previousWeight = prevFrameWeight;
+                context.transformsProcessed = map && before; context.projectionsProcessed = processProjections;
+                context.sourceAspect = workloadConfig.aspectRatioSource; context.targetAspect = workloadConfig.aspectRatioTarget;
+                context.extendedPercentage = workloadConfig.extAspectPercentage;
+                sceneDiagnostics::report(workloads[index], before, map, context);
+            }
+        }
+#endif
 
         bool uploadTiles = false;
         if (interpolateTiles) {

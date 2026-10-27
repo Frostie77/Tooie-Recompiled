@@ -45,7 +45,10 @@ review and backlog after its actual evidence and details are supplied.
 The [complete conversational record](graphics-framerate-follow-up-odin-20261027.md)
 retains the established local signing receipt, successful ADB update, exact
 Manual-60/Display/Original limb comparisons and both additional issue reports.
-No new marker IDs or screenshots have been supplied. MD-005 remains open:
+The [subsequent upload review](graphics-capture-odin-20261027-215735.md) accounts
+for zero events/notes and one `save` input at the playing prompt; raw records
+confirm effective setting changes and consumer activity. There are no new
+marker IDs or screenshots. MD-005 remains open:
 the second candidate is unsuccessful at both interpolated settings. Original
 is a comparison, while Display remains Frostie's everyday completion target.
 
@@ -53,6 +56,38 @@ is a comparison, while Display remains Frostie's everyday completion target.
 |---|---|---|---|
 | MD-011 | Opening-scene logos rapidly stutter up/down at Manual 60 and Display; Original is fine | Open — reproduce and trace | Build-109 conversational report, item 1; exact wording retained in the follow-up. Trace the affected draw's camera/viewport/transform and sprite inputs. Do not conflate it with dialogue shunt or assume a common cause with MD-005. |
 | MD-012 | HUD Placement Original / 16:9 / Expand does not visibly reposition the HUD | Open — setting/consumer trace needed | Build-109 conversational report, item 2; exact wording retained in the follow-up. Check effective settings and actual HUD draw/origin behavior. This setting is separate from Framerate and the main aspect ratio. |
+
+## Later build-109 session — 22:27, 27 October 2026
+
+The [complete review](graphics-check-odin-20261027-222732.md) retains **14 events,
+18 raw inputs, zero notes/orphans and all six native screenshots**. E01–E08
+occur before attachment, so their logo/HUD reports have acknowledged markers
+but no screenshot attempts. The repeated marker 3 and combined raw descriptions
+remain separate literal records, not invented follow-up notes. The incomplete
+escaped HUD input and unnumbered `HUD set to 16:9` are also preserved.
+
+- MD-011: E02 `d0b44785d95b4172bdb6a0cd0a3011ce` and E06
+  `e7921972bee34d1d90d29356c4e98b3b`, with quick markers E03–E05, retain logo jitter.
+- MD-012: E07 `a2969c1578454507972c359f8cbad7c5`, E08
+  `7917147e7fe14fb69e79e62e6653b9b9` and both other HUD inputs retain the comparison.
+  Native records again confirm all three HUD values reach RT64.
+- MD-005: E11 `f5adbd90336d4da99124e8acef226ab4` / `kazooie control wings separating`
+  and E12 `ec150928769d45e7acf2e80e5f3249d4` / `note same as 11` add standalone-Kazooie
+  evidence at Display (native target 120). The 11/12 images are viewed; motion
+  remains the user report, not a still-image timing measurement.
+- E09 `d9b1426341174e76896c31671676cd02` places the earlier freeze at a Split Up pad;
+  E10 `e64cb7f04bd34ace9084b0992333d694` reports success this time. Original PID
+  20423 remains present in all 73 assessments. This is not a fix for the old report.
+- **Exclude E13/E14** (`a5c3871de0ee4aafbb9f3df03efa0fc7`,
+  `56352ce39c184d75bf9c04ff08feaf2e`) from bug follow-up. Frostie says:
+  `disgregard markers 13 and 14, you learn those later in the game`.
+  Keep the raw evidence/clarification without creating an input bug or claiming a fix.
+
+## Subsequent crash/freeze report — failing evidence pending
+
+| ID | Observation | Status | Evidence and follow-up |
+|---|---|---|---|
+| MD-013 | Earlier reported crash/freeze, later described as occurring at a Split Up pad | Open — failure not reproduced in the new session | Original report: `im going to send to another log, my game crashed`. Frostie then says `the game didnt crash this time, but i did capture some other stuff`. The [22:27 review](graphics-check-odin-20261027-222732.md) preserves E09's prior-freeze context and E10's successful split with both images. Exact failing-process/build identity and cause remain unverified; do not close the report or link its cause to the graphics defects from this successful run. |
 
 ## Build-107 graphics check and limb follow-up — 27 October 2026
 

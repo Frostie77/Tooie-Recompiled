@@ -50,6 +50,16 @@ gameplay acceptance.
 
 ## Evidence
 
+- [27 October, 22:27 build-109 graphics session](graphics-check-odin-20261027-222732.md):
+  all 14 events/18 inputs and six images, successful Split Up this run,
+  standalone-Kazooie wing reports, logo/HUD observations and explicit exclusion
+  of later-learned B moves (E13/E14).
+- [Optional graphics input diagnostics](graphics-input-diagnostics-20261027.md):
+  default-off private-file opt-in, bounded copies of actually selected matrices,
+  vertex inputs and HUD origins; host controls pass, device delivery pending.
+- [27 October, 21:57 build-109 graphics capture](graphics-capture-odin-20261027-215735.md):
+  complete zero-marker/one-input accounting, raw-log recovery, effective HUD/
+  framerate changes and confirmed new consumer activity; no visual pass.
 - [27 October build-109 framerate and HUD follow-up](graphics-framerate-follow-up-odin-20261027.md):
   signed/installed Debug identity; limb gaps still present at Manual 60/Display
   and absent at Original; new opening-logo jitter and ineffective HUD Placement

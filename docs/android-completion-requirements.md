@@ -287,6 +287,9 @@ Broad mod compatibility remains a coverage item.
   Build-107 E03–E06 and a separate video show/refer to joint separation;
   Frostie reports Banjo, Kazooie and NPCs affected. Keep MD-005 open pending a
   tested resolution, and retain MD-003/004 and all older MD-005 evidence.
+  The [later build-109 session](development/graphics-check-odin-20261027-222732.md)
+  adds E11/E12 standalone-Kazooie wing reports at Display (native target 120).
+  E13/E14 are excluded by Frostie as later-learned moves, not input defects.
 - [ ] Resolve **MD-011** opening-logo rapid up/down jitter, reported at Manual 60
   and Display but absent at Original. Keep it separate from dialogue-entry shunt
   and deferred intro/demo cadence until actual draw evidence links them.
@@ -294,6 +297,10 @@ Broad mod compatibility remains a coverage item.
   effect. Trace menu/effective values through the actual HUD draw/origin consumer.
   Both new manual reports are retained in the
   [build-109 follow-up](development/graphics-framerate-follow-up-odin-20261027.md).
+- [ ] Investigate **MD-013**, the earlier reported crash/freeze at a Split Up pad.
+  E09/E10 in the [later session](development/graphics-check-odin-20261027-222732.md)
+  show a successful attempt this time; the original failure still needs its own
+  evidence/reproduction. Do not count this as a confirmed fix.
 
 The [complete build-107 review](development/graphics-check-odin-20261027.md)
 retains all six events, eight raw inputs, native screenshots, video identities,

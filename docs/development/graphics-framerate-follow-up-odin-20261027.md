@@ -16,9 +16,11 @@ result of **Success** for the second limb candidate:
   `$HOME/.local/share/tooie-recompiled/candidates/touch-6da2a897867b-f8fc022a/capture-touch.sh`.
 
 The observations below are conversational Odin reports following that install.
-No fresh build-109 Share ZIP, config readback, marker IDs/timestamps, screenshots
-or video has yet been supplied. Do not invent them or reuse build-108 marker
-identities. The prior build-107/108 evidence and all raw observations remain
+The later [build-109 capture review](graphics-capture-odin-20261027-215735.md)
+verifies the upload and recovers effective option/runtime records from the raw
+log. It ended at the playing prompt: zero events/notes, one literal `save`, no
+screenshots or attached gameplay window. Do not invent marker identities or
+reuse those from build 108. The prior build-107/108 evidence and all raw observations remain
 retained in their linked reviews. No new save/settings, driver or delivered-FPS
 acceptance follows from these short comparisons.
 
@@ -77,13 +79,21 @@ Exact report (item 2):
 Record that choosing **HUD Placement → Original / 16:9 / Expand** produces no
 visible HUD relocation in Frostie's test. This is a HUD placement report,
 separate from Framerate → Original and the main aspect-ratio setting. The scene,
-visible HUD elements, active aspect/resolution, application/restart sequence and
-effective renderer values are not yet captured. Do not infer that a saved menu
-value reached the actual HUD draw, or claim every HUD element/game mode fails.
+visible HUD elements and application/restart sequence are not yet captured.
+The later raw-log review confirms the effective HUD values change among Original,
+16:9 and Expand with main aspect Expand and a 1920×1080 swapchain. The options
+reach RT64; their effect on actual HUD draw origins remains unmeasured. Do not
+claim every HUD element/game mode fails.
 Status: **open — trace the setting through its renderer and game consumers**.
 
 ## Follow-up
 
+The [later 22:27 review](graphics-check-odin-20261027-222732.md) retains every
+new event/input and all six images. It adds solo-Kazooie wing reports, logo/HUD
+observations and a successful Split Up attempt. E13/E14 are excluded at Frostie's
+request as later-learned moves; the earlier freeze remains separately open.
+The [optional input observer](graphics-input-diagnostics-20261027.md) is diagnostic
+preparation, not a fix; its host checks pass and device delivery remains pending.
 Keep MD-005, MD-011 and MD-012 open and PR #41 draft. Preserve every additional
 marker, note and raw input when the capture is supplied. The earlier focused
 Jiggy-static/dialogue passes remain tied to build 107 and intended for the next

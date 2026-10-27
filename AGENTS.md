@@ -569,6 +569,16 @@ follow-up separately reports opening-logo vertical jitter at interpolated rates
 (MD-011) and ineffective HUD Placement (MD-012); do not assume shared causes.
 See `docs/development/graphics-framerate-follow-up-odin-20261027.md`.
 
+Build-109 raw logs confirm the new consumer running and all three HUD values
+reaching RT64. The later 22:27 session adds standalone-Kazooie wing reports and
+a successful Split Up attempt; E13/E14 are excluded as later-learned moves.
+The prior freeze remains separate. Optional scene-input diagnostics are OFF
+unless a private request file is staged. Copy inputs under the workload lock,
+respect actual raw/processed upload selection (Original can leave old processed
+arrays around), bound traversal/logging and report omissions/observer cost.
+Host immutable-output and stale-buffer controls pass; this is not GPU readback
+or visual acceptance. See `docs/development/graphics-input-diagnostics-20261027.md`.
+
 ### 7.3 Skybox flicker
 
 The sky layers are drawn through the shared model renderer with no transform id,

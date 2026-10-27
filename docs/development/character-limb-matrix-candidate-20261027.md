@@ -3,11 +3,16 @@
 MD-005 remains **open: this second candidate is unsuccessful on Odin**.
 After signing and installing build 109, Frostie reports the gaps remain at
 **Manual 60 and Display**, and Original is fine. These are manual comparisons
-without a fresh config/capture readback. See the [complete follow-up](graphics-framerate-follow-up-odin-20261027.md)
+not joined to visual markers. The [later raw-log review](graphics-capture-odin-20261027-215735.md)
+confirms mode changes and the new consumer running, but no visual pass.
+See the [complete follow-up](graphics-framerate-follow-up-odin-20261027.md)
 for the installation receipt, exact wording and two additional graphics reports.
 The first CPU-vertex candidate also did not resolve it; retain its
 [complete failed check](character-limb-check-odin-20261027.md) and every marker.
 The constructed host regression below does not establish this actual NPC's cause.
+The [22:27 follow-up](graphics-check-odin-20261027-222732.md) also retains
+standalone-Kazooie wing reports at Display; no interpolated-mode acceptance is
+established. E13/E14's B moves are excluded as later-learned abilities.
 
 ## Reproduced edge failure
 
