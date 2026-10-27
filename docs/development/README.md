@@ -50,6 +50,8 @@ gameplay acceptance.
 
 ## Evidence
 
+- [HUD component drawing path](hud-placement-investigation-20261028.md):
+  missing origins, located authored component boundary and remaining identity/anchor checks.
 - [27–28 October build-110 scene-input capture](graphics-input-check-odin-20261028.md):
   every 11-event/13-input record and eight PNGs, complete renderer input recovery,
   copied-matrix ownership mismatch, missing HUD origins and marker-11 follow-up.

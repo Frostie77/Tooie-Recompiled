@@ -69,6 +69,17 @@ whitespace checks pass. CI now includes the copy regression alongside the
 retained vertex/seam/observer checks. No new Android artifact or hardware pass
 has been accepted.
 
+[CI run 111](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40519631786)
+is in progress for engineering head `56ad8d092439429491452e8f54bb6abc3582b501`,
+verified tree `b6516ebf89b6aa4ce454a760662e71b8227177d4`. It has not produced an
+accepted APK. Its expected PR integration commit `ba1675a593ab9ee9e4fe19a5bc92614105762c3f`
+has the same verified tree; final job/artifact checks must confirm the actual
+source. Odin still has the signed build-110 `f37c1e2a10b7` APK above.
+The retained actor/skeletal suite also passes: generated actor ownership and
+lifetime guards, rigid-model matching and all six skeletal trajectory/history/
+unsafe-input cases, with the exact `60c0c89` parent failing its trajectory control
+as intended. No sanitizer failure is reported.
+
 Next test the visible NPC and player/solo-Kazooie joints at Display after a
 verified candidate build. Original remains a diagnostic comparison. Keep
 MD-005 open; MD-011 logo jitter, MD-012 HUD placement and MD-014 flying aim are

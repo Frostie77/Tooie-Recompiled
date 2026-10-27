@@ -155,7 +155,10 @@ The broader Display playthrough and measured pacing/delivery remain open.
 Track the two new reports separately: **MD-011** opening-logo rapid vertical
 jitter at Manual 60/Display but not Original, and **MD-012** HUD Placement
 Original/16:9/Expand producing no visible movement. Preserve exact descriptions
-and all future markers. Shared framerate dependence does not establish one cause.
+and all future markers. Shared framerate dependence does not establish one cause. The
+[HUD source investigation](hud-placement-investigation-20261028.md) locates the
+per-component `scinfobar_entrypoint_24` callback and related sprite/model routes;
+component identities, intended anchors and state restoration still need proof.
 
 Draft PR #41 also contains the [graphics corrections](graphics-fix-candidates-20261027.md):
 bounded attachment clears and consistent camera/projection during a changed

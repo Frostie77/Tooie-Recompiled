@@ -190,7 +190,12 @@ No new device graphics pass is claimed.
 
 MD-011 retains its three early logo observations and sampled inputs, without
 prompt-phase pictures. A shared cause with the copied-bone defect is not
-established. MD-014 remains an independent input-policy investigation, with
+established. Early sample `961246657085` repeats projection ID `0x1000`
+and maps several loads to previous projection 1. The first four inspected
+current view/projection inputs equal one another; each recorded combined
+current projection also equals its previous projection. Reused IDs
+alone do not prove a mismatched camera or establish a logo correction. The
+sample is not semantically identified as the reported logo frame. MD-014 remains an independent input-policy investigation, with
 Kazooie/UFO and invert-setting comparisons deferred as Frostie requested.
 
 ## Cleanup and follow-up
