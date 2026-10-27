@@ -35,6 +35,8 @@ std::atomic<uint32_t> g_bt_rt64_proj_id_auto{0};
 std::atomic<uint32_t> g_bt_rt64_proj_id_gameplay{0};
 std::atomic<uint32_t> g_bt_rt64_proj_id_sky{0};
 std::atomic<uint32_t> g_bt_rt64_proj_id_ortho{0};
+// Counts consumer bypasses, not unique guest frames or diagnosed camera cuts.
+std::atomic<uint32_t> g_bt_rt64_projection_viewport_bypasses{0};
 // Counts the skybox's own transforms that were matched against the previous
 // frame. The sky layers are drawn through the same shared model renderer as
 // every other model, so this is what tells "the sky got its identity and was
@@ -492,11 +494,12 @@ namespace RT64 {
                 }
             }
             char record[512];
-            std::snprintf(record,sizeof(record),"workload=%llu batches=%zu player_mapped=%u player_unmapped=%u duplicate_player_ids=%u invalid_decomposition_pairs=%u projection_mapped=%u projection_unmapped=%u projection_auto_total=%u projection_gameplay_total=%u projection_sky_total=%u projection_mismatch_total=%u",
+            std::snprintf(record,sizeof(record),"workload=%llu batches=%zu player_mapped=%u player_unmapped=%u duplicate_player_ids=%u invalid_decomposition_pairs=%u projection_mapped=%u projection_unmapped=%u projection_auto_total=%u projection_gameplay_total=%u projection_sky_total=%u projection_mismatch_total=%u projection_viewport_bypasses_total=%u",
                 (unsigned long long)(workloads.empty()?0:workloadQueue.workloads[workloads.front()].workloadId),workloads.size(),
                 playerMapped,playerUnmapped,playerDuplicates,invalidPairs,projectionMapped,projectionUnmapped,
                 g_bt_rt64_proj_id_auto.load(std::memory_order_relaxed),g_bt_rt64_proj_id_gameplay.load(std::memory_order_relaxed),
-                g_bt_rt64_proj_id_sky.load(std::memory_order_relaxed),g_bt_rt64_projection_mismatches.load(std::memory_order_relaxed));
+                g_bt_rt64_proj_id_sky.load(std::memory_order_relaxed),g_bt_rt64_projection_mismatches.load(std::memory_order_relaxed),
+                g_bt_rt64_projection_viewport_bypasses.load(std::memory_order_relaxed));
             tooie::diagnostics::log("interpolation",record);
         }
 #endif

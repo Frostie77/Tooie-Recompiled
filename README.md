@@ -182,8 +182,11 @@ See the [release notes](docs/development/release-notes-v1.1.0.md) for more detai
 
 ## Known issues
 
-- Minor visual lines during the Jiggy challenge.
-- A brief screen shift when dialogue animation begins.
+- Coloured static-like lines during the Jiggy challenge, reported when the paw
+  moves toward the lower screen.
+- A brief screen shift when dialogue animation begins. Candidate fixes for
+  both visual issues are [under test](docs/development/graphics-fix-candidates-20261027.md);
+  device verification is pending.
 - Intro/demo stutter and animation cadence still need further work.
 - Startup compatibility reports for Retroid Pocket 5 / Adreno 650 and Redmi Pad
   2 / Mali-G57 MC2 need further investigation. The Poco X3 Pro reporter obtained

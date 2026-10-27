@@ -23,6 +23,7 @@ std::atomic<uint32_t> g_bt_rt64_proj_adjusted_sky{0};
 std::atomic<uint32_t> g_bt_rt64_proj_adjusted_other{0};
 std::atomic<uint32_t> g_bt_rt64_proj_skipped_sky{0};
 std::atomic<uint32_t> g_bt_rt64_proj_skipped_other{0};
+extern std::atomic<uint32_t> g_bt_rt64_projection_viewport_bypasses;
 }
 
 namespace RT64 {
@@ -134,6 +135,31 @@ namespace RT64 {
         }
     }
 
+    // A view matrix and the viewport it was submitted for form one mapping.
+    // Reusing the previous camera with the current letterbox/viewport produces
+    // a mixed mapping during a transition, even at Original aspect ratio.
+    // Compare authored viewport state, not per-draw scissors (which vary with
+    // geometry). Keep ordinary camera/FOV motion at a stable viewport smooth.
+    static bool sameProjectionViewport(const DrawData &previous, uint32_t previousIndex,
+                                      const DrawData &current, uint32_t currentIndex) {
+        const auto &a = previous.rspViewports[previousIndex];
+        const auto &b = current.rspViewports[currentIndex];
+        for (uint32_t axis = 0; axis < 3; ++axis) {
+            if ((a.scale[axis] != b.scale[axis]) || (a.translate[axis] != b.translate[axis])) {
+                return false;
+            }
+        }
+        if (previous.viewportOrigins[previousIndex] != current.viewportOrigins[currentIndex]) {
+            return false;
+        }
+        for (uint32_t i = 0; i < 4; ++i) {
+            if (previous.viewportClipRatios[previousIndex * 4 + i] != current.viewportClipRatios[currentIndex * 4 + i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     void ProjectionProcessor::processScene(const ProcessParams &p, const GameScene &scene, size_t sceneIndex) {
         for (size_t i = 0; i < scene.projections.size(); i++) {
             const GameIndices::Projection &sceneProj = scene.projections[i];
@@ -162,9 +188,22 @@ namespace RT64 {
                 const GameFrameMap::ViewProjectionMap &viewProjMap = workloadMap.viewProjections[proj.transformsIndex];
                 if (viewProjMap.mapped) {
                     const Workload &prevWorkload = p.workloadQueue->workloads[workloadMap.prevWorkloadIndex];
-                    prevViewMatrix = &prevWorkload.drawData.viewTransforms[viewProjMap.prevTransformIndex];
-                    prevProjMatrix = &prevWorkload.drawData.projTransforms[viewProjMap.prevTransformIndex];
-                    rigidBody = &viewProjMap.rigidBody;
+                    const uint32_t currentGroup = drawData.viewProjTransformGroups[proj.transformsIndex];
+                    const bool gameplayViewportTransition =
+                        (drawData.transformGroups[currentGroup].matrixId == 0x00001000U) &&
+                        !sameProjectionViewport(prevWorkload.drawData, viewProjMap.prevTransformIndex,
+                                                drawData, proj.transformsIndex);
+                    if (gameplayViewportTransition) {
+                        // Only Tooie's explicitly tagged gameplay cameras opt
+                        // into this transition rule. Use BOTH submitted camera
+                        // and projection; do not change the viewport or aspect.
+                        g_bt_rt64_projection_viewport_bypasses.fetch_add(1, std::memory_order_relaxed);
+                    }
+                    else {
+                        prevViewMatrix = &prevWorkload.drawData.viewTransforms[viewProjMap.prevTransformIndex];
+                        prevProjMatrix = &prevWorkload.drawData.projTransforms[viewProjMap.prevTransformIndex];
+                        rigidBody = &viewProjMap.rigidBody;
+                    }
                     traceMapped = true;
                     tracePrevPairedTi = int32_t(viewProjMap.prevTransformIndex);
                     tracePrevPairedId = prevWorkload.drawData.transformGroups[prevWorkload.drawData.viewProjTransformGroups[viewProjMap.prevTransformIndex]].matrixId;

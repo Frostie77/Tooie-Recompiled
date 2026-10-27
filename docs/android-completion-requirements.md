@@ -262,6 +262,11 @@ Broad mod compatibility remains a coverage item.
 
 ## Minor issues deferred beyond the first release
 
+- [ ] Verify the [27 October graphics candidates](development/graphics-fix-candidates-20261027.md)
+  on Odin: bounded partial attachment clears for MD-001 and viewport-consistent
+  gameplay camera transitions for MD-002. Seven backend clear profiles and
+  25 production CPU projection cases pass; neither gameplay result is accepted yet.
+
 The Jiggy-challenge screen lines (marker 1) and the brief shunt
 when dialogue animation starts (marker 2) remain follow-up work after the first
 release. The [26 October dialogue investigation](development/dialogue-screen-shift-investigation-20261026.md)
@@ -273,7 +278,8 @@ adds three Original-mode marker reports and the user's compression-at-dialogue-e
 observation. Letterboxed screenshots and stable Android surface records narrow
 the next check to the internal view transition; motion/per-frame inputs and a
 matched Expand comparison remain missing. Three additional Original-scale CPU
-controls bring the projection probe to eleven cases without establishing a fix. The
+controls brought the earlier projection probe to eleven cases; the later
+candidate extends it to 25 without establishing a gameplay fix. The
 [Jiggy-challenge investigation](development/jiggy-challenge-lines-investigation-20261026.md)
 retains the captured-image sampling path and historical written descriptions.
 The [27 October Jiggy capture](development/jiggy-capture-odin-20261027.md)

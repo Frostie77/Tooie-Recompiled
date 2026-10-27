@@ -4288,11 +4288,27 @@ namespace plume {
 
         if (clearRectsCount > 0) {
             for (uint32_t i = 0; i < clearRectsCount; i++) {
+                // RDP FillRect retains the original coordinates, while the
+                // framebuffer extent comes from its scissor intersection. A
+                // partial depth clear (e.g. a cursor at the bottom edge) can
+                // therefore extend outside the attachment's actual view.
+                // vkCmdClearAttachments requires every rectangle to fit the
+                // render area; it does not apply the dynamic scissor for us.
+                // Intersect before subtracting/casting, including extreme or
+                // fully outside coordinates. Never turn an empty batch into
+                // the zero-count convention for a whole-attachment clear.
+                const int64_t left = std::max<int64_t>(clearRects[i].left, 0);
+                const int64_t top = std::max<int64_t>(clearRects[i].top, 0);
+                const int64_t right = std::min<int64_t>(clearRects[i].right, width);
+                const int64_t bottom = std::min<int64_t>(clearRects[i].bottom, height);
+                if (right <= left || bottom <= top) {
+                    continue;
+                }
                 VkClearRect clearRect;
-                clearRect.rect.offset.x = clearRects[i].left;
-                clearRect.rect.offset.y = clearRects[i].top;
-                clearRect.rect.extent.width = clearRects[i].right - clearRects[i].left;
-                clearRect.rect.extent.height = clearRects[i].bottom - clearRects[i].top;
+                clearRect.rect.offset.x = int32_t(left);
+                clearRect.rect.offset.y = int32_t(top);
+                clearRect.rect.extent.width = uint32_t(right - left);
+                clearRect.rect.extent.height = uint32_t(bottom - top);
                 clearRect.baseArrayLayer = 0;
                 clearRect.layerCount = 1;
                 rectVector.emplace_back(clearRect);
@@ -4779,10 +4795,12 @@ namespace plume {
         rejectTransferClear(targetFramebuffer, attachmentIndex, "partial-rectangles", vk);
 #endif
 #endif
-        checkActiveRenderPass();
-
         thread_local std::vector<VkClearRect> rectVector;
         clearCommonRectVector(targetFramebuffer->getWidth(), targetFramebuffer->getHeight(), clearRects, clearRectsCount, rectVector);
+        if (rectVector.empty()) {
+            return;
+        }
+        checkActiveRenderPass();
 
         VkClearAttachment attachment = {};
         auto &rgba = attachment.clearValue.color.float32;
@@ -4805,10 +4823,12 @@ namespace plume {
         assert(targetFramebuffer != nullptr);
         assert((clearRectsCount == 0) || (clearRects != nullptr));
 
-        checkActiveRenderPass();
-
         thread_local std::vector<VkClearRect> rectVector;
         clearCommonRectVector(targetFramebuffer->getWidth(), targetFramebuffer->getHeight(), clearRects, clearRectsCount, rectVector);
+        if (rectVector.empty()) {
+            return;
+        }
+        checkActiveRenderPass();
 
         VkClearAttachment attachment = {};
         attachment.clearValue.depthStencil.depth = depthValue;

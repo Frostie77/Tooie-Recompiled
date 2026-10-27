@@ -22,6 +22,17 @@
   mods are separate, plus instructions to use it at the launcher after saving
   and exiting any running game and reopening the app.
 
+### Under test
+
+- Clip partial attachment-clear rectangles to their actual framebuffer/view;
+  host regressions pass, with an Odin check still needed for the Jiggy challenge
+  static reported when moving the paw down the screen.
+- Keep the submitted gameplay camera and projection together when its viewport
+  changes; stable-viewport blending remains enabled. All 25 production CPU
+  controls pass, but dialogue entry/exit still needs Odin verification.
+
+Both graphics issues remain open. See the [candidate scope and test plan](docs/development/graphics-fix-candidates-20261027.md).
+
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
 
 Android version code **5**. Adds touch controls and custom graphics drivers

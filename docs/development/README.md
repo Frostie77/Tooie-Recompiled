@@ -50,6 +50,9 @@ gameplay acceptance.
 
 ## Evidence
 
+- [27 October graphics fix candidates](graphics-fix-candidates-20261027.md):
+  bounded attachment clears and gameplay viewport-transition consistency;
+  production host regressions pass, Odin acceptance remains pending.
 - [27 October focused Jiggy capture](jiggy-capture-odin-20261027.md): six events,
   one unparsed observation, five images with visible coloured streaks outside
   the puzzle, both aspect compositions and the reported lower-paw trigger;

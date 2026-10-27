@@ -4,8 +4,10 @@ MD-001 remains **open: cause and fix unconfirmed**. The original capture was
 rechecked, and the challenge's captured-image drawing path was traced in source.
 The [27 October focused capture](jiggy-capture-odin-20261027.md) now supplies
 five images visibly showing coloured streaks, six accepted events and one
-additional unparsed observation. This investigation changes no game code,
-graphics defaults or installed APK.
+additional unparsed observation. The later [candidate fix](graphics-fix-candidates-20261027.md)
+clips attachment-clear rectangles to their actual framebuffer/view and passes
+the production backend regression. Its effect on the captured static still
+needs Odin verification; graphics defaults and the installed APK are unchanged.
 
 ## Observation and evidence boundary
 
@@ -150,3 +152,14 @@ playthrough is not needed to reconfirm its appearance.
 Do not apply a global half-texel, filtering, coordinate-clamp, framebuffer or
 MSAA change solely from the written symptom. MD-001 and all other marker
 follow-ups remain unresolved.
+
+## Candidate after source and host checks
+
+The [27 October candidate record](graphics-fix-candidates-20261027.md) documents
+an actual backend bounds defect: partial attachment clears forwarded original
+RDP rectangles beyond their framebuffer/view to Vulkan. The candidate clips
+those rectangles, preserves valid clear contents and makes empty intersections
+no-ops. The exact parent backend fails the new emitted-command bounds test;
+all seven existing clear profiles pass with the candidate. This establishes
+invalid command construction, not that the captured noisy frame used it.
+Keep MD-001 open until the low-paw sequence passes on Odin.

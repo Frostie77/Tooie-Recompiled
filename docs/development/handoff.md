@@ -1,6 +1,6 @@
 # Engineering handoff
 
-Updated: 26 October 2026.
+Updated: 27 October 2026.
 
 Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).
@@ -24,7 +24,7 @@ returned Success. Frostie confirmed existing save/settings retention and all
 five requested settings presentation changes. Signed APK SHA-256:
 `b2719ddd1080f10dbbfe287774879a239f4f331d264b445d22839be0171ec180`.
 See [PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40) for the focused
-manual acceptance. No new extended marker playthrough is recorded.
+manual acceptance. Focused dialogue and Jiggy captures from 27 October are now reviewed below.
 
 ## Accepted work
 
@@ -81,6 +81,14 @@ Mali-G715 MP7 on 25 October. This is a successful manual functional report;
 see the [device record](device-compatibility.md) for scope.
 
 ## Current priorities
+
+Two [graphics candidates](graphics-fix-candidates-20261027.md) are prepared in
+draft PR #41: clip partial attachment clears to the actual framebuffer/view,
+and bypass camera/projection blending only when a matched gameplay viewport
+changes. All seven backend clear profiles and 25 ASan/UBSan projection cases
+pass; the old backend/consumer fail the new edge/letterbox-entry controls.
+Android CI and focused Odin acceptance are required before marking either
+issue fixed. Public v1.1.0 and the installed `fae511cc166c` Debug remain unchanged.
 
 Focused Save Management acceptance and the updated retained Debug app passed
 Frostie's Odin checks. The installed Debug snapshot is `fae511cc166c` (same tree

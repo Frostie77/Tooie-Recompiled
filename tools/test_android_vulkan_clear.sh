@@ -24,6 +24,7 @@ build_and_record() {
     grep -q 'PASS: Android WSI lifecycle BGRA/RGBA' "$test_dir/$mode.out"
     grep -q 'PASS: failed/incomplete surface enumeration' "$test_dir/$mode.out"
     grep -q 'PASS: VI nearest/linear/pixel and UI' "$test_dir/$mode.out"
+    grep -q 'PASS: production depth clears clip edge/negative/extreme rectangles' "$test_dir/$mode.out"
     grep -q 'Surface format selected: requested=44 selected=37 colorSpace=0' "$test_dir/log-$mode/banjotooi-debug.log"
     grep -q 'UI pipeline: path=composite format=20 samples=1' "$test_dir/log-$mode/banjotooi-debug.log"
     grep -q 'Surface format request: vkFormat=44' "$test_dir/log-$mode/banjotooi-debug.log"

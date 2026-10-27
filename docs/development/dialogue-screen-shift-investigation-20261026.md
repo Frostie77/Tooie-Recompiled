@@ -2,10 +2,11 @@
 
 MD-002 remains **open: no confirmed cause or gameplay fix**. Review of the
 existing captures and a production CPU probe establishes two possible renderer
-mechanisms, but neither is identified in the recorded dialogue event. No app
-behavior, graphics defaults, release version or installed APK is changed by
-this investigation. Frostie later resumed focused checks on the updated Debug
-app. The [27 October dialogue capture](dialogue-capture-odin-20261027.md) now
+mechanisms, but neither is identified in the recorded dialogue event. The later
+[27 October candidate](graphics-fix-candidates-20261027.md) adds a narrow gameplay
+viewport-transition guard, with 25 production CPU cases passing; its effect on
+MD-002 still needs an Odin test. Graphics defaults, release version and the
+installed APK are unchanged. Frostie resumed focused checks on the Debug app. The [27 October dialogue capture](dialogue-capture-odin-20261027.md) now
 adds three Original-mode reports and letterboxed images; its per-frame motion,
 camera and viewport inputs remain unmeasured.
 
@@ -282,5 +283,9 @@ capture. All three new markers and the compression-at-entry follow-up are
 recorded in the [session review](dialogue-capture-odin-20261027.md). The Original
 leg now has reports; a matched Expand comparison remains unrecorded.
 
-Until that distinction or the game's camera-cut semantics is established,
-retain MD-002 as open and leave the production camera/aspect policy unchanged.
+MD-002 remains open. The later candidate tests viewport consistency without a
+guessed dialogue-active gate: use the submitted camera/projection when the
+matched gameplay viewport changes, and retain stable-viewport interpolation.
+See the [candidate record](graphics-fix-candidates-20261027.md) for exact scope,
+opposing controls, the runtime bypass counter and required device acceptance.
+The complete game's camera-cut semantics are still not established.
