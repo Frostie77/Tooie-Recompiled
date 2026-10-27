@@ -110,8 +110,12 @@ Kazooie wing reports at Display with target 120; no higher-framerate limb pass i
 established. An [optional input observer](graphics-input-diagnostics-20261027.md)
 is now implemented, off unless explicitly requested by a private file. It records
 bounded actual selected matrix/vertex/projection/origin inputs. ASan/UBSan host
-controls and 327 simulated collector checks pass; ARM64 build and diagnostic
-delivery remain pending. No input-code change is needed for excluded E13/E14.
+controls and 327 simulated collector checks pass. CI build 110 and the exact
+downloaded Debug artifact are verified; established local signing, installation,
+request-file activation and device diagnostic delivery remain pending. Its built
+source is `f37c1e2a10b76d9e75c7ded5468df5dd969cf486`, with the exact tree of
+engineering head `64215509e920ded1ec830b5b11492f29c10e6075`; see the observer
+record for all artifact pins. No input-code change is needed for excluded E13/E14.
 The broader Display playthrough and measured pacing/delivery remain open.
 
 Track the two new reports separately: **MD-011** opening-logo rapid vertical

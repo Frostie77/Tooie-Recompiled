@@ -58,11 +58,39 @@ request enable/removal controls, player/NPC endpoint/intermediate records,
 immutable renderer output, Original's stale-buffer control and malformed/bounded
 inputs. The updated collector **passes all 327 simulated checks**, including
 original-PID extraction and lossless archives for the new domains. No real ADB
-or device actions occurred. The probe is added to CI; actual ARM64 compilation
-and on-device diagnostic delivery remain pending.
+or device actions occurred. The probe is added to CI; build 110 verifies ARM64 compilation as recorded
+below. On-device diagnostic delivery remains pending.
 
 The [later 22:27 session](graphics-check-odin-20261027-222732.md) has 14 events,
 18 raw inputs and six images, with a successful Split Up attempt and persistent
 solo-Kazooie wing reports at Display. E13/E14 are excluded as later-learned moves
 per Frostie. Keep PR #41 draft and all three graphics defects open; no release
 is requested. The prior reported freeze still needs its own failing evidence.
+
+## Verified CI build 110
+
+[Run 40500482144](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40500482144)
+completed successfully. The job checks out integration source
+`f37c1e2a10b76d9e75c7ded5468df5dd969cf486`, whose tree
+`e34b2c520df0ab046f9885fa72e296f45fac37eb` exactly matches engineering head
+`64215509e920ded1ec830b5b11492f29c10e6075`. Host regressions, the new scene-input
+probe, ARM64 compilation, packaging and ephemeral local-signing controls pass.
+
+The downloaded Debug artifact was independently checked: ID `12733323604`,
+15,445,287 bytes, ZIP SHA-256
+`400d516260c888a956e4ed9e64332f17f63e0f13a82da59bfa0945f3f69f8ab4`.
+Its report binds `Tooie-Recompiled-Android-arm64-f37c1e2a10b7-Debug.apk` to
+SHA-256 `5af57735031363648599c41843f95f1afbb9a9729dbd49ab7fb33eba31aa8bd4`,
+native version `0.1.0-ci.110.1+gf37c1e2a10b7`, libmain Build ID
+`909d72003f6924c1397a36b213dfa1b676da01f4` and libmain SHA-256
+`ab50398fd1c8a5b97aaa7edf6727425bc6be7b8cfe5456482b2ce4d614d6a4c5`.
+The included signing helper retains SHA-256
+`b398b7b7adf7e0ea7da9f0bc304a4ef76123e91b52b479e44abf3313233d6044`;
+all three capture-tool hashes match their packaged bytes, including the updated
+collector pin. Archive CRC and APK digest checks pass.
+
+This is CI/download verification only. Established local Debug signing,
+replacement installation, explicit request-file activation, diagnostic delivery
+and cleanup after capture remain pending. Build 109 remains the last confirmed
+installed app. No graphics fix, device-data retention or gameplay pass follows
+from this build success. Use the new generated recorder after updating.
