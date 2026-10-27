@@ -559,7 +559,15 @@ model-space bone matrices under a common smooth root; ownership/schema/local
 validation and exact submitted endpoints stay intact. Unowned rigid objects
 retain decomposition. Linear bone matrices may contract between poses, and a
 singular result requires coherent whole-pose fallback. This is host evidence,
-not acceptance of the actual NPC at Manual 60; keep the PR draft for that test.
+not acceptance of the actual NPC. Build 109 was signed and installed, but
+Frostie reports the same gaps at Manual 60 and Display, with Original fine.
+This second candidate is unsuccessful for MD-005. Before another interpolation
+policy change, obtain the affected draw's actual vertices/matrices, ownership,
+matching, weights and rendered outputs. Preserve the host controls without
+mistaking their synthetic mesh for an actual-model replay. The same manual
+follow-up separately reports opening-logo vertical jitter at interpolated rates
+(MD-011) and ineffective HUD Placement (MD-012); do not assume shared causes.
+See `docs/development/graphics-framerate-follow-up-odin-20261027.md`.
 
 ### 7.3 Skybox flicker
 

@@ -1,12 +1,13 @@
 # Character mesh-edge interpolation candidate — 27 October 2026
 
-MD-005 remains **open, awaiting another Odin test at Manual 60**. Frostie reports
-that selecting Original removes the gap on the same installed build. This is a
-manual comparison without a fresh config/capture readback. Original bypasses
-generated intermediate frames, so the comparison supports an interpolation
-investigation; it does not by itself identify the pictured NPC's bone algorithm.
-The first CPU-vertex candidate did not resolve it; retain the
+MD-005 remains **open: this second candidate is unsuccessful on Odin**.
+After signing and installing build 109, Frostie reports the gaps remain at
+**Manual 60 and Display**, and Original is fine. These are manual comparisons
+without a fresh config/capture readback. See the [complete follow-up](graphics-framerate-follow-up-odin-20261027.md)
+for the installation receipt, exact wording and two additional graphics reports.
+The first CPU-vertex candidate also did not resolve it; retain its
 [complete failed check](character-limb-check-odin-20261027.md) and every marker.
+The constructed host regression below does not establish this actual NPC's cause.
 
 ## Reproduced edge failure
 
@@ -96,11 +97,15 @@ tree `68d13666c8757fb4476a872fc4deeec085499510`.
 [Debug artifact 12723765807](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40480639232/artifacts/12723765807)
 is **15,431,944 bytes**, ZIP SHA-256
 `ba0a7935a75b9e2df320d3bf40075ba0018d0e5e56cd9af2de61b903436b3b7c`.
-Established local signing, installation and device acceptance remain pending.
+Established local signing/payload verification and `adb install -r` succeeded.
+Signed APK SHA-256 is
+`8bbbc90ddfac0771b0563cbc7a08beb9da3926b99541ac7ebad75676f9fd4e12`.
+The [manual device follow-up](graphics-framerate-follow-up-odin-20261027.md)
+rejects the candidate for MD-005 at both Manual 60 and Display.
 
-## Focused Odin acceptance
+## Focused Odin test plan (candidate subsequently failed)
 
-After CI succeeds, locally sign the normal Debug artifact with the established
+The original test plan was: after CI succeeds, locally sign the normal Debug artifact with the established
 certificate and update using `adb install -r`; use its new pinned recorder.
 Restore **Graphics → Framerate → Manual → 60**, retaining the other options.
 Check the same moving NPC over several cycles, then the previously affected
@@ -115,7 +120,8 @@ change is not hardcoded to 60; Display stability and delivered performance still
 require device evidence. Do not infer a particular target rate or sustained FPS
 merely from selecting Display. Broader gameplay coverage at Display remains open.
 
-Keep this PR draft and MD-005 open until the new device result. A host pass or
-Original-mode success is not acceptance of this candidate at Manual 60. Every
-verified correction is intended for the next update; Frostie handles merges,
-reporter replies, issue closures and publication.
+The reported result now fails Manual 60 and Display and passes Original.
+Keep PR #41 draft and MD-005 open. Next obtain the affected draw's actual
+source/consumer inputs rather than treating the host fixture as its replay.
+Every verified correction is intended for the next update; Frostie handles
+merges, reporter replies, issue closures and publication.

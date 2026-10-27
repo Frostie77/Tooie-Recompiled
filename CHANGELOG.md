@@ -35,12 +35,15 @@ These corrections are intended for the next update. The
 [device record](docs/development/graphics-check-odin-20261027.md) retains their
 focused scope; other modes/devices and complete gameplay remain unverified.
 
-### Under test
+### Under investigation
 
-- Target character limb gaps in interpolated frames while retaining the selected
-  framerate. The [mesh-edge candidate](docs/development/character-limb-matrix-candidate-20261027.md)
-  passes 20 mesh-edge host cases; another Odin check at Manual 60 is pending.
-  Original removes the gap in Frostie's manual comparison. MD-005 remains open.
+- Character limb gaps remain at Manual 60 and Display in the second candidate's
+  Odin check, while Original is fine. The 20 constructed mesh-edge host passes
+  do not establish a device fix; MD-005 remains open.
+- The same manual follow-up reports opening-logo vertical jitter at Manual 60/
+  Display and HUD Placement choices having no visible effect (MD-011/012).
+  See the [exact reports and scope](docs/development/graphics-framerate-follow-up-odin-20261027.md).
+  These are unresolved reports, not fixes promised for this update.
 
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
 

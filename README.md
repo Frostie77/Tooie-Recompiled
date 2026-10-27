@@ -186,9 +186,11 @@ See the [release notes](docs/development/release-notes-v1.1.0.md) for more detai
   planned for the next update. Focused Odin Debug checks passed on 27 October;
   [broader coverage remains open](docs/development/graphics-check-odin-20261027.md).
 - Character limbs can briefly separate and rejoin during interpolated animation.
-  Original framerate removes the reported gap in a manual Odin comparison;
-  a [new candidate](docs/development/character-limb-matrix-candidate-20261027.md)
-  targets the higher-framerate behavior and still needs its own Odin check.
+  The latest Debug candidate still shows gaps at Manual 60 and Display;
+  Original is fine in the manual Odin comparison. The
+  [follow-up](docs/development/graphics-framerate-follow-up-odin-20261027.md)
+  also tracks opening-logo vertical jitter in those interpolated modes and
+  HUD Placement having no visible effect. All three remain under investigation.
 - Intro/demo stutter and animation cadence still need further work.
 - Startup compatibility reports for Retroid Pocket 5 / Adreno 650 and Redmi Pad
   2 / Mali-G57 MC2 need further investigation. The Poco X3 Pro reporter obtained

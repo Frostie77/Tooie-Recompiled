@@ -271,17 +271,29 @@ Broad mod compatibility remains a coverage item.
   devices; no complete matrix or exact original offending command is captured.
 - [ ] Verify **Display** as Frostie's intended everyday framerate setting.
   Manual 60 is a controlled diagnostic comparison, not the final target.
-  After the focused limb check, test Display with the active display/swapchain
-  rate recorded: joint continuity, camera/animation smoothness, pacing and
-  game speed/audio. A focused pass does not replace the broader playthrough.
+  The build-109 limb check failed at both Manual 60 and Display, with Original
+  fine; retain that [manual result](development/graphics-framerate-follow-up-odin-20261027.md).
+  After a correction, record the active display/swapchain rate and assess joint
+  continuity, camera/animation smoothness, pacing and game speed/audio. A focused
+  pass does not replace the broader playthrough.
 - [ ] Resolve [animated limb separation](development/character-limb-separation-20261027.md).
   The first candidate passed CI but failed the focused Odin check; the
   [build-108 record](development/character-limb-check-odin-20261027.md) retains
   both new events and images. Frostie reports the gap disappears at Original
-  (manual comparison, no fresh capture). A [new mesh-edge candidate](development/character-limb-matrix-candidate-20261027.md)
-  requires its own Manual-60 check. Build-107 E03–E06 and a separate video show/refer to joint separation;
+  (manual comparison, no fresh capture). The second
+  [mesh-edge candidate](development/character-limb-matrix-candidate-20261027.md)
+  also fails Manual 60 and Display on Odin, while Original is fine; see the
+  [build-109 follow-up](development/graphics-framerate-follow-up-odin-20261027.md).
+  Build-107 E03–E06 and a separate video show/refer to joint separation;
   Frostie reports Banjo, Kazooie and NPCs affected. Keep MD-005 open pending a
   tested resolution, and retain MD-003/004 and all older MD-005 evidence.
+- [ ] Resolve **MD-011** opening-logo rapid up/down jitter, reported at Manual 60
+  and Display but absent at Original. Keep it separate from dialogue-entry shunt
+  and deferred intro/demo cadence until actual draw evidence links them.
+- [ ] Resolve **MD-012** HUD Placement Original / 16:9 / Expand having no visible
+  effect. Trace menu/effective values through the actual HUD draw/origin consumer.
+  Both new manual reports are retained in the
+  [build-109 follow-up](development/graphics-framerate-follow-up-odin-20261027.md).
 
 The [complete build-107 review](development/graphics-check-odin-20261027.md)
 retains all six events, eight raw inputs, native screenshots, video identities,

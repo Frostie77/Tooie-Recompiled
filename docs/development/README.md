@@ -50,9 +50,13 @@ gameplay acceptance.
 
 ## Evidence
 
+- [27 October build-109 framerate and HUD follow-up](graphics-framerate-follow-up-odin-20261027.md):
+  signed/installed Debug identity; limb gaps still present at Manual 60/Display
+  and absent at Original; new opening-logo jitter and ineffective HUD Placement
+  reports, with exact conversational wording and evidence limits.
 - [27 October character mesh-edge candidate](character-limb-matrix-candidate-20261027.md):
-  Original-mode comparison, reproduced pivot/mesh-edge mismatch, shared-root
-  model-matrix interpolation and scoped host controls; Manual-60 acceptance pending.
+  reproduced pivot/mesh-edge mismatch and scoped host controls; subsequent Odin
+  Manual-60/Display checks failed, so the candidate is not a limb fix.
 
 - [27 October Odin limb candidate check](character-limb-check-odin-20261027.md):
   unsuccessful build-108 result, two events/four inputs, native joint-gap images,

@@ -40,6 +40,20 @@ screenshots do not establish motion or audio quality.
 No entries for a future playtest have been invented. Populate the session
 review and backlog after its actual evidence and details are supplied.
 
+## Build-109 manual follow-up — 27 October 2026
+
+The [complete conversational record](graphics-framerate-follow-up-odin-20261027.md)
+retains the established local signing receipt, successful ADB update, exact
+Manual-60/Display/Original limb comparisons and both additional issue reports.
+No new marker IDs or screenshots have been supplied. MD-005 remains open:
+the second candidate is unsuccessful at both interpolated settings. Original
+is a comparison, while Display remains Frostie's everyday completion target.
+
+| ID | Observation | Status | Evidence and follow-up |
+|---|---|---|---|
+| MD-011 | Opening-scene logos rapidly stutter up/down at Manual 60 and Display; Original is fine | Open — reproduce and trace | Build-109 conversational report, item 1; exact wording retained in the follow-up. Trace the affected draw's camera/viewport/transform and sprite inputs. Do not conflate it with dialogue shunt or assume a common cause with MD-005. |
+| MD-012 | HUD Placement Original / 16:9 / Expand does not visibly reposition the HUD | Open — setting/consumer trace needed | Build-109 conversational report, item 2; exact wording retained in the follow-up. Check effective settings and actual HUD draw/origin behavior. This setting is separate from Framerate and the main aspect ratio. |
+
 ## Build-107 graphics check and limb follow-up — 27 October 2026
 
 The [complete review](graphics-check-odin-20261027.md) preserves **six events,
@@ -104,7 +118,7 @@ All entries remain open and their severity is provisional.
 |---|---|---|---|
 | MD-003 | Reported unusual frames; the first description is only “strange” | Open — detail needed | Events E01 and E02 (both marker 1), screenshots 001–002. Clarify the visible change and reproduce it before assigning a rendering cause. |
 | MD-004 | Screen shaking | Open — reproduce | Events E03–E06 (markers 3–6), screenshots 003–006, plus journal observation J04 entered as `33 screen shaking`. Reproduce the camera/action and distinguish it from the earlier dialogue shift MD-002. Static screenshots cannot establish motion. |
-| MD-005 | Unusual character rendering; later reported animated limb separation/rejoining | Open — mesh-edge candidate awaits verification | Original E07–E09 (markers 7–9), screenshots 007–009 and journal J10 remain distinct. The [27 October build-107 review](graphics-check-odin-20261027.md) adds E03–E06, four native images and `IMG_8712.mp4`, with Frostie reporting Banjo/Kazooie and NPCs affected. The [source candidate](character-limb-separation-20261027.md) targets active CPU-deformed meshes. The [build-108 check](character-limb-check-odin-20261027.md) adds E01 `38adbad3e19b4654b983692db7b2c9c0` / `limbs still seperate` and E02 `d779332708d846ea864166ddbddf2310` / `limbs separating`; all four inputs and both images are retained. Frostie subsequently reports the gap disappears at Original framerate (manual comparison, no new capture); Manual 60 remains unresolved; the [mesh-edge candidate](character-limb-matrix-candidate-20261027.md) has a live-consumer regression that distinguishes mesh contacts from pivot constraints. No common cause with the older vague reports is assumed. |
+| MD-005 | Unusual character rendering; later reported animated limb separation/rejoining | Open — both candidate checks unsuccessful | Original E07–E09 (markers 7–9), screenshots 007–009 and journal J10 remain distinct. The [27 October build-107 review](graphics-check-odin-20261027.md) adds E03–E06, four native images and `IMG_8712.mp4`, with Frostie reporting Banjo/Kazooie and NPCs affected. The [source candidate](character-limb-separation-20261027.md) targets active CPU-deformed meshes. The [build-108 check](character-limb-check-odin-20261027.md) adds E01 `38adbad3e19b4654b983692db7b2c9c0` / `limbs still seperate` and E02 `d779332708d846ea864166ddbddf2310` / `limbs separating`; all four inputs and both images are retained. Frostie subsequently reports the gap disappears at Original framerate (manual comparison, no new capture); the second [mesh-edge candidate](character-limb-matrix-candidate-20261027.md) also failed Frostie's Manual-60 and Display checks, while Original is fine. The [build-109 follow-up](graphics-framerate-follow-up-odin-20261027.md) retains exact reports and installation identity. No common cause with the older vague reports is assumed. |
 
 The session review retains each full event ID, sequence, receipt timestamp,
 literal description and evidence filename. J04 and J10 were not accepted marker

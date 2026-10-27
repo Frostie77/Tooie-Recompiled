@@ -17,19 +17,18 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The retained Debug now uses built source `ca05903d788c093c778b1daab45eaf66441e0645`,
-native `0.1.0-ci.108.1+gca05903d788c` (candidate code `5637778e0446`). CI and
-established local signing/payload checks passed; `adb install -r` returned
-Success. Signed APK SHA-256:
-`2c25f017b31e91cad230d95712eca99f087f066579ff6138f62f09321c352424`.
-The [build-108 review](character-limb-check-odin-20261027.md) retains both new
-markers/four inputs and native joint-gap images. Frostie reports the limb
-separation unchanged. The candidate is unsuccessful for MD-005; host geometry
-controls are not a gameplay fix. Frostie then reports the gap disappears
-with Original framerate. This manual same-NPC comparison, without a new capture,
-supports investigating generated-frame interpolation. The next regression must
-check actual welded mesh edges, not only the authored pivot constraint. Save/settings and prior Jiggy/dialogue results
-are not freshly accepted by this short capture.
+The retained Debug now uses built source `6da2a897867b50fa72d37c3c3897fea66f4e4373`
+(build 109, candidate code `fe6e40857c4b`). CI and established local signing/
+payload checks passed; `adb install -r` returned Success. Signed APK SHA-256:
+`8bbbc90ddfac0771b0563cbc7a08beb9da3926b99541ac7ebad75676f9fd4e12`.
+The [latest manual follow-up](graphics-framerate-follow-up-odin-20261027.md)
+records gaps still present at Manual 60 and Display, with Original fine.
+This second candidate is unsuccessful for MD-005; its host mesh-edge cases are
+not a device fix. The prior [build-108 review](character-limb-check-odin-20261027.md)
+retains its failed CPU-vertex result, both markers/four inputs and native images.
+The latest follow-up also records MD-011 opening-logo vertical jitter and MD-012
+HUD Placement having no visible effect. No fresh build-109 Share ZIP/config
+readback or broad save/settings/gameplay acceptance is supplied.
 
 The [build-107 review](graphics-check-odin-20261027.md) retains two scoped
 static/dialogue passes intended for the next update, plus its six events/eight
@@ -94,43 +93,32 @@ see the [device record](device-compatibility.md) for scope.
 ## Current priorities
 
 Frostie's intended everyday framerate is **Display**. Manual 60 is a controlled
-comparison only. Build 109 passed and its exact artifact is recorded in the
-[mesh-edge candidate](character-limb-matrix-candidate-20261027.md); local signing,
-installation and acceptance are pending. First repeat the limb check at Manual
-60 (the previous app may retain Original), then test Display with its actual
-refresh/target recorded and assess joints, smoothness, pacing and game speed/audio.
-Do not equate a selected target with measured sustained delivery. The broader
-Display playthrough remains a completion requirement.
+comparison only. The [build-109 follow-up](graphics-framerate-follow-up-odin-20261027.md)
+rejects the second limb candidate at both Manual 60 and Display; Original is fine.
+Keep MD-005 open and PR #41 draft. The constructed mesh-edge cases pass, but
+cannot stand in for the actual NPC. Next trace that draw's vertex/bone inputs,
+ownership/matching, weights and rendered outputs before another policy change.
+The broader Display playthrough and measured pacing/delivery remain open.
 
+Track the two new reports separately: **MD-011** opening-logo rapid vertical
+jitter at Manual 60/Display but not Original, and **MD-012** HUD Placement
+Original/16:9/Expand producing no visible movement. Preserve exact descriptions
+and all future markers. Shared framerate dependence does not establish one cause.
 
-The [new mesh-edge candidate](character-limb-matrix-candidate-20261027.md)
-reproduces an edge gap in the old live consumer despite a passing pivot metric.
-For owned poses, it blends completed model-space bones under one smooth root;
-All 20 constructed edge cases, six retained pose/transport cases and 12 CPU-vertex
-cases pass, with opposing controls. Build 109 passed; another Manual-60 Odin test remains pending. This is a
-candidate, not a device fix; keep the first failed CPU-vertex result separate.
-
-
-Draft PR #41 contains the [graphics corrections](graphics-fix-candidates-20261027.md):
+Draft PR #41 also contains the [graphics corrections](graphics-fix-candidates-20261027.md):
 bounded attachment clears and consistent camera/projection during a changed
 gameplay viewport. Seven backend profiles, 25 CPU projection cases, CI build
 107 and focused Odin reports pass. These verified fixes are intended for the
-next update; broader modes/devices remain open.
-
-Work now targets [MD-005 animated limb separation](character-limb-separation-20261027.md).
-Frostie reports Banjo, Kazooie and NPCs separating/rejoining in motion. Build-107
-E03–E06, four native images and `IMG_8712.mp4` are retained with all earlier
-markers. The candidate interpolates active CPU-deformed vertices alongside a
-supported owned pose. The real producer/consumer translating-seam test passes;
-this does not prove the filmed NPC's path or solve all angular/weighted skinning.
-The first Debug check failed; see the build-108 record above. Keep PR #41 draft; Frostie merges, replies and
-closes issues. No new version or publication is requested.
+next update; broader modes/devices remain open. All older MD-003/004/005 records,
+including the build-107 video, remain retained. Frostie merges, replies and
+closes issues; no new release or publication is requested.
 
 The current installed-build recorder is
-`$HOME/.local/share/tooie-recompiled/candidates/touch-ca05903d788c-e575917a/capture-touch.sh`.
-The reviewed build-108 session ended on `save`; any replacement Debug build requires its
-own generated recorder and receipt. Earlier Original dialogue and Jiggy captures
-remain failing-source evidence; later scoped passes do not erase them.
+`$HOME/.local/share/tooie-recompiled/candidates/touch-6da2a897867b-f8fc022a/capture-touch.sh`.
+The reviewed build-108 session ended on `save`; no new build-109 capture has
+been supplied yet. Each replacement Debug build requires its own generated
+recorder and receipt. Earlier Original dialogue/Jiggy captures remain failing
+source evidence; later scoped passes do not erase them.
 
 The [dialogue-shift investigation](dialogue-screen-shift-investigation-20261026.md)
 reviews the original logs and confirms two possible CPU renderer mechanisms,
