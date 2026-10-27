@@ -269,6 +269,11 @@ Broad mod compatibility remains a coverage item.
   the next update. This accepts the reported setup, not every mode/device.
 - [ ] Broaden the graphics checks across Original/Expand, scene transitions and
   devices; no complete matrix or exact original offending command is captured.
+- [ ] Verify **Display** as Frostie's intended everyday framerate setting.
+  Manual 60 is a controlled diagnostic comparison, not the final target.
+  After the focused limb check, test Display with the active display/swapchain
+  rate recorded: joint continuity, camera/animation smoothness, pacing and
+  game speed/audio. A focused pass does not replace the broader playthrough.
 - [ ] Resolve [animated limb separation](development/character-limb-separation-20261027.md).
   The first candidate passed CI but failed the focused Odin check; the
   [build-108 record](development/character-limb-check-odin-20261027.md) retains

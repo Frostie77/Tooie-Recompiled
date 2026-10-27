@@ -93,11 +93,21 @@ see the [device record](device-compatibility.md) for scope.
 
 ## Current priorities
 
+Frostie's intended everyday framerate is **Display**. Manual 60 is a controlled
+comparison only. Build 109 passed and its exact artifact is recorded in the
+[mesh-edge candidate](character-limb-matrix-candidate-20261027.md); local signing,
+installation and acceptance are pending. First repeat the limb check at Manual
+60 (the previous app may retain Original), then test Display with its actual
+refresh/target recorded and assess joints, smoothness, pacing and game speed/audio.
+Do not equate a selected target with measured sustained delivery. The broader
+Display playthrough remains a completion requirement.
+
+
 The [new mesh-edge candidate](character-limb-matrix-candidate-20261027.md)
 reproduces an edge gap in the old live consumer despite a passing pivot metric.
 For owned poses, it blends completed model-space bones under one smooth root;
 All 20 constructed edge cases, six retained pose/transport cases and 12 CPU-vertex
-cases pass, with opposing controls. CI precedes another Manual-60 Odin test. This is a
+cases pass, with opposing controls. Build 109 passed; another Manual-60 Odin test remains pending. This is a
 candidate, not a device fix; keep the first failed CPU-vertex result separate.
 
 

@@ -86,6 +86,18 @@ actor controls and generated actor lifetime/wrapper guards also pass. The 12
 existing CPU-deformation cases and their former-SKIP failing control also pass
 with the new consumer. These source/host results do not establish an Odin fix.
 
+## Build 109
+
+[Build 109](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40480639232)
+passed the 20-case seam regression, 12 CPU-vertex cases, ARM64 compilation,
+APK verification and ephemeral signing fixtures. Built source
+`6da2a897867b50fa72d37c3c3897fea66f4e4373` has exactly candidate `fe6e40857c4b`
+tree `68d13666c8757fb4476a872fc4deeec085499510`.
+[Debug artifact 12723765807](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40480639232/artifacts/12723765807)
+is **15,431,944 bytes**, ZIP SHA-256
+`ba0a7935a75b9e2df320d3bf40075ba0018d0e5e56cd9af2de61b903436b3b7c`.
+Established local signing, installation and device acceptance remain pending.
+
 ## Focused Odin acceptance
 
 After CI succeeds, locally sign the normal Debug artifact with the established
@@ -94,6 +106,14 @@ Restore **Graphics → Framerate → Manual → 60**, retaining the other option
 Check the same moving NPC over several cycles, then the previously affected
 Banjo/Kazooie motions. Record any remaining gap or new contraction/deformation
 separately. Briefly revisit the accepted Jiggy low-paw and dialogue sequences.
+
+Frostie explicitly wants **Display** as the eventual normal setting. Manual 60
+is the controlled comparison, not the intended endpoint. Once that focused check
+passes, repeat the relevant NPC/player/scene checks with Display selected and
+record its actual display/swapchain target plus present/VI timing. The source
+change is not hardcoded to 60; Display stability and delivered performance still
+require device evidence. Do not infer a particular target rate or sustained FPS
+merely from selecting Display. Broader gameplay coverage at Display remains open.
 
 Keep this PR draft and MD-005 open until the new device result. A host pass or
 Original-mode success is not acceptance of this candidate at Manual 60. Every
