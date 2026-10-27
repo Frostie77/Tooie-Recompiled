@@ -26,6 +26,7 @@ def method(source, needle):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--baseline-api', type=Path)
+    parser.add_argument('--seams', action='store_true', help='Run the welded rotating mesh-edge regression')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     rt = root/'lib/rt64/src'
@@ -76,7 +77,7 @@ def main():
         env={**os.environ,'ASAN_OPTIONS':'detect_leaks=0','UBSAN_OPTIONS':'halt_on_error=1:print_stacktrace=1','APP_FOLDER_PATH':str(build)}
         def run(cmd):subprocess.run([str(x) for x in cmd],check=True,env=env,cwd=root)
         run([os.environ.get('CC','gcc'),'-std=c11','-fwrapv',*flags,'-c',build/'deform.c','-o',build/'deform.o'])
-        cpp=[root/'tests/deformed_vertices.cpp',root/'tests/skeletal_rsp.cpp',args.baseline_api or root/'src/recomp_api.cpp',build/'rt64_game_frame.cpp',build/'rt64_transform_processor.cpp',build/'coprocessor.cpp']
+        cpp=[root/('tests/skeletal_seams.cpp' if args.seams else 'tests/deformed_vertices.cpp'),root/'tests/skeletal_rsp.cpp',args.baseline_api or root/'src/recomp_api.cpp',build/'rt64_game_frame.cpp',build/'rt64_transform_processor.cpp',build/'coprocessor.cpp']
         cpp += [rt/p for p in ['hle/rt64_rigid_body.cpp','common/rt64_math.cpp','hle/rt64_framebuffer_changes.cpp','hle/rt64_framebuffer_storage.cpp','hle/rt64_projection.cpp','common/rt64_common.cpp','preset/rt64_preset_scene.cpp','preset/rt64_preset.cpp']]
         exe=build/'probe'
         run([os.environ.get('CXX','g++'),'-std=c++20',*flags,*cpp,build/'deform.o','-Wl,--gc-sections','-no-pie','-o',exe])
@@ -87,6 +88,9 @@ def main():
             print('PASS: exact baseline metadata fails the rendered-position seam check.',flush=True)
             return
         run([exe])
+        if args.seams:
+            print('Scope: constructed rotating mesh seam, not a replay of the Odin NPC; no GPU/device execution.',flush=True)
+            return
         control=subprocess.run([str(exe),'--force-skip'],env=env,capture_output=True,text=True)
         assert control.returncode==31 and 'seam gap=' in control.stderr and 'gap<.001f' in control.stderr,control.stderr
         print('PASS: forcing the former SKIP vertex policy fails the rendered-position seam check.',flush=True)

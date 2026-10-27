@@ -101,3 +101,24 @@ void decodeDeformed(RT64::WorkloadQueue &queue,unsigned slot,uint8_t *ram,int16_
     rsp.popMatrix(1);bone=reinterpret_cast<DisplayList*>(ram+0x500128);GBI_EXTENDED::popMatrixGroupV1(&state,&bone);
     REQUIRE(queue.workloads[slot].drawData.worldTransforms.size()==3);
 }
+
+void decodeSkeletalSeam(RT64::WorkloadQueue &queue,unsigned slot,uint8_t *ram) {
+    using namespace RT64;
+    queue.writeCursor=slot;queue.workloads[slot].resetDrawData();
+    GBI gbi{};TestInterpreter interpreter{&gbi};State state{ram,{}, {&queue,&interpreter},nullptr};
+    RSP rsp(&state);state.rsp=&rsp;rsp.projMask=4;rsp.loadMask=2;rsp.pushMask=1;
+    rsp.projectionIndex=0;rsp.viewProjMatrixStack[0]=hlslpp::float4x4::identity();
+    rsp.extended.viewProjMatrix=hlslpp::float4x4::identity();
+    for(unsigned bone=0;bone<2;++bone) {
+        auto *dl=reinterpret_cast<DisplayList*>(ram+0x500000+bone*40);
+        rsp.matrix(dl->w1&0x7FFFFF,3);++dl;GBI_EXTENDED::matrixGroupV1(&state,&dl);
+        for(unsigned v=0;v<3;++v) {
+            rsp.vertices[v]={};rsp.vertices[v].x=10;rsp.vertices[v].y=int(v)-1;
+        }
+        rsp.setVertexCommon<true,16>(0x600000+bone*48,0,3);
+        rsp.popMatrix(1);dl=reinterpret_cast<DisplayList*>(ram+0x500000+bone*40+32);
+        GBI_EXTENDED::popMatrixGroupV1(&state,&dl);
+    }
+    REQUIRE(queue.workloads[slot].drawData.worldTransforms.size()==3);
+    REQUIRE(queue.workloads[slot].drawData.skeletalTransforms.size()==2);
+}

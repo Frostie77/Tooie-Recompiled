@@ -1544,7 +1544,7 @@ extern "C" void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
 
 // 0x800DF12C is where func_800DE498 has just written the root display-list
 // pointer back to the graphics buffers, i.e. immediately after its own
-// gSPMatrix and before CPU animation and the geometry walker. 0xF8($sp) holds
+// gSPMatrix, after the earlier dbanim pass and before the geometry walker. 0xF8($sp) holds
 // the address of the display-list cursor and 0x10C($sp) the model's geometry
 // list, both read from the same stack slots the function itself uses.
 //
@@ -1641,7 +1641,7 @@ extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
             if (now >= nextReport) {
                 char record[240];
                 std::snprintf(record, sizeof(record),
-                    "model=0x%X root_id=0x%X table=0x%X player=%u vertices=interpolate bones=authored-hierarchy",
+                    "model=0x%X root_id=0x%X table=0x%X player=%u vertices=interpolate bones=linear-model-matrices",
                     model, scope.transform_id, uint32_t(table), in_player ? g_player_key : 0);
                 tooie::diagnostics::log("mesh-motion", record);
                 nextReport = now + 5'000'000;

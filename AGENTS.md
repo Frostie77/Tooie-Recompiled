@@ -544,6 +544,23 @@ which the game then overwrites. The append returns true and nothing is emitted.
 Every metadata site had to be verified against RT64's decode counters, not
 against the append's return value.
 
+### Android owned-pose mesh edges — 27 October 2026
+
+The later Odin limb-gap report disappears at Original framerate in Frostie's
+manual comparison; Manual 60 still needs a tested correction. The first
+CPU-deformed-vertex candidate did not resolve that report. See the full result
+and marker ledger in `docs/development/character-limb-check-odin-20261027.md`.
+
+A bone-pivot constraint is insufficient to prove a welded mesh edge. The new
+constructed regression (`tools/probe_deformed_vertices.py --seams`) executes
+the actual producer/RSP/matcher/consumer and demonstrates an old intermediate
+edge gap while the older pivot metric passes. The candidate blends complete
+model-space bone matrices under a common smooth root; ownership/schema/local
+validation and exact submitted endpoints stay intact. Unowned rigid objects
+retain decomposition. Linear bone matrices may contract between poses, and a
+singular result requires coherent whole-pose fallback. This is host evidence,
+not acceptance of the actual NPC at Manual 60; keep the PR draft for that test.
+
 ### 7.3 Skybox flicker
 
 The sky layers are drawn through the shared model renderer with no transform id,

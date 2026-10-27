@@ -25,8 +25,10 @@ Success. Signed APK SHA-256:
 The [build-108 review](character-limb-check-odin-20261027.md) retains both new
 markers/four inputs and native joint-gap images. Frostie reports the limb
 separation unchanged. The candidate is unsuccessful for MD-005; host geometry
-controls are not a gameplay fix. Compare Original framerate against Manual 60
-before choosing the next change. Save/settings and prior Jiggy/dialogue results
+controls are not a gameplay fix. Frostie then reports the gap disappears
+with Original framerate. This manual same-NPC comparison, without a new capture,
+supports investigating generated-frame interpolation. The next regression must
+check actual welded mesh edges, not only the authored pivot constraint. Save/settings and prior Jiggy/dialogue results
 are not freshly accepted by this short capture.
 
 The [build-107 review](graphics-check-odin-20261027.md) retains two scoped
@@ -90,6 +92,14 @@ Mali-G715 MP7 on 25 October. This is a successful manual functional report;
 see the [device record](device-compatibility.md) for scope.
 
 ## Current priorities
+
+The [new mesh-edge candidate](character-limb-matrix-candidate-20261027.md)
+reproduces an edge gap in the old live consumer despite a passing pivot metric.
+For owned poses, it blends completed model-space bones under one smooth root;
+All 20 constructed edge cases, six retained pose/transport cases and 12 CPU-vertex
+cases pass, with opposing controls. CI precedes another Manual-60 Odin test. This is a
+candidate, not a device fix; keep the first failed CPU-vertex result separate.
+
 
 Draft PR #41 contains the [graphics corrections](graphics-fix-candidates-20261027.md):
 bounded attachment clears and consistent camera/projection during a changed

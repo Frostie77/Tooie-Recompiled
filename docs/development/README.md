@@ -50,6 +50,10 @@ gameplay acceptance.
 
 ## Evidence
 
+- [27 October character mesh-edge candidate](character-limb-matrix-candidate-20261027.md):
+  Original-mode comparison, reproduced pivot/mesh-edge mismatch, shared-root
+  model-matrix interpolation and scoped host controls; Manual-60 acceptance pending.
+
 - [27 October Odin limb candidate check](character-limb-check-odin-20261027.md):
   unsuccessful build-108 result, two events/four inputs, native joint-gap images,
   flat late-session changed-vertex counters and an Original/Manual-60 comparison.

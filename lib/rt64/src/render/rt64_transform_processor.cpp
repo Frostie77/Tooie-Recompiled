@@ -107,7 +107,7 @@ namespace RT64 {
                 counts.applied += skeletalApplied; counts.actors += actorApplied; counts.frozen += skeletalFrozen; counts.pairs += poses.size();
                 const auto now = tooie::diagnostics::monotonicUs();
                 if (now >= counts.next && (counts.applied || counts.frozen)) {
-                    char text[300]; std::snprintf(text, sizeof(text), "applied=%llu current_pose_fallback=%llu evaluated_pairs=%llu actor_applied=%llu player_applied=%llu policy=authored-hierarchy npc_policy=" TOOIE_ACTOR_POLICY,
+                    char text[360]; std::snprintf(text, sizeof(text), "applied=%llu current_pose_fallback=%llu evaluated_pairs=%llu actor_applied=%llu player_applied=%llu policy=authored-hierarchy interpolation=linear-model-matrices npc_policy=" TOOIE_ACTOR_POLICY,
                         (unsigned long long)counts.applied, (unsigned long long)counts.frozen, (unsigned long long)counts.pairs, (unsigned long long)counts.actors, (unsigned long long)(counts.applied - counts.actors));
                     tooie::diagnostics::log("skeletal", text);
                     counts = {}; counts.next = now + 5'000'000;

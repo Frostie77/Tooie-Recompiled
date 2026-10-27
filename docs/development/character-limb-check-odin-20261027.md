@@ -111,7 +111,19 @@ manual 16:9 target, 2× integer resolution, MSAA2X, AntiAliasedPixelScaling,
 three-point filtering enabled. Java surface/decor records are 1920×1080 after
 layout. No exact selected custom-driver claim is inferred from these options.
 
-## Next discriminator
+## Manual Original-framerate follow-up
+
+After the requested same-NPC comparison, Frostie reports:
+
+> the gap dissapears when set to origina
+
+This is a manual report on the installed build, with no new capture/config
+readback. It is a scoped successful Original comparison, not acceptance at
+Manual 60 or a complete all-character test. Original bypasses generated
+intermediate frames, which directs the next investigation to interpolation.
+It does not identify a specific bone/group algorithm by itself.
+
+## Next discriminator (comparison now completed manually)
 
 Temporarily compare the same NPC with **Settings → Graphics → Framerate →
 Original**, keeping other options fixed. Frontend `rr_option` maps Original to
@@ -119,9 +131,9 @@ RT64 targetRate 0; `rt64_workload_queue.cpp` then skips generated intermediate
 frames and uses submitted current endpoints in normal unpaused rendering.
 This is a comparison, not a proposed permanent FPS downgrade or a confirmed fix.
 
-Record whether gaps disappear or persist before selecting the next source
-change. If they disappear, inspect consumed bone/group matching and local-pose
-interpolation; if they persist, inspect the submitted endpoints/mesh. A new
-source-linked pose/vertex capture may be needed in either case. Restore Manual
-60 after the comparison. No new candidate build, issue closure or release is
-implied by the current evidence.
+The reported gap disappears. Next inspect bone/group matching and local-pose
+interpolation using actual mesh-edge constraints, beyond the earlier pivot-only
+regression. A new source-linked pose/vertex capture may still be needed to
+establish the exact pictured-model cause. Original is a diagnostic comparison;
+the correction should be checked again at Manual 60. No issue closure or release
+is implied by this manual result.

@@ -136,6 +136,7 @@ jobs:
             python3 tools/probe_dialogue_camera.py
             python3 tools/probe_dialogue_projection.py --opaque-window-types
             python3 tools/probe_deformed_vertices.py
+            python3 tools/probe_deformed_vertices.py --seams
             python3 tools/test_android_release.py
             python3 tools/test_update_metadata.py
             python3 tools/test_android_updates.py --android-jar "$ANDROID_HOME/platforms/android-36/android.jar" --jni-include "$JAVA_HOME/include"

@@ -37,10 +37,10 @@ focused scope; other modes/devices and complete gameplay remain unverified.
 
 ### Under test
 
-- Animated limb separation remains under investigation. The first CPU-vertex
-  candidate passed host tests and CI but did not resolve the focused Odin check;
-  see the [device result](docs/development/character-limb-check-odin-20261027.md).
-  It is not recorded as a verified fix for this update.
+- Target character limb gaps in interpolated frames while retaining the selected
+  framerate. The [mesh-edge candidate](docs/development/character-limb-matrix-candidate-20261027.md)
+  passes 20 mesh-edge host cases; another Odin check at Manual 60 is pending.
+  Original removes the gap in Frostie's manual comparison. MD-005 remains open.
 
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
 

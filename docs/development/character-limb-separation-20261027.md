@@ -8,6 +8,15 @@ MD-005 events E07–E09/J10 remain distinct; no common cause is assumed.
 All verified fixes are intended for the next update; this candidate is not yet
 a verified gameplay correction.
 
+## Current follow-up
+
+Frostie reports the gap disappears with Original framerate. A
+[new mesh-edge candidate](character-limb-matrix-candidate-20261027.md) replaces
+relative-pivot blending with completed model-space bone matrix blending under
+one common moving root. Its constructed edge regression reproduces the old
+failure independently of the pivot metric. Another Manual-60 device result
+is required; this older CPU-vertex experiment remains unsuccessful for MD-005.
+
 ## Build-108 result
 
 Frostie completed signing and installation, then reported “its the same as

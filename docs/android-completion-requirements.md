@@ -272,7 +272,9 @@ Broad mod compatibility remains a coverage item.
 - [ ] Resolve [animated limb separation](development/character-limb-separation-20261027.md).
   The first candidate passed CI but failed the focused Odin check; the
   [build-108 record](development/character-limb-check-odin-20261027.md) retains
-  both new events and images. Compare Original/Manual 60 before another change. Build-107 E03–E06 and a separate video show/refer to joint separation;
+  both new events and images. Frostie reports the gap disappears at Original
+  (manual comparison, no fresh capture). A [new mesh-edge candidate](development/character-limb-matrix-candidate-20261027.md)
+  requires its own Manual-60 check. Build-107 E03–E06 and a separate video show/refer to joint separation;
   Frostie reports Banjo, Kazooie and NPCs affected. Keep MD-005 open pending a
   tested resolution, and retain MD-003/004 and all older MD-005 evidence.
 
