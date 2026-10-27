@@ -57,6 +57,16 @@ is a comparison, while Display remains Frostie's everyday completion target.
 | MD-011 | Opening-scene logos rapidly stutter up/down at Manual 60 and Display; Original is fine | Open — reproduce and trace | Build-109 conversational report, item 1; exact wording retained in the follow-up. Trace the affected draw's camera/viewport/transform and sprite inputs. Do not conflate it with dialogue shunt or assume a common cause with MD-005. |
 | MD-012 | HUD Placement Original / 16:9 / Expand does not visibly reposition the HUD | Open — setting/consumer trace needed | Build-109 conversational report, item 2; exact wording retained in the follow-up. Check effective settings and actual HUD draw/origin behavior. This setting is separate from Framerate and the main aspect ratio. |
 
+## Extended build-109 playthrough — 22:42, 27 October 2026
+
+The [complete review](installed-debug-playtest-20261027-224200.md) accounts for
+zero events/notes/orphans, both `playing`/`save` inputs and no images. The declared
+capture lasts 50 minutes, 1.562 seconds; original game PID 22228 stays present in
+all 571 assessments. All 1,816 included source files and 10,115 PID-tagged Runtime
+records reconcile with the manifest/summary. Frostie reports nothing significant
+beyond the known observations. No new issue or graphics/freeze resolution is
+inferred. MD-005/011/012/013 retain their existing statuses.
+
 ## Later build-109 session — 22:27, 27 October 2026
 
 The [complete review](graphics-check-odin-20261027-222732.md) retains **14 events,

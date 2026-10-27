@@ -17,9 +17,18 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The retained Debug now uses built source `6da2a897867b50fa72d37c3c3897fea66f4e4373`
-(build 109, candidate code `fe6e40857c4b`). CI and established local signing/
-payload checks passed; `adb install -r` returned Success. Signed APK SHA-256:
+The retained Debug now uses built source `f37c1e2a10b76d9e75c7ded5468df5dd969cf486`
+(build 110, engineering code `64215509e920`). CI/download verification and the
+established local signer/payload checks passed. Frostie supplied `adb install -r`
+Success; signed APK SHA-256 is
+`504e7320b6d1a371feab4dcebaac205303dd89dedb55d1dabc51474d09b99666`.
+Local folder: `touch-f37c1e2a10b7-606a8a3a`. Exact installed-hash readback and
+optional observer activation/delivery remain pending. The checked temporary
+capture helper enables only the private request and removes it after recording;
+see [the observer record](graphics-input-diagnostics-20261027.md).
+
+The prior build-109 source `6da2a897867b50fa72d37c3c3897fea66f4e4373`
+(candidate code `fe6e40857c4b`) used signed SHA-256
 `8bbbc90ddfac0771b0563cbc7a08beb9da3926b99541ac7ebad75676f9fd4e12`.
 The [latest manual follow-up](graphics-framerate-follow-up-odin-20261027.md)
 records gaps still present at Manual 60 and Display, with Original fine.
@@ -36,6 +45,11 @@ retains 14 events/18 raw inputs and six images: Split Up succeeds this run,
 standalone-Kazooie wing separation remains, and E13/E14 are explicitly excluded
 as moves learned later. The prior Split Up freeze stays open; this new successful
 run does not establish its cause or a fix.
+The [22:42 extended build-109 playthrough](installed-debug-playtest-20261027-224200.md)
+adds a 50-minute declared window with no events/notes, both journal inputs and
+571 original-process checks all present. Frostie reports nothing new beyond
+known observations. All included sources/runtime counts are verified; no new
+issue or graphics/freeze resolution is inferred.
 
 The [build-107 review](graphics-check-odin-20261027.md) retains two scoped
 static/dialogue passes intended for the next update, plus its six events/eight
@@ -111,7 +125,8 @@ established. An [optional input observer](graphics-input-diagnostics-20261027.md
 is now implemented, off unless explicitly requested by a private file. It records
 bounded actual selected matrix/vertex/projection/origin inputs. ASan/UBSan host
 controls and 327 simulated collector checks pass. CI build 110 and the exact
-downloaded Debug artifact are verified; established local signing, installation,
+downloaded Debug artifact are verified; local signing/payload checks and the
+replacement-install Success are now supplied. Exact installed-hash readback,
 request-file activation and device diagnostic delivery remain pending. Its built
 source is `f37c1e2a10b76d9e75c7ded5468df5dd969cf486`, with the exact tree of
 engineering head `64215509e920ded1ec830b5b11492f29c10e6075`; see the observer
@@ -131,8 +146,11 @@ next update; broader modes/devices remain open. All older MD-003/004/005 records
 including the build-107 video, remain retained. Frostie merges, replies and
 closes issues; no new release or publication is requested.
 
-The current installed-build recorder is
-`$HOME/.local/share/tooie-recompiled/candidates/touch-6da2a897867b-f8fc022a/capture-touch.sh`.
+The new installed-build recorder is
+`$HOME/.local/share/tooie-recompiled/candidates/touch-f37c1e2a10b7-606a8a3a/capture-touch.sh`.
+For the next diagnostic session use the pinned temporary scene-capture helper
+around this recorder, so request-file cleanup runs after `save`. Normal recorder
+use does not enable the observer. Build 110 has not yet supplied device evidence.
 The first build-109 upload ended at the playing prompt. The later 22:27 upload
 has a verified attached gameplay window and original PID 20423, ended on `save`;
 all 14 events/18 inputs and six images have been reviewed. Each replacement Debug build requires its own generated

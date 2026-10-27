@@ -276,6 +276,10 @@ Broad mod compatibility remains a coverage item.
   After a correction, record the active display/swapchain rate and assess joint
   continuity, camera/animation smoothness, pacing and game speed/audio. A focused
   pass does not replace the broader playthrough.
+  The [22:42 extended build-109 capture](development/installed-debug-playtest-20261027-224200.md)
+  adds a 50-minute declared window with all 571 original-process checks present
+  and no new user observations. It does not resolve the existing graphics defects
+  or establish sustained 120-FPS delivery.
 - [ ] Resolve [animated limb separation](development/character-limb-separation-20261027.md).
   The first candidate passed CI but failed the focused Odin check; the
   [build-108 record](development/character-limb-check-odin-20261027.md) retains

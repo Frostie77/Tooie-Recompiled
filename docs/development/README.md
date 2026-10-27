@@ -50,6 +50,9 @@ gameplay acceptance.
 
 ## Evidence
 
+- [27 October, 22:42 extended build-109 playthrough](installed-debug-playtest-20261027-224200.md):
+  50-minute declared capture, both inputs/zero markers, 571 original-process
+  checks and complete delta review; no new issue or graphics acceptance.
 - [27 October, 22:27 build-109 graphics session](graphics-check-odin-20261027-222732.md):
   all 14 events/18 inputs and six images, successful Split Up this run,
   standalone-Kazooie wing reports, logo/HUD observations and explicit exclusion

@@ -89,8 +89,47 @@ The included signing helper retains SHA-256
 all three capture-tool hashes match their packaged bytes, including the updated
 collector pin. Archive CRC and APK digest checks pass.
 
-This is CI/download verification only. Established local Debug signing,
-replacement installation, explicit request-file activation, diagnostic delivery
-and cleanup after capture remain pending. Build 109 remains the last confirmed
-installed app. No graphics fix, device-data retention or gameplay pass follows
-from this build success. Use the new generated recorder after updating.
+This verifies CI/downloads only; the subsequent local-signing/install receipt
+is recorded below. No graphics fix, device-data retention or gameplay pass
+follows from build success. Use the new generated recorder after updating.
+
+
+## Local Debug update and temporary capture helper
+
+Frostie's local helper reports the established Debug certificate, signature,
+alignment/version and complete CI-payload verification passed. Signed APK
+SHA-256 is `504e7320b6d1a371feab4dcebaac205303dd89dedb55d1dabc51474d09b99666`,
+at `$HOME/.local/share/tooie-recompiled/candidates/touch-f37c1e2a10b7-606a8a3a/Tooie-Touch-f37c1e2a10b7-Local-Debug.apk`.
+Frostie then supplied `adb install -r` / `Performing Streamed Install` / `Success`.
+No new gameplay, save-retention or observer-delivery acceptance is inferred.
+
+The temporary helper SHA-256 is
+`c4080014a27731815c9f2f764fd09bcc7c45822456431d294f3af9f5cb56c400`.
+
+`tools/android-workflow/capture_scene_trace_f37c1e2a10b7.py` verifies that exact
+local APK and receipt, all three pinned capture-tool files, the selected serial
+and the installed base APK's remote hash. It requires the Debug game process
+closed and an interactive terminal. It refuses an existing request, creates only
+`files/data/render-trace-v1` with exact bytes and mode 0600, checks the device's
+hash, and invokes the existing pinned recorder. Its `finally` block rechecks the
+installed app and removes only the expected request after capture. The existing
+collector remains read-only; enabling/removing the request is this outer helper's
+separate documented write. It never installs, launches, stops, sends game input,
+changes settings or touches saves.
+
+A `--cleanup-only` mode verifies the same APK/device and removes only an exact
+request; unknown contents or links are preserved. If disconnection/timeout makes
+cleanup uncertain, the helper reports that explicitly for reconnection and
+cleanup. Normal completion disables subsequent samples within five seconds.
+No actual device activation or cleanup is claimed before its output is supplied.
+
+Host controls execute the real nested-shell request scripts: exact bytes/0600
+permissions, existing-request refusal, removal/idempotence, foreign contents and
+symlink preservation, missing data folder, and wrong/missing local APK rejection.
+Installed-hash/ambiguous-path and offline-PID guards also pass with simulated
+responses. Python compilation and diff checks pass. These controls used no ADB;
+they do not establish on-device diagnostic delivery. The recorder still takes marker
+screenshots only after `playing`; intro markers before attachment retain logs
+and journal entries but no screenshot attempts. A five-second observer sample
+can miss a short intro event, and four bounded vertices do not establish a full
+mesh or GPU output. Keep all three graphics defects open until a tested fix.
