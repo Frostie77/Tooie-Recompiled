@@ -992,6 +992,16 @@ constexpr uint32_t kCurrentBoneGroupFlags = matrix_group_flags(
     G_EX_ASPECT_AUTO, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO);
 static_assert(kCurrentBoneGroupFlags == (kBoneGroupFlags & ~0x1FFCU));
 
+// dbanim updates vertices on the CPU for models with an active deformation
+// table. Those positions must advance at the same presentation weight as the
+// bones. Rigid/static models keep their original SKIP policy.
+constexpr uint32_t kDeformedRootGroupFlags =
+    (kRootGroupFlags & ~(3U << 13)) | (G_EX_COMPONENT_INTERPOLATE << 13);
+constexpr uint32_t kDeformedBoneGroupFlags =
+    (kBoneGroupFlags & ~(3U << 13)) | (G_EX_COMPONENT_INTERPOLATE << 13);
+static_assert((kDeformedRootGroupFlags ^ kRootGroupFlags) == (1U << 13));
+static_assert((kDeformedBoneGroupFlags ^ kBoneGroupFlags) == (1U << 13));
+
 // Projections are tagged with push = 0: a projection id stack entry *is* the
 // current projection, so each load overwrites rather than nests and no matching
 // pop is needed. Simple (whole-matrix) interpolation, because RT64 itself notes
@@ -1156,6 +1166,7 @@ struct RootScope {
     bool pushed;
 #if TOOIE_SKELETAL_POSE_ENABLED
     uint32_t model = 0;
+    bool deformed_vertices = false;
     std::shared_ptr<const tooie::skeletal::Pose> pose;
 #endif
 #if TOOIE_ACTOR_POSE_ENABLED
@@ -1603,13 +1614,51 @@ extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
 #endif
 #if TOOIE_SKELETAL_POSE_ENABLED
     scope.model = model;
+#if defined(__ANDROID__)
+    // DE498 only calls dbanim when model +0x28 and render state +0x20
+    // are nonzero; it stores the exact table at render state +0x34.
+    // Check that completed path and a supported pose, not just an asset flag.
+    const uint32_t state = static_cast<uint32_t>(ctx->r16);
+    const uint32_t offset = in_rdram(model, 0x2CU) ? read_word(rdram, model + 0x28U) : 0;
+    const uint64_t table = uint64_t(model) + offset;
+    if (offset && table <= 0x807FFFFCU && in_rdram(state, 0x38U) &&
+        read_word(rdram, state + 0x20U) && read_word(rdram, state + 0x34U) == table &&
+        static_cast<int16_t>(read_word(rdram, uint32_t(table))) > 0) {
+        const uint32_t list = read_word(rdram, kAnimationMatrixList);
+        if (in_player) {
+            scope.pose = tooie::skeletal::guest::pose(rdram, list, g_player_key,
+                model, {}, g_player_actor);
+        }
+#if TOOIE_ACTOR_POSE_ENABLED
+        else if (scope.actor) {
+            scope.pose = tooie::skeletal::actors::pose(rdram, list, model, scope.actor);
+        }
+#endif
+        scope.deformed_vertices = bool(scope.pose);
+        if (scope.deformed_vertices) {
+            static thread_local uint64_t nextReport = 0;
+            const auto now = tooie::diagnostics::monotonicUs();
+            if (now >= nextReport) {
+                char record[240];
+                std::snprintf(record, sizeof(record),
+                    "model=0x%X root_id=0x%X table=0x%X player=%u vertices=interpolate bones=authored-hierarchy",
+                    model, scope.transform_id, uint32_t(table), in_player ? g_player_key : 0);
+                tooie::diagnostics::log("mesh-motion", record);
+                nextReport = now + 5'000'000;
+            }
+        }
+    }
+#endif
 #endif
     if (scope.transform_id == 0U) {
         return;
     }
 
-    scope.pushed =
-        append_matrix_group(rdram, cursor, scope.transform_id, kRootGroupFlags);
+    uint32_t flags = kRootGroupFlags;
+#if TOOIE_SKELETAL_POSE_ENABLED
+    if (scope.deformed_vertices) flags = kDeformedRootGroupFlags;
+#endif
+    scope.pushed = append_matrix_group(rdram, cursor, scope.transform_id, flags);
 #if TOOIE_ACTOR_POSE_ENABLED
     if (scope.pushed && scope.actor) {
         ++tooie::skeletal::actors::stats().roots;
@@ -1723,6 +1772,9 @@ extern "C" void tooie_rt64_push_player_bone(uint8_t* rdram,
         }
     }
 #endif
+    if (root_scope.deformed_vertices && root_scope.pose) {
+        bone_flags = kDeformedBoneGroupFlags;
+    }
 #endif
     g_bone_scopes[depth] = append_matrix_group(
         rdram, cursor, root_scope.transform_id + 1U + static_cast<uint32_t>(bone),

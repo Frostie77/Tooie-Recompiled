@@ -1,13 +1,13 @@
 # Jiggy-challenge lines investigation — 26 October 2026
 
-MD-001 remains **open: cause and fix unconfirmed**. The original capture was
-rechecked, and the challenge's captured-image drawing path was traced in source.
-The [27 October focused capture](jiggy-capture-odin-20261027.md) now supplies
-five images visibly showing coloured streaks, six accepted events and one
-additional unparsed observation. The later [candidate fix](graphics-fix-candidates-20261027.md)
-clips attachment-clear rectangles to their actual framebuffer/view and passes
-the production backend regression. Its effect on the captured static still
-needs Odin verification; graphics defaults and the installed APK are unchanged.
+MD-001 has a **focused Odin pass, intended for the next update**. The later
+[candidate](graphics-fix-candidates-20261027.md) clips attachment-clear rectangles
+to their framebuffer/view and passes the production backend regression. Build
+107 passed CI; Frostie installed its locally signed Debug APK and reports the
+static gone. The [device review](graphics-check-odin-20261027.md) retains E01,
+exact identities and limits. Broader modes/devices and the original offending
+command remain unverified. The earlier investigation below preserves the five
+noisy images, all six events, unparsed observation and source hypotheses.
 
 ## Observation and evidence boundary
 

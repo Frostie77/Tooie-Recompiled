@@ -50,23 +50,29 @@ gameplay acceptance.
 
 ## Evidence
 
-- [27 October graphics fix candidates](graphics-fix-candidates-20261027.md):
+- [27 October Odin graphics check and limb follow-up](graphics-check-odin-20261027.md):
+  scoped static/dialogue passes on build 107, all six markers/eight raw inputs,
+  native limb-gap images and the separately timed video.
+- [27 October character limb candidate](character-limb-separation-20261027.md):
+  CPU-deformed vertices and bone motion, real producer/consumer regression and
+  device acceptance still pending.
+- [27 October graphics corrections](graphics-fix-candidates-20261027.md):
   bounded attachment clears and gameplay viewport-transition consistency;
-  production host regressions pass, Odin acceptance remains pending.
+  production host regressions and focused Odin checks pass.
 - [27 October focused Jiggy capture](jiggy-capture-odin-20261027.md): six events,
   one unparsed observation, five images with visible coloured streaks outside
   the puzzle, both aspect compositions and the reported lower-paw trigger;
-  cause and fix remain unconfirmed.
+  earlier failing evidence retained alongside the later focused pass.
 - [27 October focused dialogue capture](dialogue-capture-odin-20261027.md): all
   three Original-mode marker reports, letterboxed images, stable recorded Android
-  surface and compression-at-entry follow-up; no motion trace or confirmed fix.
+  surface and compression-at-entry follow-up; earlier evidence before build 107.
 - [26 October Jiggy-challenge lines investigation](jiggy-challenge-lines-investigation-20261026.md):
   historical description, original evidence gap, captured-image drawing/sampling
-  trace and the later object-local rectangle/target path; MD-001 remains open.
+  trace and the later object-local rectangle/target path; focused acceptance is above.
 - [26 October dialogue screen-shift investigation](dialogue-screen-shift-investigation-20261026.md):
   original evidence review, production CPU camera/aspect probes and the 27 October
-  game-camera request/update trace with a generated-code host probe. MD-002 remains
-  open; the 27 October capture adds three Original-scale RT64 controls.
+  game-camera request/update trace with a generated-code host probe; the earlier
+  27 October capture adds three Original-scale RT64 controls.
 - [26 October Odin Debug update](android-debug-refresh-odin-20261026.md): verified build, established
   local signer, successful replacement and manually confirmed save/settings;
   new recorder command, with further playthroughs paused.

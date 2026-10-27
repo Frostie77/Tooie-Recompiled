@@ -1,12 +1,13 @@
 # Graphics fix candidates — 27 October 2026
 
-Two source-tested candidates are prepared for MD-001 (Jiggy static) and MD-002
-(dialogue shunt). **Both remain open pending Odin verification.** The captures
-show the symptoms but do not record the exact offending GPU command or viewport
-transition. The source defects/controls below are reproducible; the claim that
-they explain these particular gameplay events still needs a device test.
-No ROM, save, signing identity, release version, driver default or graphics
-setting is changed. Public v1.1.0 remains the published release.
+The MD-001 (Jiggy static) and MD-002 (dialogue shunt) corrections passed build
+107 and a **focused Odin Debug check** on 27 October. Frostie reports the static
+gone and the dialogue shunt appears gone, with corresponding markers. Both are
+intended for the next update. The [device review](graphics-check-odin-20261027.md)
+retains exact identities and every input; broader mode/device coverage and
+original-event causality remain unverified. Animated limb separation has a
+[separate open candidate](character-limb-separation-20261027.md).
+Public v1.1.0 remains the published release.
 
 ## MD-001: attachment clear bounds
 
@@ -44,8 +45,9 @@ existing clear profiles pass, along with their retained rejection/lifecycle
 controls. The exact pre-change backend from parent `05b3c7eda61c` fails the new
 bounds check at an edge rectangle. No GPU executes in this fixture.
 
-This repairs invalid clear-command construction. Whether that caused the
-captured static, and whether clipping removes it on the Odin, remain unverified.
+This repairs invalid clear-command construction. Frostie reports the static
+gone on Odin with this build; E01 shows the low paw without the former streaks.
+The original offending command is not captured, so exact causality remains unproved.
 The candidate does not claim a new driver workaround or replace depth clearing
 with a different rendering technique.
 
@@ -88,10 +90,16 @@ The existing nine-function game-camera probe and its boundaries remain separate.
 
 ## Build and focused device acceptance
 
-These are candidate production changes in draft PR #41. Android CI must pass
-before distributing a test APK. Keep the tested retained Debug build and public
-release identities distinct from a new candidate. No installation, merge or
-publication is performed by the source/host checks.
+These production changes are in draft PR #41. Android [build 107](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40448889558)
+passed; built source `1956c218c12415d863130a24c53fb9b22d4b345e` has the exact
+candidate-head `057c520c4077b51825c7b95465175afc175129e1` tree. Frostie then
+locally signed with the established Debug certificate and installed with
+`adb install -r` (Success). Signed APK SHA-256:
+`ead0b8244d7dcb30b38e2ba40ecf2b4d6f5fac342e078d95fbad26d36f4c7e05`.
+The [device record](graphics-check-odin-20261027.md) accepts the two reported
+symptoms in that setup. The remaining plan below is broader coverage; it does
+not require repeating the accepted focused result. No merge or publication
+follows automatically.
 
 Use the same save, graphics driver, filtering and resolution for the comparison.
 No further general playthrough is needed to confirm the symptoms already seen.

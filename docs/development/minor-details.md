@@ -8,8 +8,8 @@ and descriptions rather than assuming their severity from a marker number.
 
 | ID | Observation | Status | Evidence |
 |---|---|---|---|
-| MD-001 | Coloured static-like horizontal streaks and vertical fragments during the Jiggy challenge; reported when the paw moves toward the lower screen | Open — candidate fix awaits Odin test | [24 October candidate check](release-candidate-check-20261024.md), original marker 1; historical position/extent/flicker clarifications remain in the [source investigation](jiggy-challenge-lines-investigation-20261026.md). The [27 October Jiggy capture](jiggy-capture-odin-20261027.md) retains all six events, one additional unparsed observation and the paw trigger. Five images show noise over the room outside the puzzle in both wide and Original compositions; one still misses the obvious flicker. [Candidate](graphics-fix-candidates-20261027.md): bound partial attachment clears; backend regression passes, but the actual causal draw remains unconfirmed. |
-| MD-002 | Brief screen shift when dialogue animation begins; reported while the view compresses on entry | Open — candidate fix awaits Odin test | [24 October candidate check](release-candidate-check-20261024.md), original marker 2; [investigation](dialogue-screen-shift-investigation-20261026.md) and [27 October three-marker capture](dialogue-capture-odin-20261027.md). New E01–E03 report the jump with Original active; screenshots show letterboxed dialogue and Android surface records stay 1920×1080. Motion and per-frame viewport/camera inputs remain unmeasured; no matched Expand result or actual-event cause is confirmed. [Candidate](graphics-fix-candidates-20261027.md): keep gameplay camera/projection together when the viewport changes; 25 CPU cases pass, device result pending. |
+| MD-001 | Coloured static-like horizontal streaks and vertical fragments during the Jiggy challenge; reported when the paw moves toward the lower screen | Focused Odin pass — next update; broader coverage open | [24 October candidate check](release-candidate-check-20261024.md), original marker 1; historical position/extent/flicker clarifications remain in the [source investigation](jiggy-challenge-lines-investigation-20261026.md). The [27 October Jiggy capture](jiggy-capture-odin-20261027.md) retains all six events, one additional unparsed observation and the paw trigger. Five images show noise over the room outside the puzzle in both wide and Original compositions; one still misses the obvious flicker. [Candidate](graphics-fix-candidates-20261027.md): bound partial attachment clears; backend regression passes. Build-107 E01 and Frostie report the static gone; see the [scoped device record](graphics-check-odin-20261027.md). The exact original causal draw remains unconfirmed. |
+| MD-002 | Brief screen shift when dialogue animation begins; reported while the view compresses on entry | Focused Odin pass — next update; broader coverage open | [24 October candidate check](release-candidate-check-20261024.md), original marker 2; [investigation](dialogue-screen-shift-investigation-20261026.md) and [27 October three-marker capture](dialogue-capture-odin-20261027.md). New E01–E03 report the jump with Original active; screenshots show letterboxed dialogue and Android surface records stay 1920×1080. Motion and per-frame viewport/camera inputs remain unmeasured; no matched Expand result or actual-event cause is confirmed. [Candidate](graphics-fix-candidates-20261027.md): keep gameplay camera/projection together when the viewport changes; 25 CPU cases pass. Build-107 E02 records `no dialogue shunt`; Frostie says it appears gone. See the [scoped device record](graphics-check-odin-20261027.md); this is not a full Original/Expand/device matrix. |
 
 ## Required review when evidence is uploaded
 
@@ -40,6 +40,22 @@ screenshots do not establish motion or audio quality.
 No entries for a future playtest have been invented. Populate the session
 review and backlog after its actual evidence and details are supplied.
 
+## Build-107 graphics check and limb follow-up — 27 October 2026
+
+The [complete review](graphics-check-odin-20261027.md) preserves **six events,
+eight raw inputs, zero notes/orphans**, all six screenshots and the subsequent
+111-frame video. E01 (`82211b7a484e48d6a535d942df099e6f`) reports no static;
+E02 (`8554326036ca49f98fd0db4f57cfa95e`) reports no dialogue shunt.
+E03–E06 (`f11ff67dd79f4d9ca3e9aa36b015fd2d`,
+`89cc7f991a0146938158be029aa5eca9`, `11b9adb5383f4489aa8bd68b7dfe9ccb`,
+`ac0bdf8647814650a7f8052c130e21f6`) describe or refer back to animated limb
+separation. E05's concatenated `sam5 same as 3` remains one literal event.
+
+MD-001/002 have focused passes on the installed Debug build, intended for the
+next update. MD-005 remains open. The video shows one moving NPC; the broader
+all-characters scope is Frostie's report. Preserve older evidence and its
+original uncertainty; these later results do not rewrite earlier observations.
+
 ## Focused Jiggy capture — 27 October 2026
 
 The [session review](jiggy-capture-odin-20261027.md) accounts for all six events
@@ -57,7 +73,8 @@ Associate all seven observations with MD-001 for follow-up. The obvious defect
 is visible outside the board in five images, including Original composition;
 the sixth report remains retained despite its still missing the obvious noise.
 The trigger is reported, not a measured input threshold or proven source cause.
-All existing graphics details remain open.
+At this earlier capture, all graphics details were open; the later build-107
+focused acceptance is recorded above.
 
 ## Focused dialogue capture — 27 October 2026
 
@@ -73,7 +90,7 @@ description is one event, not two.
 Associate these reports and Frostie's accompanying compression-at-entry
 observation with MD-002 for follow-up; neither the screenshots nor host receipt
 times establish motion or a shared measured cause. No Jiggy static-line event
-is present in this upload. MD-001 and MD-003–MD-005 remain open.
+is present in this upload. Later build-107 results are recorded above; MD-003–MD-005 remain open.
 
 ## Installed Debug playtest — 24 October 2026
 
@@ -87,7 +104,7 @@ All entries remain open and their severity is provisional.
 |---|---|---|---|
 | MD-003 | Reported unusual frames; the first description is only “strange” | Open — detail needed | Events E01 and E02 (both marker 1), screenshots 001–002. Clarify the visible change and reproduce it before assigning a rendering cause. |
 | MD-004 | Screen shaking | Open — reproduce | Events E03–E06 (markers 3–6), screenshots 003–006, plus journal observation J04 entered as `33 screen shaking`. Reproduce the camera/action and distinguish it from the earlier dialogue shift MD-002. Static screenshots cannot establish motion. |
-| MD-005 | Unusual character rendering | Open — detail needed | Events E07–E09 (markers 7–9), screenshots 007–009, plus unnumbered journal observation J10. Identify the affected character/body part and action; retain each occurrence separately until the evidence supports a common cause. |
+| MD-005 | Unusual character rendering; later reported animated limb separation/rejoining | Open — limb candidate under test | Original E07–E09 (markers 7–9), screenshots 007–009 and journal J10 remain distinct. The [27 October build-107 review](graphics-check-odin-20261027.md) adds E03–E06, four native images and `IMG_8712.mp4`, with Frostie reporting Banjo/Kazooie and NPCs affected. The [source candidate](character-limb-separation-20261027.md) targets active CPU-deformed meshes. No common cause with the older vague reports or device fix is assumed. |
 
 The session review retains each full event ID, sequence, receipt timestamp,
 literal description and evidence filename. J04 and J10 were not accepted marker

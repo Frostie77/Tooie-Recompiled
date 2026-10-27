@@ -81,3 +81,23 @@ void decodeSkeletal(RT64::WorkloadQueue &queue, unsigned slot, uint8_t *ram, uns
     REQUIRE(d.skeletalTransforms.size()==(fault ? 0 : count));
     for(auto &entry:d.skeletalTransforms) REQUIRE(entry.second->bone+1==entry.first);
 }
+
+// Decode the actual root/bone packets from deformed_vertices.cpp. Vertex
+// coordinate decoding supplies the actual dbanim-written signed x coordinate;
+// the production setVertexCommon path owns all attribute/matrix associations.
+void decodeDeformed(RT64::WorkloadQueue &queue,unsigned slot,uint8_t *ram,int16_t cpuX) {
+    using namespace RT64;
+    queue.writeCursor=slot;queue.workloads[slot].resetDrawData();
+    GBI gbi{};TestInterpreter interpreter{&gbi};State state{ram,{}, {&queue,&interpreter},nullptr};
+    RSP rsp(&state);state.rsp=&rsp;rsp.projMask=4;rsp.loadMask=2;rsp.pushMask=1;
+    rsp.projectionIndex=0;rsp.viewProjMatrixStack[0]=hlslpp::float4x4::identity();
+    auto *root=reinterpret_cast<DisplayList*>(ram+0x500000);
+    rsp.matrix(root->w1&0x7FFFFF,3);++root;GBI_EXTENDED::matrixGroupV1(&state,&root);
+    rsp.vertices[0]={};rsp.vertices[0].x=cpuX;rsp.setVertexCommon<true,16>(0x6B0018,0,1);
+    auto *bone=reinterpret_cast<DisplayList*>(ram+0x500100);
+    rsp.matrix(bone->w1&0x7FFFFF,3);++bone;GBI_EXTENDED::matrixGroupV1(&state,&bone);
+    rsp.vertices[0]={};rsp.setVertexCommon<true,16>(0x600000,0,1);
+    rsp.popMatrix(1);bone=reinterpret_cast<DisplayList*>(ram+0x500120);GBI_EXTENDED::popMatrixGroupV1(&state,&bone);
+    rsp.popMatrix(1);bone=reinterpret_cast<DisplayList*>(ram+0x500128);GBI_EXTENDED::popMatrixGroupV1(&state,&bone);
+    REQUIRE(queue.workloads[slot].drawData.worldTransforms.size()==3);
+}

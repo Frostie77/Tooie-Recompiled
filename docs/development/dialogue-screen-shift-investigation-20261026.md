@@ -1,14 +1,13 @@
 # Dialogue screen shift investigation — 26 October 2026
 
-MD-002 remains **open: no confirmed cause or gameplay fix**. Review of the
-existing captures and a production CPU probe establishes two possible renderer
-mechanisms, but neither is identified in the recorded dialogue event. The later
-[27 October candidate](graphics-fix-candidates-20261027.md) adds a narrow gameplay
-viewport-transition guard, with 25 production CPU cases passing; its effect on
-MD-002 still needs an Odin test. Graphics defaults, release version and the
-installed APK are unchanged. Frostie resumed focused checks on the Debug app. The [27 October dialogue capture](dialogue-capture-odin-20261027.md) now
-adds three Original-mode reports and letterboxed images; its per-frame motion,
-camera and viewport inputs remain unmeasured.
+MD-002 has a **focused Odin pass, intended for the next update**. The later
+[viewport-transition guard](graphics-fix-candidates-20261027.md) passes 25
+production CPU cases and build 107. Frostie installed its locally signed Debug
+APK, reports the shunt appears gone and recorded `no dialogue shunt`. The
+[device review](graphics-check-odin-20261027.md) retains the tentative wording,
+E02, exact identities and limits. No complete Original/Expand/device matrix or
+per-frame original-event cause is established. Earlier captures and source
+hypotheses below remain evidence, including the compression-at-entry report.
 
 ## Original dialogue observation
 

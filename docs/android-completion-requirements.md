@@ -262,34 +262,27 @@ Broad mod compatibility remains a coverage item.
 
 ## Minor issues deferred beyond the first release
 
-- [ ] Verify the [27 October graphics candidates](development/graphics-fix-candidates-20261027.md)
-  on Odin: bounded partial attachment clears for MD-001 and viewport-consistent
-  gameplay camera transitions for MD-002. Seven backend clear profiles and
-  25 production CPU projection cases pass; neither gameplay result is accepted yet.
+- [x] Focused Odin check of the [27 October graphics corrections](development/graphics-fix-candidates-20261027.md):
+  build 107 passed CI and was locally signed/installed. Frostie reports the
+  Jiggy static gone and the dialogue shunt appears gone, with corresponding
+  `no static lines` / `no dialogue shunt` markers. These fixes are intended for
+  the next update. This accepts the reported setup, not every mode/device.
+- [ ] Broaden the graphics checks across Original/Expand, scene transitions and
+  devices; no complete matrix or exact original offending command is captured.
+- [ ] Verify the [animated limb candidate](development/character-limb-separation-20261027.md)
+  on Odin. Build-107 E03–E06 and a separate video show/refer to joint separation;
+  Frostie reports Banjo, Kazooie and NPCs affected. Keep MD-005 open pending a
+  new Debug result, and retain MD-003/004 and all older MD-005 evidence.
 
-The Jiggy-challenge screen lines (marker 1) and the brief shunt
-when dialogue animation starts (marker 2) remain follow-up work after the first
-release. The [26 October dialogue investigation](development/dialogue-screen-shift-investigation-20261026.md)
-reviews existing evidence and two synthetic renderer mechanisms. Its 27 October
-follow-up traces the game camera controller and verifies instant/gradual branches
-with a host probe; the actual cause and gameplay fix remain unconfirmed. The
-[27 October focused capture](development/dialogue-capture-odin-20261027.md)
-adds three Original-mode marker reports and the user's compression-at-dialogue-entry
-observation. Letterboxed screenshots and stable Android surface records narrow
-the next check to the internal view transition; motion/per-frame inputs and a
-matched Expand comparison remain missing. Three additional Original-scale CPU
-controls brought the earlier projection probe to eleven cases; the later
-candidate extends it to 25 without establishing a gameplay fix. The
-[Jiggy-challenge investigation](development/jiggy-challenge-lines-investigation-20261026.md)
-retains the captured-image sampling path and historical written descriptions.
-The [27 October Jiggy capture](development/jiggy-capture-odin-20261027.md)
-adds six retained events and one unparsed observation. Five images show coloured
-horizontal streaks and vertical fragments outside the puzzle, including Original
-composition; Frostie reports a lower-paw trigger. Source review adds an
-object-local fill/target-restore path to investigate, without identifying the
-actual causal draw. MD-001 also remains unresolved. Keep both in known issues. Focused Save
-Management/settings testing has resumed and passed; the new graphics reports
-remain open follow-up work.
+The [complete build-107 review](development/graphics-check-odin-20261027.md)
+retains all six events, eight raw inputs, native screenshots, video identities,
+manual wording and limits. Earlier [dialogue](development/dialogue-capture-odin-20261027.md)
+and [Jiggy](development/jiggy-capture-odin-20261027.md) captures remain source
+evidence, including their unparsed observations and reported triggers. Seven
+backend clear profiles and 25 production CPU projection cases passed before
+these focused device checks. Exact original-event causality is not proved by
+host controls or by the absence of errors. Save Management/settings acceptance
+remains separately recorded above.
 
 ## First Android release milestone
 

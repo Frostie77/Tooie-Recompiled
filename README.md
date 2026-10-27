@@ -182,11 +182,12 @@ See the [release notes](docs/development/release-notes-v1.1.0.md) for more detai
 
 ## Known issues
 
-- Coloured static-like lines during the Jiggy challenge, reported when the paw
-  moves toward the lower screen.
-- A brief screen shift when dialogue animation begins. Candidate fixes for
-  both visual issues are [under test](docs/development/graphics-fix-candidates-20261027.md);
-  device verification is pending.
+- Jiggy-challenge static lines and the dialogue screen shift have corrections
+  planned for the next update. Focused Odin Debug checks passed on 27 October;
+  [broader coverage remains open](docs/development/graphics-check-odin-20261027.md).
+- Character limbs can briefly separate and rejoin during animation. A Debug
+  candidate is being checked; the [limb investigation](docs/development/character-limb-separation-20261027.md)
+  remains open.
 - Intro/demo stutter and animation cadence still need further work.
 - Startup compatibility reports for Retroid Pocket 5 / Adreno 650 and Redmi Pad
   2 / Mali-G57 MC2 need further investigation. The Poco X3 Pro reporter obtained

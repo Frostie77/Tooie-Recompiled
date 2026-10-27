@@ -37,6 +37,8 @@ std::atomic<uint32_t> g_bt_rt64_proj_id_sky{0};
 std::atomic<uint32_t> g_bt_rt64_proj_id_ortho{0};
 // Counts consumer bypasses, not unique guest frames or diagnosed camera cuts.
 std::atomic<uint32_t> g_bt_rt64_projection_viewport_bypasses{0};
+std::atomic<uint64_t> g_bt_rt64_deformed_vertex_matches{0};
+std::atomic<uint64_t> g_bt_rt64_deformed_vertex_count{0};
 // Counts the skybox's own transforms that were matched against the previous
 // frame. The sky layers are drawn through the same shared model renderer as
 // every other model, so this is what tells "the sky got its identity and was
@@ -493,13 +495,15 @@ namespace RT64 {
                     if (projection.mapped) ++projectionMapped; else ++projectionUnmapped;
                 }
             }
-            char record[512];
-            std::snprintf(record,sizeof(record),"workload=%llu batches=%zu player_mapped=%u player_unmapped=%u duplicate_player_ids=%u invalid_decomposition_pairs=%u projection_mapped=%u projection_unmapped=%u projection_auto_total=%u projection_gameplay_total=%u projection_sky_total=%u projection_mismatch_total=%u projection_viewport_bypasses_total=%u",
+            char record[640];
+            std::snprintf(record,sizeof(record),"workload=%llu batches=%zu player_mapped=%u player_unmapped=%u duplicate_player_ids=%u invalid_decomposition_pairs=%u projection_mapped=%u projection_unmapped=%u projection_auto_total=%u projection_gameplay_total=%u projection_sky_total=%u projection_mismatch_total=%u projection_viewport_bypasses_total=%u deformed_vertex_matches_total=%llu deformed_vertices_total=%llu",
                 (unsigned long long)(workloads.empty()?0:workloadQueue.workloads[workloads.front()].workloadId),workloads.size(),
                 playerMapped,playerUnmapped,playerDuplicates,invalidPairs,projectionMapped,projectionUnmapped,
                 g_bt_rt64_proj_id_auto.load(std::memory_order_relaxed),g_bt_rt64_proj_id_gameplay.load(std::memory_order_relaxed),
                 g_bt_rt64_proj_id_sky.load(std::memory_order_relaxed),g_bt_rt64_projection_mismatches.load(std::memory_order_relaxed),
-                g_bt_rt64_projection_viewport_bypasses.load(std::memory_order_relaxed));
+                g_bt_rt64_projection_viewport_bypasses.load(std::memory_order_relaxed),
+                (unsigned long long)g_bt_rt64_deformed_vertex_matches.load(std::memory_order_relaxed),
+                (unsigned long long)g_bt_rt64_deformed_vertex_count.load(std::memory_order_relaxed));
             tooie::diagnostics::log("interpolation",record);
         }
 #endif
@@ -886,6 +890,12 @@ namespace RT64 {
                 }
 
                 modifiedBuffers.positionVelocity = true;
+                // Stable player/actor IDs; count actual changed-position matches,
+                // not merely the producer's interpolation flag.
+                if (curGroup.matrixId >= 0x10000000U && curGroup.matrixId < 0xF0000000U) {
+                    g_bt_rt64_deformed_vertex_matches.fetch_add(1, std::memory_order_relaxed);
+                    g_bt_rt64_deformed_vertex_count.fetch_add(curVertexCount, std::memory_order_relaxed);
+                }
             }
         }
 

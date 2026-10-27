@@ -17,14 +17,18 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The retained private Debug app now uses snapshot `fae511cc166c` (same Git tree
-as branch source `d6cb2289f06b`), signed with the established Debug certificate.
-Build 99 and local certificate/payload verification passed; `adb install -r`
-returned Success. Frostie confirmed existing save/settings retention and all
-five requested settings presentation changes. Signed APK SHA-256:
-`b2719ddd1080f10dbbfe287774879a239f4f331d264b445d22839be0171ec180`.
-See [PR #40](https://github.com/Frostie77/Tooie-Recompiled/pull/40) for the focused
-manual acceptance. Focused dialogue and Jiggy captures from 27 October are now reviewed below.
+The retained private Debug app now uses built source
+`1956c218c12415d863130a24c53fb9b22d4b345e`, native version
+`0.1.0-ci.107.1+g1956c218c124`, exact tree of candidate head
+`057c520c4077b51825c7b95465175afc175129e1`. Build 107, established local
+Debug-certificate/payload checks and `adb install -r` (Success) passed.
+Signed APK SHA-256:
+`ead0b8244d7dcb30b38e2ba40ecf2b4d6f5fac342e078d95fbad26d36f4c7e05`.
+The [review](graphics-check-odin-20261027.md) retains two focused passes, all
+six events/eight inputs, four limb follow-ups and subsequent video. A separate
+full save/settings acceptance is not inferred for this update. The earlier
+`fae511cc166c` / PR #40 update did retain saves/settings and pass all five
+requested settings presentation changes; keep that result tied to its build.
 
 ## Accepted work
 
@@ -82,27 +86,26 @@ see the [device record](device-compatibility.md) for scope.
 
 ## Current priorities
 
-Two [graphics candidates](graphics-fix-candidates-20261027.md) are prepared in
-draft PR #41: clip partial attachment clears to the actual framebuffer/view,
-and bypass camera/projection blending only when a matched gameplay viewport
-changes. All seven backend clear profiles and 25 ASan/UBSan projection cases
-pass; the old backend/consumer fail the new edge/letterbox-entry controls.
-Android CI and focused Odin acceptance are required before marking either
-issue fixed. Public v1.1.0 and the installed `fae511cc166c` Debug remain unchanged.
+Draft PR #41 contains the [graphics corrections](graphics-fix-candidates-20261027.md):
+bounded attachment clears and consistent camera/projection during a changed
+gameplay viewport. Seven backend profiles, 25 CPU projection cases, CI build
+107 and focused Odin reports pass. These verified fixes are intended for the
+next update; broader modes/devices remain open.
 
-Focused Save Management acceptance and the updated retained Debug app passed
-Frostie's Odin checks. The installed Debug snapshot is `fae511cc166c` (same tree
-as `d6cb2289f06b`); existing progress/settings and all five requested presentation
-changes were accepted. The current recorder is
-`$HOME/.local/share/tooie-recompiled/candidates/touch-fae511cc166c-c2782ebd/capture-touch.sh`.
-The [27 October focused dialogue capture](dialogue-capture-odin-20261027.md)
-contains three reviewed marker events and no follow-up/orphan notes. It records
-Original before all three reports; the user associates the shunt with the game
-view compressing on dialogue entry. Images show letterboxed dialogue; Android
-surface records remain 1920×1080. No motion/per-frame camera or viewport trace
-is available. A matched Expand dialogue result remains pending. The separate
-[Jiggy capture](jiggy-capture-odin-20261027.md) has now been reviewed: all six
-events and one unparsed observation are retained under MD-001.
+Work now targets [MD-005 animated limb separation](character-limb-separation-20261027.md).
+Frostie reports Banjo, Kazooie and NPCs separating/rejoining in motion. Build-107
+E03–E06, four native images and `IMG_8712.mp4` are retained with all earlier
+markers. The candidate interpolates active CPU-deformed vertices alongside a
+supported owned pose. The real producer/consumer translating-seam test passes;
+this does not prove the filmed NPC's path or solve all angular/weighted skinning.
+New Debug acceptance is required. Keep PR #41 draft; Frostie merges, replies and
+closes issues. No new version or publication is requested.
+
+The current installed-build recorder is
+`$HOME/.local/share/tooie-recompiled/candidates/touch-1956c218c124-95fe1f67/capture-touch.sh`.
+The reviewed session ended on `save`; any replacement Debug build requires its
+own generated recorder and receipt. Earlier Original dialogue and Jiggy captures
+remain failing-source evidence; later scoped passes do not erase them.
 
 The [dialogue-shift investigation](dialogue-screen-shift-investigation-20261026.md)
 reviews the original logs and confirms two possible CPU renderer mechanisms,
@@ -112,8 +115,8 @@ request/update paths. A new host probe executes nine retained generated function
 and distinguishes immediate endpoint selection from controlled gradual movement;
 selector changes, pending bytes and sticky modifiers are individually insufficient
 as universal cut signals. Modifier 50 motion and the complete state machine remain
-outside the probe's scope. Neither investigation establishes MD-002's actual
-cause; no runtime fix is claimed. Three added Original-scale RT64 controls pass:
+outside the probe's scope. Neither original investigation established MD-002's actual
+cause; the later guarded build and focused result are recorded above. Three added Original-scale RT64 controls pass:
 AUTO classification changes but its scale-1 factor leaves focal X unchanged;
 the same-role camera-cut control still blends. The earlier 28 October test plan
 is superseded by the received 27 October capture.
@@ -128,7 +131,8 @@ do not measure onset or identify the causal draw. Source review additionally
 traces an object-local fill rectangle and target restore before an object draw
 (`func_80803668_chjiggygamenew` → `func_800E7DE4` → `func_800BC5B0`).
 Investigate that path alongside geometry/clipping and framebuffer state; actual
-per-draw inputs remain missing. No cause or repair is confirmed. Track the deferred
+per-draw inputs remain missing. Later focused acceptance is recorded above;
+exact original-command causality remains unconfirmed. Track the deferred
 intro/demo stutter separately. Startup
 checks were introduced in v1.0.1; the live main feed now describes verified
 public v1.1.0 / code 5. Frostie confirms older releases detect it manually in
@@ -259,16 +263,16 @@ The exact source, APK hashes and candidate folder are in the
 The current recorder command is:
 
 ```bash
-"$HOME/.local/share/tooie-recompiled/candidates/touch-fae511cc166c-c2782ebd/capture-touch.sh"
+"$HOME/.local/share/tooie-recompiled/candidates/touch-1956c218c124-95fe1f67/capture-touch.sh"
 ```
 
-This current recorder replaces the historical 1bc and 6f3e recorders. It retains
+This recorder replaces the historical 1bc, 6f3e and fae recorders. It retains
 manual `playing`, markers 1–30, repeated events/follow-up notes and `save`.
 The seven-library profile and private `:game` PID path passed host consumer and
 exact-parent controls; private-file/foreground queries still use the package.
-No fresh on-device capture output, installed-APK readback or new marker session
-was supplied with that manual update confirmation. The later focused
-save-backup acceptance below does not supply a new retained Debug marker session.
+The earlier manual Debug refresh had no fresh capture. Later build-107
+installed-APK checks and its six-event session are now recorded above; the
+disposable save-backup acceptance below remains a different test.
 If a recorder is still running, `save` ends it and retains the evidence before normal app closure.
 See the [workflow guide](../../tools/android-workflow/README.md).
 

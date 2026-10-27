@@ -22,16 +22,25 @@
   mods are separate, plus instructions to use it at the launcher after saving
   and exiting any running game and reopening the app.
 
+### Fixed in focused Odin checks
+
+- Clip partial attachment-clear rectangles to their actual framebuffer/view.
+  Frostie reports the Jiggy-challenge static lines gone in the 27 October Debug
+  check; the marker screenshot shows the low paw without the previous streaks.
+- Keep the submitted gameplay camera and projection together when its viewport
+  changes, retaining normal blending with a stable viewport. Frostie reports
+  the dialogue shunt appears gone and recorded `no dialogue shunt`.
+
+These corrections are intended for the next update. The
+[device record](docs/development/graphics-check-odin-20261027.md) retains their
+focused scope; other modes/devices and complete gameplay remain unverified.
+
 ### Under test
 
-- Clip partial attachment-clear rectangles to their actual framebuffer/view;
-  host regressions pass, with an Odin check still needed for the Jiggy challenge
-  static reported when moving the paw down the screen.
-- Keep the submitted gameplay camera and projection together when its viewport
-  changes; stable-viewport blending remains enabled. All 25 production CPU
-  controls pass, but dialogue entry/exit still needs Odin verification.
-
-Both graphics issues remain open. See the [candidate scope and test plan](docs/development/graphics-fix-candidates-20261027.md).
+- Interpolate CPU-deformed character vertices alongside their animated bones
+  for verified supported models. This candidate targets the reported limb gaps;
+  its [source and test scope](docs/development/character-limb-separation-20261027.md)
+  is separate from an Odin gameplay result. The limb issue remains open.
 
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
 
