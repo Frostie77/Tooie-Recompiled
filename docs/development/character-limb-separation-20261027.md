@@ -1,12 +1,22 @@
 # Animated limb separation candidate — 27 October 2026
 
-MD-005 remains **open, awaiting a new Debug test**. Frostie reports that Banjo,
+MD-005 remains **open: the first Debug candidate did not fix the reported symptom**. Frostie reports that Banjo,
 Kazooie and NPC limbs briefly separate and rejoin during animation. The
 [build-107 review](graphics-check-odin-20261027.md) preserves E03–E06, native
 images, the subsequent NPC video and conversational details. Older vague
 MD-005 events E07–E09/J10 remain distinct; no common cause is assumed.
 All verified fixes are intended for the next update; this candidate is not yet
 a verified gameplay correction.
+
+## Build-108 result
+
+Frostie completed signing and installation, then reported “its the same as
+before”. The [complete candidate check](character-limb-check-odin-20261027.md)
+retains both new events, all four raw inputs and native images with joint gaps.
+The changed-vertex route executed earlier, but its counters were flat during
+the later NPC check. Host seam correctness is not a resolution of MD-005.
+Next compare Original framerate against the recorded Manual 60 setting before
+choosing another source change. Existing Jiggy/dialogue acceptance is separate.
 
 ## Source mismatch and candidate
 

@@ -269,10 +269,12 @@ Broad mod compatibility remains a coverage item.
   the next update. This accepts the reported setup, not every mode/device.
 - [ ] Broaden the graphics checks across Original/Expand, scene transitions and
   devices; no complete matrix or exact original offending command is captured.
-- [ ] Verify the [animated limb candidate](development/character-limb-separation-20261027.md)
-  on Odin. Build-107 E03–E06 and a separate video show/refer to joint separation;
+- [ ] Resolve [animated limb separation](development/character-limb-separation-20261027.md).
+  The first candidate passed CI but failed the focused Odin check; the
+  [build-108 record](development/character-limb-check-odin-20261027.md) retains
+  both new events and images. Compare Original/Manual 60 before another change. Build-107 E03–E06 and a separate video show/refer to joint separation;
   Frostie reports Banjo, Kazooie and NPCs affected. Keep MD-005 open pending a
-  new Debug result, and retain MD-003/004 and all older MD-005 evidence.
+  tested resolution, and retain MD-003/004 and all older MD-005 evidence.
 
 The [complete build-107 review](development/graphics-check-odin-20261027.md)
 retains all six events, eight raw inputs, native screenshots, video identities,

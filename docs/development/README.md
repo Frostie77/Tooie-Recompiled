@@ -50,12 +50,16 @@ gameplay acceptance.
 
 ## Evidence
 
+- [27 October Odin limb candidate check](character-limb-check-odin-20261027.md):
+  unsuccessful build-108 result, two events/four inputs, native joint-gap images,
+  flat late-session changed-vertex counters and an Original/Manual-60 comparison.
+
 - [27 October Odin graphics check and limb follow-up](graphics-check-odin-20261027.md):
   scoped static/dialogue passes on build 107, all six markers/eight raw inputs,
   native limb-gap images and the separately timed video.
 - [27 October character limb candidate](character-limb-separation-20261027.md):
   CPU-deformed vertices and bone motion, real producer/consumer regression and
-  device acceptance still pending.
+  first device check unsuccessful; follow-up remains open.
 - [27 October graphics corrections](graphics-fix-candidates-20261027.md):
   bounded attachment clears and gameplay viewport-transition consistency;
   production host regressions and focused Odin checks pass.

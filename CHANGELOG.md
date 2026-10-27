@@ -37,10 +37,10 @@ focused scope; other modes/devices and complete gameplay remain unverified.
 
 ### Under test
 
-- Interpolate CPU-deformed character vertices alongside their animated bones
-  for verified supported models. This candidate targets the reported limb gaps;
-  its [source and test scope](docs/development/character-limb-separation-20261027.md)
-  is separate from an Odin gameplay result. The limb issue remains open.
+- Animated limb separation remains under investigation. The first CPU-vertex
+  candidate passed host tests and CI but did not resolve the focused Odin check;
+  see the [device result](docs/development/character-limb-check-odin-20261027.md).
+  It is not recorded as a verified fix for this update.
 
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
 

@@ -17,18 +17,23 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The retained private Debug app now uses built source
-`1956c218c12415d863130a24c53fb9b22d4b345e`, native version
-`0.1.0-ci.107.1+g1956c218c124`, exact tree of candidate head
-`057c520c4077b51825c7b95465175afc175129e1`. Build 107, established local
-Debug-certificate/payload checks and `adb install -r` (Success) passed.
-Signed APK SHA-256:
-`ead0b8244d7dcb30b38e2ba40ecf2b4d6f5fac342e078d95fbad26d36f4c7e05`.
-The [review](graphics-check-odin-20261027.md) retains two focused passes, all
-six events/eight inputs, four limb follow-ups and subsequent video. A separate
-full save/settings acceptance is not inferred for this update. The earlier
-`fae511cc166c` / PR #40 update did retain saves/settings and pass all five
-requested settings presentation changes; keep that result tied to its build.
+The retained Debug now uses built source `ca05903d788c093c778b1daab45eaf66441e0645`,
+native `0.1.0-ci.108.1+gca05903d788c` (candidate code `5637778e0446`). CI and
+established local signing/payload checks passed; `adb install -r` returned
+Success. Signed APK SHA-256:
+`2c25f017b31e91cad230d95712eca99f087f066579ff6138f62f09321c352424`.
+The [build-108 review](character-limb-check-odin-20261027.md) retains both new
+markers/four inputs and native joint-gap images. Frostie reports the limb
+separation unchanged. The candidate is unsuccessful for MD-005; host geometry
+controls are not a gameplay fix. Compare Original framerate against Manual 60
+before choosing the next change. Save/settings and prior Jiggy/dialogue results
+are not freshly accepted by this short capture.
+
+The [build-107 review](graphics-check-odin-20261027.md) retains two scoped
+static/dialogue passes intended for the next update, plus its six events/eight
+inputs, four original limb reports and video. The earlier `fae511cc166c` / PR #40
+update retained saves/settings and passed all five presentation changes; keep
+those acceptances tied to their actual builds.
 
 ## Accepted work
 
@@ -98,12 +103,12 @@ E03–E06, four native images and `IMG_8712.mp4` are retained with all earlier
 markers. The candidate interpolates active CPU-deformed vertices alongside a
 supported owned pose. The real producer/consumer translating-seam test passes;
 this does not prove the filmed NPC's path or solve all angular/weighted skinning.
-New Debug acceptance is required. Keep PR #41 draft; Frostie merges, replies and
+The first Debug check failed; see the build-108 record above. Keep PR #41 draft; Frostie merges, replies and
 closes issues. No new version or publication is requested.
 
 The current installed-build recorder is
-`$HOME/.local/share/tooie-recompiled/candidates/touch-1956c218c124-95fe1f67/capture-touch.sh`.
-The reviewed session ended on `save`; any replacement Debug build requires its
+`$HOME/.local/share/tooie-recompiled/candidates/touch-ca05903d788c-e575917a/capture-touch.sh`.
+The reviewed build-108 session ended on `save`; any replacement Debug build requires its
 own generated recorder and receipt. Earlier Original dialogue and Jiggy captures
 remain failing-source evidence; later scoped passes do not erase them.
 
@@ -263,7 +268,7 @@ The exact source, APK hashes and candidate folder are in the
 The current recorder command is:
 
 ```bash
-"$HOME/.local/share/tooie-recompiled/candidates/touch-1956c218c124-95fe1f67/capture-touch.sh"
+"$HOME/.local/share/tooie-recompiled/candidates/touch-ca05903d788c-e575917a/capture-touch.sh"
 ```
 
 This recorder replaces the historical 1bc, 6f3e and fae recorders. It retains

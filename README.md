@@ -185,8 +185,8 @@ See the [release notes](docs/development/release-notes-v1.1.0.md) for more detai
 - Jiggy-challenge static lines and the dialogue screen shift have corrections
   planned for the next update. Focused Odin Debug checks passed on 27 October;
   [broader coverage remains open](docs/development/graphics-check-odin-20261027.md).
-- Character limbs can briefly separate and rejoin during animation. A Debug
-  candidate is being checked; the [limb investigation](docs/development/character-limb-separation-20261027.md)
+- Character limbs can briefly separate and rejoin during animation. The first
+  Debug candidate did not resolve it; the [limb investigation](docs/development/character-limb-separation-20261027.md)
   remains open.
 - Intro/demo stutter and animation cadence still need further work.
 - Startup compatibility reports for Retroid Pocket 5 / Adreno 650 and Redmi Pad
