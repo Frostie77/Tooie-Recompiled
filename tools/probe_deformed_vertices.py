@@ -28,7 +28,13 @@ def main():
     parser.add_argument('--baseline-api', type=Path)
     parser.add_argument('--seams', action='store_true', help='Run the welded rotating mesh-edge regression')
     parser.add_argument('--scene-trace', action='store_true', help='Check the optional renderer-input observer')
+    parser.add_argument('--copies', action='store_true', help='Replay the recorded bone matrix copy/reload inputs')
+    parser.add_argument('--baseline-rsp', type=Path, help='Verify the recorded-input drift against the old RSP source')
     args = parser.parse_args()
+    if sum((args.copies,args.seams,args.scene_trace))>1:
+        parser.error('Select one probe mode')
+    if args.baseline_rsp and not args.copies:
+        parser.error('--baseline-rsp requires --copies')
     root = Path(__file__).resolve().parents[1]
     rt = root/'lib/rt64/src'
     with tempfile.TemporaryDirectory(prefix='tooie-deformed-vertices-') as folder:
@@ -40,7 +46,7 @@ def main():
             s=(rt/name).read_text().replace('#include "rt64_workload_queue.h"','#include "matching_queue.h"').replace('#include "hle/rt64_workload_queue.h"','#include "matching_queue.h"')
             s=s.replace('#include "../../../../src/render_diagnostics.h"','#include "render_diagnostics.h"')
             (build/Path(name).name).write_text(s)
-        source=(rt/'hle/rt64_rsp.cpp').read_text()
+        source=(args.baseline_rsp or rt/'hle/rt64_rsp.cpp').read_text()
         names=['RSP','reset','clearExtended','maskPhysicalAddress','fromSegmented','fromSegmentedMasked','matrixCommon','matrix','popMatrix','skeletalBinding','matrixId','popMatrixId','computeModelViewProj']
         bodies='\n'.join(method(source,'RSP::'+n+'(') for n in names)
         for name in ['readExtendedVertexSegment','setVertexCommon']:
@@ -78,7 +84,7 @@ def main():
         env={**os.environ,'ASAN_OPTIONS':'detect_leaks=0','UBSAN_OPTIONS':'halt_on_error=1:print_stacktrace=1','APP_FOLDER_PATH':str(build)}
         def run(cmd):subprocess.run([str(x) for x in cmd],check=True,env=env,cwd=root)
         run([os.environ.get('CC','gcc'),'-std=c11','-fwrapv',*flags,'-c',build/'deform.c','-o',build/'deform.o'])
-        cpp=[root/('tests/scene_diagnostics.cpp' if args.scene_trace else 'tests/skeletal_seams.cpp' if args.seams else 'tests/deformed_vertices.cpp'),root/'tests/skeletal_rsp.cpp',args.baseline_api or root/'src/recomp_api.cpp',build/'rt64_game_frame.cpp',build/'rt64_transform_processor.cpp',build/'coprocessor.cpp']
+        cpp=[root/('tests/skeletal_copies.cpp' if args.copies else 'tests/scene_diagnostics.cpp' if args.scene_trace else 'tests/skeletal_seams.cpp' if args.seams else 'tests/deformed_vertices.cpp'),root/'tests/skeletal_rsp.cpp',args.baseline_api or root/'src/recomp_api.cpp',build/'rt64_game_frame.cpp',build/'rt64_transform_processor.cpp',build/'coprocessor.cpp']
         cpp += [rt/p for p in ['hle/rt64_rigid_body.cpp','common/rt64_math.cpp','hle/rt64_framebuffer_changes.cpp','hle/rt64_framebuffer_storage.cpp','hle/rt64_projection.cpp','common/rt64_common.cpp','preset/rt64_preset_scene.cpp','preset/rt64_preset.cpp']]
         exe=build/'probe'
         run([os.environ.get('CXX','g++'),'-std=c++20',*flags,*cpp,build/'deform.o','-Wl,--gc-sections','-no-pie','-o',exe])
@@ -88,7 +94,19 @@ def main():
             print(control.stderr.strip())
             print('PASS: exact baseline metadata fails the rendered-position seam check.',flush=True)
             return
+        if args.baseline_rsp:
+            control=subprocess.run([str(exe)],env=env,capture_output=True,text=True)
+            assert args.copies and control.returncode==61 and 'copied-matrix drift=' in control.stderr and 'gap<.002f' in control.stderr,control.stderr
+            print(control.stderr.strip())
+            print('PASS: exact old RSP source fails the recorded copied-matrix rendered-position check.',flush=True)
+            return
         run([exe])
+        if args.copies:
+            control=subprocess.run([str(exe),'--force-unowned-aliases'],env=env,capture_output=True,text=True)
+            assert control.returncode==61 and 'copied-matrix drift=' in control.stderr and 'gap<.002f' in control.stderr,control.stderr
+            print('PASS: restoring unowned copy/reload behavior fails the recorded rendered-position check.',flush=True)
+            print('Scope: recorded matrix/vertex subset with controlled ownership/schema; no full NPC mesh or GPU/device execution.',flush=True)
+            return
         if args.scene_trace:
             print('Scope: copied CPU upload inputs in controlled fixtures; no device/GPU or visual acceptance.',flush=True)
             return

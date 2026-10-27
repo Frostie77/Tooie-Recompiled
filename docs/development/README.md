@@ -50,6 +50,12 @@ gameplay acceptance.
 
 ## Evidence
 
+- [27–28 October build-110 scene-input capture](graphics-input-check-odin-20261028.md):
+  every 11-event/13-input record and eight PNGs, complete renderer input recovery,
+  copied-matrix ownership mismatch, missing HUD origins and marker-11 follow-up.
+- [28 October flying/aiming direction report](flying-aim-controls-20261028.md):
+  build-110 marker 11 pending raw evidence, exact user wording and current Y-hook
+  scope; scene/setting context and an actual flight consumer still need tracing.
 - [27 October, 22:42 extended build-109 playthrough](installed-debug-playtest-20261027-224200.md):
   50-minute declared capture, both inputs/zero markers, 571 original-process
   checks and complete delta review; no new issue or graphics acceptance.

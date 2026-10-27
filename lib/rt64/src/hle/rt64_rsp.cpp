@@ -522,11 +522,21 @@ namespace RT64 {
 #if TOOIE_SKELETAL_POSE_ENABLED
     tooie::skeletal::BindingPtr RSP::skeletalBinding() const {
         const auto &g = extended.modelMatrixIdStack[extended.modelMatrixIdStackSize - 1];
-        const auto &b = g.skeletal;
+        auto b = g.skeletal;
         alignas(16) const hlslpp::float4x4 viewProjection = extended.viewProjMatrix;
         if (!b || !b->pose || b->bone >= b->pose->bones.size() || modelViewProjInserted ||
-            modelMatrixPhysicalAddressStack[modelMatrixStackSize - 1] != b->address ||
             !isMatrixIdentity(viewProjection)) return {};
+        const uint32_t address = modelMatrixPhysicalAddressStack[modelMatrixStackSize - 1];
+        if (address != b->address) {
+            // Tooie reloads parent/copy matrices inside a bone group. Preserve
+            // ownership only when this task's same owned pose proves the exact
+            // fixed payload and an unambiguous bone. Never search other models.
+            if (address > 0x800000U - sizeof(FixedMatrix)) return {};
+            tooie::skeletal::Words loaded;
+            std::memcpy(loaded.data(), state->fromRDRAM(address), sizeof(FixedMatrix));
+            b = tooie::skeletal::TaskScope::findFixed(b, address, loaded);
+            if (!b) return {};
+        }
         FixedMatrix fixed; std::memcpy(&fixed, b->fixed.data(), sizeof(fixed));
         alignas(16) const hlslpp::float4x4 expected = fixed.toMatrix4x4();
         alignas(16) const hlslpp::float4x4 actual = modelMatrixStack[modelMatrixStackSize - 1];

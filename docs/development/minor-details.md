@@ -11,6 +11,27 @@ and descriptions rather than assuming their severity from a marker number.
 | MD-001 | Coloured static-like horizontal streaks and vertical fragments during the Jiggy challenge; reported when the paw moves toward the lower screen | Focused Odin pass — next update; broader coverage open | [24 October candidate check](release-candidate-check-20261024.md), original marker 1; historical position/extent/flicker clarifications remain in the [source investigation](jiggy-challenge-lines-investigation-20261026.md). The [27 October Jiggy capture](jiggy-capture-odin-20261027.md) retains all six events, one additional unparsed observation and the paw trigger. Five images show noise over the room outside the puzzle in both wide and Original compositions; one still misses the obvious flicker. [Candidate](graphics-fix-candidates-20261027.md): bound partial attachment clears; backend regression passes. Build-107 E01 and Frostie report the static gone; see the [scoped device record](graphics-check-odin-20261027.md). The exact original causal draw remains unconfirmed. |
 | MD-002 | Brief screen shift when dialogue animation begins; reported while the view compresses on entry | Focused Odin pass — next update; broader coverage open | [24 October candidate check](release-candidate-check-20261024.md), original marker 2; [investigation](dialogue-screen-shift-investigation-20261026.md) and [27 October three-marker capture](dialogue-capture-odin-20261027.md). New E01–E03 report the jump with Original active; screenshots show letterboxed dialogue and Android surface records stay 1920×1080. Motion and per-frame viewport/camera inputs remain unmeasured; no matched Expand result or actual-event cause is confirmed. [Candidate](graphics-fix-candidates-20261027.md): keep gameplay camera/projection together when the viewport changes; 25 CPU cases pass. Build-107 E02 records `no dialogue shunt`; Frostie says it appears gone. See the [scoped device record](graphics-check-odin-20261027.md); this is not a full Original/Expand/device matrix. |
 
+## Build-110 scene-input session — 27–28 October 2026
+
+The [complete review](graphics-input-check-odin-20261028.md) retains all **11
+events/13 inputs**, zero notes/orphans and eight native PNGs. E01–E03 preserve
+logo jitter; E04/marker 3 and E05/marker 5 preserve NPC gaps at Display; E06–E09
+preserve all HUD choices with no observed placement change; E10/marker 10 is the
+Original-framerate NPC comparison with gaps manually absent. E11 is MD-014
+below. Reused marker 2 and the literal `note same as 1` event are preserved.
+All 185 original-process checks show PID 29847. All eight scene domains arrive;
+312,262 raw runtime records and included-source hashes reconcile exactly.
+MD-005/011/012/013 remain open. A scoped matrix-copy ownership candidate passes
+12 recorded-subset host cases with ASan/UBSan and failing exact-old-RSP and
+restored-unowned controls. No new device pass is claimed. The terminal cleanup
+line remains outside the uploaded archive.
+
+## Flying/shooting report during build-110 capture — 28 October 2026
+
+| ID | Observation | Status | Evidence and follow-up |
+|---|---|---|---|
+| MD-014 | Flying and aiming simultaneously sends the reticle opposite the direction of travel, making shooting impractical; stationary aiming works with the existing invert feature | Open — next patch investigation | The [build-110 review](graphics-input-check-odin-20261028.md) verifies marker 11 / E11, ID `d6ce96d79b4443b3abd5d62658188d7d`, 00:10:05.479 AEDT, literal description and native reticle image. The [report/source review](flying-aim-controls-20261028.md) retains every clarification. Controlled Kazooie flight is the likely case; Frostie will confirm later and the UFO expectation is untested. Preserve working stationary inversion; no On/Off cause or control fix is established. |
+
 ## Required review when evidence is uploaded
 
 1. Read every event and follow-up note in `User-Follow-Up`, `User-Markers`, the

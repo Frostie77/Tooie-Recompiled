@@ -22,8 +22,8 @@ The retained Debug now uses built source `f37c1e2a10b76d9e75c7ded5468df5dd969cf4
 established local signer/payload checks passed. Frostie supplied `adb install -r`
 Success; signed APK SHA-256 is
 `504e7320b6d1a371feab4dcebaac205303dd89dedb55d1dabc51474d09b99666`.
-Local folder: `touch-f37c1e2a10b7-606a8a3a`. Exact installed-hash readback and
-optional observer activation/delivery remain pending. The checked temporary
+Local folder: `touch-f37c1e2a10b7-606a8a3a`. Exact installed-hash readback and optional request activation are now confirmed;
+native observer delivery is now verified; the cleanup terminal line remains pending. The checked temporary
 capture helper enables only the private request and removes it after recording;
 see [the observer record](graphics-input-diagnostics-20261027.md).
 
@@ -113,6 +113,25 @@ see the [device record](device-compatibility.md) for scope.
 
 ## Current priorities
 
+The [build-110 input capture](graphics-input-check-odin-20261028.md) is now fully
+reviewed: 11 events, 13 inputs, zero notes/orphans, all eight PNGs, PID 29847
+present in all 185 checks, 312,262 runtime records exactly reconciled. All eight
+scene domains arrive in 208 bounded samples. The camera-NPC Display/Original
+comparison and unchanged HUD placement are retained. E11 records MD-014;
+controlled Kazooie flight is the likely case, UFO behavior and invert On/Off are
+unconfirmed, and Frostie will confirm later. Do not request marker 11 again.
+The capture ends with `save`; the terminal request-cleanup PASS remains pending.
+
+The recorded input identifies mixed owned/unowned matrix reloads inside one
+explicit model scope: equal submitted endpoints, different intermediate
+consumers. The next limb candidate resolves exact fixed payloads only through
+this queued task's same explicitly owned pose; address matches are preferred,
+ambiguous copies/foreign scopes reject. All 12 recorded two-bone subset cases
+pass with ASan/UBSan; the exact old RSP and restored-unowned controls fail on
+rendered-position drift as intended. This is not a full-mesh/GPU replay or a new
+device fix. HUD draws still lack origin tags; the opening-logo
+cause remains independent and unproved.
+
 Frostie's intended everyday framerate is **Display**. Manual 60 is a controlled
 comparison only. The [build-109 follow-up](graphics-framerate-follow-up-odin-20261027.md)
 rejects the second limb candidate at both Manual 60 and Display; Original is fine.
@@ -126,8 +145,8 @@ is now implemented, off unless explicitly requested by a private file. It record
 bounded actual selected matrix/vertex/projection/origin inputs. ASan/UBSan host
 controls and 327 simulated collector checks pass. CI build 110 and the exact
 downloaded Debug artifact are verified; local signing/payload checks and the
-replacement-install Success are now supplied. Exact installed-hash readback,
-request-file activation and device diagnostic delivery remain pending. Its built
+replacement-install Success are now supplied. Exact installed-hash readback and request activation are now confirmed by the
+helper output; native diagnostic delivery is now verified; the cleanup terminal line remains pending. Its built
 source is `f37c1e2a10b76d9e75c7ded5468df5dd969cf486`, with the exact tree of
 engineering head `64215509e920ded1ec830b5b11492f29c10e6075`; see the observer
 record for all artifact pins. No input-code change is needed for excluded E13/E14.
@@ -150,7 +169,7 @@ The new installed-build recorder is
 `$HOME/.local/share/tooie-recompiled/candidates/touch-f37c1e2a10b7-606a8a3a/capture-touch.sh`.
 For the next diagnostic session use the pinned temporary scene-capture helper
 around this recorder, so request-file cleanup runs after `save`. Normal recorder
-use does not enable the observer. Build 110 has not yet supplied device evidence.
+use does not enable the observer. Build 110's complete input evidence is reviewed above; no correction is accepted yet.
 The first build-109 upload ended at the playing prompt. The later 22:27 upload
 has a verified attached gameplay window and original PID 20423, ended on `save`;
 all 14 events/18 inputs and six images have been reviewed. Each replacement Debug build requires its own generated

@@ -59,7 +59,7 @@ immutable renderer output, Original's stale-buffer control and malformed/bounded
 inputs. The updated collector **passes all 327 simulated checks**, including
 original-PID extraction and lossless archives for the new domains. No real ADB
 or device actions occurred. The probe is added to CI; build 110 verifies ARM64 compilation as recorded
-below. On-device diagnostic delivery remains pending.
+below. The later uploaded input review confirms on-device diagnostic delivery.
 
 The [later 22:27 session](graphics-check-odin-20261027-222732.md) has 14 events,
 18 raw inputs and six images, with a successful Split Up attempt and persistent
@@ -133,3 +133,20 @@ screenshots only after `playing`; intro markers before attachment retain logs
 and journal entries but no screenshot attempts. A five-second observer sample
 can miss a short intro event, and four bounded vertices do not establish a full
 mesh or GPU output. Keep all three graphics defects open until a tested fix.
+
+
+## First uploaded renderer inputs — 28 October 2026
+
+The [complete build-110 review](graphics-input-check-odin-20261028.md) now verifies
+all eight scene domains: 208 bounded samples, 312,262 total PID-tagged runtime
+records and exact summary reconciliation. All 11 events/13 inputs and eight
+native images are reviewed. This confirms diagnostic delivery, not a graphics
+fix. Invalid input counts stay zero; 199 samples explicitly report truncation.
+The wrapper cleanup line occurs after packaging and remains unconfirmed.
+
+A [same-pose matrix-copy candidate](character-limb-copy-candidate-20261028.md)
+targets the captured mixed ownership/interpolation path. Its recorded-input
+behavioral check passes all 12 cases with ASan/UBSan; old-RSP and restored-
+unowned controls fail on rendered-position drift as intended. Missing HUD
+origins and the opening-logo report remain separate; there is no new device
+acceptance.

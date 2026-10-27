@@ -579,6 +579,18 @@ arrays around), bound traversal/logging and report omissions/observer cost.
 Host immutable-output and stale-buffer controls pass; this is not GPU readback
 or visual acceptance. See `docs/development/graphics-input-diagnostics-20261027.md`.
 
+The first build-110 scene-input capture (28 October) exposes fixed matrix
+reloads/copies inside an owned model scope losing their bone binding. Identical
+current/previous matrices then receive different intermediate consumers; one
+actual sampled vertex differs by 0.578295 world units at weight 0.25. The copy
+candidate resolves only through the same immutable queued task and explicit
+pose, with exact fixed bytes, address preference and ambiguous-bone rejection.
+Keep the existing actual/source/projection checks. Do not infer model ownership
+from coincident matrices globally or assume an address stride. The 12 recorded-
+subset host cases pass with ASan/UBSan; exact-old-RSP and restored-unowned
+controls fail on rendered-position drift as intended. No device fix is claimed. See
+`docs/development/graphics-input-check-odin-20261028.md` and the copy candidate.
+
 ### 7.3 Skybox flicker
 
 The sky layers are drawn through the shared model renderer with no transform id,

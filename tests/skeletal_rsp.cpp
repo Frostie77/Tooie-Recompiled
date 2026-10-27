@@ -122,3 +122,31 @@ void decodeSkeletalSeam(RT64::WorkloadQueue &queue,unsigned slot,uint8_t *ram) {
     REQUIRE(queue.workloads[slot].drawData.worldTransforms.size()==3);
     REQUIRE(queue.workloads[slot].drawData.skeletalTransforms.size()==2);
 }
+
+// Real fixed reload/copy operations with a still-active child group, as in the
+// Odin input capture. Group packets come from the native publisher above.
+void decodeSkeletalCopies(RT64::WorkloadQueue &queue,unsigned slot,uint8_t *ram,
+                          int16_t x,int16_t y,int16_t z) {
+    using namespace RT64;
+    queue.writeCursor=slot;queue.workloads[slot].resetDrawData();
+    GBI gbi{};TestInterpreter interpreter{&gbi};State state{ram,{}, {&queue,&interpreter},nullptr};
+    RSP rsp(&state);state.rsp=&rsp;rsp.projMask=4;rsp.loadMask=2;rsp.pushMask=1;
+    rsp.projectionIndex=0;rsp.viewProjMatrixStack[0]=hlslpp::float4x4::identity();
+    auto point=[&] {rsp.vertices[0]={};rsp.vertices[0].x=x;rsp.vertices[0].y=y;rsp.vertices[0].z=z;
+                   rsp.setVertexCommon<true,16>(0x600000,0,1);};
+    const uint32_t parentAddress=reinterpret_cast<DisplayList*>(ram+0x500000)->w1&0x7FFFFF;
+    constexpr uint32_t copyAddress=0x490000;
+    std::memcpy(ram+copyAddress,ram+parentAddress,64);
+    for(unsigned bone=0;bone<2;++bone) {
+        auto *dl=reinterpret_cast<DisplayList*>(ram+0x500000+bone*40);
+        rsp.matrix(dl->w1&0x7FFFFF,3);++dl;GBI_EXTENDED::matrixGroupV1(&state,&dl);point();
+        if(bone==0) {rsp.matrix(copyAddress,2);point();}
+        else {
+            rsp.matrix(parentAddress,2);point(); // parent under child group
+            rsp.matrix(copyAddress,2);point();   // copied parent under child group
+        }
+        rsp.popMatrix(1);dl=reinterpret_cast<DisplayList*>(ram+0x500000+bone*40+32);
+        GBI_EXTENDED::popMatrixGroupV1(&state,&dl);
+    }
+    REQUIRE(queue.workloads[slot].drawData.worldTransforms.size()==6);
+}

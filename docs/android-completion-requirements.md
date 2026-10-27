@@ -1,6 +1,6 @@
 # Tooie Recompiled completion checklist
 
-Updated: 26 October 2026.
+Updated: 28 October 2026.
 
 The goal is a reliable native Android ARM64 release,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
@@ -294,9 +294,17 @@ Broad mod compatibility remains a coverage item.
   The [later build-109 session](development/graphics-check-odin-20261027-222732.md)
   adds E11/E12 standalone-Kazooie wing reports at Display (native target 120).
   E13/E14 are excluded by Frostie as later-learned moves, not input defects.
+  The [build-110 input capture](development/graphics-input-check-odin-20261028.md)
+  adds E04/E05 Display gaps, E10 Original comparison and actual matrix-copy
+  ownership mismatches. The scoped candidate passes 12 host cases and failing
+  old-RSP controls; Android and device acceptance remain pending.
 - [ ] Resolve **MD-011** opening-logo rapid up/down jitter, reported at Manual 60
   and Display but absent at Original. Keep it separate from dialogue-entry shunt
   and deferred intro/demo cadence until actual draw evidence links them.
+- [ ] Resolve **MD-014** flying/aiming direction mismatch while preserving working
+  stationary inversion. [Marker 11 and every clarification](development/flying-aim-controls-20261028.md)
+  are recorded. Controlled Kazooie flight is the likely affected mode; UFO and
+  inversion On/Off comparisons await Frostie's later confirmation.
 - [ ] Resolve **MD-012** HUD Placement Original / 16:9 / Expand having no visible
   effect. Trace menu/effective values through the actual HUD draw/origin consumer.
   Both new manual reports are retained in the
