@@ -92,8 +92,9 @@ contains three reviewed marker events and no follow-up/orphan notes. It records
 Original before all three reports; the user associates the shunt with the game
 view compressing on dialogue entry. Images show letterboxed dialogue; Android
 surface records remain 1920×1080. No motion/per-frame camera or viewport trace
-is available. A matched Expand result and the requested separate Jiggy capture
-remain pending.
+is available. A matched Expand dialogue result remains pending. The separate
+[Jiggy capture](jiggy-capture-odin-20261027.md) has now been reviewed: all six
+events and one unparsed observation are retained under MD-001.
 
 The [dialogue-shift investigation](dialogue-screen-shift-investigation-20261026.md)
 reviews the original logs and confirms two possible CPU renderer mechanisms,
@@ -110,14 +111,16 @@ the same-role camera-cut control still blends. The earlier 28 October test plan
 is superseded by the received 27 October capture.
 Keep the later MD-004 screen-shaking reports separate. The
 [Jiggy-challenge investigation](jiggy-challenge-lines-investigation-20261026.md)
-records Frostie's clarification that MD-001 looks like static in a horizontal
-straight line, the original capture's missing event-period log/image, and the
-game's small captured-image target and POINT-sampled drawing path. On 27 October
-he located it usually near the top left, reaching about halfway across and
-disappearing/reappearing quickly. That later extent refines his initial
-whole-screen description. Its cause and repair remain unconfirmed; next capture
-the whole displayed frame with the line visible and retain its graphics settings.
-No new image or measured per-draw state is available. Track the deferred
+retains the historical horizontal/top-left/half-width/flicker description and
+the captured-image sampling path. Five of six new Jiggy images visibly show
+broken horizontal coloured streaks and vertical fragments over the room above
+the puzzle, including Original composition. Frostie reports moving the paw
+toward the lower screen as the trigger. All six images show a low paw; stills
+do not measure onset or identify the causal draw. Source review additionally
+traces an object-local fill rectangle and target restore before an object draw
+(`func_80803668_chjiggygamenew` → `func_800E7DE4` → `func_800BC5B0`).
+Investigate that path alongside geometry/clipping and framebuffer state; actual
+per-draw inputs remain missing. No cause or repair is confirmed. Track the deferred
 intro/demo stutter separately. Startup
 checks were introduced in v1.0.1; the live main feed now describes verified
 public v1.1.0 / code 5. Frostie confirms older releases detect it manually in

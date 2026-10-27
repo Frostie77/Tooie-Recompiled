@@ -275,10 +275,13 @@ the next check to the internal view transition; motion/per-frame inputs and a
 matched Expand comparison remain missing. Three additional Original-scale CPU
 controls bring the projection probe to eleven cases without establishing a fix. The
 [Jiggy-challenge investigation](development/jiggy-challenge-lines-investigation-20261026.md)
-records the captured-image sampling path and Frostie's latest description:
-static-like horizontal noise, usually near the top left, extending about halfway
-across and disappearing/reappearing quickly. These are conversation details;
-MD-001 also remains unresolved. Keep both in known issues. Focused Save
+retains the captured-image sampling path and historical written descriptions.
+The [27 October Jiggy capture](development/jiggy-capture-odin-20261027.md)
+adds six retained events and one unparsed observation. Five images show coloured
+horizontal streaks and vertical fragments outside the puzzle, including Original
+composition; Frostie reports a lower-paw trigger. Source review adds an
+object-local fill/target-restore path to investigate, without identifying the
+actual causal draw. MD-001 also remains unresolved. Keep both in known issues. Focused Save
 Management/settings testing has resumed and passed; the new graphics reports
 remain open follow-up work.
 

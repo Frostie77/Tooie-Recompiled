@@ -50,12 +50,16 @@ gameplay acceptance.
 
 ## Evidence
 
+- [27 October focused Jiggy capture](jiggy-capture-odin-20261027.md): six events,
+  one unparsed observation, five images with visible coloured streaks outside
+  the puzzle, both aspect compositions and the reported lower-paw trigger;
+  cause and fix remain unconfirmed.
 - [27 October focused dialogue capture](dialogue-capture-odin-20261027.md): all
   three Original-mode marker reports, letterboxed images, stable recorded Android
   surface and compression-at-entry follow-up; no motion trace or confirmed fix.
 - [26 October Jiggy-challenge lines investigation](jiggy-challenge-lines-investigation-20261026.md):
-  static-like straight-line description, original evidence gap and captured-image
-  drawing/sampling source trace; MD-001 remains open.
+  historical description, original evidence gap, captured-image drawing/sampling
+  trace and the later object-local rectangle/target path; MD-001 remains open.
 - [26 October dialogue screen-shift investigation](dialogue-screen-shift-investigation-20261026.md):
   original evidence review, production CPU camera/aspect probes and the 27 October
   game-camera request/update trace with a generated-code host probe. MD-002 remains

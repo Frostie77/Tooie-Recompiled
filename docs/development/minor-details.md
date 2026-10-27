@@ -8,7 +8,7 @@ and descriptions rather than assuming their severity from a marker number.
 
 | ID | Observation | Status | Evidence |
 |---|---|---|---|
-| MD-001 | Static-like horizontal line during the Jiggy challenge, usually near the top left, reaching about halfway across and disappearing/reappearing quickly | Open — investigating; no confirmed fix | [24 October candidate check](release-candidate-check-20261024.md), original marker 1; Frostie's 26 October description/orientation and 27 October position, extent and flicker clarification are retained in the [source investigation](jiggy-challenge-lines-investigation-20261026.md). The later half-width estimate refines his initial whole-screen description. The original log omits the event period and has no picture of the line; no new capture of the defect is recorded. |
+| MD-001 | Coloured static-like horizontal streaks and vertical fragments during the Jiggy challenge; reported when the paw moves toward the lower screen | Open — investigating; no confirmed fix | [24 October candidate check](release-candidate-check-20261024.md), original marker 1; historical position/extent/flicker clarifications remain in the [source investigation](jiggy-challenge-lines-investigation-20261026.md). The [27 October Jiggy capture](jiggy-capture-odin-20261027.md) retains all six events, one additional unparsed observation and the paw trigger. Five images show noise over the room outside the puzzle in both wide and Original compositions; one still misses the obvious flicker. Actual causal draw remains unconfirmed. |
 | MD-002 | Brief screen shift when dialogue animation begins; reported while the view compresses on entry | Open — investigating; no confirmed fix | [24 October candidate check](release-candidate-check-20261024.md), original marker 2; [investigation](dialogue-screen-shift-investigation-20261026.md) and [27 October three-marker capture](dialogue-capture-odin-20261027.md). New E01–E03 report the jump with Original active; screenshots show letterboxed dialogue and Android surface records stay 1920×1080. Motion and per-frame viewport/camera inputs remain unmeasured; no matched Expand result or actual-event cause is confirmed. |
 
 ## Required review when evidence is uploaded
@@ -39,6 +39,25 @@ screenshots do not establish motion or audio quality.
 
 No entries for a future playtest have been invented. Populate the session
 review and backlog after its actual evidence and details are supplied.
+
+## Focused Jiggy capture — 27 October 2026
+
+The [session review](jiggy-capture-odin-20261027.md) accounts for all six events
+from session `46509b59`: E01/marker 2 `6db1b16a123e453782493a211c87c0b7`,
+E02/marker 2 `1264fe2a7dc64fe39ed24cab01527e93`, E03/marker 3
+`110ed9bfd96242da9f848dc0a52c4b4d`, E04/marker 4
+`d5a3a9be3ef04e99859406c09ead1617`, E05/marker 1
+`38da615732494859b90456a4f9f2d21e`, and E06/marker 1
+`c57d4b70ecf54102aac4f289d6ebf70b`. It also preserves the unparsed
+`static lines` observation at 14:00:54.160 AEDT, all nine raw input lines,
+the six PNG identities and Frostie's accompanying lower-paw trigger report.
+There are zero follow-up/orphan notes. Reused marker numbers are not collapsed.
+
+Associate all seven observations with MD-001 for follow-up. The obvious defect
+is visible outside the board in five images, including Original composition;
+the sixth report remains retained despite its still missing the obvious noise.
+The trigger is reported, not a measured input threshold or proven source cause.
+All existing graphics details remain open.
 
 ## Focused dialogue capture — 27 October 2026
 
