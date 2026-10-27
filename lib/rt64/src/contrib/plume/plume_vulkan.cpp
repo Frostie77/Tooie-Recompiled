@@ -2273,7 +2273,8 @@ namespace plume {
         for (const auto &binding : setLayout->setBindings) allocatedCounts.push_back(binding.descriptorCount);
         if (desc.lastRangeIsBoundless) allocatedCounts.back() = boundlessRangeSize;
         const char *qualification = androidDescriptorPoolQualification(device->physicalDeviceProperties, device->driverProperties);
-        const bool qualified = std::strcmp(qualification, "adreno-740-proprietary-declared-bound") == 0;
+        const bool qualified = std::strcmp(qualification, "adreno-740-proprietary-declared-bound") == 0 ||
+            std::strcmp(qualification, "adreno-650-proprietary-declared-bound") == 0;
         const auto poolPlan = planAndroidDescriptorPool(setLayout->setBindings, setLayout->bindingFlags, allocatedCounts,
             qualified, desc.lastRangeIsBoundless, device->descriptorIndexingProperties.maxUpdateAfterBindDescriptorsInAllPools,
             device->liveUpdateAfterBindSlots);

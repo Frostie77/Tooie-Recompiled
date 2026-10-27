@@ -7,13 +7,18 @@
 namespace plume {
 // Android-only caller. The raw driverVersion encoding was not supplied in the
 // Odin evidence; do not invent a version cutoff from Logcat's "0676.53".
+// Adreno 650 is an issue #26 test candidate; its need for this policy has not
+// been measured on hardware. Keep the device/driver qualification exact.
 inline const char *androidDescriptorPoolQualification(const VkPhysicalDeviceProperties &device,
     const VkPhysicalDeviceDriverProperties &driver) {
     if (device.vendorID != 0x5143) return "different-vendor";
     if (driver.sType != VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES) return "driver-properties-unavailable";
     if (driver.driverID != VK_DRIVER_ID_QUALCOMM_PROPRIETARY) return "different-driver";
-    if (std::strcmp(device.deviceName, "Adreno (TM) 740") && std::strcmp(device.deviceName, "Adreno 740")) return "different-gpu";
-    return "adreno-740-proprietary-declared-bound";
+    if (!std::strcmp(device.deviceName, "Adreno (TM) 740") || !std::strcmp(device.deviceName, "Adreno 740"))
+        return "adreno-740-proprietary-declared-bound";
+    if (!std::strcmp(device.deviceName, "Adreno (TM) 650") || !std::strcmp(device.deviceName, "Adreno 650"))
+        return "adreno-650-proprietary-declared-bound";
+    return "different-gpu";
 }
 
 struct VulkanDescriptorPoolPlan {
