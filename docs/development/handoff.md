@@ -6,33 +6,6 @@ Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).
 Use the current repository refs and workflow profile for exact source identities.
 
-## Working agreement and continuity
-
-Frostie asked on 28 October to keep this handoff updated as work proceeds,
-including how we work. Record meaningful changes, exact source/build/artifact
-identities, checks and their limits, user-reported results, decisions, unresolved
-questions and the immediate next action. Preserve earlier failed results and
-raw evidence. Maintain the active work branch; Frostie handles merges.
-
-- Keep guidance concise: one step and one complete copy/paste command block at
-  a time. Name the shell (normally WSL Ubuntu), assess the returned output, then
-  give the next command. Avoid manual source edits when Codex can do the work.
-- Codex handles repository investigation, engineering changes, automated checks,
-  commits and pushes. ChatGPT coordinates, reviews through GitHub, prepares
-  local build/test instructions and reporter drafts, and interprets results.
-  Frostie has authorized ChatGPT to maintain this handoff with completed work.
-- Local development uses Windows with WSL Ubuntu and the established local
-  builder. Verify current source, candidate folder, APK identity and recorder
-  before reusing a command from an older session.
-- Preserve each app's ROM, saves, settings, mods, signing identity and evidence.
-  Odin installation, launch and retries require explicit authorization within
-  the requested scope; resolve an unknown result before retrying.
-- Prepare reporter replies, issue/PR comments and release text as drafts in chat.
-  Frostie sends replies, merges, closes issues and publishes releases.
-- Keep host/CI checks, downloaded-artifact verification and actual device
-  acceptance separate. Display is the intended everyday Odin framerate;
-  Original is a diagnostic comparison, not an accepted limb fix.
-
 ## Current release
 
 [v1.1.0 / code 5](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) is published and GitHub marks it as
@@ -276,26 +249,17 @@ All seven ARM64 ELF hashes and Build IDs match the report; libmain contains
 `io.github.banjotooierecompiled.gputest.gf2166cfa4bf7`, with touch controls
 and the driver picker. It does not include PR #41's limb experiments.
 
-Baseline comparison checked on 28 October: this is current main plus the
-targeted optional-RT startup guard and GPU Test packaging, not an exact
-v1.1.0 rebuild with only that guard. Relative to public v1.1.0 source
-`0b0acfa54d2f689d6febb4dee29710fdde9fbb80`, it also includes the merged
-Save Management export/import/recovery feature, moved Touch tab and renamed
-Invert Aiming y-axis setting. Existing touch controls, mod support and the
-driver picker are retained. The test has its own app data and does not
-automatically share the release app's saves/settings/mods. Normal raster
-rendering is retained; the skipped setup is the unused optional RT compose
-pipeline. PR #41's limb experiments and later Jiggy/dialogue corrections are
-not in this test. Build success does not establish Redmi compatibility.
+The test is based on main after v1.1.0 and therefore also includes merged
+Save Management and settings-presentation changes. Touch controls, mods and
+the driver picker are retained. GPU Test uses separate private app data;
+normal raster rendering is unchanged. PR #41's limb experiments and later
+Jiggy/dialogue corrections are absent.
 
-Next: Frostie sends the prepared Redmi test draft with that ZIP link. The
-reporter retains the release app, installs only the GPU Test APK, selects
-**System Default**, reports the screen reached and supplies a fresh startup log
-whether it succeeds or fails. If gameplay is reached, check movement, touch
-controls, sound and close/reopen. Android version remains to be confirmed.
-The reply is drafted only; posting, installation and Redmi acceptance are
-unconfirmed. No replacement Mali driver has been verified. Keep each device's
-evidence separate and leave reporter replies and issue closures to Frostie.
+Next engineering check: test this APK on the Redmi with **System Default**,
+record the screen reached and obtain a fresh startup log on success or failure.
+If gameplay is reached, check movement, touch, sound and close/reopen.
+Android version and device acceptance remain unconfirmed; no replacement
+Mali driver has been verified.
 
 Touch controls are implemented and published in v1.1.0 after focused Odin acceptance.
 The earlier combined c849 Poco test included the accepted touch/audio source
