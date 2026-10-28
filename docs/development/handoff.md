@@ -17,19 +17,15 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The retained Debug now uses built source `f37c1e2a10b76d9e75c7ded5468df5dd969cf486`
-(build 110, engineering code `64215509e920`). CI/download verification and the
-established local signer/payload checks passed. Frostie supplied `adb install -r`
-Success; signed APK SHA-256 is
-`504e7320b6d1a371feab4dcebaac205303dd89dedb55d1dabc51474d09b99666`.
-Local folder: `touch-f37c1e2a10b7-606a8a3a`. Exact installed-hash readback and optional request activation are now confirmed;
-native observer delivery is now verified; the cleanup terminal line remains pending. The checked temporary
-capture helper enables only the private request and removes it after recording;
-see [the observer record](graphics-input-diagnostics-20261027.md). The
-[next limb candidate / build 111](character-limb-copy-candidate-20261028.md)
-now passes CI and independent downloaded-APK/native/helper verification. Its
-built source is `ba1675a593ab`; the Odin replacement install and comparison
-are still pending, so build 110 remains the last confirmed installed Debug.
+The retained Debug is now **build 111**, built source
+`ba1675a593ab9ee9e4fe19a5bc92614105762c3f`. The
+[28 October Odin review](character-limb-flight-check-odin-20261028.md)
+accepts a focused Display check: Frostie records no gaps seen on the previously
+affected NPC and Banjo/Kazooie. All seven events, one note, ten raw inputs and
+seven native images are reviewed; broader characters/modes/devices remain open.
+The same capture establishes the manual normal-flight comparison: Kazooie
+carrying Banjo in the Mayan area works with aiming inversion Off and has the
+flight/reticle mismatch with it On. This input problem remains open.
 
 The prior build-109 source `6da2a897867b50fa72d37c3c3897fea66f4e4373`
 (candidate code `fe6e40857c4b`) used signed SHA-256
@@ -117,13 +113,22 @@ see the [device record](device-compatibility.md) for scope.
 
 ## Current priorities
 
+The limb copy-ownership candidate now has the focused build-111 Display pass
+above. Current input work is the [stationary/flight control separation](flying-aim-controls-20261028.md):
+keep **Invert Aiming y-axis** for normal stationary aim; add **Invert Flight
+y-axis** directly underneath (Off: up means down, On: up means up, with flight
+and aiming coherent); add **Swap Joystick Aiming Controls** for stationary
+aiming only. Preserve Kazooie-rifle minigame controls. The UFO may follow a
+shared stationary aiming path under Frostie's clarification. None of these
+input changes is implemented yet. HUD component anchoring remains separate.
+
 The [build-110 input capture](graphics-input-check-odin-20261028.md) is now fully
 reviewed: 11 events, 13 inputs, zero notes/orphans, all eight PNGs, PID 29847
 present in all 185 checks, 312,262 runtime records exactly reconciled. All eight
 scene domains arrive in 208 bounded samples. The camera-NPC Display/Original
 comparison and unchanged HUD placement are retained. E11 records MD-014;
-controlled Kazooie flight is the likely case, UFO behavior and invert On/Off are
-unconfirmed, and Frostie will confirm later. Do not request marker 11 again.
+the original exact mode and On/Off state were then unconfirmed. The later
+build-111 comparison and current requested UFO scope are recorded above. Do not request marker 11 again.
 The capture ends with `save`; the terminal request-cleanup PASS remains pending.
 
 The recorded input identifies mixed owned/unowned matrix reloads inside one
@@ -139,9 +144,10 @@ cause remains independent and unproved.
 Frostie's intended everyday framerate is **Display**. Manual 60 is a controlled
 comparison only. The [build-109 follow-up](graphics-framerate-follow-up-odin-20261027.md)
 rejects the second limb candidate at both Manual 60 and Display; Original is fine.
-Keep MD-005 open and PR #41 draft. The constructed mesh-edge cases pass, but
-cannot stand in for the actual NPC. Next trace that draw's vertex/bone inputs,
-ownership/matching, weights and rendered outputs before another policy change.
+The constructed mesh-edge cases alone could not stand in for the actual NPC;
+the later build-110 input trace led to the copy-ownership candidate and the
+focused build-111 pass above. Broader MD-005 coverage remains open and PR #41
+stays draft pending review/remaining work.
 The later [22:27 session](graphics-check-odin-20261027-222732.md) adds standalone
 Kazooie wing reports at Display with target 120; no higher-framerate limb pass is
 established. An [optional input observer](graphics-input-diagnostics-20261027.md)
@@ -173,10 +179,10 @@ including the build-107 video, remain retained. Frostie merges, replies and
 closes issues; no new release or publication is requested.
 
 The new installed-build recorder is
-`$HOME/.local/share/tooie-recompiled/candidates/touch-f37c1e2a10b7-606a8a3a/capture-touch.sh`.
-For the next diagnostic session use the pinned temporary scene-capture helper
-around this recorder, so request-file cleanup runs after `save`. Normal recorder
-use does not enable the observer. Build 110's complete input evidence is reviewed above; no correction is accepted yet.
+`$HOME/.local/share/tooie-recompiled/candidates/touch-ba1675a593ab-a8b00c3d/capture-touch.sh`.
+Use this build's generated recorder for another installed-build session. It does
+not enable the optional scene-input observer; the build-111 capture used normal
+recording. Build 110's earlier complete observer evidence remains reviewed above.
 The first build-109 upload ended at the playing prompt. The later 22:27 upload
 has a verified attached gameplay window and original PID 20423, ended on `save`;
 all 14 events/18 inputs and six images have been reviewed. Each replacement Debug build requires its own generated

@@ -1,7 +1,9 @@
 # Same-pose fixed-matrix reload candidate — 28 October 2026
 
-Status: host and Android build/package checks pass; Odin validation pending.
-This is a candidate, not a device-accepted limb fix.
+Status: host and Android build/package checks pass; the [28 October build-111
+Odin check](character-limb-flight-check-odin-20261028.md) now supplies a focused
+Display pass for the reported NPC and Banjo/Kazooie joints. Broader character,
+mode and device coverage remains open.
 
 The [build-110 input review](graphics-input-check-odin-20261028.md) finds exactly
 equal submitted matrices taking different intermediate paths because fixed
@@ -65,7 +67,8 @@ also fails that check: **0.560229 world units** of copied-vertex drift at weight
 0.578295-unit separation measured directly in the captured full-model inputs.
 No sanitizer failure occurs in the passing candidate. Python compilation and
 whitespace checks pass. CI now includes the copy regression alongside the
-retained vertex/seam/observer checks. No hardware pass has been accepted.
+retained vertex/seam/observer checks. No hardware pass was accepted at that host-only stage; the later focused
+build-111 Display check is recorded above.
 
 [CI run 111](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40519631786)
 completed successfully. Job `122242877800` passes host checks, ARM64 compilation,
@@ -86,15 +89,16 @@ has SHA-256 `7be2bcc2f28ab0dcce307461c1673305e6311a1590ad0ba7162adb97e8e3bd11`
 and Build ID `bb9478cb4b1876fdbf72a5480d090c494aae8d2d`. The embedded native
 version, unchanged local signer (`b398b7b7…`) and all three pinned capture
 helpers also match. This verifies the CI artifact, not a locally established
-Debug signature or device behavior. Local signing/update remain to be performed
-by Frostie. Odin still has the signed build-110 `f37c1e2a10b7` APK.
+Debug signature or device behavior. That was the pre-install status. Frostie's subsequent replacement install and
+source/hash-bound build-111 capture now confirm the new APK was tested on Odin;
+see the focused result above.
 
 The retained actor/skeletal suite also passes: generated actor ownership and
 lifetime guards, rigid-model matching and all six skeletal trajectory/history/
 unsafe-input cases, with the exact `60c0c89` parent failing its trajectory control
 as intended. No sanitizer failure is reported.
 
-Next test the visible NPC and player/solo-Kazooie joints at Display after a
-verified candidate build. Original remains a diagnostic comparison. Keep
-MD-005 open; MD-011 logo jitter, MD-012 HUD placement and MD-014 flying aim are
+The focused NPC and Banjo/Kazooie Display check now passes. Solo-Kazooie and
+broader character/mode coverage remain open; Original remains a diagnostic
+comparison. MD-011 logo jitter, MD-012 HUD placement and MD-014 flying aim are
 separate work. All confirmed fixes are intended for the next patch.

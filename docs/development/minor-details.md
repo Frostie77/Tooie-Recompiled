@@ -11,6 +11,24 @@ and descriptions rather than assuming their severity from a marker number.
 | MD-001 | Coloured static-like horizontal streaks and vertical fragments during the Jiggy challenge; reported when the paw moves toward the lower screen | Focused Odin pass — next update; broader coverage open | [24 October candidate check](release-candidate-check-20261024.md), original marker 1; historical position/extent/flicker clarifications remain in the [source investigation](jiggy-challenge-lines-investigation-20261026.md). The [27 October Jiggy capture](jiggy-capture-odin-20261027.md) retains all six events, one additional unparsed observation and the paw trigger. Five images show noise over the room outside the puzzle in both wide and Original compositions; one still misses the obvious flicker. [Candidate](graphics-fix-candidates-20261027.md): bound partial attachment clears; backend regression passes. Build-107 E01 and Frostie report the static gone; see the [scoped device record](graphics-check-odin-20261027.md). The exact original causal draw remains unconfirmed. |
 | MD-002 | Brief screen shift when dialogue animation begins; reported while the view compresses on entry | Focused Odin pass — next update; broader coverage open | [24 October candidate check](release-candidate-check-20261024.md), original marker 2; [investigation](dialogue-screen-shift-investigation-20261026.md) and [27 October three-marker capture](dialogue-capture-odin-20261027.md). New E01–E03 report the jump with Original active; screenshots show letterboxed dialogue and Android surface records stay 1920×1080. Motion and per-frame viewport/camera inputs remain unmeasured; no matched Expand result or actual-event cause is confirmed. [Candidate](graphics-fix-candidates-20261027.md): keep gameplay camera/projection together when the viewport changes; 25 CPU cases pass. Build-107 E02 records `no dialogue shunt`; Frostie says it appears gone. See the [scoped device record](graphics-check-odin-20261027.md); this is not a full Original/Expand/device matrix. |
 
+## Build-111 limb and normal-flight comparison — 28 October 2026
+
+The [complete review](character-limb-flight-check-odin-20261028.md) retains all
+seven events, one linked note, ten raw inputs and seven native images.
+Sequences 1–4 record the focused **Display limb pass** for the reported NPC
+and Banjo/Kazooie. Preserve sequence 2's exact note target and the repeated
+3/4 markers. Earlier failed candidates remain evidence; this does not establish
+all characters/modes/devices.
+
+Sequences 5/6 report normal free flight in the Mayan area with Kazooie carrying
+Banjo and **Invert Aiming y-axis Off** working; sequences 7/8 report the
+mismatch returning with it On. MD-014 remains open. The source/settings scope
+now separates normal stationary aim, coherent flight steering/aim inversion
+and a stationary-only stick-role swap, retaining rifle-minigame controls.
+The UFO may follow a shared stationary aiming path under Frostie's clarification.
+See the [requirements](flying-aim-controls-20261028.md). No input implementation,
+HUD fix or logo-jitter resolution is claimed.
+
 ## Build-110 scene-input session — 27–28 October 2026
 
 The [complete review](graphics-input-check-odin-20261028.md) retains all **11
@@ -30,7 +48,7 @@ line remains outside the uploaded archive.
 
 | ID | Observation | Status | Evidence and follow-up |
 |---|---|---|---|
-| MD-014 | Flying and aiming simultaneously sends the reticle opposite the direction of travel, making shooting impractical; stationary aiming works with the existing invert feature | Open — next patch investigation | The [build-110 review](graphics-input-check-odin-20261028.md) verifies marker 11 / E11, ID `d6ce96d79b4443b3abd5d62658188d7d`, 00:10:05.479 AEDT, literal description and native reticle image. The [report/source review](flying-aim-controls-20261028.md) retains every clarification. Controlled Kazooie flight is the likely case; Frostie will confirm later and the UFO expectation is untested. Preserve working stationary inversion; no On/Off cause or control fix is established. |
+| MD-014 | Flying and aiming simultaneously sends the reticle opposite the direction of travel, making shooting impractical; stationary aiming works with the existing invert feature | Open — next patch investigation | The [build-110 review](graphics-input-check-odin-20261028.md) verifies marker 11 / E11, ID `d6ce96d79b4443b3abd5d62658188d7d`, 00:10:05.479 AEDT, literal description and native reticle image. The [report/source review](flying-aim-controls-20261028.md) retains every clarification. The later build-111 comparison identifies normal free flight with Kazooie carrying Banjo and a manual Off-pass/On-fail reproduction. Requested stationary/flight/swap settings and the conditional shared UFO scope are in that source review. Preserve the old marker 11; no input fix is implemented yet. |
 
 ## Required review when evidence is uploaded
 
@@ -184,7 +202,7 @@ All entries remain open and their severity is provisional.
 |---|---|---|---|
 | MD-003 | Reported unusual frames; the first description is only “strange” | Open — detail needed | Events E01 and E02 (both marker 1), screenshots 001–002. Clarify the visible change and reproduce it before assigning a rendering cause. |
 | MD-004 | Screen shaking | Open — reproduce | Events E03–E06 (markers 3–6), screenshots 003–006, plus journal observation J04 entered as `33 screen shaking`. Reproduce the camera/action and distinguish it from the earlier dialogue shift MD-002. Static screenshots cannot establish motion. |
-| MD-005 | Unusual character rendering; later reported animated limb separation/rejoining | Open — both candidate checks unsuccessful | Original E07–E09 (markers 7–9), screenshots 007–009 and journal J10 remain distinct. The [27 October build-107 review](graphics-check-odin-20261027.md) adds E03–E06, four native images and `IMG_8712.mp4`, with Frostie reporting Banjo/Kazooie and NPCs affected. The [source candidate](character-limb-separation-20261027.md) targets active CPU-deformed meshes. The [build-108 check](character-limb-check-odin-20261027.md) adds E01 `38adbad3e19b4654b983692db7b2c9c0` / `limbs still seperate` and E02 `d779332708d846ea864166ddbddf2310` / `limbs separating`; all four inputs and both images are retained. Frostie subsequently reports the gap disappears at Original framerate (manual comparison, no new capture); the second [mesh-edge candidate](character-limb-matrix-candidate-20261027.md) also failed Frostie's Manual-60 and Display checks, while Original is fine. The [build-109 follow-up](graphics-framerate-follow-up-odin-20261027.md) retains exact reports and installation identity. No common cause with the older vague reports is assumed. |
+| MD-005 | Unusual character rendering; later reported animated limb separation/rejoining | Focused build-111 Odin Display pass — broader coverage open | Original E07–E09 (markers 7–9), screenshots 007–009 and journal J10 remain distinct. The [27 October build-107 review](graphics-check-odin-20261027.md) adds E03–E06, four native images and `IMG_8712.mp4`, with Frostie reporting Banjo/Kazooie and NPCs affected. The [source candidate](character-limb-separation-20261027.md) targets active CPU-deformed meshes. The [build-108 check](character-limb-check-odin-20261027.md) adds E01 `38adbad3e19b4654b983692db7b2c9c0` / `limbs still seperate` and E02 `d779332708d846ea864166ddbddf2310` / `limbs separating`; all four inputs and both images are retained. Frostie subsequently reports the gap disappears at Original framerate (manual comparison, no new capture); the second [mesh-edge candidate](character-limb-matrix-candidate-20261027.md) also failed Frostie's Manual-60 and Display checks, while Original is fine. The [build-109 follow-up](graphics-framerate-follow-up-odin-20261027.md) retains exact reports and installation identity. No common cause with the older vague reports is assumed. |
 
 The session review retains each full event ID, sequence, receipt timestamp,
 literal description and evidence filename. J04 and J10 were not accepted marker
