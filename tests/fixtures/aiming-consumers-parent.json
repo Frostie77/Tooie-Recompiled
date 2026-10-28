@@ -28,6 +28,50 @@
     "func_8009EF34": {
       "file": "RecompiledFuncs/funcs_23.c",
       "sha256": "2fa43e6ae0b05437a98e6045d63b46ef61d7a5eebfd87c5e546e6c043a35eced"
+    },
+    "bafly_entrypoint_10": {
+      "file": "RecompiledFuncs/funcs_39.c",
+      "sha256": "e2ace866e912667a5778814813f99ea8894012133970a0d689ae37f115c129a3"
+    },
+    "bafpctrl_entrypoint_1": {
+      "file": "RecompiledFuncs/funcs_39.c",
+      "sha256": "585eaf06d59530908f7ec57a9ea20f77637ef1c52421e96524cc1353ef630d54"
+    },
+    "bafpctrl_entrypoint_4": {
+      "file": "RecompiledFuncs/funcs_39.c",
+      "sha256": "1687cc3440d877f69d45eb182e0ccc4355c434096a46a68797008c2497929a03"
+    },
+    "bafpctrl_entrypoint_6": {
+      "file": "RecompiledFuncs/funcs_39.c",
+      "sha256": "32fda7f06a40d3674688b77280ecce75409e82a4a83e134598eae0db14be0988"
+    },
+    "func_8009E6F8": {
+      "file": "RecompiledFuncs/funcs_22.c",
+      "sha256": "6723d077c2ddebc7c228544f3f898769c025cbc897a439721d332b2662f82d75"
+    },
+    "func_800919D0": {
+      "file": "RecompiledFuncs/funcs_20.c",
+      "sha256": "dfbc9a8fdc5876744477661847ee8cd1ef630ed35b4dd7bd4f1f8a4cfa33b0ca"
+    },
+    "func_800F10B4": {
+      "file": "RecompiledFuncs/funcs_33.c",
+      "sha256": "a5c49dbceb21bf4fd573157e95aa09ddb72f09a422809eced66319a462df3933"
+    },
+    "func_800BCF90": {
+      "file": "RecompiledFuncs/funcs_26.c",
+      "sha256": "3b8268d0f6bc882bd1f221333af80b530f3edc72e24e1d5c3d2b2772f65e4580"
+    },
+    "func_800BCCD8": {
+      "file": "RecompiledFuncs/funcs_26.c",
+      "sha256": "5f2450c654a7b771cfad1ca5e66bb764158d8a9ad059d82e67583ef6e5e5f799"
+    },
+    "func_800BCCF4": {
+      "file": "RecompiledFuncs/funcs_26.c",
+      "sha256": "4ea59d3bb324fdb4b65e7624c7b5e74dba1386090400a0acf56d51c02ee1e894"
+    },
+    "func_8009CAAC": {
+      "file": "RecompiledFuncs/funcs_22.c",
+      "sha256": "87563e9034f9795bcf4006c0d3320c036a66c6fa2eff56743f93415e6f9c3c1b"
     }
   }
 }

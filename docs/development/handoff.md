@@ -21,7 +21,8 @@ The retained Debug is now **build 111**, built source
 `ba1675a593ab9ee9e4fe19a5bc92614105762c3f`. The
 [28 October Odin review](character-limb-flight-check-odin-20261028.md)
 accepts a focused Display check: Frostie records no gaps seen on the previously
-affected NPC and Banjo/Kazooie. All seven events, one note, ten raw inputs and
+affected NPC and Banjo/Kazooie, and explicitly accepts this limb-gap test as
+successful. Opening-logo bouncing remains open as MD-011. All seven events, one note, ten raw inputs and
 seven native images are reviewed; broader characters/modes/devices remain open.
 The same capture establishes the manual normal-flight comparison: Kazooie
 carrying Banjo in the Mayan area works with aiming inversion Off and has the
@@ -117,10 +118,19 @@ The limb copy-ownership candidate now has the focused build-111 Display pass
 above. Current input work is the [stationary/flight control separation](flying-aim-controls-20261028.md):
 keep **Invert Aiming y-axis** for normal stationary aim; add **Invert Flight
 y-axis** directly underneath (Off: up means down, On: up means up, with flight
-and aiming coherent); add **Swap Joystick Aiming Controls** for stationary
-aiming only. Preserve Kazooie-rifle minigame controls. The UFO may follow a
-shared stationary aiming path under Frostie's clarification. None of these
-input changes is implemented yet. HUD component anchoring remains separate.
+and aiming coherent); place **Swap Joystick Aiming Controls** directly below
+flight inversion for stationary aiming only. Preserve Kazooie-rifle minigame controls. The UFO may follow a
+shared stationary aiming path under Frostie's clarification. These changes are
+now implemented in the controls candidate; Odin acceptance is pending. The
+flight option governs both physical pitch and the airborne cursor. The swap
+exchanges both physical sticks' analog bindings and C-button roles for each
+stationary-aim read, preserving saved profiles and restoring roles on exit.
+Scope uses authored state-handler identities and live controller ownership,
+not map guesses. See the linked source record for the consumer boundaries and
+validation. HUD component anchoring and opening-logo bouncing remain open.
+The controls regression passes 2,416 complete guest-consumer cases with
+ASan/UBSan; nine deliberately broken policies/hooks fail as expected. Native
+touch merging and Android Java compilation pass. This is not Odin acceptance.
 
 The [build-110 input capture](graphics-input-check-odin-20261028.md) is now fully
 reviewed: 11 events, 13 inputs, zero notes/orphans, all eight PNGs, PID 29847

@@ -2,7 +2,8 @@
 
 ## Report and evidence status
 
-Track this separately as **MD-014**, open for the next patch investigation.
+Track this separately as **MD-014**. The scoped controls candidate is now
+implemented; Odin acceptance remains pending.
 The later [build-111 comparison](character-limb-flight-check-odin-20261028.md)
 now identifies normal free flight with Banjo and a manual Off/On reproduction.
 The build-110 record below is historical; preserve its original uncertainty.
@@ -60,7 +61,7 @@ Implement the following separate settings through verified gameplay consumers:
 |---|---|
 | **Invert Aiming y-axis** | Restrict the existing saved inversion to normal stationary aiming. Preserve its existing Off/On vertical behavior there. Exclude the Kazooie-as-rifle minigames/shooter sections and normal flight from this setting. |
 | **Invert Flight y-axis** | Place immediately underneath Invert Aiming y-axis. During normal Kazooie flight carrying Banjo, apply one coherent Y policy to both flight steering and aiming. **Off:** original aircraft-style input, stick up means down and stick down means up. **On:** stick up means up and stick down means down. Stationary aim and rifle minigames are outside this setting. |
-| **Swap Joystick Aiming Controls** | **Off:** existing stick assignments. **On:** exchange the left and right sticks' aiming-mode roles, including both X/Y axes, only while normal stationary aiming is active. Restore normal assignments immediately on leaving that mode. Do not swap buttons or apply a global walking/camera/flight remap. |
+| **Swap Joystick Aiming Controls** | Place immediately underneath Invert Flight y-axis. **Off:** existing stick assignments. **On:** exchange the left and right sticks' aiming-mode roles, including both X/Y axes, only while normal stationary aiming is active. Restore normal assignments immediately on leaving that mode. Do not swap buttons or apply a global walking/camera/flight remap. |
 
 Frostie's initial request left UFO controls alone. His subsequent clarification
 allows the UFO to follow the regular stationary aiming control path if it is
@@ -82,10 +83,10 @@ states, the stick swap, entry/exit restoration, persistence and rifle exclusions
 through actual consumers, with a failing prior-code control. Retain working
 movement, normal camera and unaffected input paths.
 
-These are requirements and a confirmed manual reproduction. No input fix or
-new setting is implemented or device-accepted yet.
+These requirements and the manual reproduction define the candidate below.
+The old build-111 APK does not contain these input changes.
 
-## Current implementation inspected
+## Implementation before separation (build 111)
 
 `src/aiming_controls.cpp` maintains an atomic `aiming_invert` bool, default Off,
 published by the existing General configuration callback. Its bridge changes
@@ -111,7 +112,7 @@ these retained tests. They do **not** establish flying/shooting compatibility.
 The original [aiming implementation record](history/android-aiming-invert-20261022.md)
 retains the exact scope; do not reinterpret stationary acceptance as an all-modes pass.
 
-## Next discriminator and correction
+## Investigation sequence
 
 1. Identify the scene/form and recorded setting state; retain marker 11 and its
    follow-up note. An Off comparison can distinguish the preference from an
@@ -127,7 +128,63 @@ retains the exact scope; do not reinterpret stationary acceptance as an all-mode
    retained stationary/first-person/config tests. Verify the new candidate on
    Odin in the same segment before describing the problem as fixed.
 
-No input runtime changes, new input build, merge, release or issue closure were
-performed for MD-014. The separate graphics work now has a matrix-copy ownership
-candidate; it does not correct this control report. HUD placement and logo jitter remain open; the later build-111 limb check has
-a focused Display pass, with broader coverage still open.
+## Scoped controls candidate
+
+The General menu now keeps **Invert Aiming y-axis**, then **Invert Flight
+y-axis**, then **Swap Joystick Aiming Controls**. The saved keys are
+`aiming_invert`, `flight_invert` and `aiming_swap_sticks`. All default Off;
+existing `aiming_invert` values and other settings survive old-config loading.
+
+The old bridge inverted the airborne cursor without changing flight pitch.
+The new policy reads the current state through the authored `player+0x120`
+state object and its handler table (`func_8009E6F8` / `func_8009CAAC`). Normal
+Banjo/Kazooie flight is identified by the permanent `_bsbfly_entrypoint_0..9`
+stubs, not a guessed state ID or an overlay's current load address. The shared
+`bafly` consumer also serves bee flight, solo Kazooie and gliding; those are
+outside the new flight preference.
+
+| Consumer | Maintained hook | Policy |
+|---|---|---|
+| `func_808000B4_baeggaim` | Before `0x80800100`, player from saved `sp+0x28` | Flight preference for normal flight; aiming preference for active stationary aim |
+| `func_808002A4_bafpctrl` | Before `0x80800320`, player in `s0` | Scoped aiming pitch under the original camera/input gates |
+| `bafly_entrypoint_10` | Before `0x80800590`, player from saved `sp+0x20` | Same flight preference applied to physical pitch |
+| `bsfirstp` rifle/FPS controls | Both old inversion hooks removed | Original aiming and walking behavior |
+
+Stationary aim requires the actual `bafpctrl` active mode (byte `+0x10 == 3`),
+stationary camera (`+0x11 == 0`) and enabled input (`+0x13 != 0`). Normal flight
+and all `bsfirstp` state handlers are excluded. A UFO sharing this stationary
+path may inherit the stationary options, as authorized; it is not classified
+as Banjo/Kazooie flight.
+
+The stick swap runs in the physical-input callback for the active player's
+controller, following the canonical player slots and the game's input-history
+object (`player+0x40 -> pointer -> object`, live mode byte `+5 == 2`, port at
+`+6`). These fields are traced through `func_800919D0`, `func_800BCF90` and
+`func_800BD2D0`. The input object is a pointer, not a controller index.
+`profiles::get_n64_input` exchanges left/right analog bindings for that one
+read, including the sticks' C-button roles and both binding slots. Physical
+buttons, triggers and keyboard bindings retain their mappings. Exiting aiming,
+disabling the option or entering a menu stops the swap without editing stored
+profiles. Android touch input merges afterward. Aim inversion therefore follows
+whichever physical stick supplies the aiming axes.
+
+The expanded regression uses complete retained guest consumers and original
+parent bodies, the real configuration/file path and production profile reader.
+It checks independent preferences, steering/reticle coherence, rifle/walking
+exclusions, both stick roles, mode exit, controller ownership, saved settings and
+RAM/ABI preservation. Peripheral camera/timer/device services are controlled;
+this is a host regression, not a ROM or device playthrough.
+
+Validation: all **2,416** complete guest-consumer cases pass with ASan/UBSan,
+alongside the real profile/configuration checks. Nine deliberate controls fail
+their expected assertions: prior broad inversion, missing hooks, rifle/walking/
+horizontal inversion, missing flight steering, missing swap, a one-way swap and
+a broken load callback. Native touch merging and the full Android Java compile
+also pass; APK compilation/packaging and the device comparison remain separate.
+
+The same Mayan-area Odin comparison remains required before accepting MD-014:
+stationary inversion, flight Off/On with steering and reticle together, the
+stationary-only swap, exit restoration and unchanged rifle-minigame controls.
+Opening-logo bouncing (MD-011) and HUD anchoring (MD-012) remain separate open
+investigations. Frostie explicitly accepts the build-111 limb-gap test as
+successful; that result does not resolve either issue.

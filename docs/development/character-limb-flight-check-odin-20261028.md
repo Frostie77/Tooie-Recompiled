@@ -5,6 +5,9 @@ limb separation. MD-014 flight aiming remains open:** the existing aiming
 inversion is reported correct Off and mismatched On during normal free flight
 with Kazooie carrying Banjo. No flight control change is in this APK.
 
+Frostie explicitly accepts this limb-gap test as successful. Opening-logo
+bouncing (MD-011) still needs investigation; this limb result does not resolve it.
+
 ## Evidence identity and scope
 
 - Uploaded Share ZIP:

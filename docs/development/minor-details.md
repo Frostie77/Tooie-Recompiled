@@ -18,7 +18,8 @@ seven events, one linked note, ten raw inputs and seven native images.
 Sequences 1–4 record the focused **Display limb pass** for the reported NPC
 and Banjo/Kazooie. Preserve sequence 2's exact note target and the repeated
 3/4 markers. Earlier failed candidates remain evidence; this does not establish
-all characters/modes/devices.
+all characters/modes/devices. Frostie explicitly accepts this limb-gap test as
+successful; opening-logo bouncing remains open as MD-011.
 
 Sequences 5/6 report normal free flight in the Mayan area with Kazooie carrying
 Banjo and **Invert Aiming y-axis Off** working; sequences 7/8 report the
@@ -26,8 +27,9 @@ mismatch returning with it On. MD-014 remains open. The source/settings scope
 now separates normal stationary aim, coherent flight steering/aim inversion
 and a stationary-only stick-role swap, retaining rifle-minigame controls.
 The UFO may follow a shared stationary aiming path under Frostie's clarification.
-See the [requirements](flying-aim-controls-20261028.md). No input implementation,
-HUD fix or logo-jitter resolution is claimed.
+See the [controls candidate](flying-aim-controls-20261028.md). The scoped input
+settings are now implemented and await Odin acceptance. HUD anchoring and
+opening-logo bouncing remain unresolved.
 
 ## Build-110 scene-input session — 27–28 October 2026
 
@@ -48,7 +50,7 @@ line remains outside the uploaded archive.
 
 | ID | Observation | Status | Evidence and follow-up |
 |---|---|---|---|
-| MD-014 | Flying and aiming simultaneously sends the reticle opposite the direction of travel, making shooting impractical; stationary aiming works with the existing invert feature | Open — next patch investigation | The [build-110 review](graphics-input-check-odin-20261028.md) verifies marker 11 / E11, ID `d6ce96d79b4443b3abd5d62658188d7d`, 00:10:05.479 AEDT, literal description and native reticle image. The [report/source review](flying-aim-controls-20261028.md) retains every clarification. The later build-111 comparison identifies normal free flight with Kazooie carrying Banjo and a manual Off-pass/On-fail reproduction. Requested stationary/flight/swap settings and the conditional shared UFO scope are in that source review. Preserve the old marker 11; no input fix is implemented yet. |
+| MD-014 | Flying and aiming simultaneously sends the reticle opposite the direction of travel, making shooting impractical; stationary aiming works with the existing invert feature | Candidate implemented — Odin comparison pending | The [build-110 review](graphics-input-check-odin-20261028.md) verifies marker 11 / E11, ID `d6ce96d79b4443b3abd5d62658188d7d`, 00:10:05.479 AEDT, literal description and native reticle image. The [report/source review](flying-aim-controls-20261028.md) retains every clarification. The later build-111 comparison identifies normal free flight with Kazooie carrying Banjo and a manual Off-pass/On-fail reproduction. Requested stationary/flight/swap settings and the conditional shared UFO scope are in that source review. Preserve the old marker 11. The scoped controls candidate is implemented; a new Odin check is still required. |
 
 ## Required review when evidence is uploaded
 

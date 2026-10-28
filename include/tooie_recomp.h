@@ -68,7 +68,8 @@ void tooie_yield_pending_sound(uint8_t* rdram, recomp_context* ctx);
 void tooie_clear_dp_freeze(uint8_t* rdram, recomp_context* ctx);
 
 // Invert only an aiming consumer's returned vertical stick sample.
-void tooie_aiming_invert(uint8_t* rdram, recomp_context* ctx);
+void tooie_aiming_invert(uint8_t* rdram, recomp_context* ctx, uint32_t player);
+void tooie_flight_invert(uint8_t* rdram, recomp_context* ctx, uint32_t player);
 
 // Apply accepted replay spans to the existing guest retrace wait.
 void tooie_demo_pacing(uint8_t* rdram, recomp_context* ctx, uint32_t event);
