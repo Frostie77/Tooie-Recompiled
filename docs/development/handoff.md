@@ -1,6 +1,6 @@
 # Engineering handoff
 
-Updated: 27 October 2026.
+Updated: 28 October 2026.
 
 Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).
@@ -25,7 +25,11 @@ Success; signed APK SHA-256 is
 Local folder: `touch-f37c1e2a10b7-606a8a3a`. Exact installed-hash readback and optional request activation are now confirmed;
 native observer delivery is now verified; the cleanup terminal line remains pending. The checked temporary
 capture helper enables only the private request and removes it after recording;
-see [the observer record](graphics-input-diagnostics-20261027.md).
+see [the observer record](graphics-input-diagnostics-20261027.md). The
+[next limb candidate / build 111](character-limb-copy-candidate-20261028.md)
+now passes CI and independent downloaded-APK/native/helper verification. Its
+built source is `ba1675a593ab`; local signing and the Odin replacement install
+are still pending, so build 110 remains the last confirmed installed Debug.
 
 The prior build-109 source `6da2a897867b50fa72d37c3c3897fea66f4e4373`
 (candidate code `fe6e40857c4b`) used signed SHA-256
@@ -225,8 +229,13 @@ own-channel updates remain separate from the passed basic settings comparison.
 The Poco X3 Pro / Android 12 / Adreno 640 reporter now has working gameplay
 with Turnip in the d6 test; no stock-driver compatibility fix is established.
 Frostie has parked the Retroid Pocket 5 report and existing Adreno 650 experiment
-pending more data. The initial Redmi Pad 2 report also needs Android/build
-identity and logs; no v1.1.0 result is recorded. Keep each device's evidence
+pending more data. The Redmi Pad 2 reporter has now supplied a 119,352-byte
+startup log: ten native starts reject optional FP32 attachment blending after
+Vulkan initialization. Android/build identity and gameplay remain unconfirmed.
+The independent [draft PR #42](https://github.com/Frostie77/Tooie-Recompiled/pull/42)
+skips the unused RT compose pipeline on raster-only builds/devices and is
+building a separate GPU Test app. It does not include PR #41's limb experiments;
+no replacement Mali driver has been verified. Keep each device's evidence
 separate and leave reporter replies and issue closures to Frostie.
 
 Touch controls are implemented and published in v1.1.0 after focused Odin acceptance.

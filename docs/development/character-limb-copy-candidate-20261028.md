@@ -1,7 +1,6 @@
 # Same-pose fixed-matrix reload candidate — 28 October 2026
 
-Status: implementation and host behavioral/old-RSP validation pass; Android
-build and device validation pending.
+Status: host and Android build/package checks pass; Odin validation pending.
 This is a candidate, not a device-accepted limb fix.
 
 The [build-110 input review](graphics-input-check-odin-20261028.md) finds exactly
@@ -66,15 +65,30 @@ also fails that check: **0.560229 world units** of copied-vertex drift at weight
 0.578295-unit separation measured directly in the captured full-model inputs.
 No sanitizer failure occurs in the passing candidate. Python compilation and
 whitespace checks pass. CI now includes the copy regression alongside the
-retained vertex/seam/observer checks. No new Android artifact or hardware pass
-has been accepted.
+retained vertex/seam/observer checks. No hardware pass has been accepted.
 
 [CI run 111](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40519631786)
-is in progress for engineering head `56ad8d092439429491452e8f54bb6abc3582b501`,
-verified tree `b6516ebf89b6aa4ce454a760662e71b8227177d4`. It has not produced an
-accepted APK. Its expected PR integration commit `ba1675a593ab9ee9e4fe19a5bc92614105762c3f`
-has the same verified tree; final job/artifact checks must confirm the actual
-source. Odin still has the signed build-110 `f37c1e2a10b7` APK above.
+completed successfully. Job `122242877800` passes host checks, ARM64 compilation,
+APK packaging and ephemeral local-signing controls. Actual built source is
+`ba1675a593ab9ee9e4fe19a5bc92614105762c3f`, native
+`0.1.0-ci.111.1+gba1675a593ab`, whose verified tree
+`b6516ebf89b6aa4ce454a760662e71b8227177d4` matches engineering head
+`56ad8d092439429491452e8f54bb6abc3582b501`.
+
+The independently downloaded [Debug artifact](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40519631786/artifacts/12742671394)
+is **15,444,674 bytes**, ZIP SHA-256
+`27e803c1cb57eed1ea5fed861d23feed091f34e6243e23b3cea2fd3e5e119346`.
+All bundled checksums, flat unique paths and CRC pass. CI APK
+`Tooie-Recompiled-Android-arm64-ba1675a593ab-Debug.apk` has SHA-256
+`a6b1031b3e3bc43fe1527389f7ad3a2fa68a8ab1b872a8c088d244e96796633f`.
+Every one of its seven native ELF hashes/Build IDs matches the report; libmain
+has SHA-256 `7be2bcc2f28ab0dcce307461c1673305e6311a1590ad0ba7162adb97e8e3bd11`
+and Build ID `bb9478cb4b1876fdbf72a5480d090c494aae8d2d`. The embedded native
+version, unchanged local signer (`b398b7b7…`) and all three pinned capture
+helpers also match. This verifies the CI artifact, not a locally established
+Debug signature or device behavior. Local signing/update remain to be performed
+by Frostie. Odin still has the signed build-110 `f37c1e2a10b7` APK.
+
 The retained actor/skeletal suite also passes: generated actor ownership and
 lifetime guards, rigid-model matching and all six skeletal trajectory/history/
 unsafe-input cases, with the exact `60c0c89` parent failing its trajectory control
