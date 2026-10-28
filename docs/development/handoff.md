@@ -28,8 +28,15 @@ capture helper enables only the private request and removes it after recording;
 see [the observer record](graphics-input-diagnostics-20261027.md). The
 [next limb candidate / build 111](character-limb-copy-candidate-20261028.md)
 now passes CI and independent downloaded-APK/native/helper verification. Its
-built source is `ba1675a593ab`; local signing and the Odin replacement install
-are still pending, so build 110 remains the last confirmed installed Debug.
+built source is `ba1675a593ab9ee9e4fe19a5bc92614105762c3f`. Frostie supplied
+a successful established-Debug-certificate, signature/alignment/version and
+complete-CI-payload signing result on 28 October. The signed APK is
+`/home/trent/.local/share/tooie-recompiled/candidates/touch-ba1675a593ab-a8b00c3d/Tooie-Touch-ba1675a593ab-Local-Debug.apk`,
+SHA-256 `02a1aeadf4c7d4ab4878998ee60de106233d48fb78bc490311cb0bcdd9f73362`.
+Its generated recorder is `capture-touch.sh` in that same candidate folder.
+The helper performed no installation or device-data changes. The authorized
+Odin replacement install and device test remain pending; build 110 is still
+the last confirmed installed Debug.
 
 The prior build-109 source `6da2a897867b50fa72d37c3c3897fea66f4e4373`
 (candidate code `fe6e40857c4b`) used signed SHA-256
@@ -121,7 +128,7 @@ see the [device record](device-compatibility.md) for scope.
 
 | Issue | Current evidence | Next engineering step |
 |---|---|---|
-| **MD-005 — limb separation** | Both earlier candidates fail at Manual 60/Display; Original removes the gaps. Matrix-copy ownership candidate **build 111** passes host/CI/download checks, with no device acceptance yet. | Prepare the verified APK with the established local Debug signer, then obtain an authorized Odin comparison at **Display**. Build 110 remains the last confirmed installed Debug. |
+| **MD-005 — limb separation** | Both earlier candidates fail at Manual 60/Display; Original removes the gaps. Matrix-copy ownership candidate **build 111** passes host/CI/download checks, with no device acceptance yet. | Local signing/payload verification passed; perform the authorized replacement install, then compare on Odin at **Display**. Build 110 remains the last confirmed installed Debug. |
 | **MD-014 — Kazooie flight aiming** | Marker 11 and the flight/reticle mismatch are recorded. Stationary inversion works; exact flight segment and preference state remain unconfirmed. No flight fix is implemented. | Trace the actual flight movement/pitch/reticle consumers and scope a correction without changing shared stick input or working stationary aim. Retain marker 11; a new build-111 Off/On flight comparison is now planned. |
 | **MD-012 — HUD placement** | All three settings reach RT64, but captured HUD draws lack origin anchors. Component callback and 48-entry layout caller are located. No HUD fix is implemented. | Map stable HUD components and authored positions, then add scoped placement metadata with state restoration and consumer-level checks. |
 
