@@ -130,7 +130,11 @@ not map guesses. See the linked source record for the consumer boundaries and
 validation. HUD component anchoring and opening-logo bouncing remain open.
 The controls regression passes 2,416 complete guest-consumer cases with
 ASan/UBSan; nine deliberately broken policies/hooks fail as expected. Native
-touch merging and Android Java compilation pass. This is not Odin acceptance.
+touch merging and Android Java compilation pass. [CI build 121](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40664106804)
+now passes the full host, ARM64 and APK checks. Built integration source
+`9d1c5a7c758e69dd226c49e046b1c7001ef3c961` has the exact tree of controls head
+`986e4d8b12b78e65ff25cfcd30fa84570f51cf41`; the downloaded package is verified.
+The Odin still has build 111; the new controls have no device acceptance yet.
 
 The [build-110 input capture](graphics-input-check-odin-20261028.md) is now fully
 reviewed: 11 events, 13 inputs, zero notes/orphans, all eight PNGs, PID 29847
@@ -172,7 +176,15 @@ engineering head `64215509e920ded1ec830b5b11492f29c10e6075`; see the observer
 record for all artifact pins. No input-code change is needed for excluded E13/E14.
 The broader Display playthrough and measured pacing/delivery remain open.
 
-Track the two new reports separately: **MD-011** opening-logo rapid vertical
+The [new startup-logo review](opening-logo-check-odin-20261028.md) covers both
+repeated marker-1 events, both native screenshots and the 12.93-second supplied
+video. It identifies Nintendo 64/Rareware/Dolby and retains the reported subtle
+wobble on build 111 at Display. `chintrochar` has screen-positioned,
+camera-relative model and companion sprite/text paths to discriminate; their
+exact association with each visible logo and a correction remain unproved.
+The optional scene observer was off in this capture.
+
+Track the two reports separately: **MD-011** opening-logo rapid vertical
 jitter at Manual 60/Display but not Original, and **MD-012** HUD Placement
 Original/16:9/Expand producing no visible movement. Preserve exact descriptions
 and all future markers. Shared framerate dependence does not establish one cause. The

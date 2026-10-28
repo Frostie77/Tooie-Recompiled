@@ -180,7 +180,16 @@ alongside the real profile/configuration checks. Nine deliberate controls fail
 their expected assertions: prior broad inversion, missing hooks, rifle/walking/
 horizontal inversion, missing flight steering, missing swap, a one-way swap and
 a broken load callback. Native touch merging and the full Android Java compile
-also pass; APK compilation/packaging and the device comparison remain separate.
+also pass. [CI build 121](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40664106804)
+now passes full host regressions, ARM64 compilation and APK verification. Its
+integration source `9d1c5a7c758e69dd226c49e046b1c7001ef3c961` has the exact
+`ada9404da1bb957e8241481c04d3e2bcdaf86837` tree of controls commit
+`986e4d8b12b78e65ff25cfcd30fa84570f51cf41`. The downloaded ZIP/APK, seven native
+ELF hashes/Build IDs, embedded options/version and pinned capture helpers are
+verified. The candidate reports `0.1.0-ci.121.1+g9d1c5a7c758e`; APK SHA-256
+is `6f16d517cc9bee7a4bff9a19e59f3431587a0d0ed73d169b31b472828e20775b`.
+No local Odin update or new control acceptance is claimed; the new logo check
+still uses build 111.
 
 The same Mayan-area Odin comparison remains required before accepting MD-014:
 stationary inversion, flight Off/On with steering and reticle together, the

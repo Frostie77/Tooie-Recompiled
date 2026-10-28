@@ -11,6 +11,15 @@ and descriptions rather than assuming their severity from a marker number.
 | MD-001 | Coloured static-like horizontal streaks and vertical fragments during the Jiggy challenge; reported when the paw moves toward the lower screen | Focused Odin pass — next update; broader coverage open | [24 October candidate check](release-candidate-check-20261024.md), original marker 1; historical position/extent/flicker clarifications remain in the [source investigation](jiggy-challenge-lines-investigation-20261026.md). The [27 October Jiggy capture](jiggy-capture-odin-20261027.md) retains all six events, one additional unparsed observation and the paw trigger. Five images show noise over the room outside the puzzle in both wide and Original compositions; one still misses the obvious flicker. [Candidate](graphics-fix-candidates-20261027.md): bound partial attachment clears; backend regression passes. Build-107 E01 and Frostie report the static gone; see the [scoped device record](graphics-check-odin-20261027.md). The exact original causal draw remains unconfirmed. |
 | MD-002 | Brief screen shift when dialogue animation begins; reported while the view compresses on entry | Focused Odin pass — next update; broader coverage open | [24 October candidate check](release-candidate-check-20261024.md), original marker 2; [investigation](dialogue-screen-shift-investigation-20261026.md) and [27 October three-marker capture](dialogue-capture-odin-20261027.md). New E01–E03 report the jump with Original active; screenshots show letterboxed dialogue and Android surface records stay 1920×1080. Motion and per-frame viewport/camera inputs remain unmeasured; no matched Expand result or actual-event cause is confirmed. [Candidate](graphics-fix-candidates-20261027.md): keep gameplay camera/projection together when the viewport changes; 25 CPU cases pass. Build-107 E02 records `no dialogue shunt`; Frostie says it appears gone. See the [scoped device record](graphics-check-odin-20261027.md); this is not a full Original/Expand/device matrix. |
 
+## Build-111 opening-logo follow-up — 28 October 2026
+
+The [complete logo review](opening-logo-check-odin-20261028.md) retains two
+distinct marker-1 events, all four inputs, both native screenshots and the
+supplied 12.93-second video. The actual sequence is Nintendo 64, Rareware and
+Dolby. MD-011 remains reproduced at Display and unresolved; the limb-gap pass
+stays accepted. The `chintrochar` screen-positioned/camera-relative model and
+companion sprite/text routes are a focused source lead, not a proved cause.
+
 ## Build-111 limb and normal-flight comparison — 28 October 2026
 
 The [complete review](character-limb-flight-check-odin-20261028.md) retains all
