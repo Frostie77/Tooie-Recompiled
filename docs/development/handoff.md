@@ -276,6 +276,18 @@ All seven ARM64 ELF hashes and Build IDs match the report; libmain contains
 `io.github.banjotooierecompiled.gputest.gf2166cfa4bf7`, with touch controls
 and the driver picker. It does not include PR #41's limb experiments.
 
+Baseline comparison checked on 28 October: this is current main plus the
+targeted optional-RT startup guard and GPU Test packaging, not an exact
+v1.1.0 rebuild with only that guard. Relative to public v1.1.0 source
+`0b0acfa54d2f689d6febb4dee29710fdde9fbb80`, it also includes the merged
+Save Management export/import/recovery feature, moved Touch tab and renamed
+Invert Aiming y-axis setting. Existing touch controls, mod support and the
+driver picker are retained. The test has its own app data and does not
+automatically share the release app's saves/settings/mods. Normal raster
+rendering is retained; the skipped setup is the unused optional RT compose
+pipeline. PR #41's limb experiments and later Jiggy/dialogue corrections are
+not in this test. Build success does not establish Redmi compatibility.
+
 Next: Frostie sends the prepared Redmi test draft with that ZIP link. The
 reporter retains the release app, installs only the GPU Test APK, selects
 **System Default**, reports the screen reached and supplies a fresh startup log
