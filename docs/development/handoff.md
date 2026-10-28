@@ -28,15 +28,8 @@ capture helper enables only the private request and removes it after recording;
 see [the observer record](graphics-input-diagnostics-20261027.md). The
 [next limb candidate / build 111](character-limb-copy-candidate-20261028.md)
 now passes CI and independent downloaded-APK/native/helper verification. Its
-built source is `ba1675a593ab9ee9e4fe19a5bc92614105762c3f`. Frostie supplied
-a successful established-Debug-certificate, signature/alignment/version and
-complete-CI-payload signing result on 28 October. The signed APK is
-`/home/trent/.local/share/tooie-recompiled/candidates/touch-ba1675a593ab-a8b00c3d/Tooie-Touch-ba1675a593ab-Local-Debug.apk`,
-SHA-256 `02a1aeadf4c7d4ab4878998ee60de106233d48fb78bc490311cb0bcdd9f73362`.
-Its generated recorder is `capture-touch.sh` in that same candidate folder.
-The helper performed no installation or device-data changes. The authorized
-Odin replacement install and device test remain pending; build 110 is still
-the last confirmed installed Debug.
+built source is `ba1675a593ab`; the Odin replacement install and comparison
+are still pending, so build 110 remains the last confirmed installed Debug.
 
 The prior build-109 source `6da2a897867b50fa72d37c3c3897fea66f4e4373`
 (candidate code `fe6e40857c4b`) used signed SHA-256
@@ -123,28 +116,6 @@ Mali-G715 MP7 on 25 October. This is a successful manual functional report;
 see the [device record](device-compatibility.md) for scope.
 
 ## Current priorities
-
-### Active engineering focus
-
-| Issue | Current evidence | Next engineering step |
-|---|---|---|
-| **MD-005 — limb separation** | Both earlier candidates fail at Manual 60/Display; Original removes the gaps. Matrix-copy ownership candidate **build 111** passes host/CI/download checks, with no device acceptance yet. | Local signing/payload verification passed; perform the authorized replacement install, then compare on Odin at **Display**. Build 110 remains the last confirmed installed Debug. |
-| **MD-014 — Kazooie flight aiming** | Marker 11 and the flight/reticle mismatch are recorded. Stationary inversion works; exact flight segment and preference state remain unconfirmed. No flight fix is implemented. | Trace the actual flight movement/pitch/reticle consumers and scope a correction without changing shared stick input or working stationary aim. Retain marker 11; a new build-111 Off/On flight comparison is now planned. |
-| **MD-012 — HUD placement** | All three settings reach RT64, but captured HUD draws lack origin anchors. Component callback and 48-entry layout caller are located. No HUD fix is implemented. | Map stable HUD components and authored positions, then add scoped placement metadata with state restoration and consumer-level checks. |
-
-Build-111 flight evidence plan: keep Framerate **Display** and existing driver,
-resolution, antialiasing and HUD settings fixed. Compare **Invert Aiming y-axis
-Off**, then **On**, returning to the same Kazooie flight segment and closing the
-settings menu after each change. Explicitly label each state in marker notes;
-record stick direction, flight movement, reticle and shooting response. A short
-matched video can show motion that the recorder's screenshots cannot. This is
-a new diagnostic comparison, not a flight fix or device result.
-
-Build 111 targets limb separation only; it does not fix flight aiming or HUD
-placement. See the [copy candidate](character-limb-copy-candidate-20261028.md),
-[flight investigation](flying-aim-controls-20261028.md) and
-[HUD investigation](hud-placement-investigation-20261028.md). Redmi compatibility
-work is separate. Other open observations retain their recorded status.
 
 The [build-110 input capture](graphics-input-check-odin-20261028.md) is now fully
 reviewed: 11 events, 13 inputs, zero notes/orphans, all eight PNGs, PID 29847
@@ -263,32 +234,11 @@ startup log: ten native starts reject optional FP32 attachment blending after
 Vulkan initialization. Android/build identity and gameplay remain unconfirmed.
 The independent [draft PR #42](https://github.com/Frostie77/Tooie-Recompiled/pull/42)
 skips the unused RT compose pipeline on raster-only builds/devices.
-[CI run 112](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40633729769)
-completed successfully. Engineering source `dd27ff7d40ffb0b30e3c01391ef0ee7f1eb08349`
-and built integration source `f2166cfa4bf71e663aa4aee6668eb834ed621fad`
-have the same tree `dd34a6dcf05308f192498eb8b5777468d48a8430`.
-The independently downloaded [GPU Test ZIP](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40633729769/artifacts/12793071930)
-is 15,334,512 bytes, SHA-256
-`5320f9ffec074c83cb24ddff5bbe1c06c24d5b63bcb7fb1ffa17e560d2e82a28`;
-CRC, unique flat paths and bundled APK checksum pass. APK
-`Tooie-Recompiled-Android-arm64-f2166cfa4bf7-GPU-Test.apk` is 17,488,072 bytes,
-SHA-256 `a38cba12af004e9eaed147e1e2730dc22cac1b8af649c023d358e2992b7c4482`.
-All seven ARM64 ELF hashes and Build IDs match the report; libmain contains
-`0.1.0-ci.112.1+gf2166cfa4bf7`. The report identifies the separate package
-`io.github.banjotooierecompiled.gputest.gf2166cfa4bf7`, with touch controls
-and the driver picker. It does not include PR #41's limb experiments.
-
-The test is based on main after v1.1.0 and therefore also includes merged
-Save Management and settings-presentation changes. Touch controls, mods and
-the driver picker are retained. GPU Test uses separate private app data;
-normal raster rendering is unchanged. PR #41's limb experiments and later
-Jiggy/dialogue corrections are absent.
-
-Next engineering check: test this APK on the Redmi with **System Default**,
-record the screen reached and obtain a fresh startup log on success or failure.
-If gameplay is reached, check movement, touch, sound and close/reopen.
-Android version and device acceptance remain unconfirmed; no replacement
-Mali driver has been verified.
+[Build 112](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40633729769)
+passed CI; its separate GPU Test APK awaits Redmi device validation.
+It does not include PR #41's limb experiments;
+no replacement Mali driver has been verified. Keep each device's evidence
+separate and leave reporter replies and issue closures to Frostie.
 
 Touch controls are implemented and published in v1.1.0 after focused Odin acceptance.
 The earlier combined c849 Poco test included the accepted touch/audio source
@@ -393,15 +343,13 @@ installed with `adb install -r`, and reported to retain the save and settings.
 The exact source, APK hashes and candidate folder are in the
 [Debug update record](android-debug-refresh-odin-20261026.md).
 
-The historical build-108 recorder was:
+Historical build-108 recorder (superseded by build 110 above):
 
 ```bash
 "$HOME/.local/share/tooie-recompiled/candidates/touch-ca05903d788c-e575917a/capture-touch.sh"
 ```
 
-It is superseded by the build-110 recorder listed under Current priorities;
-do not use it for a replacement build. This older recorder replaced the
-historical 1bc, 6f3e and fae recorders. The recorder interface retains
+This earlier recorder replaced the historical 1bc, 6f3e and fae recorders. It retains
 manual `playing`, markers 1–30, repeated events/follow-up notes and `save`.
 The seven-library profile and private `:game` PID path passed host consumer and
 exact-parent controls; private-file/foreground queries still use the package.
