@@ -1,6 +1,6 @@
 # Android device compatibility reports
 
-Updated: 26 October 2026. These records describe the named builds and tested
+Updated: 28 October 2026. These records describe the named builds and tested
 scope; broader compatibility and a complete playthrough remain open.
 
 | Device | Android / GPU | Build | Recorded result |
@@ -9,7 +9,7 @@ scope; broader compatibility and a complete playthrough remain open.
 | Pixel 8 Pro | Android 17 / Mali-G715 MP7, as reported by Frostie | Public v1.0.1 | Frostie explicitly confirmed that it works on 25 October. This is a successful manual functional report. |
 | Poco X3 Pro | Android 12 / Adreno 640 | Historical public/c849 system failures; d6 on-device picker with regular Turnip R8 | Reporter confirms the game works; reviewed screenshot shows Turnip loaded and matching the running game. Share startup log failed in that d6 test; the fix is now published in v1.1.0 after Odin acceptance. No new Poco sharing result is claimed. See the [26 October result](poco-turnip-result-20261026.md). |
 | Retroid Pocket 5 | Android version pending / Adreno 650 | Original report and offered PR #27 test | Parked pending device details, a fresh log and the existing test result. |
-| Redmi Pad 2 | Android version not supplied in the initial report / reported Helio G100-Ultra, Mali-G57 MC2 | Initial APK/release not identified | [5ejfkhj reports an immediate startup crash](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6399188671). The initial comment supplies no Android version or log; no v1.1.0 result is recorded here. |
+| Redmi Pad 2 | Android version pending / reported Helio G100-Ultra; log confirms Mali-G57 MC2 | New exported startup log; exact APK/source not identified | Reporter now reaches a startup screen, then reports closing after Start. All ten logged native starts reject FP32 attachment blending while creating an optional RT compose pipeline. Scoped skip candidate passes host controls; Android/reporter checks pending. Useful startup-log sharing is confirmed by the export. See the [28 October investigation](redmi-pad2-raster-startup-20261028.md). |
 
 The Pixel report confirms working v1.0.1, rather than only a successful
 download or installation. No capture, play duration, route or input method was

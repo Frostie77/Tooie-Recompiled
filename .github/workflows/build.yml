@@ -48,7 +48,7 @@ jobs:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
       TOOIE_CI_ROOT: ${{ github.workspace }}/.ci-android
       TOOIE_ANDROID_TOUCH_TEST: ${{ (github.ref_name == 'feature/android-touch-controls' || github.head_ref == 'feature/android-touch-controls' || (github.event_name == 'workflow_dispatch' && inputs.touch_controls_test)) && '1' || '0' }}
-      TOOIE_ANDROID_DRIVER_TEST: ${{ (github.ref_name == 'test/android-turnip-loader' || github.head_ref == 'test/android-turnip-loader' || github.ref_name == 'test/android-poco-touch-controls' || github.head_ref == 'test/android-poco-touch-controls' || (github.event_name == 'workflow_dispatch' && inputs.gpu_driver_test)) && '1' || '0' }}
+      TOOIE_ANDROID_DRIVER_TEST: ${{ (github.ref_name == 'test/android-turnip-loader' || github.head_ref == 'test/android-turnip-loader' || github.ref_name == 'test/android-poco-touch-controls' || github.head_ref == 'test/android-poco-touch-controls' || github.ref_name == 'test/android-mali-raster-startup' || github.head_ref == 'test/android-mali-raster-startup' || (github.event_name == 'workflow_dispatch' && inputs.gpu_driver_test)) && '1' || '0' }}
     steps:
       - name: Check out the source snapshot
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -133,6 +133,7 @@ jobs:
             python3 tools/android-workflow/tests/test_installed_capture.py
             python3 tools/test_transform_upload.py
             python3 tools/test_aiming_controls.py
+            python3 tools/test_optional_raytracing_compose.py
             python3 tools/test_android_release.py
             python3 tools/test_update_metadata.py
             python3 tools/test_android_updates.py --android-jar "$ANDROID_HOME/platforms/android-36/android.jar" --jni-include "$JAVA_HOME/include"

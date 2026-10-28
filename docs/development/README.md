@@ -50,6 +50,8 @@ gameplay acceptance.
 
 ## Evidence
 
+- [Redmi Pad 2 startup-format candidate](redmi-pad2-raster-startup-20261028.md):
+  repeated optional-compose rejection, exact log and host controls; device result pending.
 - [26 October Jiggy-challenge lines investigation](jiggy-challenge-lines-investigation-20261026.md):
   static-like straight-line description, original evidence gap and captured-image
   drawing/sampling source trace; MD-001 remains open.
