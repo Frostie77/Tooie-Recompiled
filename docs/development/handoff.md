@@ -378,3 +378,19 @@ same next update:
 The disposable-save restoration results remain tied to source `410532de5c42`.
 Frostie subsequently accepted all five presentation changes on the retained
 Debug update from `fae511cc166c`, with his existing save and settings intact.
+
+
+## Redmi Pad 2 follow-up — 28 October 2026
+
+The [new log review and scoped candidate](redmi-pad2-raster-startup-20261028.md)
+retain the reporter's actual reply, exact export and ten repeated optional FP32
+compose-blend rejections. System Vulkan initialization succeeds. A candidate on
+`test/android-mali-raster-startup`, based independently on main `1a1e194a749d`,
+skips that RT-only pipeline when RT is not built or the device lacks capability.
+All eight host cases and exact old-source/restored-unconditional failure controls
+pass with ASan/UBSan. Android build and reporter acceptance remain pending; the
+workflow selects a separate GPU Test package, including touch controls.
+No compatible replacement Mali driver has been verified. Use the existing
+system driver for this test. Keep issue #26 open; Frostie handles the reply.
+The separately successful limb build 111 belongs to draft PR #41 and is not
+part of this compatibility candidate.

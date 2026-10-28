@@ -155,6 +155,9 @@ The remaining touch/phone matrix and actual failed-driver recovery remain open.
 The Retroid Pocket 5 investigation remains parked pending more data. See the
 [startup-crash record](development/startup-crash-issue26.md).
 
+- [ ] Verify the [Redmi Pad 2 optional-compose candidate](development/redmi-pad2-raster-startup-20261028.md)
+  with its reporter. Exact log review and eight host cases pass; gameplay and
+  full startup remain unaccepted. Android version/APK identity are still pending.
 - [ ] Complete the adventure through the credits, covering major areas,
   transformations, mechanics and optional activities.
 - [ ] Verify representative uninterrupted 20–30-minute sessions, with correct
