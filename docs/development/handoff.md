@@ -122,8 +122,16 @@ see the [device record](device-compatibility.md) for scope.
 | Issue | Current evidence | Next engineering step |
 |---|---|---|
 | **MD-005 — limb separation** | Both earlier candidates fail at Manual 60/Display; Original removes the gaps. Matrix-copy ownership candidate **build 111** passes host/CI/download checks, with no device acceptance yet. | Prepare the verified APK with the established local Debug signer, then obtain an authorized Odin comparison at **Display**. Build 110 remains the last confirmed installed Debug. |
-| **MD-014 — Kazooie flight aiming** | Marker 11 and the flight/reticle mismatch are recorded. Stationary inversion works; exact flight segment and preference state remain unconfirmed. No flight fix is implemented. | Trace the actual flight movement/pitch/reticle consumers and scope a correction without changing shared stick input or working stationary aim. Retain the existing evidence; the detailed comparison remains deferred. |
+| **MD-014 — Kazooie flight aiming** | Marker 11 and the flight/reticle mismatch are recorded. Stationary inversion works; exact flight segment and preference state remain unconfirmed. No flight fix is implemented. | Trace the actual flight movement/pitch/reticle consumers and scope a correction without changing shared stick input or working stationary aim. Retain marker 11; a new build-111 Off/On flight comparison is now planned. |
 | **MD-012 — HUD placement** | All three settings reach RT64, but captured HUD draws lack origin anchors. Component callback and 48-entry layout caller are located. No HUD fix is implemented. | Map stable HUD components and authored positions, then add scoped placement metadata with state restoration and consumer-level checks. |
+
+Build-111 flight evidence plan: keep Framerate **Display** and existing driver,
+resolution, antialiasing and HUD settings fixed. Compare **Invert Aiming y-axis
+Off**, then **On**, returning to the same Kazooie flight segment and closing the
+settings menu after each change. Explicitly label each state in marker notes;
+record stick direction, flight movement, reticle and shooting response. A short
+matched video can show motion that the recorder's screenshots cannot. This is
+a new diagnostic comparison, not a flight fix or device result.
 
 Build 111 targets limb separation only; it does not fix flight aiming or HUD
 placement. See the [copy candidate](character-limb-copy-candidate-20261028.md),
