@@ -41,7 +41,7 @@ bool normal_flight(uint32_t handler) {
 }
 
 bool stationary_aim(uint8_t* rdram, uint32_t player, uint32_t handler) {
-    // bsfirstp is the Kazooie-rifle/FPS path; it can also use bafpctrl.
+    // bsfirstp is the Breegull Blaster/FPS path; it can also use bafpctrl.
     if (!valid(handler, 8) || normal_flight(handler) ||
         in_stubs(handler, 0x80084288U, 0x800843B0U)) return false;
     const auto aim = word(rdram, player + 0x90);
@@ -76,10 +76,10 @@ void tooie::input::add_aiming_option(recomp::config::Config& config) {
     add_toggle(config,
         "aiming_invert", "Invert Aiming y-axis",
         "Reverses up and down during stationary aiming. "
-        "Does not change flight or Kazooie-rifle minigames.", aiming_invert);
+        "Does not change flight or Breegull Blaster controls.", aiming_invert);
     add_toggle(config,
         "flight_invert", "Invert Flight y-axis",
-        "Changes flight and flight aiming while Kazooie carries Banjo. "
+        "Changes vertical flight movement and aiming. "
         "Off: up flies down. On: up flies up.", flight_invert);
     add_toggle(config,
         "aiming_swap_sticks", "Swap Joystick Aiming Controls",

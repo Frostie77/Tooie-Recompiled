@@ -3,7 +3,7 @@
 ## Report and evidence status
 
 Track this separately as **MD-014**. The scoped controls candidate is now
-implemented; Odin acceptance remains pending.
+implemented and has a [focused Odin pass](scoped-controls-check-odin-20261028.md).
 The later [build-111 comparison](character-limb-flight-check-odin-20261028.md)
 now identifies normal free flight with Banjo and a manual Off/On reproduction.
 The build-110 record below is historical; preserve its original uncertainty.
@@ -59,15 +59,15 @@ Implement the following separate settings through verified gameplay consumers:
 
 | Setting | Required scope and behavior |
 |---|---|
-| **Invert Aiming y-axis** | Restrict the existing saved inversion to normal stationary aiming. Preserve its existing Off/On vertical behavior there. Exclude the Kazooie-as-rifle minigames/shooter sections and normal flight from this setting. |
-| **Invert Flight y-axis** | Place immediately underneath Invert Aiming y-axis. During normal Kazooie flight carrying Banjo, apply one coherent Y policy to both flight steering and aiming. **Off:** original aircraft-style input, stick up means down and stick down means up. **On:** stick up means up and stick down means down. Stationary aim and rifle minigames are outside this setting. |
+| **Invert Aiming y-axis** | Restrict the existing saved inversion to normal stationary aiming. Preserve its existing Off/On vertical behavior there. Exclude the Breegull Blaster sections and normal flight from this setting. |
+| **Invert Flight y-axis** | Place immediately underneath Invert Aiming y-axis. During normal Kazooie flight carrying Banjo, apply one coherent Y policy to both flight steering and aiming. **Off:** original aircraft-style input, stick up means down and stick down means up. **On:** stick up means up and stick down means down. Stationary aim and Breegull Blaster sections are outside this setting. |
 | **Swap Joystick Aiming Controls** | Place immediately underneath Invert Flight y-axis. **Off:** existing stick assignments. **On:** exchange the left and right sticks' aiming-mode roles, including both X/Y axes, only while normal stationary aiming is active. Restore normal assignments immediately on leaving that mode. Do not swap buttons or apply a global walking/camera/flight remap. |
 
 Frostie's initial request left UFO controls alone. His subsequent clarification
 allows the UFO to follow the regular stationary aiming control path if it is
 actually shared. Do not force a UFO-specific exception merely to prevent that
 existing shared behavior, and do not route it through the new flight option
-solely because it is a flying vehicle. Kazooie-rifle minigames remain excluded.
+solely because it is a flying vehicle. Breegull Blaster sections remain excluded.
 
 Retain the existing `aiming_invert` preference and its saved value; use separate
 saved preferences for the two new toggles, with Off preserving existing
@@ -75,11 +75,11 @@ assignments/conventions. After the stationary stick swap, aiming inversion
 must apply to whichever stick now supplies aim Y. Keep stationary and flight
 preferences independent.
 
-Trace the actual stationary, normal-flight and rifle-mode entry/exit paths.
+Trace the actual stationary, normal-flight and Breegull Blaster entry/exit paths.
 Do not infer context from the map alone or guess a player-state ID. Existing
 hooks in `baeggaim`, `bafpctrl` and `bsfirstp` are not proof that every call is
 the requested stationary mode. Require behavioral coverage for both inversion
-states, the stick swap, entry/exit restoration, persistence and rifle exclusions
+states, the stick swap, entry/exit restoration, persistence and Breegull Blaster exclusions
 through actual consumers, with a failing prior-code control. Retain working
 movement, normal camera and unaffected input paths.
 
@@ -148,7 +148,7 @@ outside the new flight preference.
 | `func_808000B4_baeggaim` | Before `0x80800100`, player from saved `sp+0x28` | Flight preference for normal flight; aiming preference for active stationary aim |
 | `func_808002A4_bafpctrl` | Before `0x80800320`, player in `s0` | Scoped aiming pitch under the original camera/input gates |
 | `bafly_entrypoint_10` | Before `0x80800590`, player from saved `sp+0x20` | Same flight preference applied to physical pitch |
-| `bsfirstp` rifle/FPS controls | Both old inversion hooks removed | Original aiming and walking behavior |
+| `bsfirstp` Breegull Blaster/FPS controls | Both old inversion hooks removed | Original aiming and walking behavior |
 
 Stationary aim requires the actual `bafpctrl` active mode (byte `+0x10 == 3`),
 stationary camera (`+0x11 == 0`) and enabled input (`+0x13 != 0`). Normal flight
@@ -170,14 +170,14 @@ whichever physical stick supplies the aiming axes.
 
 The expanded regression uses complete retained guest consumers and original
 parent bodies, the real configuration/file path and production profile reader.
-It checks independent preferences, steering/reticle coherence, rifle/walking
+It checks independent preferences, steering/reticle coherence, Breegull Blaster/walking
 exclusions, both stick roles, mode exit, controller ownership, saved settings and
 RAM/ABI preservation. Peripheral camera/timer/device services are controlled;
 this is a host regression, not a ROM or device playthrough.
 
 Validation: all **2,416** complete guest-consumer cases pass with ASan/UBSan,
 alongside the real profile/configuration checks. Nine deliberate controls fail
-their expected assertions: prior broad inversion, missing hooks, rifle/walking/
+their expected assertions: prior broad inversion, missing hooks, Breegull Blaster/walking/
 horizontal inversion, missing flight steering, missing swap, a one-way swap and
 a broken load callback. Native touch merging and the full Android Java compile
 also pass. [CI build 121](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40664106804)
@@ -188,12 +188,17 @@ integration source `9d1c5a7c758e69dd226c49e046b1c7001ef3c961` has the exact
 ELF hashes/Build IDs, embedded options/version and pinned capture helpers are
 verified. The candidate reports `0.1.0-ci.121.1+g9d1c5a7c758e`; APK SHA-256
 is `6f16d517cc9bee7a4bff9a19e59f3431587a0d0ed73d169b31b472828e20775b`.
-No local Odin update or new control acceptance is claimed; the new logo check
-still uses build 111.
+The earlier startup-logo check uses build 111. The subsequent
+[build-121 controls capture](scoped-controls-check-odin-20261028.md) now confirms
+the installed candidate and a focused pass for the nine instructed checks.
 
-The same Mayan-area Odin comparison remains required before accepting MD-014:
-stationary inversion, flight Off/On with steering and reticle together, the
-stationary-only swap, exit restoration and unchanged rifle-minigame controls.
+The Mayan-area comparison now passes: stationary inversion, all four flight
+Off/On combinations with steering and reticle together, the stationary-only
+swap, exit restoration and flight retaining its usual stick roles when Swap
+is On. Frostie separately confirms unchanged **Breegull Blaster** controls
+from his manual test after the capture ended. Preserve that evidence distinction.
+The next build uses the requested wording for Breegull Blaster and flight;
+only wording changes after this acceptance, not the control policy.
 Opening-logo bouncing (MD-011) and HUD anchoring (MD-012) remain separate open
 investigations. Frostie explicitly accepts the build-111 limb-gap test as
 successful; that result does not resolve either issue.

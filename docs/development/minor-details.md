@@ -11,6 +11,18 @@ and descriptions rather than assuming their severity from a marker number.
 | MD-001 | Coloured static-like horizontal streaks and vertical fragments during the Jiggy challenge; reported when the paw moves toward the lower screen | Focused Odin pass — next update; broader coverage open | [24 October candidate check](release-candidate-check-20261024.md), original marker 1; historical position/extent/flicker clarifications remain in the [source investigation](jiggy-challenge-lines-investigation-20261026.md). The [27 October Jiggy capture](jiggy-capture-odin-20261027.md) retains all six events, one additional unparsed observation and the paw trigger. Five images show noise over the room outside the puzzle in both wide and Original compositions; one still misses the obvious flicker. [Candidate](graphics-fix-candidates-20261027.md): bound partial attachment clears; backend regression passes. Build-107 E01 and Frostie report the static gone; see the [scoped device record](graphics-check-odin-20261027.md). The exact original causal draw remains unconfirmed. |
 | MD-002 | Brief screen shift when dialogue animation begins; reported while the view compresses on entry | Focused Odin pass — next update; broader coverage open | [24 October candidate check](release-candidate-check-20261024.md), original marker 2; [investigation](dialogue-screen-shift-investigation-20261026.md) and [27 October three-marker capture](dialogue-capture-odin-20261027.md). New E01–E03 report the jump with Original active; screenshots show letterboxed dialogue and Android surface records stay 1920×1080. Motion and per-frame viewport/camera inputs remain unmeasured; no matched Expand result or actual-event cause is confirmed. [Candidate](graphics-fix-candidates-20261027.md): keep gameplay camera/projection together when the viewport changes; 25 CPU cases pass. Build-107 E02 records `no dialogue shunt`; Frostie says it appears gone. See the [scoped device record](graphics-check-odin-20261027.md); this is not a full Original/Expand/device matrix. |
 
+## Build-121 scoped controls acceptance — 28 October 2026
+
+The [complete controls review](scoped-controls-check-odin-20261028.md) retains
+all nine events, ten inputs, zero notes/orphans and nine native images. Frostie
+accepts the flight combinations, stationary inversion, both stick roles and
+restoration on exit. The all-options-On flight check also passes. MD-014 now
+has a focused Odin pass for the next update. After accidentally closing the
+game, Frostie manually confirms Breegull Blaster controls are unchanged; this
+is a manual report outside the recorded session, not marker 10. The next build
+uses his requested wording for Breegull Blaster and flight. Logo/HUD work
+and the earlier Split Up freeze remain open.
+
 ## Build-111 opening-logo follow-up — 28 October 2026
 
 The [complete logo review](opening-logo-check-odin-20261028.md) retains two
@@ -32,12 +44,13 @@ successful; opening-logo bouncing remains open as MD-011.
 
 Sequences 5/6 report normal free flight in the Mayan area with Kazooie carrying
 Banjo and **Invert Aiming y-axis Off** working; sequences 7/8 report the
-mismatch returning with it On. MD-014 remains open. The source/settings scope
+mismatch returning with it On. This historical reproduction is superseded
+by the focused build-121 pass above. The source/settings scope
 now separates normal stationary aim, coherent flight steering/aim inversion
-and a stationary-only stick-role swap, retaining rifle-minigame controls.
+and a stationary-only stick-role swap, retaining Breegull Blaster controls.
 The UFO may follow a shared stationary aiming path under Frostie's clarification.
 See the [controls candidate](flying-aim-controls-20261028.md). The scoped input
-settings are now implemented and await Odin acceptance. HUD anchoring and
+settings are now implemented and pass the scoped build-121 check. HUD anchoring and
 opening-logo bouncing remain unresolved.
 
 ## Build-110 scene-input session — 27–28 October 2026
@@ -59,7 +72,7 @@ line remains outside the uploaded archive.
 
 | ID | Observation | Status | Evidence and follow-up |
 |---|---|---|---|
-| MD-014 | Flying and aiming simultaneously sends the reticle opposite the direction of travel, making shooting impractical; stationary aiming works with the existing invert feature | Candidate implemented — Odin comparison pending | The [build-110 review](graphics-input-check-odin-20261028.md) verifies marker 11 / E11, ID `d6ce96d79b4443b3abd5d62658188d7d`, 00:10:05.479 AEDT, literal description and native reticle image. The [report/source review](flying-aim-controls-20261028.md) retains every clarification. The later build-111 comparison identifies normal free flight with Kazooie carrying Banjo and a manual Off-pass/On-fail reproduction. Requested stationary/flight/swap settings and the conditional shared UFO scope are in that source review. Preserve the old marker 11. The scoped controls candidate is implemented; a new Odin check is still required. |
+| MD-014 | Flying and aiming simultaneously sends the reticle opposite the direction of travel, making shooting impractical; stationary aiming works with the existing invert feature | Focused Odin pass — next update; broader coverage open | The [build-110 review](graphics-input-check-odin-20261028.md) verifies marker 11 / E11, ID `d6ce96d79b4443b3abd5d62658188d7d`, 00:10:05.479 AEDT, literal description and native reticle image. The [report/source review](flying-aim-controls-20261028.md) retains every clarification. The later build-111 comparison identifies normal free flight with Kazooie carrying Banjo and a manual Off-pass/On-fail reproduction. Requested stationary/flight/swap settings and the conditional shared UFO scope are in that source review. Preserve the old marker 11. The [build-121 review](scoped-controls-check-odin-20261028.md) now records nine accepted checks and the subsequent manual Breegull Blaster confirmation. The descriptions are updated without changing control behavior. |
 
 ## Required review when evidence is uploaded
 

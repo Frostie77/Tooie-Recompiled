@@ -17,7 +17,16 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The retained Debug is now **build 111**, built source
+The retained Debug is now **build 121**, built source
+`9d1c5a7c758e69dd226c49e046b1c7001ef3c961`. The
+[scoped control review](scoped-controls-check-odin-20261028.md) accepts the nine
+recorded checks: independent aiming/flight inversion, coherent flight pitch and
+reticle, stationary-only stick swapping and restoration on exit. Frostie later
+manually confirms Breegull Blaster controls are unchanged. He clarifies that
+he accidentally closed the game after marker 9; all nine checks were retained.
+The next build uses his requested Breegull Blaster and plain-flight wording.
+
+The preceding **build 111** used source
 `ba1675a593ab9ee9e4fe19a5bc92614105762c3f`. The
 [28 October Odin review](character-limb-flight-check-odin-20261028.md)
 accepts a focused Display check: Frostie records no gaps seen on the previously
@@ -26,7 +35,8 @@ successful. Opening-logo bouncing remains open as MD-011. All seven events, one 
 seven native images are reviewed; broader characters/modes/devices remain open.
 The same capture establishes the manual normal-flight comparison: Kazooie
 carrying Banjo in the Mayan area works with aiming inversion Off and has the
-flight/reticle mismatch with it On. This input problem remains open.
+flight/reticle mismatch with it On. That reproduction is historical; the
+build-121 scoped comparison above now passes.
 
 The prior build-109 source `6da2a897867b50fa72d37c3c3897fea66f4e4373`
 (candidate code `fe6e40857c4b`) used signed SHA-256
@@ -119,9 +129,9 @@ above. Current input work is the [stationary/flight control separation](flying-a
 keep **Invert Aiming y-axis** for normal stationary aim; add **Invert Flight
 y-axis** directly underneath (Off: up means down, On: up means up, with flight
 and aiming coherent); place **Swap Joystick Aiming Controls** directly below
-flight inversion for stationary aiming only. Preserve Kazooie-rifle minigame controls. The UFO may follow a
+flight inversion for stationary aiming only. Preserve Breegull Blaster controls. The UFO may follow a
 shared stationary aiming path under Frostie's clarification. These changes are
-now implemented in the controls candidate; Odin acceptance is pending. The
+now implemented with a [focused Odin pass](scoped-controls-check-odin-20261028.md). The
 flight option governs both physical pitch and the airborne cursor. The swap
 exchanges both physical sticks' analog bindings and C-button roles for each
 stationary-aim read, preserving saved profiles and restoring roles on exit.
@@ -134,7 +144,9 @@ touch merging and Android Java compilation pass. [CI build 121](https://github.c
 now passes the full host, ARM64 and APK checks. Built integration source
 `9d1c5a7c758e69dd226c49e046b1c7001ef3c961` has the exact tree of controls head
 `986e4d8b12b78e65ff25cfcd30fa84570f51cf41`; the downloaded package is verified.
-The Odin still has build 111; the new controls have no device acceptance yet.
+The Odin now has build 121 and the scoped controls check passes. Breegull
+Blaster has the separate manual confirmation described above; the latest
+source changes only update the two descriptions and engineering records.
 
 The [build-110 input capture](graphics-input-check-odin-20261028.md) is now fully
 reviewed: 11 events, 13 inputs, zero notes/orphans, all eight PNGs, PID 29847
