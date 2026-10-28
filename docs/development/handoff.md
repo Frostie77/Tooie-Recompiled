@@ -6,6 +6,33 @@ Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).
 Use the current repository refs and workflow profile for exact source identities.
 
+## Working agreement and continuity
+
+Frostie asked on 28 October to keep this handoff updated as work proceeds,
+including how we work. Record meaningful changes, exact source/build/artifact
+identities, checks and their limits, user-reported results, decisions, unresolved
+questions and the immediate next action. Preserve earlier failed results and
+raw evidence. Maintain the active work branch; Frostie handles merges.
+
+- Keep guidance concise: one step and one complete copy/paste command block at
+  a time. Name the shell (normally WSL Ubuntu), assess the returned output, then
+  give the next command. Avoid manual source edits when Codex can do the work.
+- Codex handles repository investigation, engineering changes, automated checks,
+  commits and pushes. ChatGPT coordinates, reviews through GitHub, prepares
+  local build/test instructions and reporter drafts, and interprets results.
+  Frostie has authorized ChatGPT to maintain this handoff with completed work.
+- Local development uses Windows with WSL Ubuntu and the established local
+  builder. Verify current source, candidate folder, APK identity and recorder
+  before reusing a command from an older session.
+- Preserve each app's ROM, saves, settings, mods, signing identity and evidence.
+  Odin installation, launch and retries require explicit authorization within
+  the requested scope; resolve an unknown result before retrying.
+- Prepare reporter replies, issue/PR comments and release text as drafts in chat.
+  Frostie sends replies, merges, closes issues and publishes releases.
+- Keep host/CI checks, downloaded-artifact verification and actual device
+  acceptance separate. Display is the intended everyday Odin framerate;
+  Original is a diagnostic comparison, not an accepted limb fix.
+
 ## Current release
 
 [v1.1.0 / code 5](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) is published and GitHub marks it as
@@ -233,10 +260,30 @@ pending more data. The Redmi Pad 2 reporter has now supplied a 119,352-byte
 startup log: ten native starts reject optional FP32 attachment blending after
 Vulkan initialization. Android/build identity and gameplay remain unconfirmed.
 The independent [draft PR #42](https://github.com/Frostie77/Tooie-Recompiled/pull/42)
-skips the unused RT compose pipeline on raster-only builds/devices and is
-building a separate GPU Test app. It does not include PR #41's limb experiments;
-no replacement Mali driver has been verified. Keep each device's evidence
-separate and leave reporter replies and issue closures to Frostie.
+skips the unused RT compose pipeline on raster-only builds/devices.
+[CI run 112](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40633729769)
+completed successfully. Engineering source `dd27ff7d40ffb0b30e3c01391ef0ee7f1eb08349`
+and built integration source `f2166cfa4bf71e663aa4aee6668eb834ed621fad`
+have the same tree `dd34a6dcf05308f192498eb8b5777468d48a8430`.
+The independently downloaded [GPU Test ZIP](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40633729769/artifacts/12793071930)
+is 15,334,512 bytes, SHA-256
+`5320f9ffec074c83cb24ddff5bbe1c06c24d5b63bcb7fb1ffa17e560d2e82a28`;
+CRC, unique flat paths and bundled APK checksum pass. APK
+`Tooie-Recompiled-Android-arm64-f2166cfa4bf7-GPU-Test.apk` is 17,488,072 bytes,
+SHA-256 `a38cba12af004e9eaed147e1e2730dc22cac1b8af649c023d358e2992b7c4482`.
+All seven ARM64 ELF hashes and Build IDs match the report; libmain contains
+`0.1.0-ci.112.1+gf2166cfa4bf7`. The report identifies the separate package
+`io.github.banjotooierecompiled.gputest.gf2166cfa4bf7`, with touch controls
+and the driver picker. It does not include PR #41's limb experiments.
+
+Next: Frostie sends the prepared Redmi test draft with that ZIP link. The
+reporter retains the release app, installs only the GPU Test APK, selects
+**System Default**, reports the screen reached and supplies a fresh startup log
+whether it succeeds or fails. If gameplay is reached, check movement, touch
+controls, sound and close/reopen. Android version remains to be confirmed.
+The reply is drafted only; posting, installation and Redmi acceptance are
+unconfirmed. No replacement Mali driver has been verified. Keep each device's
+evidence separate and leave reporter replies and issue closures to Frostie.
 
 Touch controls are implemented and published in v1.1.0 after focused Odin acceptance.
 The earlier combined c849 Poco test included the accepted touch/audio source
@@ -341,13 +388,15 @@ installed with `adb install -r`, and reported to retain the save and settings.
 The exact source, APK hashes and candidate folder are in the
 [Debug update record](android-debug-refresh-odin-20261026.md).
 
-The current recorder command is:
+The historical build-108 recorder was:
 
 ```bash
 "$HOME/.local/share/tooie-recompiled/candidates/touch-ca05903d788c-e575917a/capture-touch.sh"
 ```
 
-This recorder replaces the historical 1bc, 6f3e and fae recorders. It retains
+It is superseded by the build-110 recorder listed under Current priorities;
+do not use it for a replacement build. This older recorder replaced the
+historical 1bc, 6f3e and fae recorders. The recorder interface retains
 manual `playing`, markers 1–30, repeated events/follow-up notes and `save`.
 The seven-library profile and private `:game` PID path passed host consumer and
 exact-parent controls; private-file/foreground queries still use the package.
@@ -429,7 +478,7 @@ Track confirmed minor observations in the [minor-details backlog](minor-details.
 and keep other observations in the appropriate issue/session record. Nothing
 is resolved automatically; see that backlog's review protocol.
 
-## Latest uploaded Debug playthrough
+## Earlier uploaded Debug playthrough — 24 October
 
 The [24 October installed Debug session](installed-debug-playtest-20261024-223111.md)
 retains all nine accepted marker events and two additional unparsed observations.
