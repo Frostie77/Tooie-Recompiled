@@ -1,6 +1,6 @@
 # Engineering handoff
 
-Updated: 29 October 2026.
+Updated: 30 October 2026.
 
 Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).
@@ -17,7 +17,22 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The current installed Odin test build is **127**, integration source
+The current installed Odin test build is **128**, integration source
+`66dcd14b6792ee5d620800e5a1c8da98fb57d001`. Full CI 128 and the independent
+downloaded paired-APK checks pass. Frostie reports the Lagoon water glitches
+completely gone at Expand/Display/MSAA 2×, gone with None, and other previously
+affected spots clear after restoring 2×. These are focused manual passes;
+the eight new screenshots still need visual review. The recorder then stops
+on original-PID loss after a captured menu-navigation SIGABRT during the
+reported 4× → 2× MSAA change. Its native option records include that change.
+The [menu-navigation correction](menu-navigation-crash-20261030.md) reproduces
+the same exception with the actual producer/consumer and recovers focus through
+the active navigation tree. Normal and address/undefined-sanitized host checks
+pass, including the failing old-source control; full Android CI and device
+confirmation for this new menu fix remain pending. Broader long-play character
+rendering and new Redmi FPS remain open.
+
+The preceding installed Odin test build was **127**, integration source
 `88262a661566d9bb784ce41960b652c3522f43b2`. Frostie accepts the left counter
 number and right Jiggy total in Original, Expand and 16:9, then accepts the
 challenge timer in all three modes, including its correct wide left-edge
@@ -34,10 +49,10 @@ the complete appended native log. Windows ADB expands LF to CRLF, so the helper
 derives native offsets from the verified archived baseline and transfers
 encoded chunks. Future collector integration needs the same byte handling.
 See the
-[shared clipping fix](hud-shared-clipping-fix-20261029.md). Water, broader
+[shared clipping fix](hud-shared-clipping-fix-20261029.md). Water evidence review, broader
 long-play character rendering and new Redmi FPS results remain open.
 
-The current build-127 water follow-up still fails with MSAA 2×. None changes
+The preceding build-127 water follow-up failed with MSAA 2×. None changes
 its appearance to disappearing water/small screen lines, with intermittent
 water-present views. Normal-labelled shots use different camera views, so
 they are not a strict fixed-camera comparison. Frostie's subsequent
@@ -54,7 +69,9 @@ reproduced Vulkan defect: after a decal, later transparent depth-tested draws
 can stay in a read-only pass whose NONE load operation leaves its depth values
 undefined. Android now loads that depth while retaining supported NONE stores.
 The actual captured draw selector and 24 production framebuffer contracts pass;
-restoring the old load fails. Full CI and Odin water acceptance are pending.
+restoring the old load fails. Full CI 128 and focused Odin manual water checks
+now pass as described above, with capture review still pending. Frostie's
+stock-driver query confirms Adreno 740 supports `VK_EXT_load_store_op_none`.
 
 The preceding Odin baseline is **126**, integration source
 `27a577cc85d520075e76319bfce1f0ec0c6a7c44`. Its full host/ARM64/APK CI passes;

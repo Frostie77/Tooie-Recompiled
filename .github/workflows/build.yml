@@ -143,6 +143,7 @@ jobs:
             python3 tools/test_depth_preservation.py
             python3 tools/test_widescreen_visibility.py
             python3 tools/test_manual_resolution.py
+            python3 tools/test_ui_navigation.py
             python3 tools/test_pose_validation_diagnostics.py
             python3 tools/probe_dialogue_camera.py
             python3 tools/probe_dialogue_projection.py --opaque-window-types

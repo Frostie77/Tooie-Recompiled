@@ -1,6 +1,6 @@
 # Read-only depth preservation candidate — 29 October 2026
 
-Status: **source defect reproduced and corrected; device water acceptance pending**.
+Status: **full CI 128 and focused Odin manual water checks pass; image review pending**.
 The complete [build-127 review](hud-water-check-odin-build127-20261029.md) now
 includes the verified native recovery, all 27 events and all 27 viewed images.
 
@@ -42,8 +42,8 @@ Original aspect / Original framerate / MSAA None configuration interval.
   texture/draw/pixel identification.
 
 The old Odin runtime log does not explicitly report the optional extension's
-availability. The captured sequence proves exposure if the NONE path is
-selected; next-device acceptance remains necessary. All 752 scene budgets
+availability. Frostie's subsequent stock-driver `cmd gpu vkjson` query confirms
+Adreno 740 supports `VK_EXT_load_store_op_none`. All 752 scene budgets
 report zero invalid observed CPU inputs, with bounded omissions in 638. The
 20 Original/Original/None samples have both interpolation processors off.
 
@@ -68,6 +68,28 @@ draw order, scissor handling and graphics options are unchanged.
   read-only pass is unused for depth testing.
 
 These are host recording/contract and source-consumer checks. This workspace
-has no Vulkan CPU driver, so they are not GPU execution or an Odin water pass.
-Full Android CI and focused on-device water testing are the next gates.
+has no Vulkan CPU driver, so those checks are not GPU execution.
 The broader intermittent character mesh issue and Redmi FPS remain open.
+
+## Build-128 follow-up
+
+Full [Android CI 128](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40875911462)
+passes for engineering `8f5cb4b9c3323edb759c5ddaed65cc49e8b9c1cc`.
+Integration `66dcd14b6792ee5d620800e5a1c8da98fb57d001` has the exact tested tree
+`3f1ac7a5b2ef69696e173b66ae2d545bcb294904`. Independent downloaded normal and
+GPU Test checks confirm matching seven-library ARM64 payloads and Build IDs.
+
+Frostie has installed build 128 and reports the glitches completely gone in the
+Expand/Display/MSAA 2× check, gone with None, and other previously affected
+Lagoon spots clear after restoring 2×. This is focused manual acceptance.
+The completed capture's eight events comprise four marker-1 views, two marker-2
+views and two marker-3 views. Preserve those repetitions rather than treating
+the proposed three test labels as three screenshots. Initial native review
+records 2× → None → 2× → 4× → 2× on original PID 10919, then a new PID 12064.
+All eight PNGs and full per-member/runtime reconstruction still need review.
+
+The capture ends with a [menu-navigation exception](menu-navigation-crash-20261030.md)
+during the reported 4× → 2× change. The stack identifies the UI navigation path;
+it does not establish an MSAA resource-allocation or depth-preservation failure.
+The temporary render-trace removal is acknowledged, and the fresh-log capture
+completes its final private-log read without the previous bulk-read timeout.
