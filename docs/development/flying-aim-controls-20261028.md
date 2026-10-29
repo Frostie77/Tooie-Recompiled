@@ -14,8 +14,13 @@ guess or timer defines the exclusion.
 All eight preference combinations and 81 axis positions give 648 original
 profile comparisons, including analog C-button roles. Removing the exclusion
 fails. The retained 2,416 guest-consumer cases pass with ten failing controls.
-The Jiggy device comparison remains pending. Preserve the nine accepted
-regular control checks and subsequent manual Breegull Blaster acceptance.
+The [complete build-125 Odin review](graphics-batch-check-odin-20261029.md)
+now retains Frostie's accepted normal-control comparisons with Swap Off and On.
+The On marker is concatenated with the first water report and has a lagoon
+image; preserve that limitation instead of inventing an On-paw capture.
+Preserve the nine accepted regular control checks and subsequent manual
+Breegull Blaster acceptance. The new challenge-timer failure is MD-012, not a
+failed input-exclusion result.
 
 ## Report and evidence status
 

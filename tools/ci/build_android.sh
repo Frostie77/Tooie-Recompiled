@@ -10,7 +10,7 @@ ndk="$sdk/ndk/$ndk_version"
 toolchain="$ndk/build/cmake/android.toolchain.cmake"
 [[ -f "$toolchain" ]] || { echo "Missing NDK $ndk_version: $toolchain" >&2; exit 1; }
 mkdir -p "$work/logs"
-exec > >(tee "$work/logs/${1:?Expected prepare, native, package or candidate}.log") 2>&1
+exec > >(tee "$work/logs/${1:?Expected prepare, native, package, paired-gpu or candidate}.log") 2>&1
 export CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:-2}
 touch_test=${TOOIE_ANDROID_TOUCH_TEST:-0}
 [[ "$touch_test" == 0 || "$touch_test" == 1 ]] || { echo 'Invalid TOOIE_ANDROID_TOUCH_TEST' >&2; exit 1; }
@@ -89,6 +89,14 @@ package)
   gradle --no-daemon --console=plain --stacktrace -p "$package" "${driver_gradle[@]}" assembleDebug
   python3 "$source_root/tools/ci/verify_android.py" apk "$source_root" "$work" "$ndk"
   ;;
+paired-gpu)
+  [[ "$touch_test" == 0 && "$driver_test" == 0 ]] || { echo 'Paired packaging starts from the verified normal Debug profile.' >&2; exit 1; }
+  [[ -f "$work/artifacts/build-report.json" ]] || { echo 'Verify the normal Debug APK first.' >&2; exit 1; }
+  revision=$(git -C "$source_root" rev-parse HEAD)
+  gradle --no-daemon --console=plain --stacktrace -p "$work/package" \
+    "-PtooieDriverTestId=${revision:0:12}" assembleDebug
+  TOOIE_ANDROID_DRIVER_TEST=1 python3 "$source_root/tools/ci/verify_android.py" apk-paired-gpu "$source_root" "$work" "$ndk"
+  ;;
 candidate)
   [[ "$touch_test" == 0 ]] || { echo 'Touch-test packages cannot become release candidates.' >&2; exit 1; }
   [[ "$driver_test" == 0 ]] || { echo 'GPU-driver tests cannot become release candidates.' >&2; exit 1; }
@@ -104,5 +112,5 @@ candidate)
     --build-tools "$sdk/build-tools/36.0.0" --source-commit "$revision" \
     --version-code "$code" --output "$work/candidate"
   ;;
-*) echo 'Usage: build_android.sh prepare|native|package|candidate' >&2; exit 2 ;;
+*) echo 'Usage: build_android.sh prepare|native|package|paired-gpu|candidate' >&2; exit 2 ;;
 esac

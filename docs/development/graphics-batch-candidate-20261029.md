@@ -1,10 +1,13 @@
 # Graphics and Jiggy input candidate — 29 October 2026
 
-Status: **host-validated candidates; Odin acceptance pending**. Frostie requests
+Status: **focused build-125 Odin passes for intro logos and Jiggy controls;
+HUD timer and lagoon water remain open.** See the
+[complete comparison](graphics-batch-check-odin-20261029.md). Frostie requests
 one combined build, followed by further work on supported backlog findings.
 Keep PR #41 draft. The earlier controls and focused limb-gap passes stand.
 The [late-play and lagoon review](late-play-and-lagoon-check-odin-20261028.md)
-retains all seven new observations. Do not call these device fixes yet.
+retains all seven prior observations. Broader long-play character acceptance
+remains open; do not extend the two focused passes to the entire batch.
 
 [CI build 124](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40792116390)
 passes the complete host, ARM64 and APK checks for engineering head `0261fd76`.
@@ -129,7 +132,8 @@ ID, overlay-window address or timeout substitutes for ownership. All eight
 preference combinations and 81 axis positions produce **648** original-profile
 comparisons, including analog C-button roles. Removing the exclusion fails its
 control. Existing **2,416** guest-consumer cases still pass, with ten deliberate
-broken-policy controls. An actual Odin Jiggy Challenge check remains required.
+broken-policy controls. Frostie now accepts the focused build-125 Odin Off/On
+challenge comparison in the review above.
 
 ## Combined validation and next comparison
 

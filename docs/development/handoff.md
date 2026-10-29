@@ -17,14 +17,20 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The retained Debug is now **build 121**, built source
-`9d1c5a7c758e69dd226c49e046b1c7001ef3c961`. The
+The current Odin test candidate is **build 125**, integration source
+`a0672974abaf764e38861dc4dd49d74f22e4ff07`, with the exact source tree of
+engineering head `87e00e71d4285b4c5d4931c10ca7907d49015a53`. The
+[complete capture review](graphics-batch-check-odin-20261029.md) accepts the
+focused logo/Jiggy checks and retains the timer/water failures.
+
+The preceding **build 121**, built source
+`9d1c5a7c758e69dd226c49e046b1c7001ef3c961`, established the baseline. The
 [scoped control review](scoped-controls-check-odin-20261028.md) accepts the nine
 recorded checks: independent aiming/flight inversion, coherent flight pitch and
 reticle, stationary-only stick swapping and restoration on exit. Frostie later
 manually confirms Breegull Blaster controls are unchanged. He clarifies that
 he accidentally closed the game after marker 9; all nine checks were retained.
-The next build uses his requested Breegull Blaster and plain-flight wording.
+Build 125 includes his requested Breegull Blaster and plain-flight wording.
 
 The preceding **build 111** used source
 `ba1675a593ab9ee9e4fe19a5bc92614105762c3f`. The
@@ -133,16 +139,42 @@ rigid placement; whole-component HUD anchors; horizontal-only Expand frustum
 widening that retains rear/vertical rejection; and Jiggy Challenge exclusion
 from stationary stick swapping. Their regressions pass with deliberate failing
 controls. The five-part batch passes [full CI build 124](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40792116390).
-Odin acceptance remains pending. Keep PR #41 draft and do not claim the lagoon
-water cause is proved.
+The follow-up also passes [full CI build 125](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40795576679)
+and its complete downloaded APK/native payload is verified. Keep PR #41 draft
+and do not claim the lagoon water cause is proved.
+
+The [complete build-125 Odin review](graphics-batch-check-odin-20261029.md)
+retains all 16 events, 18 inputs, 15 included native images and 16,092 Runtime
+records. Frostie explicitly accepts **MD-011 logo bouncing at Display** and
+**MD-015 Jiggy controls with Swap Off/On**. HUD counters improve, but **MD-012
+remains open:** Expand/16:9 hide the challenge timer and Original restores it.
+The timer candidate in slot 11 still emits draw commands; trace the actual
+placement/clipping consumers before choosing a correction. **MD-016 water still
+fails**, including main Original aspect and Original framerate. The native
+configuration changes are retained, but optional water draw inputs are absent.
+The capture ends with save and the owned HUD request is removed. Broader
+long-play character acceptance remains open. Preserve the literal repeated
+marker 7 and combined marker-10 input; details belong in the review, not another
+generic replay of the already accepted controls.
+
+The [timer/Redmi follow-up](hud-timer-redmi-followup-20261029.md) now restores
+the countdown's working Original draw path in every HUD mode, preserving wide
+placement for other counters; 54 additional consumer cases pass. It integrates
+PR #42's startup guard, retaining eight setup cases, and adds paired Debug/GPU
+Test packaging from one native build. Manual resolution and corrected culling
+are included; Redmi FPS improvement is unmeasured. The water cause remains
+open: explicit `--render-trace` captures rotating draw pages with depth, texture
+and vertex inputs. Default tracing stays off. Full combined CI and new device
+checks remain pending.
 
 The [manual resolution and warning follow-up](manual-resolution-20261029.md)
 adds fractional 1x–8x resolution control, retaining old choices/defaults and
 real Apply/Cancel/persistence behavior. All 576 consumer cases and both controls
 pass. The existing bounded actor warning now identifies the exact rejected
 builder/schema check, with seven immutable-input cases and a failing control.
-It does not change unsupported-actor rendering policy. The follow-up needs its
-own ARM64/APK CI; actual Redmi FPS and the water draw's cause remain unproved.
+It does not change unsupported-actor rendering policy. Build 125 passes the
+full host, ARM64 and APK checks; actual Redmi FPS and the water draw's cause
+remain unproved.
 
 The [complete late-play/lagoon review](late-play-and-lagoon-check-odin-20261028.md)
 retains all seven events, native images, both videos and reconciled runtime
@@ -156,8 +188,9 @@ control checks or classify Frostie's accidental game closure as a new crash.
 The [Redmi reply](redmi-gameplay-performance-20261029.md) confirms gameplay,
 movement and sound in the offered separate PR #42 test. Expand performance and
 native-resolution cost remain open; no new startup/runtime log or exact
-settings readback is supplied. The startup candidate now has device support,
-but it is not part of this PR #41 batch. The offered tree is now inspected:
+settings readback is supplied. The startup candidate now has device support.
+It was absent from build 125; the working follow-up above integrates the same
+guard into PR #41's next candidate. The offered tree is now inspected:
 it contains the old unconditional Expand override and only three resolution
 choices. The new source leads do not establish a measured FPS cause. Frostie
 still owns reporter replies and merges.
@@ -176,7 +209,8 @@ stationary-aim read, preserving saved profiles and restoring roles on exit.
 Scope uses authored state-handler identities and live controller ownership,
 not map guesses. See the linked source record for the consumer boundaries and
 validation. HUD component anchoring and opening-logo bouncing now have the
-host candidates linked above; their device comparisons remain open.
+host candidates linked above; the focused build-125 logo pass, counter
+improvement and timer failure are recorded above.
 The controls regression passes 2,416 complete guest-consumer cases with
 ASan/UBSan; ten deliberately broken policies/hooks, including the Jiggy guard,
 fail as expected. Native
@@ -184,7 +218,7 @@ touch merging and Android Java compilation pass. [CI build 121](https://github.c
 now passes the full host, ARM64 and APK checks. Built integration source
 `9d1c5a7c758e69dd226c49e046b1c7001ef3c961` has the exact tree of controls head
 `986e4d8b12b78e65ff25cfcd30fa84570f51cf41`; the downloaded package is verified.
-The Odin now has build 121 and the scoped controls check passes. Breegull
+Build 121 passed the scoped Odin controls check. Breegull
 Blaster has the separate manual confirmation described above; the latest
 source then updated the two descriptions and engineering records; the new
 combined batch above extends that accepted baseline.

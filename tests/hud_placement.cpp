@@ -87,5 +87,54 @@ int main(int argc,char **argv){
         const auto points=consumeHud(r,Start,word(r,Cursor),.75f,1,dropScope);
         CHECK(points.size()==4&&points[0].origin==G_EX_ORIGIN_LEFT&&points[1].origin==G_EX_ORIGIN_RIGHT&&points[2].origin==G_EX_ORIGIN_LEFT&&points[3].origin==G_EX_ORIGIN_NONE);
     }
+    unsigned timerCases=0;
+    // The recorded slot/kind and animation endpoints use the full retained
+    // component callback/text loop. Compare the complete resulting command
+    // stream and its actual render consumers with the working Original path.
+    for(int x:{-54,22})for(uint32_t seconds:{0U,95U,300U}) {
+        std::vector<uint8_t> original;
+        for(auto mode:{ultramodern::renderer::HUDRatioMode::Original,ultramodern::renderer::HUDRatioMode::Clamp16x9,ultramodern::renderer::HUDRatioMode::Full}) {
+            std::vector<uint8_t> ram(0x800000);auto *r=ram.data();addresses[786]=int32_t(0x80600000);
+            ultramodern::renderer::config.hr_option=mode;special=missingCallback=false;
+            put(r,Cursor,Start);byte(r,0x801357B0,1);put(r,0x80600D54,0x80005000);
+            const uint32_t entry=0x801239B4,component=0x80191460;
+            half(r,entry,22);half(r,entry+2,206);half(r,entry+6,int16_t(x));half(r,entry+8,206);
+            put(r,entry+0x18,component);put(r,component+4,0x000EFFFF);
+            put(r,component+0x14,0x3F800000);put(r,component+0x1C,0);put(r,component+0x20,seconds);
+            const std::vector<uint8_t> input(r,r+0x800000);
+            icons=texts=0;recomp_context ctx{};ctx.r4=int32_t(Cursor);ctx.r29=int32_t(0x807F0000);
+            func_800FA508(r,&ctx);CHECK(icons==1&&texts==1);
+            const auto end=word(r,Cursor);std::vector<uint8_t> commands(r+(Start&0x7FFFFF),r+(end&0x7FFFFF));
+            if(mode==ultramodern::renderer::HUDRatioMode::Original)original=commands;
+            else CHECK(commands==original);
+            CHECK(std::memcmp(r+(entry&0x7FFFFF),input.data()+(entry&0x7FFFFF),0x1C)==0);
+            CHECK(std::memcmp(r+(component&0x7FFFFF),input.data()+(component&0x7FFFFF),0x34)==0);
+            for(float ratio:{1.f,.75f,.5f}) {
+                const auto points=consumeHud(r,Start,end,ratio,1,false);
+                CHECK(points.size()==3);
+                const float expected=160+(float(x)-160)*ratio;
+                CHECK(points[0].origin==G_EX_ORIGIN_NONE&&std::fabs(points[0].x-std::floor(expected))<=1);
+                CHECK(points[1].origin==G_EX_ORIGIN_NONE&&std::fabs(points[1].x-expected)<=1);
+                CHECK(points[2].origin==G_EX_ORIGIN_NONE&&std::fabs(points[2].x-std::floor(expected+20*ratio))<=1);
+                ++timerCases;
+            }
+        }
+    }
+    // A different kind in this slot, or this kind in a different slot, keeps
+    // ordinary whole-component placement. Never exempt a heap address alone.
+    for(unsigned slot:{10U,11U})for(unsigned kind:{13U,14U}) {
+        std::vector<uint8_t> ram(0x800000);auto *r=ram.data();addresses[786]=int32_t(0x80600000);
+        ultramodern::renderer::config.hr_option=ultramodern::renderer::HUDRatioMode::Full;
+        special=missingCallback=false;put(r,Cursor,Start);byte(r,0x801357B0,1);put(r,0x80600D54,0x80005000);
+        const uint32_t entry=0x80123880+slot*0x1C,component=0x80230000;
+        half(r,entry,22);half(r,entry+6,22);half(r,entry+8,206);put(r,entry+0x18,component);
+        put(r,component+4,kind<<16);put(r,component+0x14,0x3F800000);put(r,component+0x1C,0);
+        recomp_context ctx{};ctx.r4=int32_t(Cursor);ctx.r29=int32_t(0x807F0000);func_800FA508(r,&ctx);
+        const auto points=consumeHud(r,Start,word(r,Cursor),.75f,1,false);
+        CHECK(points.size()==3);
+        const auto origin=slot==11&&kind==14?G_EX_ORIGIN_NONE:G_EX_ORIGIN_LEFT;
+        for(const auto &point:points)CHECK(point.origin==origin);
+    }
     std::printf("PASS: %u HUD layout/settings/aspect cases through retained full component/text loop, native scope commands, production GBI, RDP rectangles, RSP viewport and renderer coordinate consumers; authored-side animation, icon/text/model coherence, filtering, sparse/null callbacks, Original and restored scope.\n",cases);
+    std::printf("PASS: %u countdown mode/animation/value/aspect cases preserve the complete working Original command stream and model/text placement; layout/kind discrimination and guest inputs retained. Visual timer acceptance remains an Odin check.\n",timerCases);
 }

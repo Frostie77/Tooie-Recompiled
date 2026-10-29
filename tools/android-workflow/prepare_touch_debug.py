@@ -82,6 +82,7 @@ def main(argv=None):
     parser.add_argument("--adb",default="adb")
     parser.add_argument("--serial",required=True)
     parser.add_argument("--hud-trace",action="store_true",help="Enable the optional HUD layout trace in the generated capture launcher")
+    parser.add_argument("--render-trace",action="store_true",help="Enable optional paged draw inputs in the generated capture launcher")
     args=parser.parse_args(argv)
     require(re.fullmatch(r"[0-9a-f]{64}",args.expect_cert),"Invalid expected Debug certificate")
     report,original,tools=load_candidate(args.zip,args.expect_zip_sha256,args.expect_source)
@@ -116,6 +117,7 @@ def main(argv=None):
              "--expect-source",args.expect_source,"--expect-sha256",receipt["apk_sha256"],"--expect-cert",args.expect_cert,
              "--adb",args.adb,"--serial",args.serial,"--state",str(folder/"capture-state"),"--tool-revision",args.expect_source]
     if args.hud_trace:command.append("--hud-trace")
+    if args.render_trace:command.append("--render-trace")
     check="from pathlib import Path; import hashlib,sys; expected="+repr(expected_tools)+"; changed=any(hashlib.sha256(Path(p).read_bytes()).hexdigest()!=h for p,h in expected.items()); sys.exit('Capture tools changed; stop and reverify' if changed else 0)"
     launcher=folder/"capture-touch.sh";launcher.write_text("#!/bin/sh\n"+shlex.join([sys.executable,"-c",check])+" || exit 1\nexec "+shlex.join(command)+"\n");launcher.chmod(0o700)
     require(signed.read_bytes()==data,"Signed APK changed during verification")

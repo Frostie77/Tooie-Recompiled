@@ -146,17 +146,18 @@ class InstalledCapture(unittest.TestCase):
         class Terminal(io.StringIO):
             def isatty(self): return True
         hud = types.SimpleNamespace(enable=lambda c: self.fail('Enabled HUD trace before installed APK verification'))
+        render = types.SimpleNamespace(enable=lambda c: self.fail('Enabled renderer trace before installed APK verification'))
         with patch.object(self.c.sys, 'stdin', Terminal()), self.assertRaisesRegex(RuntimeError, 'Installed APK differs'):
-            capture.installed_main(self.c, self.args, hud)
+            capture.installed_main(self.c, self.args, hud, render)
         self.assertFalse(self.c.attempted)
 
-    def hud_shell(self):
+    def hud_shell(self, render=False, both=False):
         app = self.area / 'app'
         (app / 'files/data').mkdir(parents=True)
         calls = []
         def adb(*args, **kwargs):
             values = ['adb', '-s', 'fixture-device', *args]
-            capture.guard_observer_command(values, 'adb', 'fixture-device', True)
+            capture.guard_observer_command(values, 'adb', 'fixture-device', not render or both, render)
             words = shlex.split(args[2])
             self.assertEqual(words[:4], ['run-as', 'io.github.banjotooierecompiled', 'sh', '-c'])
             calls.append(words[4])
@@ -165,7 +166,7 @@ class InstalledCapture(unittest.TestCase):
             self.c.save(kwargs['name'] + '-status', 'returncode=' + str(result.returncode) + '\n' + result.stderr.decode())
             return result
         self.c.adb = adb
-        return app / capture.HUD_REQUEST, calls
+        return app / (capture.RENDER_REQUEST if render else capture.HUD_REQUEST), calls
 
     def test_hud_trace_stages_exact_request_and_archives_cleanup_receipt(self):
         path, calls = self.hud_shell()
@@ -229,6 +230,88 @@ class InstalledCapture(unittest.TestCase):
         capture.verify_local(self.c, self.args)
         self.assertEqual(len(self.calls), 2)
         self.assertTrue(all(call[0] in (str(self.area / 'apksigner'), str(self.area / 'aapt2')) for call in self.calls))
+
+    def test_renderer_trace_stages_exact_owned_request_and_archives_removal(self):
+        path,calls=self.hud_shell(render=True)
+        request=capture.RenderTraceRequest()
+        with contextlib.redirect_stdout(io.StringIO()):
+            request.enable(self.c)
+            self.assertEqual(path.read_bytes(),capture.RENDER_CONTENTS)
+            request.finish(self.c)
+            request.finish(self.c)
+        self.assertFalse(path.exists());self.assertEqual(len(calls),2)
+        receipt=json.loads(Path(str(self.c.prefix)+'-Render-Trace-Request.txt').read_text())
+        self.assertEqual(receipt['path'],capture.RENDER_REQUEST)
+        self.assertTrue(receipt['enable_acknowledged'] and receipt['removal_acknowledged'])
+        self.assertIsNone(receipt['error'])
+        archives,_=self.c.archive_evidence()
+        with zipfile.ZipFile(archives[0]) as bundle:
+            self.assertIn(self.c.prefix.name+'-Render-Trace-Request.txt',bundle.namelist())
+
+    def test_renderer_guard_needs_its_own_flag_and_exact_closed_script(self):
+        base=['adb','-s','fixture-device','shell','-T']
+        for enabled in (True,False):
+            remote=shlex.join(['run-as',self.c.PKG,'sh','-c',capture.render_request_script(enabled)])
+            for hud,render in ((False,False),(True,False)):
+                with self.assertRaises(RuntimeError):capture.guard_observer_command(base+[remote],'adb','fixture-device',hud,render)
+            capture.guard_observer_command(base+[remote],'adb','fixture-device',False,True)
+            for edited in (remote.replace('render-trace-v1','save-data'),remote+'; rm save-data'):
+                with self.assertRaises(RuntimeError):capture.guard_observer_command(base+[edited],'adb','fixture-device',True,True)
+            hud_remote=shlex.join(['run-as',self.c.PKG,'sh','-c',capture.hud_request_script(enabled)])
+            with self.assertRaises(RuntimeError):capture.guard_observer_command(base+[hud_remote],'adb','fixture-device',False,True)
+
+    def test_renderer_trace_retains_existing_data_and_symlinks(self):
+        path,calls=self.hud_shell(render=True)
+        target=path.parent/'save-data';target.write_bytes(b'untouched save')
+        path.symlink_to(target)
+        request=capture.RenderTraceRequest()
+        with self.assertRaisesRegex(RuntimeError,'not acknowledged'):request.enable(self.c)
+        request.finish(self.c)
+        self.assertTrue(path.is_symlink());self.assertEqual(target.read_bytes(),b'untouched save')
+        path.unlink();path.write_bytes(b'existing request')
+        self.c.prefix=self.area/'existing-render-request'
+        with self.assertRaisesRegex(RuntimeError,'not acknowledged'):capture.RenderTraceRequest().enable(self.c)
+        self.assertEqual(path.read_bytes(),b'existing request')
+
+    def test_renderer_cleanup_keeps_changed_request_and_records_failure(self):
+        path,_=self.hud_shell(render=True)
+        request=capture.RenderTraceRequest()
+        with contextlib.redirect_stdout(io.StringIO()):request.enable(self.c)
+        path.write_bytes(b'different owner')
+        request.finish(self.c)
+        self.assertEqual(path.read_bytes(),b'different owner');self.assertFalse(request.removed)
+        self.assertIn('not verified',request.error)
+
+    def test_both_trace_requests_are_independent_and_remove_only_owned_files(self):
+        render_path,calls=self.hud_shell(render=True,both=True)
+        hud_path=render_path.parent/Path(capture.HUD_REQUEST).name
+        sentinel=render_path.parent/'saved-game';sentinel.write_bytes(b'retained')
+        hud,render=capture.HudTraceRequest(),capture.RenderTraceRequest()
+        with contextlib.redirect_stdout(io.StringIO()):
+            hud.enable(self.c);render.enable(self.c)
+            hud.finish(self.c)
+            self.assertFalse(hud_path.exists());self.assertEqual(render_path.read_bytes(),capture.RENDER_CONTENTS)
+            render.finish(self.c)
+        self.assertFalse(render_path.exists());self.assertEqual(sentinel.read_bytes(),b'retained');self.assertEqual(len(calls),4)
+
+    def test_renderer_native_gate_rejects_old_or_missing_observers_before_sdk(self):
+        self.args.render_trace=True
+        with self.assertRaisesRegex(RuntimeError,'paged renderer'):capture.verify_local(self.c,self.args)
+        self.assertEqual(self.calls,[])
+        native=self.native+b'render-trace-v1\0scene-call\0'
+        self.app['lib/arm64-v8a/libmain.so']=native
+        self.report['libraries']['libmain.so']['sha256']=capture.digest(native)
+        self.driver_profile()
+        with self.assertRaisesRegex(RuntimeError,'paged renderer'):capture.verify_local(self.c,self.args)
+        self.assertEqual(self.calls,[])
+
+    def test_supported_renderer_observer_passes_all_local_checks(self):
+        self.args.render_trace=True
+        native=self.native+b'render-trace-v1\0call_first=%u call_pages=%u\0z_compare=%u z_write=%u\0'
+        self.app['lib/arm64-v8a/libmain.so']=native
+        self.report['libraries']['libmain.so']['sha256']=capture.digest(native)
+        self.driver_profile();capture.verify_local(self.c,self.args)
+        self.assertEqual(len(self.calls),2)
 
     def test_continuous_observation_runs_past_old_timer_and_stops_on_save(self):
         self.c.input_hub = lambda: types.SimpleNamespace(phase='')

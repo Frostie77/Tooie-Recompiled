@@ -9,23 +9,38 @@ and descriptions rather than assuming their severity from a marker number.
 The [batch record](graphics-batch-candidate-20261029.md) documents host-validated
 player identity lifetime, intro ownership/camera attachment, actual HUD
 placement, retained Expand culling and Jiggy input exclusion. Full combined CI
-passes in build 124; the next Odin comparison remains pending. A
+passes in build 124. A
 [manual-scale and warning follow-up](manual-resolution-20261029.md) now passes
-its host checks and needs its own full CI. The [complete new capture review](late-play-and-lagoon-check-odin-20261028.md)
+its host checks and full [CI build 125](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40795576679).
+The [complete build-125 Odin review](graphics-batch-check-odin-20261029.md)
+retains all 16 events/18 inputs and 15 included native screenshots. The
+[complete prior capture review](late-play-and-lagoon-check-odin-20261028.md)
 retains all seven new events, images and both videos. Earlier focused limb and
 regular-control acceptances stand; later long-play rendering remains open.
 
 | ID | Observation | Status | Evidence |
 |---|---|---|---|
-| MD-015 | Jiggy Challenge controls become wrong with stationary joystick swapping enabled | Host candidate passes; Odin check pending | Frostie's conversational report. The actual canonical challenge controller's input state excludes the swap; 648 real-profile comparisons pass and removing the guard fails. This is separate from MD-001's accepted static-line correction. |
-| MD-016 | Blue geometry across lagoon shore/land and strange water around a stone column | Open; visibility candidate is not a proved water fix | Three events in the 23:34 capture, retained in the complete review above. Player IDs are active in this session. Horizontal-only Expand widening replaces unconditional unculling and passes 864 cases; no captured water draw inputs prove causality. Record the actual aspect mode in the next comparison. |
+| MD-015 | Jiggy Challenge controls become wrong with stationary joystick swapping enabled | Focused build-125 Odin pass — next update; broader coverage open | Frostie accepts normal controls with Swap Off and unchanged normal controls with Swap On. The complete review retains E06 and E10; E10 is literally one combined `Jiggy Swap On11 Jolly Water` input with a lagoon image, not a separate On-paw screenshot. The actual controller exclusion passes 648 real-profile comparisons and its failing control. This is separate from MD-001's accepted static-line correction. |
+| MD-016 | Blue geometry across lagoon shore/land and strange water around a stone column | Still reproduced in build 125, including Original aspect and framerate; open | The complete review retains E10–E16, all six included water images and E16's explicitly local-only PNG receipt. Frostie confirms both Original comparisons still fail; native configuration changes are retained. This is separate from HUD Placement. Horizontal-only Expand widening passes 864 cases but has not resolved this visible water problem. Optional scene-input domains remain empty; no captured water draw proves a cause. |
 
-MD-011 and MD-012 now have host candidates with failing controls; keep them
-open until the visible logo/HUD checks pass. MD-005's earlier focused Display
+MD-011 now has an explicitly accepted focused build-125 Display pass.
+MD-012 has improved counter placement but a new challenge-timer failure:
+HUD Placement Original restores the timer; Expand and 16:9 hide it. Frostie
+confirms recording this failure. Keep MD-012 open and inspect the timer's actual
+draw/placement and clipping path without assuming the precise cause. The
+complete review above preserves all marker associations. MD-005's earlier focused Display
 limb-gap pass does not cover the later broad long-play corruption. MD-013's
 Split Up freeze still lacks a new failing capture. The separate
 [Redmi result](redmi-gameplay-performance-20261029.md) supports startup while
 leaving aspect/resolution performance open.
+
+The [timer/Redmi follow-up](hud-timer-redmi-followup-20261029.md) now preserves
+the matching countdown's Original draw path in all HUD modes (54 added consumer
+cases). Other counters retain wide placement. Timer visibility remains an Odin
+check. MD-016 is still open; the new explicit renderer trace records rotating
+draw pages, depth/texture state and raw/indexed vertices for its next diagnosis.
+The same candidate includes the previously separate Redmi startup guard and
+paired test packaging; no new Redmi FPS result is claimed.
 
 ## Current deferred details
 
@@ -140,8 +155,8 @@ is a comparison, while Display remains Frostie's everyday completion target.
 
 | ID | Observation | Status | Evidence and follow-up |
 |---|---|---|---|
-| MD-011 | Opening-scene logos rapidly stutter up/down at Manual 60 and Display; Original is fine | Host intro candidate passes; Odin comparison pending | Build-109 report and complete build-111 logo review. The 29 October batch restores special intro ownership/camera attachment; 36 consumer cases and both controls pass. Do not conflate it with dialogue shunt or assume a common cause with MD-005. |
-| MD-012 | HUD Placement Original / 16:9 / Expand does not visibly reposition the HUD | Host placement candidate passes; Odin comparison pending | Build-109 report, build-110 setting/origin evidence and source investigation. The 29 October whole-component candidate passes 72 consumer cases and failing controls. Live pictured item mapping remains pending. This setting is separate from Framerate and the main aspect ratio. |
+| MD-011 | Opening-scene logos rapidly stutter up/down at Manual 60 and Display; Original is fine | Focused build-125 Display Odin pass — next update; broader coverage open | E01/E02 literally say `logo steady`; the reviewed images identify Rareware and Dolby. Frostie explicitly confirms the bouncing is fixed. This is a manual motion acceptance without a new video or all-mode/device pass. The intro candidate passes 36 consumer cases and both controls. Earlier failure evidence is retained. |
+| MD-012 | Historically ineffective HUD placement; build-125 Expand / 16:9 now hide the Jiggy Challenge timer | Open; counters improve but timer regresses | The complete build-125 review retains E03–E05's counter comparison and E07/E08/repeated marker 7 plus E09's timer reports. Frostie confirms Original restores the timer. E08/E09 images are menu-covered with Expand selected; they do not themselves prove a restored timer. Native option changes and the timer candidate's slot-11 draw commands are retained. The older 72 host cases have not reproduced this failure. HUD Placement is separate from Framerate and main Aspect Ratio. |
 
 ## Extended build-109 playthrough — 22:42, 27 October 2026
 

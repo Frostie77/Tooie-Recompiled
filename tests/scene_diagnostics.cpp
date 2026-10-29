@@ -4,6 +4,8 @@
 #include "skeletal_pose.cpp"
 #undef main
 #include "render/rt64_scene_diagnostics.h"
+#include "scene-first-page-control.h"
+#include "scene-early-stop-control.h"
 #include <fstream>
 #include <iterator>
 #undef CHECK
@@ -13,7 +15,9 @@ BufferUploader::~BufferUploader(){}
 void BufferUploader::submit(RenderWorker*,const std::vector<Upload>&) {CHECK(false);}
 void decodeSkeletalSeam(WorkloadQueue&,unsigned,uint8_t*);
 
-int main() {
+int main(int argc,char **argv) {
+    const bool firstPageControl=argc==2&&std::string(argv[1])=="--first-page-only";
+    const bool earlyStopControl=argc==2&&std::string(argv[1])=="--early-index-stop";
     const auto folder = std::getenv("APP_FOLDER_PATH"); CHECK(folder);
     const std::string request = std::string(folder) + "/" + sceneDiagnostics::RequestName;
     sceneDiagnostics::Window window;
@@ -21,7 +25,7 @@ int main() {
     { std::ofstream f(request); f << "wrong\n"; }
     CHECK(!window.due(5'000'001));
     { std::ofstream f(request); f << sceneDiagnostics::RequestContents; }
-    CHECK(window.due(10'000'001) && !window.due(10'000'002));
+    CHECK(window.due(10'000'001) && window.sequence==1 && !window.due(10'000'002));
     CHECK(window.due(15'000'001) && window.due(1)); // no lifetime cap; clock rollback
     CHECK(std::remove(request.c_str()) == 0);
     CHECK(!window.due(5'000'001));
@@ -94,9 +98,38 @@ int main() {
         proj.gameCallCount=0; rect.gameCalls.resize(sceneDiagnostics::MaxCalls+1); rect.gameCallCount=unsigned(rect.gameCalls.size());
         counts=sceneDiagnostics::report(w,nullptr,nullptr,c);
         CHECK(counts.calls==sceneDiagnostics::MaxCalls && counts.truncated);
+        // A late transparent/raw draw must be observable even when a large
+        // earlier indexed draw has exhausted the separate vertex walk budget.
+        d.faceIndices.assign(sceneDiagnostics::MaxIndices+3,0);
+        proj.gameCallCount=1;call.callDesc.triangleCount=unsigned(d.faceIndices.size()/3);
+        rect.type=Projection::Type::Triangle;
+        for(auto &x:rect.gameCalls)x={};
+        auto &late=rect.gameCalls.back();late.callDesc.uid=999;
+        late.callDesc.triangleCount=2;late.callDesc.otherMode.L=Z_CMP|Z_UPD|ZMODE_XLU;
+        late.callDesc.tileIndex=0;late.callDesc.tileCount=1;
+        late.callDesc.loadIndex=0;late.callDesc.loadCount=1;
+        d.callTiles.resize(1);d.callTiles[0]={};d.callTiles[0].valid=true;
+        d.callTiles[0].tmemHashOrID=0x1234;d.callTiles[0].sampleWidth=32;d.callTiles[0].sampleHeight=32;
+        d.loadOperations.resize(1);d.loadOperations[0]={};d.loadOperations[0].texture.address=0x123456;
+        d.triPosFloats={10,20,.25f,1, 30,20,.25f,1, 10,40,.25f,1, 30,40,.25f,1, 10,40,.25f,1, 30,20,.25f,1};
+        d.triTcFloats={0,0,32,0,0,32,32,32,0,32,32,0};
+        w.gameCallCount=rect.gameCallCount+1;c.callPage=1;c.sample=444;
+        const auto raw=d.triPosFloats,tc=d.triTcFloats;const auto mode=late.callDesc.otherMode.L;
+        if(firstPageControl) {
+            sceneDiagnosticsFirstPage::Context badContext;badContext.callPage=1;badContext.sample=444;
+            const auto bad=sceneDiagnosticsFirstPage::report(w,nullptr,nullptr,badContext);CHECK(bad.calls==2);
+        }
+        if(earlyStopControl) {
+            sceneDiagnosticsEarlyStop::Context badContext;badContext.callPage=1;badContext.sample=444;
+            const auto bad=sceneDiagnosticsEarlyStop::report(w,nullptr,nullptr,badContext);CHECK(bad.calls==2);
+        }
+        counts=sceneDiagnostics::report(w,nullptr,nullptr,c);
+        CHECK(counts.calls==2&&counts.callVertices==sceneDiagnostics::MaxCallVertices&&counts.truncated);
+        CHECK(d.triPosFloats==raw&&d.triTcFloats==tc&&late.callDesc.otherMode.L==mode);
     }
     std::ifstream log(std::string(folder)+"/banjotooi-debug.log");
     std::string line; bool owner=false, unanchored=false, matrix=false, raw=false, rawProjection=false, processedProjection=false, viewport=false, projectionJoin=false, previousSource=false;
+    bool lateDraw=false,lateVertex=false,texture=false,textureLoad=false,page=false;
     while (std::getline(log,line)) {
         CHECK(line.size()<2047);
         owner |= line.find("Runtime scene-owner:")!=std::string::npos && line.find("paired=1")!=std::string::npos;
@@ -109,7 +142,14 @@ int main() {
         viewport |= line.find("has_viewport=1 viewport_scale=160/120/")!=std::string::npos;
         projectionJoin |= line.find("Runtime scene-vertex:")!=std::string::npos && line.find("projection_transform=0")!=std::string::npos;
         previousSource |= line.find("prev_source_valid=1 prev_vertex=0 prev_source=9/-1/0")!=std::string::npos;
+        lateDraw |= line.find("uid=999")!=std::string::npos&&line.find("z_compare=1 z_write=1")!=std::string::npos;
+        lateVertex |= line.find("kind=raw vertex=0 screen=10/20/0.25/1 tc_valid=1 tc=0/0")!=std::string::npos;
+        texture |= line.find("stage=texture ")!=std::string::npos&&line.find("tmem_hash_or_id=0x1234")!=std::string::npos;
+        textureLoad |= line.find("stage=texture-load ")!=std::string::npos&&line.find("address=0x123456")!=std::string::npos;
+        page |= line.find("sample=444 ")!=std::string::npos&&line.find("call_first=256 call_pages=2")!=std::string::npos;
     }
     CHECK(owner && unanchored && matrix && raw && rawProjection && processedProjection && viewport && projectionJoin && previousSource);
+    CHECK(lateDraw&&lateVertex&&texture&&textureLoad&&page);
     std::puts("PASS: opt-in/removal/late-window controls; live player/NPC consumed matrices and vertices at endpoint/intermediate weights; default HUD origins; Original stale-buffer control; immutable output, malformed input and bounded reports");
+    std::puts("PASS: rotating draw pages retain late depth/texture/raw-vertex inputs after the earlier indexed-vertex budget is exhausted; renderer inputs stay immutable.");
 }

@@ -44,6 +44,19 @@ def main():
     rt = root/'lib/rt64/src'
     with tempfile.TemporaryDirectory(prefix='tooie-deformed-vertices-') as folder:
         build = Path(folder)
+        if args.scene_trace:
+            scene=(rt/'render/rt64_scene_diagnostics.h').read_text().replace(
+                '#include "../../../../src/runtime_diagnostics.h"','#include "runtime_diagnostics.h"')
+            faults=[('scene-first-page-control.h','sceneDiagnosticsFirstPage',
+                     'const unsigned callFirst = unsigned(c.callPage % pages) * MaxCalls;',
+                     'const unsigned callFirst = 0;'),
+                    ('scene-early-stop-control.h','sceneDiagnosticsEarlyStop',
+                     'if (visits++ >= MaxCallVisits)',
+                     'if (inspected >= MaxIndices || visits++ >= MaxCallVisits)')]
+            for name,namespace,before,after in faults:
+                assert scene.count(before)==1
+                (build/name).write_text(scene.replace('namespace RT64::sceneDiagnostics {',
+                    'namespace RT64::'+namespace+' {').replace(before,after))
         (build/'matching_queue.h').write_text('#pragma once\n#include "hle/rt64_workload.h"\nnamespace RT64 {struct WorkloadQueue {std::array<Workload,4> workloads;int writeCursor=0;};}\n')
         stub = build/'platform/X11/Xlib.h';stub.parent.mkdir(parents=True)
         stub.write_text('#pragma once\ntypedef struct _XDisplay Display;typedef unsigned long Window;\n')
@@ -149,6 +162,10 @@ def main():
             print('Scope: recorded matrix/vertex subset with controlled ownership/schema; no full NPC mesh or GPU/device execution.',flush=True)
             return
         if args.scene_trace:
+            for option,detail in [('--first-page-only','bad.calls==2'),('--early-index-stop','bad.calls==2')]:
+                control=subprocess.run([str(exe),option],env=env,capture_output=True,text=True)
+                assert control.returncode==51 and detail in control.stderr,control.stderr
+            print('PASS: restoring first-page-only or stopping calls at the earlier vertex budget each loses the late draw and fails its expected assertion.',flush=True)
             print('Scope: copied CPU upload inputs in controlled fixtures; no device/GPU or visual acceptance.',flush=True)
             return
         if args.seams:

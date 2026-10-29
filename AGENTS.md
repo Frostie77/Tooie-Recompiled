@@ -566,8 +566,12 @@ HUD entries at `0x80123880` have authored X/Y at `+0/+2`, animated draw X/Y at
 authored position; never assign per-glyph or animated-position origins. The
 private scope must reach rectangle, model viewport and scissor consumers and
 restore preceding state. Original HUD mode emits no placement packets.
-All 72 consumer cases and failing controls pass. Visible logo/HUD acceptance
-remains pending; see the combined candidate record above.
+Build 125 has a focused Odin logo pass and improved counter placement, but
+wide HUD modes hide the challenge countdown. The follow-up preserves the
+working Original command path only for stable layout slot 11 and component
+kind 14; other counters keep their anchors. All 72 retained and 54 countdown
+consumer cases pass; new countdown visibility still needs Odin acceptance.
+See docs/development/hud-timer-redmi-followup-20261029.md.
 
 ### Android owned-pose mesh edges — 27 October 2026
 

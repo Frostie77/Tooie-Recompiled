@@ -372,6 +372,7 @@ namespace RT64 {
                 const auto *before = map && map->prevWorkloadIndex < workloads.size() ? &workloads[map->prevWorkloadIndex] : nullptr;
                 sceneDiagnostics::Context context;
                 context.sample = sceneSample; context.weight = curFrameWeight; context.previousWeight = prevFrameWeight;
+                context.callPage = sceneWindow.sequence - 1;
                 context.transformsProcessed = map && before; context.projectionsProcessed = processProjections;
                 context.sourceAspect = workloadConfig.aspectRatioSource; context.targetAspect = workloadConfig.aspectRatioTarget;
                 context.extendedPercentage = workloadConfig.extAspectPercentage;

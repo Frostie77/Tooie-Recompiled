@@ -1,7 +1,17 @@
 # HUD placement source investigation — 28 October 2026
 
-Status: **MD-012 has a host-validated placement candidate; Odin acceptance is
-pending**. See the [29 October combined candidate](graphics-batch-candidate-20261029.md)
+Status: **MD-012 remains open: build-125 counters improve, but Expand/16:9 hide
+the Jiggy Challenge timer; Original restores it.** The
+[complete Odin review](graphics-batch-check-odin-20261029.md) preserves the
+failure, native option changes and slot-11 timer lead. Its command spans survive
+the guest writes; nested draw resources and actual renderer clipping still need
+investigation. The old 72 host cases do not reproduce this timer failure.
+The [timer follow-up](hud-timer-redmi-followup-20261029.md) preserves this
+countdown's working Original command path in every HUD mode. Its 54 additional
+consumer cases pass; visible Odin acceptance remains pending. Other counters
+retain wide placement. This restoration does not establish the deeper nested
+alignment cause.
+See the [29 October combined candidate](graphics-batch-candidate-20261029.md)
 for implementation, 72 consumer cases and failing controls. The build-110
 observations below describe the prior missing-anchor path.
 

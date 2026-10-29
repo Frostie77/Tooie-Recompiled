@@ -59,13 +59,17 @@ def main():
     for i,p in enumerate(files):
         obj=build/f'support-{i}.o';run([cxx,'-std=c++20',*flags,'-c',p,'-o',obj],f'compile-{i}');objects.append(obj)
     native=(root/'src/hud_placement.cpp').read_text()
-    for label,text in [('current',native),('animated-anchor',native.replace('half(r,entry)','half(r,entry+6)'))]:
+    timer_guard='if(entry==table+11*stride&&(word(r,component+4)>>16)==14U)return;'
+    assert native.count(timer_guard)==1
+    for label,text in [('current',native),('animated-anchor',native.replace('half(r,entry)','half(r,entry+6)')),
+                       ('unprotected-timer',native.replace(timer_guard,''))]:
         p=build/(label+'.cpp');p.write_text(text);obj=build/(label+'.o');binary=build/label
         run([cxx,'-std=c++20',*flags,'-c',p,'-o',obj],'compile-'+label)
         run([cxx,'-fsanitize=address,undefined','-no-pie',*objects,obj,'-Wl,--gc-sections','-o',binary],'link-'+label)
         run([binary],'execute-'+label,0 if label=='current' else 83)
     run([build/'current','--drop-scope'],'execute-no-metadata',83)
     print('PASS: omitted metadata and selecting anchors from animated X each fail the real renderer-position regression.',flush=True)
+    print('PASS: restoring the old countdown scope breaks its complete working-Original command/placement equivalence.',flush=True)
     print('Scope: controlled component drawing/resource services, actual guest/component/GBI/RDP/RSP and coordinate consumers; pictured Odin item identities and visual acceptance remain pending.',flush=True)
 
 

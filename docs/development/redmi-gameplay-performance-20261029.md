@@ -25,7 +25,11 @@ an FPS counter, selected settings or gameplay timing.
 This is the first positive functional report for the offered Redmi startup
 candidate on the reported Redmi Pad 2 / Helio G100-Ultra / Mali-G57 MC2. The
 unused compose-pipeline correction in PR #42 has device support, while broader
-compatibility and release integration remain pending. It is not evidence for
+compatibility and release integration remain pending. The
+[combined follow-up](hud-timer-redmi-followup-20261029.md) now includes that
+same startup guard alongside Manual resolution and corrected culling, with
+paired Debug/GPU Test packaging. Its new Redmi comparison remains pending.
+The prior reply is not evidence for
 an alternative Mali driver or acceptance of PR #41's graphics experiments.
 
 The Expand performance report is a separate open finding. The old PR #41

@@ -1,17 +1,21 @@
 # Opening-logo follow-up — Odin, 28 October 2026
 
-**MD-011 remains open.** The new build-111 Display report, two native screenshots
+**MD-011 has a focused build-125 Display Odin pass.** The
+[29 October review](graphics-batch-check-odin-20261029.md) retains both `logo steady`
+events and Frostie's explicit confirmation that bouncing is fixed. This is a
+manual motion acceptance; no new video or all-mode/device pass is claimed.
+
+The historical build-111 Display report, two native screenshots
 and supplied phone video identify the Nintendo 64, Rareware and Dolby startup
-sequence. The previously accepted limb-gap test stays accepted; this recording
-reports a separate remaining defect. No logo correction or new Original-mode
-comparison is claimed.
+sequence. The previously accepted limb-gap test stays accepted; the historical
+recording reports a separate defect before the new correction.
 
 Follow-up, 29 October: the [combined candidate](graphics-batch-candidate-20261029.md)
 now restores actual marker/generation ownership around special intro draws
 and keeps explicitly camera-relative rigid models coherent with the consumed
 camera. All 36 retained-branch/weight cases and both failing controls pass.
-The recorded visible logos still need an Odin comparison; the evidence below
-does not identify a pictured logo's type ID or establish device resolution.
+The build-125 comparison above now passes. The historical evidence below does
+not identify a pictured logo's type ID or establish the correction by itself.
 
 ## Reviewed evidence
 

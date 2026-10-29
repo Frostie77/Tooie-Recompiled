@@ -14,6 +14,7 @@ namespace RT64::sceneDiagnostics {
 constexpr unsigned MaxProjections = 16, MaxCalls = 256, MaxTransforms = 256;
 constexpr unsigned MaxVerticesPerTransform = 4, MaxIndices = 131072;
 constexpr unsigned MaxCallVisits = 4096;
+constexpr unsigned MaxCallVertices = 4, MaxVertexVisitsPerCall = 16;
 constexpr uint64_t PeriodUs = 5'000'000;
 constexpr const char *RequestName = "render-trace-v1";
 constexpr const char *RequestContents = "tooie-render-trace-v1\n";
@@ -22,7 +23,7 @@ constexpr const char *RequestContents = "tooie-render-trace-v1\n";
 // or malformed requests are OFF. Polling also lets removal stop an active trace
 // without restarting the app. No game settings or saves are changed here.
 struct Window {
-    uint64_t checked = 0, sampled = 0;
+    uint64_t checked = 0, sampled = 0, sequence = 0;
     bool initialized = false, captured = false, enabled = false;
     bool due(uint64_t now) {
         if (!initialized || now < checked || now - checked >= PeriodUs) {
@@ -42,17 +43,76 @@ struct Window {
 #endif
         }
         if (!enabled || (captured && now >= sampled && now - sampled < PeriodUs)) return false;
-        captured = true; sampled = now; return true;
+        captured = true; sampled = now; ++sequence; return true;
     }
 };
 
 struct Context {
     uint64_t sample = 0;
+    uint64_t callPage = 0;
     float weight = 1, previousWeight = 0;
     bool transformsProcessed = false, projectionsProcessed = false;
     float sourceAspect = 0, targetAspect = 0, extendedPercentage = 0;
 };
-struct Counts { unsigned projections = 0, calls = 0, transforms = 0, vertices = 0, inspected = 0, invalid = 0; bool truncated = false; };
+struct Counts { unsigned projections = 0, calls = 0, transforms = 0, vertices = 0, callVertices = 0, inspected = 0, invalid = 0; bool truncated = false; };
+inline void callInputs(const Workload &w, const Context &c, unsigned framebuffer,
+                       unsigned projection, unsigned callIndex, Projection::Type type,
+                       const GameCall &call, Counts &out) {
+    const auto &d = w.drawData;
+    char line[1500];
+    if (call.callDesc.tileCount && call.callDesc.tileIndex < d.callTiles.size()) {
+        const auto &tile = d.callTiles[call.callDesc.tileIndex];
+        std::snprintf(line, sizeof(line),
+            "sample=%llu workload=%llu fb=%u projection=%u call=%u stage=texture tile_index=%u tile_count=%u valid=%u tmem_hash_or_id=0x%llX tile_copy=%u raw_tmem=%u fmt=%u siz=%u width=%u height=%u",
+            (unsigned long long)c.sample, (unsigned long long)w.workloadId, framebuffer, projection, callIndex,
+            call.callDesc.tileIndex, call.callDesc.tileCount, unsigned(tile.valid), (unsigned long long)tile.tmemHashOrID,
+            unsigned(tile.tileCopyUsed), unsigned(tile.rawTMEM), unsigned(tile.loadTile.fmt), unsigned(tile.loadTile.siz),
+            unsigned(tile.sampleWidth), unsigned(tile.sampleHeight));
+        tooie::diagnostics::log("scene-call", line);
+    }
+    if (call.callDesc.loadCount && call.callDesc.loadIndex < d.loadOperations.size()) {
+        const auto &load = d.loadOperations[call.callDesc.loadIndex];
+        std::snprintf(line, sizeof(line),
+            "sample=%llu workload=%llu fb=%u projection=%u call=%u stage=texture-load first=%u count=%u address=0x%X fmt=%u siz=%u width=%u",
+            (unsigned long long)c.sample, (unsigned long long)w.workloadId, framebuffer, projection, callIndex,
+            call.callDesc.loadIndex, call.callDesc.loadCount, load.texture.address,
+            unsigned(load.texture.fmt), unsigned(load.texture.siz), unsigned(load.texture.width));
+        tooie::diagnostics::log("scene-call", line);
+    }
+    const bool indexed = type == Projection::Type::Perspective || type == Projection::Type::Orthographic;
+    const bool raw = type == Projection::Type::Triangle;
+    if (!indexed && !raw) return;
+    unsigned seen[MaxCallVertices]{};
+    unsigned copied = 0;
+    const uint64_t count = uint64_t(call.callDesc.triangleCount) * 3;
+    for (uint64_t j = 0; j < count && j < MaxVertexVisitsPerCall && copied < MaxCallVertices; ++j) {
+        const uint64_t offset = indexed ? uint64_t(call.meshDesc.faceIndicesStart) + j : uint64_t(call.meshDesc.rawVertexStart) + j;
+        if ((indexed && offset >= d.faceIndices.size()) || (raw && offset >= d.triPosFloats.size() / 4)) { ++out.invalid; break; }
+        const unsigned v = indexed ? d.faceIndices[offset] : unsigned(offset);
+        if (std::find(seen, seen + copied, v) != seen + copied) continue;
+        if (indexed && (v >= d.posFloats.size() / 3 || v >= d.worldIndices.size() || v >= d.viewProjIndices.size())) { ++out.invalid; continue; }
+        seen[copied++] = v; ++out.callVertices;
+        if (indexed) {
+            const unsigned t = d.worldIndices[v];
+            const bool screen = v < d.posScreen.size(), tc = v < d.tcFloats.size() / 2;
+            std::snprintf(line, sizeof(line),
+                "sample=%llu workload=%llu fb=%u projection=%u call=%u stage=vertex kind=indexed vertex=%u transform=%u projection_transform=%u matrix_address=0x%X pos=%.9g/%.9g/%.9g tc_valid=%u tc=%.9g/%.9g cpu_screen_valid=%u cpu_screen=%.9g/%.9g/%.9g",
+                (unsigned long long)c.sample, (unsigned long long)w.workloadId, framebuffer, projection, callIndex,
+                v, t, unsigned(d.viewProjIndices[v]), t < d.worldTransformPhysicalAddresses.size() ? d.worldTransformPhysicalAddresses[t] : 0,
+                double(d.posFloats[v*3]), double(d.posFloats[v*3+1]), double(d.posFloats[v*3+2]), unsigned(tc),
+                tc ? double(d.tcFloats[v*2]) : 0, tc ? double(d.tcFloats[v*2+1]) : 0, unsigned(screen),
+                screen ? double(d.posScreen[v][0]) : 0, screen ? double(d.posScreen[v][1]) : 0, screen ? double(d.posScreen[v][2]) : 0);
+        } else {
+            const bool tc = v < d.triTcFloats.size() / 2;
+            std::snprintf(line, sizeof(line),
+                "sample=%llu workload=%llu fb=%u projection=%u call=%u stage=vertex kind=raw vertex=%u screen=%.9g/%.9g/%.9g/%.9g tc_valid=%u tc=%.9g/%.9g",
+                (unsigned long long)c.sample, (unsigned long long)w.workloadId, framebuffer, projection, callIndex, v,
+                double(d.triPosFloats[v*4]), double(d.triPosFloats[v*4+1]), double(d.triPosFloats[v*4+2]), double(d.triPosFloats[v*4+3]),
+                unsigned(tc), tc ? double(d.triTcFloats[v*2]) : 0, tc ? double(d.triTcFloats[v*2+1]) : 0);
+        }
+        tooie::diagnostics::log("scene-call", line);
+    }
+}
 inline void matrix(const Context &c, uint64_t workload, const char *kind, unsigned index,
                    const char *endpoint, const hlslpp::float4x4 &input) {
     alignas(16) const hlslpp::float4x4 m = input;
@@ -74,11 +134,13 @@ inline Counts report(const Workload &w, const Workload *previous,
     const auto start = tooie::diagnostics::monotonicUs();
     const auto &d = w.drawData;
     const bool history = c.transformsProcessed && previous && map && map->mapped;
+    const unsigned pages = std::max(1U, (std::min(w.gameCallCount, MaxCallVisits) + MaxCalls - 1) / MaxCalls);
+    const unsigned callFirst = unsigned(c.callPage % pages) * MaxCalls;
     char line[1500];
-    std::snprintf(line, sizeof(line), "sample=%llu workload=%llu previous_workload=%llu weight=%.9g previous_weight=%.9g transforms_processed=%u projections_processed=%u source_aspect=%.9g target_aspect=%.9g extended_percentage=%.9g world_matrices=%zu source_vertices=%u observation=cpu-inputs-not-gpu-readback",
+    std::snprintf(line, sizeof(line), "sample=%llu workload=%llu previous_workload=%llu weight=%.9g previous_weight=%.9g transforms_processed=%u projections_processed=%u source_aspect=%.9g target_aspect=%.9g extended_percentage=%.9g world_matrices=%zu source_vertices=%u call_first=%u call_pages=%u calls_total=%u observation=cpu-inputs-not-gpu-readback",
         (unsigned long long)c.sample, (unsigned long long)w.workloadId, (unsigned long long)(previous ? previous->workloadId : 0),
         double(c.weight), double(c.previousWeight), unsigned(c.transformsProcessed), unsigned(c.projectionsProcessed),
-        double(c.sourceAspect), double(c.targetAspect), double(c.extendedPercentage), d.worldTransforms.size(), d.vertexCount());
+        double(c.sourceAspect), double(c.targetAspect), double(c.extendedPercentage), d.worldTransforms.size(), d.vertexCount(), callFirst, pages, w.gameCallCount);
     tooie::diagnostics::log("scene-sample", line);
 
     // Report raw and selected projection inputs, including endpoint-only runs.
@@ -113,27 +175,31 @@ inline Counts report(const Workload &w, const Workload *previous,
     // Prioritize actual drawn owned character bones before terrain/unowned
     // geometry. Both passes are bounded; all omissions are explicitly reported.
     for (unsigned pass = 0; pass < 2; ++pass) {
-        unsigned inspected = 0, visits = 0;
+        unsigned inspected = 0, visits = 0, ordinal = 0;
         for (unsigned f = 0; f < w.fbPairCount && f < w.fbPairs.size(); ++f) {
-            if (inspected >= MaxIndices || visits >= MaxCallVisits) { out.truncated = true; break; }
+            if (visits >= MaxCallVisits) { out.truncated = true; break; }
             const auto &fb = w.fbPairs[f];
             for (unsigned p = 0; p < fb.projectionCount && p < fb.projections.size(); ++p) {
-                if (inspected >= MaxIndices || visits >= MaxCallVisits) { out.truncated = true; break; }
+                if (visits >= MaxCallVisits) { out.truncated = true; break; }
                 const auto &proj = fb.projections[p];
                 for (unsigned a = 0; a < proj.gameCallCount && a < proj.gameCalls.size(); ++a) {
-                    if (inspected >= MaxIndices || visits++ >= MaxCallVisits) { out.truncated = true; break; }
+                    if (visits++ >= MaxCallVisits) { out.truncated = true; break; }
                     const auto &call = proj.gameCalls[a];
+                    const unsigned callOrdinal = ordinal++;
                     const bool indexed = proj.type == Projection::Type::Perspective || proj.type == Projection::Type::Orthographic;
                     const unsigned projectionTransform = indexed ? proj.transformsIndex : UINT32_MAX;
-                    if (pass == 0 && out.calls < MaxCalls) {
+                    if (pass == 0 && callOrdinal >= callFirst && out.calls < MaxCalls) {
                         ++out.calls;
-                        std::snprintf(line, sizeof(line), "sample=%llu workload=%llu fb=%u projection=%u projection_transform=%u call=%u uid=%u type=%u triangles=%u rect=%d/%d/%d/%d rect_origins=%u/%u scissor=%d/%d/%d/%d scissor_origins=%u/%u",
+                        std::snprintf(line, sizeof(line), "sample=%llu workload=%llu fb=%u projection=%u projection_transform=%u call=%u uid=%u type=%u triangles=%u rect=%d/%d/%d/%d rect_origins=%u/%u scissor=%d/%d/%d/%d scissor_origins=%u/%u ordinal=%u other_mode=0x%X/0x%X z_compare=%u z_write=%u z_mode=0x%X combine=0x%X/0x%X color_address=0x%X depth_address=0x%X",
                             (unsigned long long)c.sample, (unsigned long long)w.workloadId, f, p, projectionTransform, a, call.callDesc.uid, unsigned(proj.type), call.callDesc.triangleCount,
                             call.callDesc.rect.ulx, call.callDesc.rect.uly, call.callDesc.rect.lrx, call.callDesc.rect.lry,
                             unsigned(call.callDesc.rectLeftOrigin), unsigned(call.callDesc.rectRightOrigin),
                             call.callDesc.scissorRect.ulx, call.callDesc.scissorRect.uly, call.callDesc.scissorRect.lrx, call.callDesc.scissorRect.lry,
-                            unsigned(call.callDesc.scissorLeftOrigin), unsigned(call.callDesc.scissorRightOrigin));
+                            unsigned(call.callDesc.scissorLeftOrigin), unsigned(call.callDesc.scissorRightOrigin), callOrdinal,
+                            call.callDesc.otherMode.H, call.callDesc.otherMode.L, unsigned(call.callDesc.otherMode.zCmp()), unsigned(call.callDesc.otherMode.zUpd()), call.callDesc.otherMode.zMode(),
+                            call.callDesc.colorCombiner.H, call.callDesc.colorCombiner.L, fb.colorImage.address, fb.depthImage.address);
                         tooie::diagnostics::log("scene-call", line);
+                        callInputs(w, c, f, p, a, proj.type, call, out);
                     } else if (pass == 0) out.truncated = true;
                     if (!indexed) continue;
                     const uint64_t first = call.meshDesc.faceIndicesStart, count = uint64_t(call.callDesc.triangleCount) * 3;
@@ -232,9 +298,9 @@ inline Counts report(const Workload &w, const Workload *previous,
             tooie::diagnostics::log("scene-vertex", line);
         }
     }
-    std::snprintf(line, sizeof(line), "sample=%llu workload=%llu projections=%u calls=%u transforms=%u vertices=%u inspected_indices=%u invalid=%u truncated=%u max_projections=%u max_calls=%u max_transforms=%u vertices_per_transform=%u max_indices_per_pass=%u observer_us=%llu includes_log_io=1 selection=drawn-owned-first-then-unowned-no-visual-identity-claim",
+    std::snprintf(line, sizeof(line), "sample=%llu workload=%llu projections=%u calls=%u transforms=%u vertices=%u inspected_indices=%u invalid=%u truncated=%u max_projections=%u max_calls=%u max_transforms=%u vertices_per_transform=%u max_indices_per_pass=%u observer_us=%llu includes_log_io=1 call_first=%u call_vertices=%u vertices_per_call=%u selection=rotating-draw-page-plus-drawn-owned-first-no-visual-identity-claim",
         (unsigned long long)c.sample, (unsigned long long)w.workloadId, out.projections, out.calls, out.transforms, out.vertices, out.inspected, out.invalid, unsigned(out.truncated),
-        MaxProjections, MaxCalls, MaxTransforms, MaxVerticesPerTransform, MaxIndices, (unsigned long long)(tooie::diagnostics::monotonicUs()-start));
+        MaxProjections, MaxCalls, MaxTransforms, MaxVerticesPerTransform, MaxIndices, (unsigned long long)(tooie::diagnostics::monotonicUs()-start), callFirst, out.callVertices, MaxCallVertices);
     tooie::diagnostics::log("scene-budget", line);
     return out;
 }
