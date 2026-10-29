@@ -3679,7 +3679,16 @@ namespace plume {
             VkAttachmentDescription attachment = {};
             attachment.format = toVk(depthAttachmentViewDesc.format);
             attachment.samples = VkSampleCountFlagBits(depthAttachment->desc.multisampling.sampleCount);
+#if defined(__ANDROID__)
+            // Read-only does not mean unused. After a decal, depth-tested
+            // transparent draws can remain in this same pass without writing
+            // depth. LOAD_OP_NONE leaves their attachment values undefined on
+            // tile renderers. Load the prior depth; STORE_OP_NONE below still
+            // avoids a write while the image is also sampled by decals.
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+#else
             attachment.loadOp = preferNoneForReadOnly ? VK_ATTACHMENT_LOAD_OP_NONE_EXT : VK_ATTACHMENT_LOAD_OP_LOAD;
+#endif
             attachment.storeOp = preferNoneForReadOnly ? VK_ATTACHMENT_STORE_OP_NONE_EXT : VK_ATTACHMENT_STORE_OP_STORE;
             attachment.stencilLoadOp = attachment.loadOp;
             attachment.stencilStoreOp = attachment.storeOp;

@@ -140,6 +140,7 @@ jobs:
             python3 tools/test_optional_raytracing_compose.py
             python3 tools/test_hud_diagnostics.py
             python3 tools/test_hud_placement.py
+            python3 tools/test_depth_preservation.py
             python3 tools/test_widescreen_visibility.py
             python3 tools/test_manual_resolution.py
             python3 tools/test_pose_validation_diagnostics.py

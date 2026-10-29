@@ -1,6 +1,37 @@
 # Shared HUD clipping candidate — 29 October 2026
 
-MD-012 remains open for Odin acceptance. Build 126's timer is visible but
+The [complete build-127 evidence review](hud-water-check-odin-build127-20261029.md)
+now supplies all 27 actual events and all 27 viewed, hash-matched PNGs. It
+confirms the pictured counter/timer correction and retains the water failures.
+Both trace requests are removed. Although the final bulk private-log read
+times out, corrected bounded recovery now verifies the complete native delta
+and option changes. Its actual marker table
+supersedes the proposed/unconfirmed numbering in the conversational notes below.
+
+Full [CI build 127](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40838645492)
+passes host regressions, ARM64 compilation and both APK verifications. The
+downloaded [normal Debug](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40838645492/artifacts/12882293874)
+and [Redmi GPU Test](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40838645492/artifacts/12882289081)
+archives match their GitHub digests. All seven native libraries and Build IDs
+match between APKs; packaged capture helpers and Redmi instructions match source.
+Integration `88262a661566d9bb784ce41960b652c3522f43b2` has the exact engineering
+head `f1e944a70e98e445ffca657a5039ce265a1e50b6` tree
+`4ffa774f7ac4a58f3ef6a2f104231d5a7cfc7ab4`. Actual compile commands retain
+ARM64/API24, C++20/C++17 profiles and disabled diagnostic controls. These build
+checks do not establish Odin pixels; the subsequent manual follow-up is below.
+
+Build 127 is now installed. At MSAA 2× Frostie accepts both the left counter
+number and right Jiggy total in Original, Expand and 16:9. He also accepts the
+challenge timer in all three modes, including its closer left-edge position in
+the wide modes with icon/digits together. This is a **focused manual pass** for
+the reported counter/timer failures. Frostie subsequently accepts regular egg
+ammo, cycling all available egg types, gold feathers during Wonderwing and red
+feathers during flight in HUD Expand at MSAA 2×. Their icons/numbers remain
+aligned and values update correctly. The session's HUD checks are complete;
+the new capture's journal/images/native settings have not yet been supplied. Do not
+describe this as GPU validation of all 48 slots or every collectible identity.
+
+The build-126 baseline timer is visible but
 inset in Expand/16:9; its left Jiggy-associated `20` disappears while its icon
 and the right `33` remain. The [complete capture review](hud-water-check-odin-20261029.md)
 retains all twelve events/images and the fresh runtime delta.
@@ -80,8 +111,41 @@ collection. This does not install, launch, stop or alter game data/settings.
 
 Water is still open. The capture shows failures in Original/Original,
 Original/Display and Expand/Display; all principal comparisons use MSAA 2×.
-The next discriminator is the same view with MS Anti-Aliasing None. No result
-has been supplied for that comparison. Do not attribute the blue fragments to
+The manual comparison on installed build 126 uses MS Anti-Aliasing None
+with Expand/Display. Frostie reports both tested lagoon spots are slightly
+less affected but still show the glitch. No new image, log or native
+configuration readback accompanies these reports; other locations are not
+established. This does not establish MSAA as the cause or a fix. The initial
+MSAA comparison is complete; next is build-127 HUD acceptance. Do not attribute the blue fragments to
 interpolation or identify a causal water draw from texture/depth metadata alone.
 Earlier focused logo, Jiggy input and limb-gap acceptances stand; broad
 long-play character rendering and Redmi FPS acceptance remain open.
+
+### Build-127 water follow-up in the current capture
+
+After the HUD checks, Frostie reports the lagoon water is still a mess with
+main Expand, Framerate Display and MSAA 2×. With MSAA None at the same view it
+is reduced but still strange. At the column view it is improved but comes and
+goes. These are manual replies; the new archive/configuration readback is pending.
+
+Frostie explicitly says he entered
+`15 lagoon column water missing and strange lines over screen - msaa none`
+after the proposed marker-14 instruction. Preserve **15 and that wording**;
+do not assume a marker 14 was entered or renumber the actual journal. Missing
+water with screen lines is a fault state. Frostie subsequently confirms the
+same stationary view sometimes looks completely normal. The proposed normal
+marker 16 has not been explicitly confirmed; inspect the eventual journal.
+
+Frostie further clarifies that MSAA None makes the defect less noticeable but
+still produces disappearing water and small screen lines, while MSAA 2× makes
+the bug appear differently. Preserve this change in presentation rather than
+treating None as simply a uniformly weaker version of the 2× fault. Neither
+condition is fixed. The subsequent same-view manual comparison at main Expand,
+Framerate Original and MSAA None still does the same. Switching main Aspect
+Ratio to Original as well, keeping Original framerate and MSAA None, also
+leaves the disappearing water/screen lines unchanged. Thus disabling all three
+does not remove the reported fault in this baseline. This does not identify
+its causal draw or exclude contributions to its appearance. Proposed markers
+17/18 and actual native settings still require the current archive; do not
+infer event numbering from the instructions. Water testing for this session
+is complete; MD-016 stays open for source investigation.

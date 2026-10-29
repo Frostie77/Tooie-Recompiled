@@ -10,6 +10,7 @@
 #include "plume_vulkan_clear_shaders.h"
 #include "hud_capture_fixture.h"
 #include <cstdio>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <limits>
@@ -792,6 +793,68 @@ static void testDepthClearDomain(VulkanDevice &device, VulkanCommandList &list) 
   std::puts("PASS: production depth clears clip edge/negative/extreme rectangles to the actual framebuffer/mip view; outside batches record no commands; full and in-bounds clears preserved, MSAA2X and 1X.");
 }
 
+// A decal samples the depth image without fixed-function depth testing. The
+// later lagoon calls compare depth but do not write it, so RT64 keeps using
+// this same read-only attachment. NONE does not load defined attachment values
+// for those comparisons, even though the backing image remains preserved.
+static void testReadOnlyDepthPreservation(VulkanDevice &device) {
+  const bool previousSupport = device.loadStoreOpNoneSupported;
+  unsigned checked = 0;
+  for (bool supported : {false, true}) {
+    device.loadStoreOpNoneSupported = supported;
+    for (bool readOnly : {false, true}) {
+      for (uint32_t samples : {1U, 2U, 4U}) {
+        for (bool explicitView : {false, true}) {
+          VulkanTexture depth;
+          initialize(depth, device, samples, RenderFormat::R8G8B8A8_UNORM);
+          depth.desc.format = RenderFormat::D32_FLOAT;
+          depth.desc.flags = RenderTextureFlag::DEPTH_TARGET;
+          depth.imageFormat = VK_FORMAT_D32_SFLOAT;
+          depth.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+          RenderFramebufferDesc desc(nullptr, 0, &depth);
+          desc.depthAttachmentReadOnly = readOnly;
+          std::unique_ptr<RenderTextureView> view;
+          if (explicitView) {
+            auto vd = RenderTextureViewDesc::Texture2D(RenderFormat::D32_FLOAT);
+            vd.mipLevels = vd.arraySize = 1;
+            view = depth.createTextureView(vd);
+            desc.depthAttachment = nullptr;
+            desc.depthAttachmentView = view.get();
+          }
+          VulkanFramebuffer framebuffer(&device, desc);
+          const auto &record = passes.at(framebuffer.renderPass);
+          REQUIRE(record.depth.attachment != VK_ATTACHMENT_UNUSED);
+          const auto &attachment = record.attachments.at(record.depth.attachment);
+          REQUIRE(attachment.samples == VkSampleCountFlagBits(samples));
+          REQUIRE(record.depth.layout == (readOnly
+              ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+              : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
+          REQUIRE(attachment.storeOp == (readOnly && supported
+              ? VK_ATTACHMENT_STORE_OP_NONE_EXT : VK_ATTACHMENT_STORE_OP_STORE));
+          // An independent permitted tile-memory consumer. Only LOAD defines
+          // the existing values inside this pass; NONE may leave all samples
+          // undefined. Exercise both occluded and visible transparent pixels.
+          const float stored[] = {0.2f, 0.8f, 0.1f, 0.9f};
+          const bool visible[] = {false, true, false, true};
+          for (unsigned pixel = 0; pixel < 4; ++pixel) {
+            for (uint32_t sample = 0; sample < samples; ++sample) {
+              const float loaded = attachment.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD
+                  ? stored[pixel] : std::numeric_limits<float>::quiet_NaN();
+              REQUIRE(std::isfinite(loaded));
+              REQUIRE((0.5f < loaded) == visible[pixel]);
+            }
+          }
+          REQUIRE(attachment.stencilLoadOp == attachment.loadOp &&
+                  attachment.stencilStoreOp == attachment.storeOp);
+          ++checked;
+        }
+      }
+    }
+  }
+  device.loadStoreOpNoneSupported = previousSupport;
+  std::printf("PASS: %u production depth attachment cases preserve defined depth tests after decals, including read-only NONE-store support, direct/explicit views and 1x/2x/4x samples; recording/contract consumer, not GPU execution.\n", checked);
+}
+
 static void resetSurfaceEnumeration() {
   surfaceCreateResult = supportQueryResult = surfaceQueryResult =
       formatCountResult = formatDataResult = modeCountResult = modeDataResult =
@@ -1360,6 +1423,11 @@ int main(int argc, char **argv) {
     if (argc == 2) return 0;
   }
   device.independentBlendSupported = true;
+  if (argc > 1 && std::strcmp(argv[1], "--depth-preservation-only") == 0) {
+    testReadOnlyDepthPreservation(device);
+    REQUIRE(destroyedPasses == createdPasses && framebufferExtents.empty());
+    return 0;
+  }
   if (argc > 1 && std::strcmp(argv[1], "--depth-rects-only") == 0) {
     testDepthClearDomain(device, list);
     REQUIRE(destroyedPasses == createdPasses && framebufferExtents.empty());
@@ -1850,6 +1918,7 @@ int main(int argc, char **argv) {
   testAttachmentClearDomain(device, list);
 #endif
   testDepthClearDomain(device, list);
+  testReadOnlyDepthPreservation(device);
   REQUIRE(destroyedPasses == createdPasses && framebufferExtents.empty());
   list.begin();
   REQUIRE(list.graphicsPipeline == VK_NULL_HANDLE &&

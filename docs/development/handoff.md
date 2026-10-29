@@ -17,7 +17,46 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The current Odin test build is **126**, integration source
+The current installed Odin test build is **127**, integration source
+`88262a661566d9bb784ce41960b652c3522f43b2`. Frostie accepts the left counter
+number and right Jiggy total in Original, Expand and 16:9, then accepts the
+challenge timer in all three modes, including its correct wide left-edge
+placement and icon/digit alignment. These are focused manual checks at MSAA 2×
+after the update. Frostie also accepts regular egg ammunition, every egg type
+available in his save, the gold-feather/Wonderwing counter and the red-feather
+flight counter in HUD Expand, with aligned icons/numbers and correct value
+updates. The [build-127 evidence review](hud-water-check-odin-build127-20261029.md)
+checks all 27 supplied screenshots and their actual events, supporting the
+focused counter/timer correction. Broader egg-type coverage remains a manual
+report. The capture is finished and both tracing requests are removed. Its
+bulk private-log read times out, but corrected bounded recovery now verifies
+the complete appended native log. Windows ADB expands LF to CRLF, so the helper
+derives native offsets from the verified archived baseline and transfers
+encoded chunks. Future collector integration needs the same byte handling.
+See the
+[shared clipping fix](hud-shared-clipping-fix-20261029.md). Water, broader
+long-play character rendering and new Redmi FPS results remain open.
+
+The current build-127 water follow-up still fails with MSAA 2×. None changes
+its appearance to disappearing water/small screen lines, with intermittent
+water-present views. Normal-labelled shots use different camera views, so
+they are not a strict fixed-camera comparison. Frostie's subsequent
+Original-framerate + None and Original-aspect/Original-framerate + None
+comparisons still fail; E25 directly pictures the latter missing-water/lines
+state in a pillarboxed view. Recovered native settings confirm these baselines;
+Original/Original/None has both interpolation processors off. Water testing is complete.
+E26/E27 and Frostie's reply show intact-looking characters at the end, while
+E27 also has water drawn over Banjo. The broader intermittent character issue
+stays open.
+
+The new [water depth candidate](water-depth-preservation-20261029.md) fixes a
+reproduced Vulkan defect: after a decal, later transparent depth-tested draws
+can stay in a read-only pass whose NONE load operation leaves its depth values
+undefined. Android now loads that depth while retaining supported NONE stores.
+The actual captured draw selector and 24 production framebuffer contracts pass;
+restoring the old load fails. Full CI and Odin water acceptance are pending.
+
+The preceding Odin baseline is **126**, integration source
 `27a577cc85d520075e76319bfce1f0ec0c6a7c44`. Its full host/ARM64/APK CI passes;
 the downloaded normal Debug and separate Redmi GPU Test have seven identical,
 independently verified native libraries. Frostie's focused manual check confirms
@@ -25,8 +64,8 @@ the timer is visible in Original, Expand and 16:9, but it remains at its Origina
 position in both wide HUD modes. The
 [complete build-126 review](hud-water-check-odin-20261029.md) verifies all twelve
 events, fourteen inputs, twelve separately supplied native PNGs and the entire
-945,400-record fresh Runtime delta. Correct wide timer placement and the missing
-left Jiggy-associated `20` remain open. New Redmi FPS acceptance remains pending. See the
+945,400-record fresh Runtime delta. Its wrong wide timer placement and missing
+left Jiggy-associated `20` motivate the build-127 correction above. See the
 [combined follow-up and artifacts](hud-timer-redmi-followup-20261029.md).
 
 Frostie also reports **marker 1 contains a missing Jiggy count** and explicitly
@@ -50,9 +89,20 @@ domain, and the timer's temporary Original-only inset exemption is removed.
 All 48 recorded layout positions, shared-slot substitutions, digit widths,
 animation and visibility/text branches pass the expanded production-consumer
 fixtures; restoring the old scissor submission fails at Vulkan's offset check.
-Final Odin visibility and correct placement remain pending. Recorder cleanup
+Focused Odin manual visibility and placement checks now pass above. Recorder cleanup
 now removes owned trace requests before the large final log read. Water still
-needs the same-view MSAA None discriminator; no result is supplied yet.
+persists at both spots in the manual MSAA None comparison below.
+
+Full [CI build 127](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40838645492)
+and independent downloaded-APK checks now pass for that candidate. Both normal
+Debug and Redmi GPU Test retain identical native payloads and source-matching
+helpers. See the shared clipping record for artifacts and exact source. Before
+updating, on installed build 126 with MS Anti-Aliasing None and Expand/Display,
+Frostie reports both tested lagoon spots look slightly less affected but the
+glitch remains. This is a manual visual report, without a new capture or
+native configuration readback. It does not establish MSAA as the cause or a
+fix. Other locations are not established by these replies. The initial MSAA
+comparison is complete; the subsequent build-127 HUD checks are above.
 
 The preceding tested Odin build is **125**, integration source
 `a0672974abaf764e38861dc4dd49d74f22e4ff07`, with the exact source tree of
