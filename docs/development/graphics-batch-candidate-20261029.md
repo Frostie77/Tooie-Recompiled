@@ -6,6 +6,12 @@ Keep PR #41 draft. The earlier controls and focused limb-gap passes stand.
 The [late-play and lagoon review](late-play-and-lagoon-check-odin-20261028.md)
 retains all seven new observations. Do not call these device fixes yet.
 
+[CI build 124](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40792116390)
+passes the complete host, ARM64 and APK checks for engineering head `0261fd76`.
+The downloaded package/native/tool hashes and required bridge markers are
+verified. The subsequent [manual-scale and warning follow-up](manual-resolution-20261029.md)
+has separate host checks and requires its own full CI.
+
 ## Player rendering after prolonged play
 
 `player_model_transform_id` previously retained every player/model address ever

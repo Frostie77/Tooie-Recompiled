@@ -9,7 +9,9 @@ and descriptions rather than assuming their severity from a marker number.
 The [batch record](graphics-batch-candidate-20261029.md) documents host-validated
 player identity lifetime, intro ownership/camera attachment, actual HUD
 placement, retained Expand culling and Jiggy input exclusion. Full combined CI
-and the next Odin comparison remain pending. The [complete new capture review](late-play-and-lagoon-check-odin-20261028.md)
+passes in build 124; the next Odin comparison remains pending. A
+[manual-scale and warning follow-up](manual-resolution-20261029.md) now passes
+its host checks and needs its own full CI. The [complete new capture review](late-play-and-lagoon-check-odin-20261028.md)
 retains all seven new events, images and both videos. Earlier focused limb and
 regular-control acceptances stand; later long-play rendering remains open.
 

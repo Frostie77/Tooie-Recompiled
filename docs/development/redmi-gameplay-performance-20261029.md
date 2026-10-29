@@ -33,9 +33,19 @@ visibility policy forces every rejected wrapper query visible. The
 [combined graphics candidate](graphics-batch-candidate-20261029.md) instead
 widens horizontal visibility while retaining rear and vertical rejection.
 That removes a demonstrated source of unnecessary submission, but no Redmi
-performance benefit is measured yet, and that source path has not been joined
-to this reporter's exact installed test tree. Inspect that tree before making
-a causal claim.
+performance benefit is measured yet. Source inspection now joins the old policy
+to offered integration `f2166cfa4bf71e663aa4aee6668eb834ed621fad`:
+`src/recomp_api.cpp` blob `d390421a32aeada3e8a24f513e005bb8d2446e87`
+contains the unconditional rejection-to-visible override. This confirms the
+test's source path, not its measured runtime cost or installed bytes.
+
+That same offered tree has only Original/Original 2x/Auto in the Graphics menu
+(`ui_config_tab_graphics.cpp` blob `bdf8e7e3de6a6f23204dde1c07bf4a208af3178e`).
+Auto requests whole integer multiples rounded up. With a 240p reference and a
+1600-pixel-high window it requests 7x/1680p internally. This is a source-derived
+case, not a readback of the reporter's chosen settings. The
+[manual-scale follow-up](manual-resolution-20261029.md) adds intermediate values
+without changing old choices. Actual Redmi performance remains unmeasured.
 
 After the combined build passes, inspect existing resolution choices and
 upscaling/render-target costs. A useful device comparison holds scene,

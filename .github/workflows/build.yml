@@ -136,6 +136,8 @@ jobs:
             python3 tools/test_hud_diagnostics.py
             python3 tools/test_hud_placement.py
             python3 tools/test_widescreen_visibility.py
+            python3 tools/test_manual_resolution.py
+            python3 tools/test_pose_validation_diagnostics.py
             python3 tools/probe_dialogue_camera.py
             python3 tools/probe_dialogue_projection.py --opaque-window-types
             python3 tools/probe_deformed_vertices.py

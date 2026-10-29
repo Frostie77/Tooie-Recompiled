@@ -153,6 +153,12 @@ void set_application_user_config(RT64::Application* application, const ultramode
             application->userConfig.resolution = RT64::UserConfiguration::Resolution::WindowIntegerScale;
             application->userConfig.downsampleMultiplier = 1;
             break;
+        case ultramodern::renderer::Resolution::Manual:
+            application->userConfig.resolution = RT64::UserConfiguration::Resolution::Manual;
+            application->userConfig.resolutionMultiplier =
+                ultramodern::renderer::clamp_manual_resolution_scale(config.res_manual_scale) * std::max(config.ds_option, 1);
+            application->userConfig.downsampleMultiplier = std::max(config.ds_option, 1);
+            break;
         case ultramodern::renderer::Resolution::Original:
             application->userConfig.resolution = RT64::UserConfiguration::Resolution::Manual;
             application->userConfig.resolutionMultiplier = std::max(config.ds_option, 1);
@@ -418,7 +424,8 @@ bool renderer::RT64Context::update_config(const ultramodern::renderer::GraphicsC
     set_application_user_config(app.get(), new_config);
 
     // When updating the user configuration, only discard framebuffers if an option was changed that affects the resolution.
-    bool resolution_changed = new_config.res_option != old_config.res_option;
+    bool resolution_changed = new_config.res_option != old_config.res_option ||
+        (new_config.res_option == ultramodern::renderer::Resolution::Manual && new_config.res_manual_scale != old_config.res_manual_scale);
     bool aspect_ratio_changed = new_config.ar_option != old_config.ar_option;
     bool downsampling_changed = new_config.ds_option != old_config.ds_option;
     bool msaa_changed = new_config.msaa_option != old_config.msaa_option;

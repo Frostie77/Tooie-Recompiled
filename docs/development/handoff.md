@@ -132,8 +132,17 @@ IDs after prolonged play; actual intro ownership and coherent camera-relative
 rigid placement; whole-component HUD anchors; horizontal-only Expand frustum
 widening that retains rear/vertical rejection; and Jiggy Challenge exclusion
 from stationary stick swapping. Their regressions pass with deliberate failing
-controls. Full combined ARM64/APK CI and Odin acceptance are pending. Keep
-PR #41 draft and do not claim the lagoon water cause is proved.
+controls. The five-part batch passes [full CI build 124](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40792116390).
+Odin acceptance remains pending. Keep PR #41 draft and do not claim the lagoon
+water cause is proved.
+
+The [manual resolution and warning follow-up](manual-resolution-20261029.md)
+adds fractional 1x–8x resolution control, retaining old choices/defaults and
+real Apply/Cancel/persistence behavior. All 576 consumer cases and both controls
+pass. The existing bounded actor warning now identifies the exact rejected
+builder/schema check, with seven immutable-input cases and a failing control.
+It does not change unsupported-actor rendering policy. The follow-up needs its
+own ARM64/APK CI; actual Redmi FPS and the water draw's cause remain unproved.
 
 The [complete late-play/lagoon review](late-play-and-lagoon-check-odin-20261028.md)
 retains all seven events, native images, both videos and reconciled runtime
@@ -148,9 +157,10 @@ The [Redmi reply](redmi-gameplay-performance-20261029.md) confirms gameplay,
 movement and sound in the offered separate PR #42 test. Expand performance and
 native-resolution cost remain open; no new startup/runtime log or exact
 settings readback is supplied. The startup candidate now has device support,
-but it is not part of this PR #41 batch. Inspect the offered test's exact
-source and existing resolution controls before attributing its performance
-to a source path or adding UI. Frostie still owns reporter replies and merges.
+but it is not part of this PR #41 batch. The offered tree is now inspected:
+it contains the old unconditional Expand override and only three resolution
+choices. The new source leads do not establish a measured FPS cause. Frostie
+still owns reporter replies and merges.
 
 The limb copy-ownership candidate now has the focused build-111 Display pass
 above. Current input work is the [stationary/flight control separation](flying-aim-controls-20261028.md):
