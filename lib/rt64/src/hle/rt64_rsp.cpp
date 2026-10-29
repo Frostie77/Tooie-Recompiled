@@ -506,7 +506,11 @@ namespace RT64 {
             drawData.viewProjTransforms.emplace_back(hlslpp::mul(extended.invViewProjMatrix, viewProjMatrixStack[projectionMatrixStackSize - 1]));
             drawData.viewProjTransformGroups.emplace_back(extended.curViewProjMatrixIdGroupIndex);
             drawData.rspViewports.emplace_back(viewportStack[viewportStackSize - 1]);
+#if defined(__ANDROID__)
+            drawData.viewportOrigins.emplace_back(state->extended.hud.origin(extended.viewportOriginStack[viewportStackSize - 1]));
+#else
             drawData.viewportOrigins.emplace_back(extended.viewportOriginStack[viewportStackSize - 1]);
+#endif
 
             for (uint32_t j = 0; j < 4; j++) {
                 drawData.viewportClipRatios.emplace_back(clipRatios[j]);
@@ -1328,6 +1332,9 @@ namespace RT64 {
             const int stackIndex = stackSize - 1;
             TransformGroup* dstGroup = &stack[stackIndex];
             dstGroup->matrixId = id;
+#if defined(__ANDROID__)
+            dstGroup->cameraRelative = false;
+#endif
 #if TOOIE_SKELETAL_POSE_ENABLED
             dstGroup->skeletal.reset();
 #endif

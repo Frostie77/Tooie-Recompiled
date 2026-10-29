@@ -4,6 +4,27 @@ Frostie will use longer Debug playtests to record observations for later work.
 Most are expected to be minor details; classify them from the uploaded evidence
 and descriptions rather than assuming their severity from a marker number.
 
+## Combined candidate — 29 October 2026
+
+The [batch record](graphics-batch-candidate-20261029.md) documents host-validated
+player identity lifetime, intro ownership/camera attachment, actual HUD
+placement, retained Expand culling and Jiggy input exclusion. Full combined CI
+and the next Odin comparison remain pending. The [complete new capture review](late-play-and-lagoon-check-odin-20261028.md)
+retains all seven new events, images and both videos. Earlier focused limb and
+regular-control acceptances stand; later long-play rendering remains open.
+
+| ID | Observation | Status | Evidence |
+|---|---|---|---|
+| MD-015 | Jiggy Challenge controls become wrong with stationary joystick swapping enabled | Host candidate passes; Odin check pending | Frostie's conversational report. The actual canonical challenge controller's input state excludes the swap; 648 real-profile comparisons pass and removing the guard fails. This is separate from MD-001's accepted static-line correction. |
+| MD-016 | Blue geometry across lagoon shore/land and strange water around a stone column | Open; visibility candidate is not a proved water fix | Three events in the 23:34 capture, retained in the complete review above. Player IDs are active in this session. Horizontal-only Expand widening replaces unconditional unculling and passes 864 cases; no captured water draw inputs prove causality. Record the actual aspect mode in the next comparison. |
+
+MD-011 and MD-012 now have host candidates with failing controls; keep them
+open until the visible logo/HUD checks pass. MD-005's earlier focused Display
+limb-gap pass does not cover the later broad long-play corruption. MD-013's
+Split Up freeze still lacks a new failing capture. The separate
+[Redmi result](redmi-gameplay-performance-20261029.md) supports startup while
+leaving aspect/resolution performance open.
+
 ## Current deferred details
 
 | ID | Observation | Status | Evidence |
@@ -117,8 +138,8 @@ is a comparison, while Display remains Frostie's everyday completion target.
 
 | ID | Observation | Status | Evidence and follow-up |
 |---|---|---|---|
-| MD-011 | Opening-scene logos rapidly stutter up/down at Manual 60 and Display; Original is fine | Open — reproduce and trace | Build-109 conversational report, item 1; exact wording retained in the follow-up. Trace the affected draw's camera/viewport/transform and sprite inputs. Do not conflate it with dialogue shunt or assume a common cause with MD-005. |
-| MD-012 | HUD Placement Original / 16:9 / Expand does not visibly reposition the HUD | Open — setting/consumer trace needed | Build-109 conversational report, item 2; exact wording retained in the follow-up. Check effective settings and actual HUD draw/origin behavior. This setting is separate from Framerate and the main aspect ratio. |
+| MD-011 | Opening-scene logos rapidly stutter up/down at Manual 60 and Display; Original is fine | Host intro candidate passes; Odin comparison pending | Build-109 report and complete build-111 logo review. The 29 October batch restores special intro ownership/camera attachment; 36 consumer cases and both controls pass. Do not conflate it with dialogue shunt or assume a common cause with MD-005. |
+| MD-012 | HUD Placement Original / 16:9 / Expand does not visibly reposition the HUD | Host placement candidate passes; Odin comparison pending | Build-109 report, build-110 setting/origin evidence and source investigation. The 29 October whole-component candidate passes 72 consumer cases and failing controls. Live pictured item mapping remains pending. This setting is separate from Framerate and the main aspect ratio. |
 
 ## Extended build-109 playthrough — 22:42, 27 October 2026
 

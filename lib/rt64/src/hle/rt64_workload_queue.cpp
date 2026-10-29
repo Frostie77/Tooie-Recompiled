@@ -4,6 +4,7 @@
 //
 
 #include "rt64_workload_queue.h"
+#include "../../../../src/visibility_aspect.h"
 
 #include "common/rt64_thread.h"
 
@@ -171,6 +172,8 @@ namespace RT64 {
             workloadConfig.aspectRatioTarget = workloadConfig.aspectRatioSource;
             break;
         }
+
+        tooie::visibility::publishAspect(workloadConfig.aspectRatioSource, workloadConfig.aspectRatioTarget);
 
         // Compute the extended GBI aspect ratio percentage to be used for the frame.
         const auto extRatioMode = ext.sharedResources->userConfig.extAspectRatio;

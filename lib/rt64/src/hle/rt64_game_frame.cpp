@@ -368,7 +368,7 @@ namespace RT64 {
                     matchTransform(curWorkload, prevWorkload, curWorkloadMap, prevWorkloadMap, curIt->second, prevIt->second, modifiedBuffers);
                     if (curIt->first >= 0x10000000U
 #if TOOIE_ACTOR_POSE_ENABLED
-                        && curIt->first < 0x10010000U
+                        && curIt->first < 0x20000000U
 #endif
                     ) {
                         g_bt_rt64_matched_transforms.fetch_add(1, std::memory_order_relaxed);
@@ -480,7 +480,7 @@ namespace RT64 {
                 const auto &mapping = frameMap.workloads[w];
                 uint32_t lastId=0;
                 for (const auto &entry : workload.transformIdMap) {
-                    if (entry.first<0x10000000U || entry.first>=0x10010000U) continue;
+                    if (entry.first<0x10000000U || entry.first>=0x20000000U) continue;
                     if (entry.first==lastId) ++playerDuplicates;
                     lastId=entry.first;
                     if (entry.second>=mapping.transforms.size()) {++playerUnmapped;continue;}

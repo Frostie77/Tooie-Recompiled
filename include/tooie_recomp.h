@@ -71,13 +71,23 @@ void tooie_clear_dp_freeze(uint8_t* rdram, recomp_context* ctx);
 void tooie_aiming_invert(uint8_t* rdram, recomp_context* ctx, uint32_t player);
 void tooie_flight_invert(uint8_t* rdram, recomp_context* ctx, uint32_t player);
 
+// Identify the real Jiggy controller without changing its input or state.
+void tooie_jiggy_input_context(const uint8_t* rdram, const recomp_context* ctx);
+
+// Whole-component HUD placement, followed by an optional read-only observer.
+void tooie_hud_placement_begin(uint8_t* rdram, const recomp_context* ctx);
+void tooie_hud_placement_end(uint8_t* rdram, const recomp_context* ctx);
+void tooie_hud_component_begin(const uint8_t* rdram, const recomp_context* ctx);
+void tooie_hud_component_callback(const uint8_t* rdram, const recomp_context* ctx);
+void tooie_hud_component_end(const uint8_t* rdram, const recomp_context* ctx);
+
 // Apply accepted replay spans to the existing guest retrace wait.
 void tooie_demo_pacing(uint8_t* rdram, recomp_context* ctx, uint32_t event);
 
-// Turns a "culled" verdict from Tooie's float-AABB, s16-AABB and sphere
-// visibility wrappers into "visible" while the applied aspect ratio is Expand,
-// whose projection is wider than the planes those tests build.
-void tooie_expand_visibility(uint8_t* rdram, recomp_context* ctx);
+// Scope the actual visibility wrappers and widen only their horizontal camera
+// planes to the applied Expand aspect; preserve rear/vertical rejection.
+void tooie_expand_visibility_scope(uint8_t* rdram, const recomp_context* ctx, uint32_t stage);
+uint32_t tooie_expand_frustum(const uint8_t* rdram, recomp_context* ctx, uint32_t kind);
 
 // RT64 interpolation metadata. The game emits none of its own, so every
 // transform looks new to RT64 and it blends matrices that do not correspond,
@@ -88,6 +98,7 @@ void tooie_correction_probe(uint8_t* rdram, recomp_context* ctx, uint32_t event,
 void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx);
 void tooie_rt64_skeleton_builder(uint8_t* rdram, recomp_context* ctx, uint32_t stage);
 void tooie_rt64_actor_scope(uint8_t* rdram, recomp_context* ctx, uint32_t stage);
+void tooie_rt64_intro_scope(uint8_t* rdram, recomp_context* ctx, uint32_t stage);
 void tooie_rt64_actor_lifetime(uint8_t* rdram, recomp_context* ctx, uint32_t event);
 void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
                              uint32_t stage);

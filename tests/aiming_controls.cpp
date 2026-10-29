@@ -1,6 +1,7 @@
 // Complete retained guest consumers, real Config persistence and production
 // controller profiles. Only devices, camera services and timers are fixtures.
 #include "aiming_controls.h"
+#include "jiggy_input_context.h"
 #include "controller_input.h"
 #include "tooie_recomp.h"
 #include "librecomp/config.hpp"
@@ -30,6 +31,7 @@ void func_8009EF34(uint8_t*, recomp_context*);
 void func_8009E6F8(uint8_t*, recomp_context*);
 void func_800919D0(uint8_t*, recomp_context*);
 void func_800BCCF4(uint8_t*, recomp_context*);
+void func_808007BC_chjiggygamenew(uint8_t*, recomp_context*);
 void bafpctrl_entrypoint_1(uint8_t*, recomp_context*);
 void bafpctrl_entrypoint_4(uint8_t*, recomp_context*);
 void bafpctrl_entrypoint_6(uint8_t*, recomp_context*);
@@ -257,6 +259,59 @@ static void profile_swapping() {
     settings(true, true, false); tooie::input::read_controller_input(0, &buttons, &x, &y); CHECK(x == .2f && y == .8f);
     size_t index = 0;
     for (size_t i = 0; i < num_game_inputs; ++i) for (size_t j = 0; j < 2; ++j) CHECK(saved[index++] == profiles::get_input_binding(profile, GameInput(i), j));
+    // The Jiggy paw reads the normal packet while a stationary-looking player
+    // context can still be present. Replay that overlap through the real
+    // profile reader, authored controller query and actual marker resolver.
+    context(ram.data(), Stationary);
+    constexpr uint32_t pool = 0x80510000, firstActor = 0x80511000, handle = 0x80512000;
+    auto halfword = [&](uint32_t address, uint16_t value) { std::memcpy(ram.data() + ((address - 0x80000000) ^ 2), &value, 2); };
+    put(ram.data(), 0x80136EE0, pool); put(ram.data(), pool, 0x9C);
+    put(ram.data(), pool + 4, firstActor); put(ram.data(), pool + 8, firstActor + 0x9C);
+    put(ram.data(), firstActor, handle); put(ram.data(), firstActor + 0x28, 5); halfword(handle + 0x1A, 0);
+    recomp_context jc{}; jc.r4 = int32_t(firstActor); jc.r29 = int32_t(0x80046000);
+    const auto contextBefore = jc; const auto memoryBefore = ram;
+    tooie_jiggy_input_context(ram.data(), &jc);
+    CHECK(ram == memoryBefore && std::memcmp(&jc, &contextBefore, sizeof(jc)) == 0);
+    auto query = [&] {
+        jc = {}; jc.r4 = int32_t(handle); jc.r29 = int32_t(0x80046000);
+        func_808007BC_chjiggygamenew(ram.data(), &jc);
+        CHECK(bool(jc.r2) == tooie::input::jiggy::active(ram.data()));
+        return bool(jc.r2);
+    };
+    CHECK(query());
+    unsigned jiggyCases = 0;
+    for (bool swap : {false, true}) for (bool a : {false, true}) for (bool f : {false, true}) {
+        settings(a, f, swap);
+        for (float lx : {-1.f, 0.f, 1.f}) for (float ly : {-1.f, 0.f, 1.f})
+        for (float rx : {-1.f, 0.f, 1.f}) for (float ry : {-1.f, 0.f, 1.f}) {
+            physical_axes[0] = {lx, ly, rx, ry, .75f, 0};
+            uint16_t originalButtons; float originalX, originalY;
+            profiles::get_n64_input(0, &originalButtons, &originalX, &originalY);
+            tooie::input::read_controller_input(0, &buttons, &x, &y);
+            CHECK(buttons == originalButtons && x == originalX && y == originalY);
+            ++jiggyCases;
+        }
+    }
+    settings(true, true, true);
+    for (unsigned phase = 0; phase < 10; ++phase) {
+        put(ram.data(), firstActor + 0x28, phase);
+        CHECK(query() == (phase == 5));
+        CHECK(tooie::input::swap_aiming_sticks(0) == (phase != 5));
+    }
+    put(ram.data(), firstActor + 0x28, 5);
+    // Relocation and swap-with-last change the actor address/index, not its marker.
+    constexpr uint32_t moved = 0x80513000;
+    std::memcpy(ram.data() + moved + 0x9C - 0x80000000, ram.data() + firstActor - 0x80000000, 0x9C);
+    put(ram.data(), pool + 4, moved); put(ram.data(), pool + 8, moved + 0x138); halfword(handle + 0x1A, 1 << 5);
+    put(ram.data(), firstActor + 0x28, 1);
+    CHECK(query() && !tooie::input::swap_aiming_sticks(0));
+    tooie::input::jiggy::forget(handle + 0x80); CHECK(tooie::input::jiggy::active(ram.data()));
+    tooie::input::jiggy::forget(handle); CHECK(tooie::input::swap_aiming_sticks(0));
+    jc.r4 = int32_t(moved + 0x9C); tooie_jiggy_input_context(ram.data(), &jc);
+    CHECK(!tooie::input::swap_aiming_sticks(0));
+    tooie::input::initialize_controls(ram.data()); CHECK(tooie::input::swap_aiming_sticks(0));
+    physical_axes[0] = {.2f, -.8f, -.9f, .6f, .75f, 0};
+    std::printf("PASS: %u Jiggy profile cases keep both axes/C-button roles original under all preferences; authored input-state query, entry/exit, actor relocation, retirement and reset\n", jiggyCases);
     settings(true, true, true);
     for (uint32_t handler = 0x80084288; handler <= 0x800843B0; handler += 8) { context(ram.data(), Stationary, handler); CHECK(!tooie::input::swap_aiming_sticks(0)); }
     for (uint32_t handler = 0x80082950; handler <= 0x80082998; handler += 8) { context(ram.data(), Stationary, handler); CHECK(!tooie::input::swap_aiming_sticks(0)); }

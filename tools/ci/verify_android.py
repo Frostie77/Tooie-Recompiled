@@ -104,7 +104,7 @@ def check_configuration(source, work, ndk):
     require(re.search(r"^ANDROID_ABI:(?:STRING|UNINITIALIZED)=arm64-v8a$", cache, re.M), "wrong target ABI")
     commands = json.loads((work / "native/compile_commands.json").read_text())
     targets = [source / p for p in (
-        "src/main.cpp", "src/recomp_api.cpp", "src/aiming_controls.cpp",
+        "src/main.cpp", "src/recomp_api.cpp", "src/aiming_controls.cpp", "src/hud_diagnostics.cpp", "src/hud_placement.cpp", "src/widescreen_visibility.cpp",
         "src/android_touch_input.cpp", "src/android_touch_controls.cpp", "src/android_touch_jni.cpp",
         "lib/rt64/src/contrib/plume/plume_vulkan.cpp",
         "lib/rt64/src/hle/rt64_present_queue.cpp",

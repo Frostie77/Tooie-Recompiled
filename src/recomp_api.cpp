@@ -30,13 +30,17 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <map>
 #include <span>
+#include <stdexcept>
 #include <thread>
+#include <vector>
 
 #include "funcs.h"
 #include "recomp.h"
 #include "register_overlays.hpp"
 #include "tooie_recomp.h"
+#include "jiggy_input_context.h"
 
 // CIC-NUS-6105 challenge/response, vendored by RT64's mupen64plus-core copy.
 extern "C" {
@@ -56,6 +60,28 @@ extern "C" {
 #include "demo_pacing_guest.h"
 #include "mod_runtime.h"
 
+namespace {
+thread_local std::vector<bool> g_intro_camera_scopes;
+}
+
+extern "C" void tooie_rt64_intro_scope(uint8_t* rdram, recomp_context* ctx, uint32_t stage) {
+#if TOOIE_ACTOR_POSE_ENABLED
+    if (stage == 1) {
+        g_intro_camera_scopes.push_back(false);
+        // Both special-placement model branches explicitly install this same
+        // resolver with func_800DF47C. They bypass func_80101808's owner scope.
+        tooie::skeletal::actors::begin(rdram, uint32_t(ctx->r4), 0x801017D0U);
+    } else if (stage == 2) {
+        if (!g_intro_camera_scopes.empty()) g_intro_camera_scopes.back() = true;
+    } else if (!g_intro_camera_scopes.empty()) {
+        g_intro_camera_scopes.pop_back();
+        tooie::skeletal::actors::end();
+    }
+#else
+    (void)rdram; (void)ctx; (void)stage;
+#endif
+}
+
 extern "C" void tooie_demo_pacing(uint8_t* rdram, recomp_context* ctx, uint32_t event) {
     tooie::demo::event(rdram, ctx, event);
 }
@@ -71,6 +97,12 @@ extern "C" void tooie_rt64_actor_scope(uint8_t* rdram, recomp_context* ctx, uint
 }
 
 extern "C" void tooie_rt64_actor_lifetime(uint8_t* rdram, recomp_context* ctx, uint32_t event) {
+    if (event == 1) {
+        const auto actor = uint32_t(ctx->r16);
+        if (tooie::input::jiggy::valid(actor, 0x9C))
+            tooie::input::jiggy::forget(tooie::input::jiggy::word(rdram, actor));
+    } else if (event == 2) tooie::input::jiggy::forget(uint32_t(ctx->r4));
+    else tooie::input::jiggy::clear();
 #if TOOIE_ACTOR_POSE_ENABLED
     if (event == 1) tooie::skeletal::actors::created(rdram, uint32_t(ctx->r16));
     else if (event == 2) tooie::skeletal::actors::registry().retire(uint32_t(ctx->r4));
@@ -856,30 +888,8 @@ extern "C" void tooie_clear_dp_freeze(uint8_t* rdram, recomp_context* ctx) {
     rdp_state &= ~kDpStatusFreeze;
 }
 
-// `Aspect Ratio: Expand` widens only the projection RT64 is handed. Tooie's
-// visibility tests build their planes from the original 4:3 camera, so anything
-// in the extra side regions is rejected by the game before a display list ever
-// reaches RT64, and those regions render as bare background. func_800E3D0C,
-// func_800E3DC0 and func_800E3E8C are the float-AABB, s16-AABB and sphere
-// wrappers that produce those verdicts; each leaves 0 in $v0 for "culled" and
-// non-zero for "visible".
-//
-// Every original result is preserved unless Expand is the applied setting, so
-// Original and Manual keep the game's exact behaviour. In Expand a rejection
-// becomes "visible", which is the whole fix: the geometry exists, it was only
-// being culled by a camera narrower than the one being rendered.
-extern "C" void tooie_expand_visibility(uint8_t* rdram, recomp_context* ctx) {
-    (void)rdram;
-    if (ctx->r2 != 0) {
-        return;
-    }
-    if (ultramodern::renderer::get_graphics_config().ar_option !=
-        ultramodern::renderer::AspectRatio::Expand) {
-        return;
-    }
-    ctx->r2 = 1;
-}
-
+// Scoped widescreen visibility is implemented in widescreen_visibility.cpp.
+// It widens the authored horizontal planes; it never forces a rejected draw on.
 // ---------------------------------------------------------------------------
 // RT64 transform groups: interpolation metadata for the player model
 // ---------------------------------------------------------------------------
@@ -1089,12 +1099,11 @@ constexpr uint32_t kAnimationMatrixList = 0x8012C968U;
 constexpr uint32_t kPlayerStateSlotTable = 0x80135490U;
 constexpr uint32_t kPlayerStateSlotCount = 8U;
 
-// Transform ids are 0x10000000 + model_slot * 0x100, leaving 0x100 ids per
-// model for its bones. Ids only have to be stable between one frame and the
-// next, so they are assigned in order of first sight.
+// Keep one disjoint 0x100-ID block per observed player/model lifetime. Retire
+// inactive lookup entries, but never recycle IDs referenced by queued frames.
 constexpr uint32_t kPlayerTransformIdBase = 0x10000000U;
 constexpr uint32_t kPlayerTransformIdStride = 0x100U;
-constexpr uint32_t kPlayerModelCount = 256U;
+constexpr uint32_t kPlayerTransformIdEnd = 0x20000000U;
 constexpr uint32_t kRootScopeCount = 16U;
 constexpr uint32_t kBoneScopeCount = 64U;
 
@@ -1174,20 +1183,19 @@ struct RootScope {
 #endif
 };
 
-struct PlayerModelKey {
-    uint32_t player;
-    uint32_t model;
+struct PlayerModelEntry {
+    uint32_t id;
+    uint64_t lastFrame;
 };
 
 // The player draw runs on one guest thread, and the ids only have to be stable
 // between adjacent frames, so this state is thread-local and never shared.
 thread_local uint32_t g_player_scope_depth = 0;
 thread_local uint32_t g_player_key = 0;
-#if TOOIE_SKELETAL_POSE_ENABLED
 thread_local uint32_t g_player_actor = 0;
-#endif
-thread_local PlayerModelKey g_player_models[kPlayerModelCount] = {};
-thread_local uint32_t g_player_model_count = 0;
+thread_local std::map<std::pair<uint32_t, uint32_t>, PlayerModelEntry> g_player_models;
+thread_local uint64_t g_player_model_frame = 0;
+thread_local uint32_t g_next_player_model_id = kPlayerTransformIdBase;
 thread_local RootScope g_root_scopes[kRootScopeCount] = {};
 thread_local uint32_t g_root_scope_depth = 0;
 thread_local bool g_bone_scopes[kBoneScopeCount] = {};
@@ -1209,20 +1217,17 @@ uint32_t stable_player_key(uint8_t* rdram, uint32_t player_state) {
 }
 
 uint32_t player_model_transform_id(uint32_t player, uint32_t model) {
-    for (uint32_t slot = 0; slot < g_player_model_count; ++slot) {
-        if (g_player_models[slot].player == player &&
-            g_player_models[slot].model == model) {
-            return kPlayerTransformIdBase + slot * kPlayerTransformIdStride;
-        }
+    const auto key = std::make_pair(player, model);
+    if (const auto found = g_player_models.find(key); found != g_player_models.end()) {
+        found->second.lastFrame = g_player_model_frame;
+        return found->second.id;
     }
-
-    if (g_player_model_count >= kPlayerModelCount) {
-        return 0;
-    }
-
-    const uint32_t slot = g_player_model_count++;
-    g_player_models[slot] = {player, model};
-    return kPlayerTransformIdBase + slot * kPlayerTransformIdStride;
+    if (g_next_player_model_id >= kPlayerTransformIdEnd)
+        throw std::overflow_error("player transform identity exhausted");
+    const auto id = g_next_player_model_id;
+    g_next_player_model_id += kPlayerTransformIdStride;
+    g_player_models.emplace(key, PlayerModelEntry{id, g_player_model_frame});
+    return id;
 }
 
 // Opt-in counters, in the same style as TOOIE_TRACE_LOOKUP. They report both
@@ -1390,11 +1395,18 @@ extern "C" void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx) {
     }
 
     const uint32_t frame = read_word(rdram, kGameFrameCount);
+    ++g_player_model_frame;
+    for (auto it = g_player_models.begin(); it != g_player_models.end();) {
+        if (g_player_model_frame - it->second.lastFrame > 1)
+            it = g_player_models.erase(it);
+        else ++it;
+    }
 #if TOOIE_SKELETAL_POSE_ENABLED
     tooie::skeletal::guest::frameBegin();
 #endif
 #if TOOIE_ACTOR_POSE_ENABLED
     tooie::skeletal::actors::frameBegin();
+    g_intro_camera_scopes.clear();
 #endif
     if (rt64_trace_enabled()) {
         std::fprintf(stderr,
@@ -1475,9 +1487,7 @@ extern "C" void tooie_rt64_begin_frame(uint8_t* rdram, recomp_context* ctx) {
     }
     g_player_scope_depth = 0;
     g_player_key = 0;
-#if TOOIE_SKELETAL_POSE_ENABLED
     g_player_actor = 0;
-#endif
 
     if (!append_command(rdram, kRenderBufferState, kEnableWord0,
                         kEnableWord1)) {
@@ -1519,9 +1529,7 @@ extern "C" void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
         if (g_player_scope_depth++ == 0U) {
             g_player_key =
                 stable_player_key(rdram, static_cast<uint32_t>(ctx->r4));
-#if TOOIE_SKELETAL_POSE_ENABLED
             g_player_actor = static_cast<uint32_t>(ctx->r4);
-#endif
             g_root_scope_depth = 0;
             g_bone_scope_depth = 0;
         }
@@ -1534,9 +1542,7 @@ extern "C" void tooie_rt64_player_scope(uint8_t* rdram, recomp_context* ctx,
 
     if (--g_player_scope_depth == 0U) {
         g_player_key = 0;
-#if TOOIE_SKELETAL_POSE_ENABLED
         g_player_actor = 0;
-#endif
         g_root_scope_depth = 0;
         g_bone_scope_depth = 0;
     }
@@ -1605,7 +1611,7 @@ extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
         return;
     }
 
-    scope.transform_id = in_player ? player_model_transform_id(g_player_key, model) : 0;
+    scope.transform_id = in_player ? player_model_transform_id(g_player_actor, model) : 0;
 #if TOOIE_ACTOR_POSE_ENABLED
     if (!in_player && in_actor) {
         scope.actor = tooie::skeletal::actors::current(rdram);
@@ -1655,6 +1661,10 @@ extern "C" void tooie_rt64_push_player_root(uint8_t* rdram,
     }
 
     uint32_t flags = kRootGroupFlags;
+#if TOOIE_ACTOR_POSE_ENABLED
+    if (scope.actor && !g_intro_camera_scopes.empty() && g_intro_camera_scopes.back())
+        flags |= TOOIE_CAMERA_RELATIVE_GROUP;
+#endif
 #if TOOIE_SKELETAL_POSE_ENABLED
     if (scope.deformed_vertices) flags = kDeformedRootGroupFlags;
 #endif

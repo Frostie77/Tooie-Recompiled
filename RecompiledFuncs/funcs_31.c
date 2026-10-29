@@ -13809,6 +13809,7 @@ RECOMP_FUNC void func_800E3CE8(uint8_t* rdram, recomp_context* ctx) {
 RECOMP_FUNC void func_800E3D0C(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+    tooie_expand_visibility_scope(rdram, ctx, 1U);
     // 0x800E3D0C: addiu       $sp, $sp, -0x50
     ctx->r29 = ADD32(ctx->r29, -0X50);
     // 0x800E3D10: sw          $a0, 0x50($sp)
@@ -13938,13 +13939,14 @@ L_800E3DAC:
     ctx->r29 = ADD32(ctx->r29, 0X50);
     // 0x800E3DB4: or          $v0, $v1, $zero
     ctx->r2 = ctx->r3 | 0;
-    tooie_expand_visibility(rdram, ctx);
+    tooie_expand_visibility_scope(rdram, ctx, 0U);
     // 0x800E3DB8: jr          $ra
     return;
 ;}
 RECOMP_FUNC void func_800E3DC0(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+    tooie_expand_visibility_scope(rdram, ctx, 1U);
     // 0x800E3DC0: addiu       $sp, $sp, -0x50
     ctx->r29 = ADD32(ctx->r29, -0X50);
     // 0x800E3DC4: sw          $a0, 0x50($sp)
@@ -14094,13 +14096,14 @@ L_800E3E78:
     ctx->r29 = ADD32(ctx->r29, 0X50);
     // 0x800E3E80: or          $v0, $v1, $zero
     ctx->r2 = ctx->r3 | 0;
-    tooie_expand_visibility(rdram, ctx);
+    tooie_expand_visibility_scope(rdram, ctx, 0U);
     // 0x800E3E84: jr          $ra
     return;
 ;}
 RECOMP_FUNC void func_800E3E8C(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+    tooie_expand_visibility_scope(rdram, ctx, 1U);
     // 0x800E3E8C: addiu       $sp, $sp, -0x28
     ctx->r29 = ADD32(ctx->r29, -0X28);
     // 0x800E3E90: sw          $a0, 0x28($sp)
@@ -14178,7 +14181,7 @@ L_800E3EE8:
     ctx->r29 = ADD32(ctx->r29, 0X28);
     // 0x800E3EF0: or          $v0, $v1, $zero
     ctx->r2 = ctx->r3 | 0;
-    tooie_expand_visibility(rdram, ctx);
+    tooie_expand_visibility_scope(rdram, ctx, 0U);
     // 0x800E3EF4: jr          $ra
     return;
 ;}

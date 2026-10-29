@@ -125,7 +125,7 @@ class DriverVariantPackagingTests(unittest.TestCase):
             cache = "TOOIE_ANDROID_RUNTIME:BOOL=ON\nTOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE:BOOL=OFF\nANDROID_ABI:STRING=arm64-v8a\n"
             cache += "TOOIE_ANDROID_VULKAN_DRIVERS:BOOL=" + (cache_mode or "ON") + "\nANDROID_STL:STRING=c++_shared\n"
             (native / "CMakeCache.txt").write_text(cache)
-            targets = ["src/main.cpp", "src/recomp_api.cpp", "src/aiming_controls.cpp", "lib/rt64/src/contrib/plume/plume_vulkan.cpp",
+            targets = ["src/main.cpp", "src/recomp_api.cpp", "src/aiming_controls.cpp", "src/hud_diagnostics.cpp", "src/hud_placement.cpp", "src/widescreen_visibility.cpp", "lib/rt64/src/contrib/plume/plume_vulkan.cpp",
                        "lib/rt64/src/hle/rt64_present_queue.cpp", "lib/rt64/src/render/rt64_transform_processor.cpp"]
             if touch_sources: targets += ["src/android_touch_input.cpp", "src/android_touch_controls.cpp", "src/android_touch_jni.cpp"]
             if loader_source: targets += ["src/android_vulkan_driver.cpp"]

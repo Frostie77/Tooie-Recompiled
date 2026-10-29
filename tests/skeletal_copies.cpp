@@ -2,6 +2,7 @@
 // two-bone schema are controlled; this is not a full NPC/GPU replay.
 #define main retainedSkeletalFixtureMain
 #include "skeletal_pose.cpp"
+#include "jiggy_input_context.h"
 #undef main
 #undef CHECK
 #define CHECK(x) do {if(!(x)){std::fprintf(stderr,"copy failure: line=%d %s\n",__LINE__,#x);std::exit(61);}}while(0)
@@ -54,6 +55,19 @@ static void lookupControls(const std::shared_ptr<const tooie::skeletal::Pose> &p
 int main(int argc,char **argv) {
     CHECK(argc==1 || (argc==2 && std::string(argv[1])=="--force-unowned-aliases"));
     const bool forceUnowned=argc==2;
+    {
+        std::vector<uint8_t> ram(0x800000); auto *r=ram.data(); recomp_context c{};
+        constexpr uint32_t pool=0x80640000,actor=0x80650000,marker=0x80670000;
+        put(r,0x80136EE0,pool);put(r,pool,0x9C);put(r,pool+4,actor);put(r,pool+8,actor+0x9C);
+        put(r,actor,marker);put(r,marker+0x18,0);c.r16=int32_t(actor);
+        tooie::input::jiggy::marker.store(marker);tooie_rt64_actor_lifetime(r,&c,1);
+        CHECK(tooie::input::jiggy::marker.load()==0);
+        tooie::input::jiggy::marker.store(marker);c.r4=int32_t(marker+0x80);tooie_rt64_actor_lifetime(r,&c,2);
+        CHECK(tooie::input::jiggy::marker.load()==marker);
+        c.r4=int32_t(marker);tooie_rt64_actor_lifetime(r,&c,2);CHECK(tooie::input::jiggy::marker.load()==0);
+        tooie::input::jiggy::marker.store(marker);tooie_rt64_actor_lifetime(r,&c,3);
+        CHECK(tooie::input::jiggy::marker.load()==0);
+    }
     J input;std::ifstream("tests/fixtures/odin-bone-matrix-copy-20261028.json")>>input;
     Pair p;p.parent={-1,0};p.bind={V(0),V(0)};
     p.authored={std::array<uint32_t,4>{0,0,0,0xFFFF},std::array<uint32_t,4>{0,0,0,0}};

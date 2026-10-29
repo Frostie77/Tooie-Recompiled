@@ -72,6 +72,18 @@
     "func_8009CAAC": {
       "file": "RecompiledFuncs/funcs_22.c",
       "sha256": "87563e9034f9795bcf4006c0d3320c036a66c6fa2eff56743f93415e6f9c3c1b"
+    },
+    "func_80106790": {
+      "file": "RecompiledFuncs/funcs_36.c",
+      "sha256": "ab26ea7ab611c89b2e22e6152ec2d5737945d939e55ebabe3838edfe3ee910c9"
+    },
+    "func_800B28CC": {
+      "file": "RecompiledFuncs/funcs_25.c",
+      "sha256": "a1514399fce531ddecea33ff2d81845d1aa66c180af144de5dcbccafb7c23ac6"
+    },
+    "func_808007BC_chjiggygamenew": {
+      "file": "RecompiledFuncs/funcs_64.c",
+      "sha256": "e0d519120949355525bbb05eb8efde4113c84b305040cee37d099eaa5643cd63"
     }
   }
 }

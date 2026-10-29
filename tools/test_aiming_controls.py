@@ -75,6 +75,14 @@ def main():
     assert ".get_input = tooie::input::read_controller_input," in main
     assert "tooie::input::read_controller_input(player, buttons, x, y)" in (root / "src/android_touch_input.cpp").read_text()
     assert "${CMAKE_SOURCE_DIR}/src/aiming_controls.cpp" in (root / "CMakeLists.txt").read_text()
+    jiggy = json.loads((root / "tests/fixtures/jiggy-input-context-parent.json").read_text())
+    jiggy_body = re.search(r"^RECOMP_FUNC void " + jiggy["function"] + r"\(.*?(?=^RECOMP_FUNC |\Z)",
+                          (root / jiggy["file"]).read_text(), re.M | re.S).group()
+    jiggy_hook = "    tooie_jiggy_input_context(rdram, ctx);\n"
+    assert jiggy_hook + "    // 0x80802030:" in jiggy_body
+    assert hashlib.sha256(jiggy_body.replace(jiggy_hook, "").encode()).hexdigest() == jiggy["sha256"]
+    assert [(h["func"], h["before_vram"], h["text"]) for h in cfg["patches"]["hook"] if "tooie_jiggy_input_context" in h["text"]] == [
+        (jiggy["function"], 0x80802030, "tooie_jiggy_input_context(rdram, ctx);")]
     print("PASS: three maintained Y hooks, authored flight/FPS dispatch identities, and every retained instruction body match the exact parent", flush=True)
 
     source = "".join(bodies.values())
@@ -138,6 +146,14 @@ def main():
     # Config can read true successfully yet fail to publish it to the input
     # thread. This control specifically disables the production load callback.
     aiming = (root / "src/aiming_controls.cpp").read_text()
+    exclusion = "    if (tooie::input::jiggy::active(rdram)) return false;"
+    assert aiming.count(exclusion) == 1
+    missing_jiggy = build / "missing-jiggy.cpp"
+    missing_jiggy.write_text(aiming.replace(exclusion, ""))
+    run([args.cxx, "-std=c++20", *flags, "-c", missing_jiggy, "-o", build / "missing-jiggy.o"], "compile-jiggy-control")
+    jiggy_objects = [obj for i, obj in enumerate(objects) if i != 3] + [build / "missing-jiggy.o", build / "current.o"]
+    run([args.cxx, "-no-pie", "-fsanitize=address,undefined", "-Wl,--gc-sections", *jiggy_objects, "-pthread", "-o", build / "missing-jiggy"], "link-jiggy-control")
+    run([build / "missing-jiggy", build / "missing-jiggy-config"], "execute-jiggy-control", expected=23)
     before = "context != recomp::config::OptionChangeContext::Temporary"
     assert aiming.count(before) == 1
     bad = build / "load-callback.cpp"
@@ -174,7 +190,7 @@ extern "C" void tooie_flight_invert(uint8_t*, recomp_context*, uint32_t) {}
         linked = [item for i, item in enumerate(objects) if i != 5] + [obj, build / "current.o"]
         run([args.cxx, "-no-pie", "-fsanitize=address,undefined", "-Wl,--gc-sections", *linked, "-pthread", "-o", build / label], "link-" + label)
         run([build / label, build / (label + "-config")], "execute-" + label, expected=23)
-    print("PASS: prior broad aiming policy, missing hooks/flight steering/swap, rifle/walking/horizontal inversion, one-way swap and broken load callback each fail the expected assertion", flush=True)
+    print("PASS: ten controls (prior broad aiming policy, missing hooks/flight steering/swap/Jiggy exclusion, rifle/walking/horizontal inversion, one-way swap and broken load callback) each fail the expected assertion", flush=True)
 
 
 if __name__ == "__main__":

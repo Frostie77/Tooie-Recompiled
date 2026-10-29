@@ -1,6 +1,9 @@
 # HUD placement source investigation — 28 October 2026
 
-Status: **MD-012 remains open**. No HUD runtime change or new device result.
+Status: **MD-012 has a host-validated placement candidate; Odin acceptance is
+pending**. See the [29 October combined candidate](graphics-batch-candidate-20261029.md)
+for implementation, 72 consumer cases and failing controls. The build-110
+observations below describe the prior missing-anchor path.
 
 The [build-110 review](graphics-input-check-odin-20261028.md) confirms the three
 HUD setting values reach RT64 and the extension percentage changes. Every
@@ -33,7 +36,9 @@ The sole maintained direct caller is core `func_800FA508` in
 `0x80123880` up to (excluding) `0x80123DC0`. At `0x800FA5CC` it calls the
 component draw entry with the pointer from entry `+0x18` and signed halfword
 coordinates from entry `+0x06` / `+0x08`. It also has special-entry/game-state
-filtering that must be retained. This stable table identity and authored pair
+filtering that must be retained. These are animated draw coordinates; the
+authored layout coordinates are at entry `+0/+2`, initialized by
+`func_800FA010`. This stable table identity and authored pair
 are a better discriminator than classifying individual rendered glyphs. The
 actual table contents and pictured item-to-entry mapping are not in this capture.
 
@@ -44,7 +49,21 @@ split text, icons and their animations. Generic sprite/rectangle routines also
 serve transitions, other overlays and world effects, so a global change there
 would affect unrelated content.
 
-## Next discriminator
+## Candidate follow-up
+
+The candidate brackets the complete component call, including associated text,
+and selects one left/center/right origin from its authored X relative to 160.
+Animation never changes this anchor. The actual GBI, rectangle, model viewport,
+scissor and coordinate consumers apply and restore that scope. Original HUD
+mode emits no placement commands. The opt-in observer records authored and
+animated coordinates and the surviving placement packets separately.
+
+The retained 72-case regression covers all settings, aspects, mixed icon/text/
+model paths and nested/following draw restoration. Missing metadata and choosing
+animated X both fail. The live pictured item-to-entry association and visual
+Odin comparison remain required; host fixtures do not establish that acceptance.
+
+## Original investigation discriminator
 
 Inspect the component initialization/layout table and its real callers to map
 stable component identities to authored positions. Establish whether each

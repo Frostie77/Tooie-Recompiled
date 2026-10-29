@@ -6,6 +6,13 @@ sequence. The previously accepted limb-gap test stays accepted; this recording
 reports a separate remaining defect. No logo correction or new Original-mode
 comparison is claimed.
 
+Follow-up, 29 October: the [combined candidate](graphics-batch-candidate-20261029.md)
+now restores actual marker/generation ownership around special intro draws
+and keeps explicitly camera-relative rigid models coherent with the consumed
+camera. All 36 retained-branch/weight cases and both failing controls pass.
+The recorded visible logos still need an Odin comparison; the evidence below
+does not identify a pictured logo's type ID or establish device resolution.
+
 ## Reviewed evidence
 
 - Share ZIP: `Tooie-ba1675a593ab-Installed-Debug-Odin-20261028-204420-9b9bed38-Share-20261028-204700-0ddd2183.zip`;

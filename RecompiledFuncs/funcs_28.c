@@ -6988,6 +6988,7 @@ RECOMP_FUNC void func_800CAA1C(uint8_t* rdram, recomp_context* ctx) {
 RECOMP_FUNC void func_800CAA24(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+    if (tooie_expand_frustum(rdram, ctx, 0U)) return;
     // 0x800CAA24: or          $a3, $a0, $zero
     ctx->r7 = ctx->r4 | 0;
     // 0x800CAA28: addiu       $t0, $a0, 0x24
@@ -7304,6 +7305,7 @@ L_800CAA38:
 RECOMP_FUNC void func_800CAB70(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+    if (tooie_expand_frustum(rdram, ctx, 1U)) return;
     // 0x800CAB70: mtc1        $zero, $f18
     ctx->f18.u32l = 0;
     // 0x800CAB74: or          $v1, $zero, $zero
@@ -7660,6 +7662,7 @@ L_800CAB84:
 RECOMP_FUNC void func_800CACEC(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+    if (tooie_expand_frustum(rdram, ctx, 2U)) return;
     // 0x800CACEC: addiu       $sp, $sp, -0x48
     ctx->r29 = ADD32(ctx->r29, -0X48);
     // 0x800CACF0: sw          $ra, 0x2C($sp)

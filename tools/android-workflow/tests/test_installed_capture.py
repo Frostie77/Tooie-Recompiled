@@ -4,6 +4,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import shlex
 import subprocess
 import tempfile
 import types
@@ -144,9 +145,90 @@ class InstalledCapture(unittest.TestCase):
         self.c.start_capture = lambda start: self.fail('Started capture for the wrong installed APK')
         class Terminal(io.StringIO):
             def isatty(self): return True
+        hud = types.SimpleNamespace(enable=lambda c: self.fail('Enabled HUD trace before installed APK verification'))
         with patch.object(self.c.sys, 'stdin', Terminal()), self.assertRaisesRegex(RuntimeError, 'Installed APK differs'):
-            capture.installed_main(self.c, self.args)
+            capture.installed_main(self.c, self.args, hud)
         self.assertFalse(self.c.attempted)
+
+    def hud_shell(self):
+        app = self.area / 'app'
+        (app / 'files/data').mkdir(parents=True)
+        calls = []
+        def adb(*args, **kwargs):
+            values = ['adb', '-s', 'fixture-device', *args]
+            capture.guard_observer_command(values, 'adb', 'fixture-device', True)
+            words = shlex.split(args[2])
+            self.assertEqual(words[:4], ['run-as', 'io.github.banjotooierecompiled', 'sh', '-c'])
+            calls.append(words[4])
+            result = subprocess.run(['sh', '-c', words[4]], cwd=app, capture_output=True)
+            self.c.save(kwargs['name'], result.stdout)
+            self.c.save(kwargs['name'] + '-status', 'returncode=' + str(result.returncode) + '\n' + result.stderr.decode())
+            return result
+        self.c.adb = adb
+        return app / capture.HUD_REQUEST, calls
+
+    def test_hud_trace_stages_exact_request_and_archives_cleanup_receipt(self):
+        path, calls = self.hud_shell()
+        request = capture.HudTraceRequest()
+        with contextlib.redirect_stdout(io.StringIO()):
+            request.enable(self.c)
+            self.assertEqual(path.read_bytes(), capture.HUD_CONTENTS)
+            request.finish(self.c)
+            request.finish(self.c)
+        self.assertFalse(path.exists())
+        self.assertEqual(len(calls), 2)
+        receipt = json.loads(Path(str(self.c.prefix) + '-HUD-Trace-Request.txt').read_text())
+        self.assertTrue(receipt['enable_acknowledged'] and receipt['removal_acknowledged'])
+        self.assertIsNone(receipt['error'])
+        archives, _ = self.c.archive_evidence()
+        self.assertEqual(len(archives), 1)
+        with zipfile.ZipFile(archives[0]) as bundle:
+            self.assertIn(self.c.prefix.name + '-HUD-Trace-Request.txt', bundle.namelist())
+
+    def test_hud_trace_never_overwrites_existing_requests_or_removes_changed_data(self):
+        path, calls = self.hud_shell()
+        path.write_bytes(b'existing request')
+        request = capture.HudTraceRequest()
+        with self.assertRaisesRegex(RuntimeError, 'not acknowledged'):
+            request.enable(self.c)
+        request.finish(self.c)
+        self.assertEqual(path.read_bytes(), b'existing request')
+        self.assertEqual(len(calls), 1)
+
+    def test_hud_trace_preserves_a_changed_request_and_records_cleanup_failure(self):
+        path, _ = self.hud_shell()
+        request = capture.HudTraceRequest()
+        with contextlib.redirect_stdout(io.StringIO()): request.enable(self.c)
+        path.write_bytes(b'changed by another owner')
+        request.finish(self.c)
+        self.assertEqual(path.read_bytes(), b'changed by another owner')
+        self.assertFalse(request.removed)
+        self.assertIn('not verified', request.error)
+
+    def test_hud_guard_only_allows_the_two_exact_scripts_when_requested(self):
+        base = ['adb', '-s', 'fixture-device', 'shell', '-T']
+        for enable in (False, True):
+            command = base + [shlex.join(['run-as', 'io.github.banjotooierecompiled', 'sh', '-c', capture.hud_request_script(enable)])]
+            with self.assertRaises(RuntimeError): capture.guard_observer_command(command, 'adb', 'fixture-device')
+            capture.guard_observer_command(command, 'adb', 'fixture-device', True)
+            with self.assertRaises(RuntimeError):
+                capture.guard_observer_command(base + [command[-1].replace('hud-trace-v1', 'save-data')], 'adb', 'fixture-device', True)
+
+    def test_hud_trace_requires_a_native_observer_before_any_device_operation(self):
+        self.args.hud_trace = True
+        with self.assertRaisesRegex(RuntimeError, 'does not contain'):
+            capture.verify_local(self.c, self.args)
+        self.assertEqual(self.calls, [])
+
+    def test_supported_hud_observer_passes_complete_local_payload_and_sdk_checks(self):
+        self.args.hud_trace = True
+        native = self.native + b'hud-trace-v1\0tooie_hud_component_begin\0tooie_hud_component_callback\0tooie_hud_component_end\0'
+        self.app['lib/arm64-v8a/libmain.so'] = native
+        self.report['libraries']['libmain.so']['sha256'] = capture.digest(native)
+        self.driver_profile()
+        capture.verify_local(self.c, self.args)
+        self.assertEqual(len(self.calls), 2)
+        self.assertTrue(all(call[0] in (str(self.area / 'apksigner'), str(self.area / 'aapt2')) for call in self.calls))
 
     def test_continuous_observation_runs_past_old_timer_and_stops_on_save(self):
         self.c.input_hub = lambda: types.SimpleNamespace(phase='')

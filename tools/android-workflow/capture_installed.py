@@ -35,7 +35,83 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def guard_observer_command(args, adb, serial):
+HUD_REQUEST = 'files/data/hud-trace-v1'
+HUD_CONTENTS = b'tooie-hud-trace-v1\n'
+HUD_HASH = hashlib.sha256(HUD_CONTENTS).hexdigest()
+
+
+def hud_request_script(enable):
+    common = 'set -eu\np=' + shlex.quote(HUD_REQUEST) + '\n'
+    if enable:
+        return common + r'''
+[ -d files/data ] || exit 44
+if [ -e "$p" ] || [ -L "$p" ]; then
+    printf '%s\n' 'HUD trace request already exists; nothing overwritten'
+    exit 45
+fi
+made=0
+trap 'if [ "$made" = 1 ]; then rm -- "$p"; fi' 0
+(umask 077; set -C; printf '%s\n' tooie-hud-trace-v1 > "$p")
+made=1
+set -- $(sha256sum "$p")
+[ "$1" = ''' + shlex.quote(HUD_HASH) + r''' ]
+made=0
+trap - 0
+printf '%s\n' TOOIE_HUD_TRACE_ENABLED
+'''
+    return common + r'''
+[ ! -L "$p" ] || { printf '%s\n' 'HUD request is a link; nothing removed'; exit 46; }
+if [ -e "$p" ]; then
+    [ -f "$p" ] || exit 47
+    set -- $(sha256sum "$p")
+    [ "$1" = ''' + shlex.quote(HUD_HASH) + r''' ] || {
+        printf '%s\n' 'HUD request contents differ; nothing removed'; exit 48;
+    }
+    rm -- "$p"
+fi
+printf '%s\n' TOOIE_HUD_TRACE_REMOVED
+'''
+
+
+class HudTraceRequest:
+    def __init__(self):
+        self.enabled = self.was_enabled = self.removed = self.closed = False
+        self.error = None
+
+    def operation(self, c, enable):
+        remote = shlex.join(['run-as', c.PKG, 'sh', '-c', hud_request_script(enable)])
+        return c.adb('shell', '-T', remote, name='HUD-Trace-' + ('Enable' if enable else 'Disable'), strict=False)
+
+    def enable(self, c):
+        result = self.operation(c, True)
+        require(result.returncode == 0 and c.text(result) == 'TOOIE_HUD_TRACE_ENABLED',
+                'HUD trace request was not acknowledged; inspect its retained status.')
+        self.enabled = self.was_enabled = True
+        print('Optional HUD layout trace enabled for this capture.', flush=True)
+
+    def finish(self, c):
+        if self.closed:
+            return
+        self.closed = True
+        if self.enabled:
+            try:
+                result = self.operation(c, False)
+                require(result.returncode == 0 and c.text(result) == 'TOOIE_HUD_TRACE_REMOVED',
+                        'HUD trace request removal was not verified; inspect its retained status.')
+                self.enabled = False
+                self.removed = True
+                print('PASS: HUD trace request removed.', flush=True)
+            except (OSError, RuntimeError) as error:
+                self.error = str(error)
+        if c.prefix is not None:
+            c.save('HUD-Trace-Request', json.dumps({'requested': True,
+                'path': HUD_REQUEST, 'sha256': HUD_HASH,
+                'enable_acknowledged': self.was_enabled,
+                'removal_acknowledged': self.removed, 'error': self.error,
+                'scope': 'Only this diagnostic request; no game settings, saves, installation or input.'}, indent=2) + '\n')
+
+
+def guard_observer_command(args, adb, serial, hud_trace=False):
     values = list(map(str, args))
     if not values or values[0] != str(adb):
         return
@@ -58,6 +134,9 @@ def guard_observer_command(args, adb, serial):
     require(len(shell) == 1, 'Unexpected observer shell arguments.')
     words = shlex.split(shell[0])
     require(words, 'Missing observer shell command.')
+    if hud_trace and any(words == ['run-as', 'io.github.banjotooierecompiled', 'sh', '-c', hud_request_script(enable)]
+                         for enable in (False, True)):
+        return
     simple = {'date', 'pidof', 'getprop', 'dumpsys', 'sha256sum'}
     if words[0] in simple:
         return
@@ -106,6 +185,10 @@ def verify_local(c, args):
         native = archive.read('lib/arm64-v8a/libmain.so')
         require(native[:6] == b'\x7fELF\x02\x01' and native[18:20] == b'\xb7\x00', 'Expected ARM64 ELF.')
         require(report['native_version'].encode() in native, 'Native version stamp differs.')
+        if getattr(args, 'hud_trace', False):
+            require(all(value in native for value in (b'hud-trace-v1', b'tooie_hud_component_begin',
+                    b'tooie_hud_component_callback', b'tooie_hud_component_end')),
+                    'This APK does not contain the optional HUD layout observer.')
     build_id = libraries['libmain.so']['build_id']
     require(re.fullmatch('[0-9a-f]{40}', build_id), 'Invalid CI Build ID.')
     signature = c.text(c.command([args.build_tools / 'apksigner', 'verify', '--verbose',
@@ -172,7 +255,7 @@ def observe_installed(c):
         }, indent=2) + '\n')
 
 
-def installed_main(c, args):
+def installed_main(c, args, hud=None):
     require(sys.stdin.isatty(), 'Run in the interactive Ubuntu terminal.')
     receipt, report, build_id, signature, manifest = verify_local(c, args)
     c.PROCESS_NAME = c.PKG + (':game' if report.get('driver_picker', False) else '')
@@ -193,7 +276,8 @@ def installed_main(c, args):
     c.save('SDK-Manifest', manifest + '\n')
     c.save('Authorization', 'User requested a marker-enabled playtest of the existing verified Debug app. '
            'Only observation, local evidence, foreground screenshot attempts and diagnostic markers. '
-           'No installation, launch, forced stop, data reset, settings change or automated game input.\n')
+           'No installation, launch, forced stop, data reset, settings change or automated game input. '
+           + ('The explicit HUD trace option also permits creating/removing only its temporary private diagnostic request.\n' if hud else '\n'))
     require(c.text(c.adb('get-state')) == 'device', 'Expected Odin is unavailable.')
     require(c.text(c.adb('get-serialno')) == c.SERIAL, 'Device serial differs.')
     installed = c.text(c.adb('shell', '-T', 'pm path ' + c.PKG, name='Installed-APK-Path')).splitlines()
@@ -209,6 +293,8 @@ def installed_main(c, args):
     c.capture_start = c.clock('Capture-Start-Device-Time')
     c.attempted = True  # Reused collector's observation/final-read flag, not an installation attempt.
     c.start_capture(c.capture_start)
+    if hud is not None:
+        hud.enable(c)
     print('Verified the installed Debug build. Open Debug and load your existing save if needed.', flush=True)
     while True:
         answer = c.prompt('When Banjo is controllable, type playing (or save to finish): ').casefold()
@@ -246,6 +332,7 @@ def parser():
         result.add_argument('--' + name, required=True)
     result.add_argument('--state', type=Path, default=Path.home() / 'projects/tooie-tools/workflow')
     result.add_argument('--tool-revision', default='working-copy')
+    result.add_argument('--hud-trace', action='store_true', help='Record HUD layout using a temporary private request, removed before archiving.')
     return result
 
 
@@ -255,6 +342,7 @@ def main(argv=None):
     workflow = load_module('installed_debug_packager', HERE / 'tooie.py')
     c.ADB, c.SERIAL = args.adb, args.serial
     c.GAMEPLAY_ONLY = True
+    hud = HudTraceRequest() if args.hud_trace else None
     c.CAPTURE_SCOPE_OVERRIDE = (
         'ATTACH TO INSTALLED DEBUG: exact local APK hash, expected certificate and CI native-library '
         'hashes checked, then installed base.apk hash matched. User manually opens the app and declares '
@@ -265,29 +353,41 @@ def main(argv=None):
         'events attempt foreground screenshots. Native runtime records are included only when emitted '
         'by this build; historical timing-trace claims are not inherited. Host logging/ADB overhead is '
         'included. Screenshots and elapsed time alone do not establish correct speed or sound.\n')
+    if hud is not None:
+        c.CAPTURE_SCOPE_OVERRIDE += ('Explicit HUD trace: a temporary hud-trace-v1 request enables bounded read-only '
+            'HUD component/command records. Its creation/removal receipts are retained; it changes no game settings.\n')
     c.TIMING_SCOPE_OVERRIDE = ('Use exact appended records from the attached PID and their stated units. '
         'This capture does not enable or infer compile-time timing/geometry/correction observers. '
         'Absent records are not a pass. Marker times are host receipt times, not exact visual onset.\n')
     original_command = c.command
     def command(args, *positional, **keywords):
-        guard_observer_command(args, c.ADB, c.SERIAL)
+        guard_observer_command(args, c.ADB, c.SERIAL, hud is not None)
         return original_command(args, *positional, **keywords)
     c.command = command
-    c.main = lambda: installed_main(c, args)
+    c.main = lambda: installed_main(c, args, hud)
     original_archive = c.archive_evidence
     def archive():
         c.save('User-Follow-Up', json.dumps(follow_up_records(c.live_events), indent=2, ensure_ascii=False) + '\n')
+        if hud is not None:
+            hud.finish(c)
         return original_archive()
     c.archive_evidence = archive
     with workflow.exclusive_lock(args.state, 'device'):
-        code = c.run()
-        if c.prefix is not None:
-            evidence = Path(str(c.prefix) + '-Evidence.zip')
-            if evidence.is_file():
-                workflow.package_evidence(evidence, {'name': 'installed-debug', 'identity': {'commit': c.SHA},
-                    'capture_mode': 'attach-only', 'apk_sha256': c.HASH, 'marker_range': [1, 30],
-                    'marker_screenshot_limit': 30, 'time_limit_seconds': None})
-        return code
+        try:
+            code = c.run()
+            if c.prefix is not None:
+                evidence = Path(str(c.prefix) + '-Evidence.zip')
+                if evidence.is_file():
+                    workflow.package_evidence(evidence, {'name': 'installed-debug', 'identity': {'commit': c.SHA},
+                        'capture_mode': 'attach-only', 'apk_sha256': c.HASH, 'marker_range': [1, 30],
+                        'marker_screenshot_limit': 30, 'time_limit_seconds': None})
+            if hud is not None and hud.error:
+                print('STOP: ' + hud.error, file=sys.stderr, flush=True)
+                return 1
+            return code
+        finally:
+            if hud is not None:
+                hud.finish(c)
 
 
 if __name__ == '__main__':

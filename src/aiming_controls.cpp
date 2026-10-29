@@ -3,6 +3,7 @@
 #include <atomic>
 #include "librecomp/config.hpp"
 #include "tooie_recomp.h"
+#include "jiggy_input_context.h"
 
 namespace {
 std::atomic<bool> aiming_invert{false};
@@ -88,6 +89,7 @@ void tooie::input::add_aiming_option(recomp::config::Config& config) {
 }
 
 void tooie::input::initialize_controls(uint8_t* rdram) {
+    tooie::input::jiggy::clear();
     game_rdram.store(rdram, std::memory_order_release);
 }
 
@@ -95,6 +97,7 @@ bool tooie::input::swap_aiming_sticks(int controller) {
     if (controller < 0 || controller >= 4 || !aiming_swap_sticks.load(std::memory_order_relaxed)) return false;
     auto* rdram = game_rdram.load(std::memory_order_acquire);
     if (!rdram) return false;
+    if (tooie::input::jiggy::active(rdram)) return false;
     // Canonical eight-player table (func_800F5008). func_800919D0 follows
     // player->0x40 + 0 to its input-history object. func_800BD2D0 reads live
     // hardware only in mode 2 (+5), using the controller port at byte +6.
@@ -110,6 +113,10 @@ bool tooie::input::swap_aiming_sticks(int controller) {
             MEM_BU(6, static_cast<int32_t>(input)) == static_cast<uint32_t>(controller)) return true;
     }
     return false;
+}
+
+extern "C" void tooie_jiggy_input_context(const uint8_t* rdram, const recomp_context* ctx) {
+    tooie::input::jiggy::remember(rdram, ctx ? uint32_t(ctx->r4) : 0);
 }
 
 // Only replace the returned Y sample. Shared stick storage and every guest

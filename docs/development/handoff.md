@@ -1,6 +1,6 @@
 # Engineering handoff
 
-Updated: 28 October 2026.
+Updated: 29 October 2026.
 
 Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).
@@ -124,6 +124,34 @@ see the [device record](device-compatibility.md) for scope.
 
 ## Current priorities
 
+Frostie requests one combined candidate covering the remaining small fixes,
+then a full build and further work on supported log/backlog findings. The
+[29 October batch](graphics-batch-candidate-20261029.md) now implements five
+host-validated candidates: bounded live player/model lookup with non-recycled
+IDs after prolonged play; actual intro ownership and coherent camera-relative
+rigid placement; whole-component HUD anchors; horizontal-only Expand frustum
+widening that retains rear/vertical rejection; and Jiggy Challenge exclusion
+from stationary stick swapping. Their regressions pass with deliberate failing
+controls. Full combined ARM64/APK CI and Odin acceptance are pending. Keep
+PR #41 draft and do not claim the lagoon water cause is proved.
+
+The [complete late-play/lagoon review](late-play-and-lagoon-check-odin-20261028.md)
+retains all seven events, native images, both videos and reconciled runtime
+records. The late-play player-ID drop supports the exhausted-pool source lead;
+the lagoon session has active player IDs and is a separate observation. Neither
+contains actual scene-input records identifying the water polygons. The prior
+focused limb-gap pass remains accepted. The earlier Split Up freeze has no
+new failing capture and remains open. Do not repeat the nine accepted regular
+control checks or classify Frostie's accidental game closure as a new crash.
+
+The [Redmi reply](redmi-gameplay-performance-20261029.md) confirms gameplay,
+movement and sound in the offered separate PR #42 test. Expand performance and
+native-resolution cost remain open; no new startup/runtime log or exact
+settings readback is supplied. The startup candidate now has device support,
+but it is not part of this PR #41 batch. Inspect the offered test's exact
+source and existing resolution controls before attributing its performance
+to a source path or adding UI. Frostie still owns reporter replies and merges.
+
 The limb copy-ownership candidate now has the focused build-111 Display pass
 above. Current input work is the [stationary/flight control separation](flying-aim-controls-20261028.md):
 keep **Invert Aiming y-axis** for normal stationary aim; add **Invert Flight
@@ -137,16 +165,19 @@ exchanges both physical sticks' analog bindings and C-button roles for each
 stationary-aim read, preserving saved profiles and restoring roles on exit.
 Scope uses authored state-handler identities and live controller ownership,
 not map guesses. See the linked source record for the consumer boundaries and
-validation. HUD component anchoring and opening-logo bouncing remain open.
+validation. HUD component anchoring and opening-logo bouncing now have the
+host candidates linked above; their device comparisons remain open.
 The controls regression passes 2,416 complete guest-consumer cases with
-ASan/UBSan; nine deliberately broken policies/hooks fail as expected. Native
+ASan/UBSan; ten deliberately broken policies/hooks, including the Jiggy guard,
+fail as expected. Native
 touch merging and Android Java compilation pass. [CI build 121](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40664106804)
 now passes the full host, ARM64 and APK checks. Built integration source
 `9d1c5a7c758e69dd226c49e046b1c7001ef3c961` has the exact tree of controls head
 `986e4d8b12b78e65ff25cfcd30fa84570f51cf41`; the downloaded package is verified.
 The Odin now has build 121 and the scoped controls check passes. Breegull
 Blaster has the separate manual confirmation described above; the latest
-source changes only update the two descriptions and engineering records.
+source then updated the two descriptions and engineering records; the new
+combined batch above extends that accepted baseline.
 
 The [build-110 input capture](graphics-input-check-odin-20261028.md) is now fully
 reviewed: 11 events, 13 inputs, zero notes/orphans, all eight PNGs, PID 29847
@@ -164,8 +195,8 @@ this queued task's same explicitly owned pose; address matches are preferred,
 ambiguous copies/foreign scopes reject. All 12 recorded two-bone subset cases
 pass with ASan/UBSan; the exact old RSP and restored-unowned controls fail on
 rendered-position drift as intended. This is not a full-mesh/GPU replay or a new
-device fix. HUD draws still lack origin tags; the opening-logo
-cause remains independent and unproved.
+device fix. The earlier HUD draws lacked origin tags. The new HUD and intro
+candidates above address separate source gaps; device resolution remains open.
 
 Frostie's intended everyday framerate is **Display**. Manual 60 is a controlled
 comparison only. The [build-109 follow-up](graphics-framerate-follow-up-odin-20261027.md)
@@ -193,7 +224,8 @@ repeated marker-1 events, both native screenshots and the 12.93-second supplied
 video. It identifies Nintendo 64/Rareware/Dolby and retains the reported subtle
 wobble on build 111 at Display. `chintrochar` has screen-positioned,
 camera-relative model and companion sprite/text paths to discriminate; their
-exact association with each visible logo and a correction remain unproved.
+exact association with each visible logo remains unproved. A host-validated
+intro correction is now in the new batch; visible Odin acceptance is pending.
 The optional scene observer was off in this capture.
 
 Track the two reports separately: **MD-011** opening-logo rapid vertical
@@ -202,7 +234,8 @@ Original/16:9/Expand producing no visible movement. Preserve exact descriptions
 and all future markers. Shared framerate dependence does not establish one cause. The
 [HUD source investigation](hud-placement-investigation-20261028.md) locates the
 per-component `scinfobar_entrypoint_24` callback and related sprite/model routes;
-component identities, intended anchors and state restoration still need proof.
+the new whole-component anchor candidate passes consumer/restoration checks,
+while live pictured component identities and visual acceptance remain pending.
 
 Draft PR #41 also contains the [graphics corrections](graphics-fix-candidates-20261027.md):
 bounded attachment clears and consistent camera/projection during a changed
@@ -271,11 +304,14 @@ with Turnip in the d6 test; no stock-driver compatibility fix is established.
 Frostie has parked the Retroid Pocket 5 report and existing Adreno 650 experiment
 pending more data. The Redmi Pad 2 reporter has now supplied a 119,352-byte
 startup log: ten native starts reject optional FP32 attachment blending after
-Vulkan initialization. Android/build identity and gameplay remain unconfirmed.
+Vulkan initialization. The subsequent offered test result is recorded below;
+Android version and installed build readback remain unconfirmed.
 The independent [draft PR #42](https://github.com/Frostie77/Tooie-Recompiled/pull/42)
 skips the unused RT compose pipeline on raster-only builds/devices.
 [Build 112](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40633729769)
-passed CI; its separate GPU Test APK awaits Redmi device validation.
+passed CI. The [29 October reply](redmi-gameplay-performance-20261029.md) now
+reports working gameplay, movement and sound, with Expand and 1600p performance
+problems. No new log, Android version or explicit driver readback is supplied.
 It does not include PR #41's limb experiments;
 no replacement Mali driver has been verified. Keep each device's evidence
 separate and leave reporter replies and issue closures to Frostie.

@@ -1,5 +1,22 @@
 # Flying and aiming direction mismatch — 28 October 2026
 
+## Jiggy Challenge follow-up — 29 October 2026
+
+Frostie reports incorrect Jiggy Challenge controls after enabling stationary
+stick swapping. Track this as MD-015, separately from the earlier accepted
+static-line correction. The [combined candidate](graphics-batch-candidate-20261029.md)
+excludes the actual challenge input context: the canonical controller marker
+published by `func_80802030_chjiggygamenew`, resolved by `func_808007BC`, with
+controller state `+0x28 == 5` as consumed by the paw update. It follows the
+live movable actor pool and invalidates on actual lifecycle changes; no map
+guess or timer defines the exclusion.
+
+All eight preference combinations and 81 axis positions give 648 original
+profile comparisons, including analog C-button roles. Removing the exclusion
+fails. The retained 2,416 guest-consumer cases pass with ten failing controls.
+The Jiggy device comparison remains pending. Preserve the nine accepted
+regular control checks and subsequent manual Breegull Blaster acceptance.
+
 ## Report and evidence status
 
 Track this separately as **MD-014**. The scoped controls candidate is now

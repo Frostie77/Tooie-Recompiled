@@ -491,8 +491,8 @@ forever. Fixed by clearing the freeze where the game signals the barrier
 
 ## 7. Findings: rendering
 
-Four defects were found and three fixed; each was settings-gated, so none was a
-regression in the default configuration.
+The initial rendering defects were settings-gated. Later Android candidates
+and their device acceptance scopes are recorded alongside the original findings.
 
 ### 7.1 `Expand` culls geometry at the frame edges
 
@@ -508,9 +508,14 @@ discarded by the game before RT64 sees a display list. The three wrappers are in
 |`func_800E3E8C`|sphere|
 
 Each sets `$v0 = $v1` immediately before `jr $ra`; `$v0 == 0` means culled, and
-callers branch straight on it. `tooie_expand_visibility` flips that verdict **only
-when `ar_option == Expand`**, reading the applied graphics config directly rather
-than mirroring the frontend's option callback.
+callers branch straight on it. The old `tooie_expand_visibility` forced every
+rejection visible in Expand, including rear and vertical geometry. The
+29 October candidate scopes these wrappers and widens only their horizontal
+camera planes using RT64's applied target/source aspect, published atomically.
+Original/Manual and other direct primitive callers keep the guest path. No
+camera bytes change. All 864 retained-wrapper/primitive cases and both failing
+controls pass; lagoon water causality and device acceptance remain open. See
+`docs/development/graphics-batch-candidate-20261029.md`.
 
 ### 7.2 `Display`/`Manual` refresh distorted the player model
 
@@ -526,11 +531,15 @@ the quaternion takes the short arc), plus the skybox layers. Verified against
 RT64's own parser counters: one enable per frame, exactly 26/37 groups decoded,
 transforms matched by id every frame, 0 failures across 4081 frames.
 
-⚠ **Identity is the stable player-state slot**, found by scanning
-`0x80135490..0x801354B0`; root ids are `0x10000000 + slot * 0x100`, leaving
-`0x100` ids for bones. Bone identity is the model's own bone index — stable per
-model but not globally unique across Tooie's 25- and 36-bone variants, which is
-why it is a sub-id *under* the root group.
+⚠ **Player identity must include the actual player-state pointer and model.**
+The earlier 256-entry permanent lookup silently stopped emitting IDs after
+256 unique pairs. The 29 October candidate retires inactive lookup entries
+and allocates non-recycled `0x100`-wide blocks in `0x10000000..0x1FFFFFFF`.
+This avoids reusing an identity while old work remains queued. Bone identity
+is the model's bone index under that root, not a global index. A 602-case
+actual-consumer reload test passes; the previous pool fails at model 257.
+The canonical player slots remain an ownership check, not the root ID formula.
+The later long-play report still requires device acceptance.
 
 ⚠ **The enable word must be derived, not copied.** `recomp_api.cpp` includes
 `rt64_extended_gbi.h` with `F3DEX_GBI_2` defined so `RT64_HOOK_OPCODE` is Tooie's
@@ -543,6 +552,22 @@ that writes a command, so a hook at that write appends past the game's command,
 which the game then overwrites. The append returns true and nothing is emitted.
 Every metadata site had to be verified against RT64's decode counters, not
 against the append's return value.
+
+### Scoped intro and HUD candidates — 29 October 2026
+
+Special intro model branches bypass the normal actor draw scope. Use their
+actual registered marker/generation; do not guess a pictured logo's type ID.
+Only explicitly marked camera-relative rigid roots blend in view-local space
+with the actual processed camera. Authored skeletal bindings keep their common
+pose consumer. All 36 branch/weight cases and both controls pass.
+
+HUD entries at `0x80123880` have authored X/Y at `+0/+2`, animated draw X/Y at
+`+6/+8`. Anchor the complete component, including associated text, from the
+authored position; never assign per-glyph or animated-position origins. The
+private scope must reach rectangle, model viewport and scissor consumers and
+restore preceding state. Original HUD mode emits no placement packets.
+All 72 consumer cases and failing controls pass. Visible logo/HUD acceptance
+remains pending; see the combined candidate record above.
 
 ### Android owned-pose mesh edges — 27 October 2026
 

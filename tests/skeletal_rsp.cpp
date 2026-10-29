@@ -39,9 +39,12 @@ void decodeActorRoots(RT64::WorkloadQueue &queue, unsigned slot, uint8_t *ram, u
     rsp.projectionIndex=0;rsp.viewProjMatrixStack[0]=hlslpp::float4x4::identity();
     for(unsigned i=0;i<count;++i) {
         auto *dl=reinterpret_cast<DisplayList*>(ram+0x500000+i*40);
-        rsp.matrix(dl->w1&0x7FFFFF,3);++dl;GBI_EXTENDED::matrixGroupV1(&state,&dl);
+        rsp.matrix(dl->w1&0x7FFFFF,3);++dl;
+        const bool tagged=dl->w0==0x6400000C;
+        if(tagged)GBI_EXTENDED::matrixGroupV1(&state,&dl);
         rsp.vertices[0]={};rsp.vertices[0].x=1;rsp.setVertexCommon<true,16>(0x600000,0,1);rsp.popMatrix(1);
-        dl=reinterpret_cast<DisplayList*>(ram+0x500000+i*40+32);GBI_EXTENDED::popMatrixGroupV1(&state,&dl);
+        dl=reinterpret_cast<DisplayList*>(ram+0x500000+i*40+32);
+        if(tagged)GBI_EXTENDED::popMatrixGroupV1(&state,&dl);
     }
     REQUIRE(queue.workloads[slot].drawData.worldTransforms.size()==count+1);
     REQUIRE(queue.workloads[slot].drawData.skeletalTransforms.empty());
