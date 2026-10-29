@@ -21,7 +21,7 @@ regular-control acceptances stand; later long-play rendering remains open.
 | ID | Observation | Status | Evidence |
 |---|---|---|---|
 | MD-015 | Jiggy Challenge controls become wrong with stationary joystick swapping enabled | Focused build-125 Odin pass — next update; broader coverage open | Frostie accepts normal controls with Swap Off and unchanged normal controls with Swap On. The complete review retains E06 and E10; E10 is literally one combined `Jiggy Swap On11 Jolly Water` input with a lagoon image, not a separate On-paw screenshot. The actual controller exclusion passes 648 real-profile comparisons and its failing control. This is separate from MD-001's accepted static-line correction. |
-| MD-016 | Blue geometry across lagoon shore/land and strange water around a stone column | Still reproduced in build 125, including Original aspect and framerate; open | The complete review retains E10–E16, all six included water images and E16's explicitly local-only PNG receipt. Frostie confirms both Original comparisons still fail; native configuration changes are retained. This is separate from HUD Placement. Horizontal-only Expand widening passes 864 cases but has not resolved this visible water problem. Optional scene-input domains remain empty; no captured water draw proves a cause. |
+| MD-016 | Blue geometry across lagoon shore/land and strange water around a stone column | Still reproduced in build 126 manual checks at Original aspect with Original/Display framerates; archive pending, open | The complete review retains E10–E16, all six included water images and E16's explicitly local-only PNG receipt. Frostie confirms both Original comparisons still fail; native configuration changes are retained. This is separate from HUD Placement. Horizontal-only Expand widening passes 864 cases but has not resolved this visible water problem. Optional scene-input domains remain empty; no captured water draw proves a cause. |
 
 MD-011 now has an explicitly accepted focused build-125 Display pass.
 MD-012 has improved counter placement but a new challenge-timer failure:
@@ -36,13 +36,49 @@ leaving aspect/resolution performance open.
 
 The [timer/Redmi follow-up](hud-timer-redmi-followup-20261029.md) now preserves
 the matching countdown's Original draw path in all HUD modes (54 added consumer
-cases). Other counters retain wide placement. Timer visibility remains an Odin
-check. MD-016 is still open; the new explicit renderer trace records rotating
+cases). Other counters retain wide placement. Frostie's focused build-126
+manual check confirms visibility in Original, Expand and 16:9, but the timer
+remains at its Original position in both wide modes. **MD-012 stays open for
+correct timer placement**; the current capture archive has not been reviewed.
+MD-016 is still open; the new explicit renderer trace records rotating
 draw pages, depth/texture state and raw/indexed vertices for its next diagnosis.
 The same candidate includes the previously separate Redmi startup guard and
 paired test packaging; no new Redmi FPS result is claimed.
 
+Frostie clarifies that current **marker 1 also reports a missing Jiggy count**.
+MD-012 includes that report and every different value/collectible occupying the
+same HUD area, as requested. Preserve the event's full wording and inspect
+each real component's visibility, icon, number and placement across the three
+HUD modes. The [expanded source review](hud-placement-investigation-20261028.md)
+records callback/state differences and the current fixtures' coverage limit.
+The new archive has not yet been supplied; do not invent a component ID, mode
+or event identity for this missing count.
+
+In build 126 Frostie also reports the water remains visible after both
+instructed 90-second steady-view comparisons at main Original aspect, first
+Framerate Original and then Display. Keep MD-016 open. This is a manual result;
+the current archive's configuration readback, new draw inputs and exact marker
+records remain pending. The new build adds the observer, not a proved water fix.
+
 ## Current deferred details
+
+The [complete build-126 review](hud-water-check-odin-20261029.md) now verifies
+all twelve actual events and all twelve separately supplied native images.
+Jiggy-count Original/wide comparisons are markers 5/6, in addition to marker 1's
+initial report. Timer visibility is retained but its position is still wrong;
+the left `20` disappears while the right `33` remains. All shared-position
+occupants remain in scope. Water persists in all three recorded compositions/
+refresh comparisons. Both trace requests are subsequently removed by guarded
+terminal recovery after the archive's USB-disconnected cleanup failure.
+
+The [shared HUD clipping candidate](hud-shared-clipping-fix-20261029.md) now
+reproduces the captured negative scissor at the Vulkan boundary, preserves
+legal pixel coverage and removes the timer's temporary inset exemption.
+Expanded checks cover every recorded layout position, shared-slot values,
+icon/text coherence, animation and visibility/text branches, with failing
+controls. MD-012 stays open for Odin visibility and correct wide placement.
+The recorder also removes owned trace requests before final bulk collection.
+MD-016 still needs the same-view MSAA None comparison; no result is supplied.
 
 | ID | Observation | Status | Evidence |
 |---|---|---|---|
@@ -156,7 +192,7 @@ is a comparison, while Display remains Frostie's everyday completion target.
 | ID | Observation | Status | Evidence and follow-up |
 |---|---|---|---|
 | MD-011 | Opening-scene logos rapidly stutter up/down at Manual 60 and Display; Original is fine | Focused build-125 Display Odin pass — next update; broader coverage open | E01/E02 literally say `logo steady`; the reviewed images identify Rareware and Dolby. Frostie explicitly confirms the bouncing is fixed. This is a manual motion acceptance without a new video or all-mode/device pass. The intro candidate passes 36 consumer cases and both controls. Earlier failure evidence is retained. |
-| MD-012 | Historically ineffective HUD placement; build-125 Expand / 16:9 now hide the Jiggy Challenge timer | Open; counters improve but timer regresses | The complete build-125 review retains E03–E05's counter comparison and E07/E08/repeated marker 7 plus E09's timer reports. Frostie confirms Original restores the timer. E08/E09 images are menu-covered with Expand selected; they do not themselves prove a restored timer. Native option changes and the timer candidate's slot-11 draw commands are retained. The older 72 host cases have not reproduced this failure. HUD Placement is separate from Framerate and main Aspect Ratio. |
+| MD-012 | Challenge timer disappears or stays incorrectly inset in wide HUD modes | Open; build-126 visibility restored, wide placement unfinished | The complete build-125 review retains E03–E05's counter comparison and E07/E08/repeated marker 7 plus E09's timer reports. Frostie confirms Original restores the timer. E08/E09 images are menu-covered with Expand selected; they do not themselves prove a restored timer. Native option changes and the timer candidate's slot-11 draw commands are retained. The older 72 host cases did not reproduce the build-125 failure. The [build-126 follow-up](hud-timer-redmi-followup-20261029.md) now has focused manual visibility confirmation in all three modes; Frostie still reports wrong, Original positioning in Expand/16:9, so placement remains open and the new archive awaits review. HUD Placement is separate from Framerate and main Aspect Ratio. |
 
 ## Extended build-109 playthrough — 22:42, 27 October 2026
 

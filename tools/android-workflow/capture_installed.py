@@ -129,6 +129,18 @@ class RenderTraceRequest(HudTraceRequest):
     script = staticmethod(render_request_script)
 
 
+def finish_before_collection(c, requests):
+    # Final log reads and processing can be large. Remove our temporary
+    # requests as soon as recording ends, while the device is still connected.
+    # Archive/finally remain idempotent fallbacks and retain failed receipts.
+    original_collect = c.collect
+    def collect():
+        for request in requests:
+            request.finish(c)
+        return original_collect()
+    c.collect = collect
+
+
 def guard_observer_command(args, adb, serial, hud_trace=False, render_trace=False):
     values = list(map(str, args))
     if not values or values[0] != str(adb):
@@ -399,6 +411,7 @@ def main(argv=None):
         return original_command(args, *positional, **keywords)
     c.command = command
     c.main = lambda: installed_main(c, args, hud, render)
+    finish_before_collection(c, requests)
     original_archive = c.archive_evidence
     def archive():
         c.save('User-Follow-Up', json.dumps(follow_up_records(c.live_events), indent=2, ensure_ascii=False) + '\n')

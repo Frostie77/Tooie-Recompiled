@@ -4237,11 +4237,23 @@ namespace plume {
 
     void VulkanCommandList::setScissors(const RenderRect *scissorRects, uint32_t count) {
 #if defined(__ANDROID__)
+        // Wide HUD alignment can put a scissor just left of the target (for
+        // example x=-1 after integer-scale alignment). Vulkan requires
+        // nonnegative offsets. Intersect with that legal coordinate domain
+        // while preserving the right/bottom edges and all covered pixels.
         graphicsScissors.clear();
-        for (uint32_t i = 0; i < count; ++i) graphicsScissors.push_back(VkRect2D{
-            { scissorRects[i].left, scissorRects[i].top },
-            { uint32_t(scissorRects[i].right - scissorRects[i].left), uint32_t(scissorRects[i].bottom - scissorRects[i].top) } });
-#endif
+        for (uint32_t i = 0; i < count; ++i) {
+            const int32_t left = std::max(scissorRects[i].left, 0);
+            const int32_t top = std::max(scissorRects[i].top, 0);
+            const int32_t right = std::max(scissorRects[i].right, left);
+            const int32_t bottom = std::max(scissorRects[i].bottom, top);
+            graphicsScissors.push_back(VkRect2D{
+                { left, top }, { uint32_t(right - left), uint32_t(bottom - top) } });
+        }
+        // Cache exactly what was submitted so temporary clear operations
+        // restore the same valid state for single and multiple scissors.
+        vkCmdSetScissor(vk, 0, count, graphicsScissors.data());
+#else
         if (count > 1) {
             thread_local std::vector<VkRect2D> scissorVector;
             scissorVector.clear();
@@ -4259,6 +4271,7 @@ namespace plume {
             VkRect2D scissor = VkRect2D{ VkOffset2D{ scissorRects[0].left, scissorRects[0].top }, VkExtent2D{ uint32_t(scissorRects[0].right - scissorRects[0].left), uint32_t(scissorRects[0].bottom - scissorRects[0].top) } };
             vkCmdSetScissor(vk, 0, 1, &scissor);
         }
+#endif
     }
 
     void VulkanCommandList::setFramebuffer(const RenderFramebuffer *framebuffer) {

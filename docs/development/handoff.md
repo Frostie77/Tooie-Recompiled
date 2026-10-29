@@ -17,7 +17,44 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The current Odin test candidate is **build 125**, integration source
+The current Odin test build is **126**, integration source
+`27a577cc85d520075e76319bfce1f0ec0c6a7c44`. Its full host/ARM64/APK CI passes;
+the downloaded normal Debug and separate Redmi GPU Test have seven identical,
+independently verified native libraries. Frostie's focused manual check confirms
+the timer is visible in Original, Expand and 16:9, but it remains at its Original
+position in both wide HUD modes. The
+[complete build-126 review](hud-water-check-odin-20261029.md) verifies all twelve
+events, fourteen inputs, twelve separately supplied native PNGs and the entire
+945,400-record fresh Runtime delta. Correct wide timer placement and the missing
+left Jiggy-associated `20` remain open. New Redmi FPS acceptance remains pending. See the
+[combined follow-up and artifacts](hud-timer-redmi-followup-20261029.md).
+
+Frostie also reports **marker 1 contains a missing Jiggy count** and explicitly
+expands MD-012 to every value/collectible sharing that HUD area. The actual
+journal also contains separate Jiggy-count comparisons at markers 5/6; preserve
+all twelve actual numbers instead of the proposed test numbering. The
+[expanded HUD investigation](hud-placement-investigation-20261028.md) records
+the real state filters and callback/text paths; current generic layout fixtures
+are not full collectible-renderer coverage. Slot 11 holds kinds 14 and 85;
+slots 36, 38 and 43 share its authored 22/206 position but are inactive in this
+capture. Fix the common path and cover substitutions, zero/multi-digit values,
+icon/text coherence and entry/exit animation across all HUD modes. The uploaded
+capture is finished. Its automatic trace cleanup failed after a USB disconnect;
+the subsequent hash/device/APK-checked recovery is acknowledged with both
+`TOOIE_HUD_TRACE_REMOVED` and `TOOIE_RENDER_TRACE_REMOVED`.
+
+The [shared HUD clipping candidate](hud-shared-clipping-fix-20261029.md) now
+reproduces a negative Vulkan scissor offset with the captured target/alignment
+and exact glyph geometry. Android clips scissors to the legal nonnegative
+domain, and the timer's temporary Original-only inset exemption is removed.
+All 48 recorded layout positions, shared-slot substitutions, digit widths,
+animation and visibility/text branches pass the expanded production-consumer
+fixtures; restoring the old scissor submission fails at Vulkan's offset check.
+Final Odin visibility and correct placement remain pending. Recorder cleanup
+now removes owned trace requests before the large final log read. Water still
+needs the same-view MSAA None discriminator; no result is supplied yet.
+
+The preceding tested Odin build is **125**, integration source
 `a0672974abaf764e38861dc4dd49d74f22e4ff07`, with the exact source tree of
 engineering head `87e00e71d4285b4c5d4931c10ca7907d49015a53`. The
 [complete capture review](graphics-batch-check-odin-20261029.md) accepts the
@@ -164,8 +201,21 @@ PR #42's startup guard, retaining eight setup cases, and adds paired Debug/GPU
 Test packaging from one native build. Manual resolution and corrected culling
 are included; Redmi FPS improvement is unmeasured. The water cause remains
 open: explicit `--render-trace` captures rotating draw pages with depth, texture
-and vertex inputs. Default tracing stays off. Full combined CI and new device
-checks remain pending.
+and vertex inputs. Default tracing stays off. Full combined
+[CI build 126](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40822259188)
+and independent downloaded-payload checks pass. The focused build-126 manual
+check restores timer visibility, but Frostie reports the timer still in the
+wrong, Original position in Expand/16:9. Keep MD-012 open for placement and
+review the pending archive before attributing a consumer cause. Frostie then
+reports water still visible after both 90-second views at main Original aspect:
+Framerate Original and Framerate Display. MD-016 remains open. Finish the
+recorder and review all event text, including marker 1's missing Jiggy count,
+actual configurations, draw inputs and both owned request cleanup receipts.
+That review is now complete as linked above. Main Original/Original has 55
+native samples at weight 1 with both processors off; Original/Display retains
+processed samples. Both principal water comparisons use MSAA2X, leaving a None
+comparison as a useful remaining discriminator. Do not call the uploaded
+cleanup successful; the later guarded terminal recovery is separate evidence.
 
 The [manual resolution and warning follow-up](manual-resolution-20261029.md)
 adds fractional 1x–8x resolution control, retaining old choices/defaults and
@@ -189,8 +239,8 @@ The [Redmi reply](redmi-gameplay-performance-20261029.md) confirms gameplay,
 movement and sound in the offered separate PR #42 test. Expand performance and
 native-resolution cost remain open; no new startup/runtime log or exact
 settings readback is supplied. The startup candidate now has device support.
-It was absent from build 125; the working follow-up above integrates the same
-guard into PR #41's next candidate. The offered tree is now inspected:
+It was absent from build 125; build 126 above integrates the same guard into
+PR #41's combined candidate. The offered tree is now inspected:
 it contains the old unconditional Expand override and only three resolution
 choices. The new source leads do not establish a measured FPS cause. Frostie
 still owns reporter replies and merges.

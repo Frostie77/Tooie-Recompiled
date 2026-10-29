@@ -1,19 +1,73 @@
 # HUD placement source investigation — 28 October 2026
 
-Status: **MD-012 remains open: build-125 counters improve, but Expand/16:9 hide
-the Jiggy Challenge timer; Original restores it.** The
+Latest source follow-up: the [shared clipping candidate](hud-shared-clipping-fix-20261029.md)
+reproduces the captured target/alignment and a negative Vulkan scissor offset,
+clips Android submissions to the legal domain and removes the timer inset
+exemption. Expanded retained-consumer and actual Vulkan recording checks pass
+with failing controls. All 48 authored positions and shared-region substitutions
+are covered by controlled resource fixtures; final Odin pixels remain pending.
+The build-specific observations below retain the earlier investigation.
+
+Status: **MD-012 remains open: build 126 restores focused timer visibility but
+retains Original positioning in Expand/16:9; Frostie also reports a missing
+Jiggy count in marker 1.** The
 [complete Odin review](graphics-batch-check-odin-20261029.md) preserves the
 failure, native option changes and slot-11 timer lead. Its command spans survive
 the guest writes; nested draw resources and actual renderer clipping still need
 investigation. The old 72 host cases do not reproduce this timer failure.
 The [timer follow-up](hud-timer-redmi-followup-20261029.md) preserves this
 countdown's working Original command path in every HUD mode. Its 54 additional
-consumer cases pass; visible Odin acceptance remains pending. Other counters
+consumer cases pass; focused manual visibility is now confirmed, while correct
+wide positioning remains unfinished. Other counters
 retain wide placement. This restoration does not establish the deeper nested
 alignment cause.
 See the [29 October combined candidate](graphics-batch-candidate-20261029.md)
 for implementation, 72 consumer cases and failing controls. The build-110
 observations below describe the prior missing-anchor path.
+
+The [complete build-126 review](hud-water-check-odin-20261029.md) now verifies
+the full journal and all twelve separately supplied PNGs. Left `20` is present
+in E05 and absent in E06 while the icon remains; the right `33` remains visible.
+The captured slot 11 carries kinds 14 and 85 at authored 22/206; slots 36, 38
+and 43 share that authored position but are inactive. Numeric glyph draws and
+their 7×14 textures still reach the workload in the wide comparison. A common
+Vulkan scissor-offset case is under investigation; do not exempt another item
+kind or mistake fixture positions for final raster visibility.
+
+## Build-126 counter and collectible scope — 29 October 2026
+
+Frostie clarifies that **marker 1 also contains a missing Jiggy-count report**
+and requests investigation of every different value/collectible displayed in
+that same HUD area. Do not reduce marker 1 to the timer baseline or discard
+its additional wording. The complete build-126 review now retains the actual
+journal and all twelve images, including separate count comparisons at markers
+5/6. This report is separate from the confirmed wide-mode timer inset.
+
+The source review confirms the shared path walks 48 layout entries, not 48
+identified collectibles. `func_800FA508` applies two existing state predicates
+before the placement hook; when that special state is active it retains only
+slots 10, 11 and 45. `scinfobar_entrypoint_24` can also suppress the icon callback
+at component state `0x64`, selects a real callback by component `+0x1C` from the
+relocated 12-byte table, and draws related text through separate state/alpha
+branches. Neither predicate has been mapped to this new missing-count event.
+Do not force normally hidden counters on or assign pictured item IDs from a
+screen position.
+
+The next investigation must inventory each actual occupant of the reported
+region by stable layout entry, live component kind and callback, including
+temporary substitutions/challenge values. Check icon, numerical value,
+animation and placement together in Original, 16:9 and Expand. Use the full
+48-entry layout snapshots to distinguish absent/state-filtered components
+from called components with missing output, then trace the real callback,
+related text and viewport/scissor consumers. Review zero/nonzero and multi-digit
+values and entry/exit states where applicable.
+
+The current 72 layout cases use the real retained loop and renderer consumers,
+but their icon/text callbacks are recording stand-ins. They do not establish
+all collectible-specific drawing behavior. The 54 timer cases likewise prove
+the scoped Original-stream restoration, not the missing Jiggy count or a
+complete regional HUD fix. Add regressions for the actual affected callback
+inputs/commands once identified; preserve the game's normal visibility rules.
 
 The [build-110 review](graphics-input-check-odin-20261028.md) confirms the three
 HUD setting values reach RT64 and the extension percentage changes. Every

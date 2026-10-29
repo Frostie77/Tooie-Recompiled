@@ -196,6 +196,30 @@ class InstalledCapture(unittest.TestCase):
         self.assertEqual(path.read_bytes(), b'existing request')
         self.assertEqual(len(calls), 1)
 
+    def test_both_trace_requests_are_removed_before_final_collection(self):
+        render_path, calls = self.hud_shell(render=True, both=True)
+        hud_path = render_path.parent / Path(capture.HUD_REQUEST).name
+        requests = [capture.HudTraceRequest(), capture.RenderTraceRequest()]
+        original_collect = self.c.collect
+        def collect():
+            self.assertFalse(hud_path.exists() or render_path.exists(), 'Final collection began with tracing enabled')
+            return original_collect()
+        self.c.collect = collect
+        with contextlib.redirect_stdout(io.StringIO()):
+            for request in requests: request.enable(self.c)
+            # Negative control: former archive-only cleanup is too late.
+            with self.assertRaisesRegex(AssertionError, 'tracing enabled'):
+                self.c.collect()
+            capture.finish_before_collection(self.c, requests)
+            self.c.collect()
+            for request in requests: request.finish(self.c)
+        self.assertEqual(len(calls), 4) # one enable and one removal per request
+        self.assertTrue(all(request.removed for request in requests))
+        with zipfile.ZipFile(Path(str(self.c.prefix) + '-Evidence.zip')) as bundle:
+            for label in ('HUD', 'Render'):
+                receipt = json.loads(bundle.read(self.c.prefix.name + '-' + label + '-Trace-Request.txt'))
+                self.assertTrue(receipt['removal_acknowledged'])
+
     def test_hud_trace_preserves_a_changed_request_and_records_cleanup_failure(self):
         path, _ = self.hud_shell()
         request = capture.HudTraceRequest()

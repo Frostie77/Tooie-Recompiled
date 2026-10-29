@@ -28,13 +28,6 @@ extern "C" void tooie_hud_placement_begin(uint8_t *r,const recomp_context *ctx) 
     constexpr uint32_t table=0x80123880U,count=48,stride=0x1C;
     const auto entry=uint32_t(ctx->r16),component=uint32_t(ctx->r5);
     if(entry<table||entry>=table+count*stride||(entry-table)%stride||!valid(component,0x34)||word(r,entry+0x18)!=component)return;
-    // The authored countdown occupies slot 11 (component kind 14). Its mixed
-    // model/text path is visible with Original HUD placement on Odin but is
-    // lost under the new scope. Retain that proven command path in every HUD
-    // mode until its nested renderer resources support independent placement.
-    // Match both stable layout identity and component kind, not the current
-    // heap address, timer value or map. Other counters retain edge placement.
-    if(entry==table+11*stride&&(word(r,component+4)>>16)==14U)return;
     // +0 is the authored layout X; +6 is its animated draw X. Choose once for
     // the whole component, never independently for its glyphs or animation.
     const auto x=half(r,entry);

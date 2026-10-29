@@ -8,9 +8,11 @@
 #include "../src/android_presentation_lifecycle.h"
 #include "../lib/rt64/src/hle/rt64_android_surface.h"
 #include "plume_vulkan_clear_shaders.h"
+#include "hud_capture_fixture.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <unordered_map>
 #include <vector>
 using namespace plume;
@@ -1239,6 +1241,57 @@ static void testAndroidSurfaceLifecycle(VulkanCommandQueue &queue, VulkanCommand
   std::puts("PASS: Android WSI lifecycle BGRA/RGBA pause/resume, native-window ownership, queue retirement, framebuffer/view ordering, failed creation and surface-loss recovery");
 }
 
+static void testRegularScissorBounds(VulkanCommandList &list) {
+  // The captured 304x228 HUD scissor in its expanded 320x241 native target can
+  // give left-aligned glyphs a negative scissor after integer alignment. Vulkan
+  // forbids negative offsets even when the glyph itself is inside the target.
+  const int32_t low = std::numeric_limits<int32_t>::min();
+  const int32_t high = std::numeric_limits<int32_t>::max();
+  const RenderRect cases[] = {
+      {0, 0, 320, 240}, {HudCapture::ClipLeft, HudCapture::ClipTop,
+                       HudCapture::ClipRight, HudCapture::ClipBottom}, {-4, -3, 100, 200},
+      {-20, 2, -1, 18}, {2, -20, 18, -1}, {-30, -20, -2, -1},
+      {20, 10, 10, 30}, {10, 20, 30, 10}, {5, 7, 5, 7},
+      {low, low, high, high}, {high, high, low, low},
+      {high - 2, high - 3, high, high}, {4, 5, 9, 12}};
+  unsigned checked = 0;
+  auto check = [&](const RenderRect &source, const VkRect2D &recorded) {
+    REQUIRE(recorded.offset.x >= 0 && recorded.offset.y >= 0);
+    REQUIRE(int64_t(recorded.offset.x) + recorded.extent.width <= high);
+    REQUIRE(int64_t(recorded.offset.y) + recorded.extent.height <= high);
+    // Independent pixel-membership oracle: clipping to the legal coordinate
+    // domain preserves every covered nonnegative pixel, including edges and
+    // the captured glyph region. Inverted/outside rectangles cover nothing.
+    std::vector<int64_t> xs = {0, 1, 7, 31, 184, 219, 224, 259, 1518, high};
+    std::vector<int64_t> ys = {0, 1, 7, 31, 995, 1064, 1139, high};
+    for (int64_t edge : {int64_t(source.left), int64_t(source.right)})
+      for (int delta : {-1, 0, 1}) if (edge + delta >= 0 && edge + delta <= high) xs.push_back(edge + delta);
+    for (int64_t edge : {int64_t(source.top), int64_t(source.bottom)})
+      for (int delta : {-1, 0, 1}) if (edge + delta >= 0 && edge + delta <= high) ys.push_back(edge + delta);
+    for (int64_t x : xs) for (int64_t y : ys) {
+      const bool before = x >= source.left && x < source.right && y >= source.top && y < source.bottom;
+      const bool after = x >= recorded.offset.x && x < int64_t(recorded.offset.x) + recorded.extent.width &&
+                         y >= recorded.offset.y && y < int64_t(recorded.offset.y) + recorded.extent.height;
+      REQUIRE(before == after);
+    }
+    ++checked;
+  };
+  for (const auto &rectangle : cases) {
+    list.setScissors(&rectangle, 1);
+    REQUIRE(boundScissors.size() == 1);
+    check(rectangle, boundScissors[0]);
+  }
+  list.setScissors(cases, uint32_t(std::size(cases)));
+  REQUIRE(boundScissors.size() == std::size(cases));
+  for (size_t i = 0; i < std::size(cases); ++i) check(cases[i], boundScissors[i]);
+  // Cached graphics state is used by the existing temporary-clear restoration
+  // tests below; it must retain the same legal scissors sent to Vulkan.
+  REQUIRE(list.graphicsScissors.size() == boundScissors.size());
+  for (size_t i = 0; i < boundScissors.size(); ++i)
+    REQUIRE(std::memcmp(&list.graphicsScissors[i], &boundScissors[i], sizeof(VkRect2D)) == 0);
+  std::printf("PASS: %u regular Vulkan scissor cases preserve nonnegative pixel coverage, captured HUD alignment, arrays, extremes and cached restoration state.\n", checked);
+}
+
 int main(int argc, char **argv) {
   simulateTimeout = argc > 1 && std::strcmp(argv[1], "--timeout") == 0;
   invalidState = argc > 1 && std::strcmp(argv[1], "--invalid-state") == 0;
@@ -1302,6 +1355,10 @@ int main(int argc, char **argv) {
   device.queueFamilies[0].queues[0].mutex = std::make_unique<std::mutex>();
   VulkanCommandQueue queue(&device, RenderCommandListType::DIRECT);
   VulkanCommandList list(&queue);
+  if (argc == 1 || (argc == 2 && !std::strcmp(argv[1], "--hud-scissors-only"))) {
+    testRegularScissorBounds(list);
+    if (argc == 2) return 0;
+  }
   device.independentBlendSupported = true;
   if (argc > 1 && std::strcmp(argv[1], "--depth-rects-only") == 0) {
     testDepthClearDomain(device, list);
