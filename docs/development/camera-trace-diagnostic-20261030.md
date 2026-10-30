@@ -22,7 +22,8 @@ collision state or a direct measure of what the screen displayed.
 microseconds, PID/TID, a unique burst nonce and step/workload identifiers. They
 are retained in the ordinary private log and original-process Runtime exports.
 One step's records use one private-log write. The end record reports counts,
-payload bytes, dropped records and total/maximum formatting-and-write cost.
+payload bytes, dropped records and total/maximum per-step formatting-and-write
+cost. That cost excludes request polling and the begin/end writes.
 Logging may affect pacing; do not treat traced FPS as a clean benchmark.
 
 The exact private request is `files/data/camera-trace-v1`, containing
@@ -55,14 +56,15 @@ The existing 25 viewport/projection cases remain a separate regression check.
 Recorder tests execute the exact request scripts, protect existing owners and
 symlinks, reject different nonces/extra shell commands, and check delayed arming
 and cleanup before collection. The collector's 327 simulated cases include all
-three camera domains and original-PID filtering. Full ARM64/APK CI and a device
-burst are still required before interpreting device results.
+three camera domains and original-PID filtering. Full ARM64/APK CI and downloaded
+payload verification now pass as recorded below. A device burst is still needed.
 
 After local signing and the ordinary Debug update, use Display framerate and
 the existing Expand/aspect, MSAA 2×, resolution and system driver settings.
-Reach the same narrow passage before typing `playing`. Stand briefly, walk
-through the problematic section immediately after the armed message, and add
-a marker describing the result. Let at least 12 seconds pass before `save`.
+Reach the same narrow passage before typing `playing`. Stand briefly, then walk
+through the problematic section immediately after the armed message. After the
+burst, add a marker describing the result. Let at least 12 seconds pass before
+`save`.
 Do not repeat accepted HUD/water/logo/Jiggy/menu tests for this diagnostic.
 
 Compare submitted camera continuity with the consumed result, grouping by
@@ -72,3 +74,39 @@ is responsible. Smooth raw views with an abnormal generated sequence would
 direct investigation toward matching/interpolation. Smooth camera values with
 visible shake require pacing or additional draw/presentation evidence. A
 synthetic sharp-turn contraction alone is insufficient to select a correction.
+
+## Build 131
+
+Full [Android CI 131](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41042131830)
+passes host regressions, ARM64 compilation, APK verification, local-signing
+checks and paired GPU Test packaging. Its real-SDK preparation fixture checks
+that `--camera-trace` reaches the fixed, hash-checked capture launcher.
+The actual-consumer trace tests and both failing controls are present in the
+downloaded host log, alongside the inert non-Android and retained viewport cases.
+
+Engineering source is `c856c9f5effa24d7214b350619b953c3a7592ce3`, tree
+`5df45e5b96427ea5e0879f6bb4fc07d0fc15e99d`. The built integration is
+`aa277b14262c951b395a39d4345845e6ecf481d4`, tree
+`6b9ee8ac45dbe61496706c334c5d01d592bb67e0`. Their sole file difference is
+main's README wording, changing the current test framerate to Display; native
+and tool sources are identical. Integration parents are
+`d33657d17ba72f0df9c4654e1c476ef42aa432d9` and the engineering source above.
+
+The independently downloaded
+[normal Debug ZIP](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41042131830/artifacts/12972886562)
+is 15,467,867 bytes, SHA-256
+`0a22633c21581bef945acc9e6770b9d78532edd613eb1d75223fc8511c5f02ac`.
+The [GPU Test ZIP](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41042131830/artifacts/12972507417)
+is 15,362,113 bytes, SHA-256
+`fa76657affd2b1c3b5eb826d4e2ba0fba9c9b25a6d8157ca36b274c019349c8f`.
+Both match GitHub's lengths/digests and pass CRC. All seven normal ARM64 library
+hashes and ELF Build IDs verify; the GPU APK has byte-identical libraries and
+matching reports. Native version is `0.1.0-ci.131.1+gaa277b14262c`, main Build ID
+`2ac5aeb2745839ca5ac5e25b11eb29f0d06da09f`. The packaged main library contains
+the new request, burst/step/matrix and consumed-view-projection markers.
+The four packaged signing/capture helpers and Redmi instructions match source.
+The production projection compiler retains NDK 28.2.13676358 and ARM64/API 24.
+
+See the [verification record](evidence/camera-trace-ci131-20261030.json).
+Build 129 remains the last confirmed installed Odin build. No installation or
+device burst is claimed here; MD-004 is still open and no camera fix is advertised.

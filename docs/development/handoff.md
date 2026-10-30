@@ -40,7 +40,13 @@ no exact native-frame/marker alignment. The next
 [diagnostic candidate](camera-trace-diagnostic-20261030.md) adds a bounded
 12-second/1,440-step consecutive raw/consumed camera observer, armed only after
 verified manual `playing`. No camera policy changes or fix is claimed. Full
-Android CI and the device burst are pending. Further mode toggles add little;
+Android [CI 131](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41042131830)
+and independent downloaded paired-APK checks now pass, including source-matching
+helpers and the native observer. Built integration is
+`aa277b14262c951b395a39d4345845e6ecf481d4`; the device burst remains pending.
+Build 129 is still the last confirmed installed Odin build. Prepare the new
+launcher with `--camera-trace` before the normal Debug update; reach the passage
+at Display before typing `playing`. Further mode toggles add little;
 guest adjustment/input values are the next step if raw views oscillate.
 Existing five-second scene sampling cannot recover that motion. The release
 needs a tested correction or Frostie's explicit known-issue

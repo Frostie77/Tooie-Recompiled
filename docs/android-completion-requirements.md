@@ -312,7 +312,9 @@ manual acceptance, not full-game/device coverage or publication.
   residual stutter at Original, with near-target Manual 60 closer to Display.
 - [ ] Resolve/retest MD-004 or record Frostie's explicit known-issue deferral.
   The cause is not established by the current comparison or synthetic camera
-  turn probe. Consecutive raw/consumed camera data remain missing. Older MD-003
+  turn probe. The [bounded observer candidate](development/camera-trace-diagnostic-20261030.md)
+  passes full CI 131 and downloaded paired-payload verification; its device
+  burst and consecutive raw/consumed data remain pending. Older MD-003
   unusual-frame reports and broader long-play deformation remain separate.
 - [ ] Obtain the new Redmi Original/Expand performance and close/reopen results.
   Prior startup/gameplay/sound success remains accepted within its reported
