@@ -1,5 +1,7 @@
 # Narrow-space camera shaking and unusual frames — 30 October 2026
 
+**31 October follow-up:** the [immediate-movement repeat and scoped correction](camera-primary-scene-fix-20261031.md) now expose wrong primary/auxiliary scene association. Host replay and failing old-source control pass; Android CI and Odin acceptance remain pending. Earlier conclusions below retain their original capture scope.
+
 The later [build-129 comparison and Display video](camera-check-odin-build129-20261030.md)
 now reproduce Frostie's narrow-space camera report: Original improves it with
 residual stutter, while near-target Manual 60 feels closer to Display. All seven

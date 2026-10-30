@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Probe synthetic camera/aspect transitions through production RT64 CPU code.
+"""Check captured camera scene identity and synthetic viewport transitions.
 
-This is not a replay of MD-002 and cannot identify its cause. No ROM, GPU,
-Android SDK, installation or device access is used.
+The default replays captured CPU projection inputs, not draw calls or GPU work.
+No ROM, Android SDK, installation or device access is used.
 """
 import argparse
 import os
@@ -81,10 +81,17 @@ def main():
             env.pop(name, None)
         fixture = 'camera_trace_probe.cpp' if args.camera_trace else ('camera_turn_probe.cpp' if args.camera_turns else 'dialogue_projection_probe.cpp')
         original_processor = sources[1].read_text()
+        original_matcher = sources[0].read_text()
         header_path = rt / 'render/rt64_camera_diagnostics.h'
-        profiles = ['current', 'missing-observer', 'raw-consumed', 'non-android'] if args.camera_trace else ['default']
+        profiles = (['current', 'missing-observer', 'raw-consumed', 'non-android'] if args.camera_trace
+                    else ['default'] if args.camera_turns else ['current', 'nearest-scene-control'])
         for profile in profiles:
             processor = original_processor
+            matcher = original_matcher
+            if profile == 'nearest-scene-control':
+                matcher, count = re.subn(r'^            // TOOIE_PRIMARY_GAMEPLAY_CAMERA_BEGIN\n[\s\S]*?^            // TOOIE_PRIMARY_GAMEPLAY_CAMERA_END\n', '', matcher, flags=re.M)
+                assert count == 1
+            sources[0].write_text(matcher)
             shadow = build / 'rt64_camera_diagnostics.h'
             if shadow.exists(): shadow.unlink()
             if profile == 'missing-observer':
@@ -103,14 +110,22 @@ def main():
                             *map(str, sources), *(str(rt / s) for s in support),
                             '-Wl,--gc-sections', '-o', str(exe)], check=True)
             argv = [str(exe), str(build / (profile+'-data'))] if args.camera_trace else [str(exe)]
+            if profile == 'nearest-scene-control':
+                baseline = subprocess.run([str(exe), '--recorded-camera-scenes'], env=env,
+                                          capture_output=True, text=True)
+                output = baseline.stdout + baseline.stderr
+                if baseline.returncode or 'runtime error:' in output or 'ERROR: AddressSanitizer' in output:
+                    raise RuntimeError('Recorded nearest-scene baseline: '+output)
+                print(output.strip(), flush=True)
             result = subprocess.run(argv, env=env, capture_output=True, text=True)
-            expected = 87 if profile in ('missing-observer', 'raw-consumed') else 0
+            expected = (87 if profile in ('missing-observer', 'raw-consumed')
+                        else 88 if profile == 'nearest-scene-control' else 0)
             output = result.stdout + result.stderr
             if result.returncode != expected or 'runtime error:' in output or 'ERROR: AddressSanitizer' in output:
                 raise RuntimeError(profile+': '+output)
             if expected:
-                assert 'camera trace failure' in output
-                print('PASS: '+profile+' fails its actual observed-camera assertion.', flush=True)
+                assert ('camera scene continuity failure' if expected == 88 else 'camera trace failure') in output
+                print('PASS: '+profile+' fails its actual camera-consumer assertion.', flush=True)
             else:
                 print(output.strip(), flush=True)
 

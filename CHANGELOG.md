@@ -62,12 +62,10 @@ focused scope; other modes/devices and complete gameplay remain separate.
 
 - Intermittent character deformation after longer play still needs a current
   failing capture or explicit disposition; the specific limb-gap pass is retained.
-- Historical unusual frames and shaking now have a recovered-evidence
-  [narrow-space camera investigation](docs/development/camera-shaking-investigation-20261030.md).
-  The [current build-129 comparison](docs/development/camera-check-odin-build129-20261030.md)
-  reproduces the camera report: Original improves it with residual stutter,
-  while near-target Manual 60 feels closer to Display. The cause remains open;
-  no camera correction is advertised.
+- The [narrow-space camera candidate](docs/development/camera-primary-scene-fix-20261031.md)
+  corrects captured primary/auxiliary scene association in host consumer replay.
+  Android candidate verification and Odin acceptance remain pending; broader
+  pacing, guest camera adjustment and older unusual-frame reports stay separate.
 - Updated Redmi Original/Expand FPS and reopen results remain pending. The
   [next-release draft](docs/development/release-notes-next.md) keeps those results
   separate from accepted Odin fixes.

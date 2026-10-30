@@ -115,7 +115,11 @@ static Result probe(const char *name, float currentX, float weight, bool widerPa
 }
 
 static bool near(float a, float b) {return std::fabs(a - b) < 0.0001f;}
-int main() {
+#include "camera_scene_checks.h"
+int main(int argc,char **argv) {
+    if(argc==2 && std::string(argv[1])=="--recorded-camera-scenes") {
+        capturedCameraSceneChecks(true);return 0;
+    }
     static_assert(kProjectionGroupFlags == 0x02008AAAU);
     const auto smooth = probe("smooth_camera", 1, .25f);
     REQUIRE(smooth.mapped && near(smooth.viewX, .25f));
@@ -185,5 +189,7 @@ int main() {
         kGameplayProjectionId + 1);
     REQUIRE(otherRole.mapped && !otherRole.bypassed && near(otherRole.viewX, 25));
     std::puts("PASS: viewport entry/exit use current camera/projection; stable letterbox, FOV-only animation and draw-scissor controls retain blending in production CPU consumers. MD-002 needs device verification.");
+    capturedCameraSceneChecks(false);
+    cameraSceneScopeChecks();
     return 0;
 }

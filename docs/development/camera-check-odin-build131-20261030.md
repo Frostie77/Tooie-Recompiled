@@ -1,5 +1,7 @@
 # Build-131 bounded camera capture — 30 October 2026
 
+**31 October follow-up:** the [immediate-movement repeat and scoped correction](camera-primary-scene-fix-20261031.md) now expose wrong primary/auxiliary scene association. Host replay and failing old-source control pass; Android CI and Odin acceptance remain pending. Earlier conclusions below retain their original capture scope.
+
 The observer worked and its temporary request was removed. This is a verified
 CPU camera capture, **not a camera fix or an aligned reproduction of the visible
 shake**. Frostie is unsure whether the shake happened within the bounded burst

@@ -1,5 +1,7 @@
 # Consecutive camera diagnostic — 30 October 2026
 
+**31 October follow-up:** the [immediate-movement repeat and scoped correction](camera-primary-scene-fix-20261031.md) now expose wrong primary/auxiliary scene association. Host replay and failing old-source control pass; Android CI and Odin acceptance remain pending. Earlier conclusions below retain their original capture scope.
+
 MD-004 remains reproduced, with cause open. The build-129 comparison already
 covers Display, Original and Manual 60; another identical mode comparison adds
 little. This candidate adds a bounded observation at the actual RT64 camera

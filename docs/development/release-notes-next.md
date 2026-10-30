@@ -37,11 +37,12 @@ The [handoff](handoff.md) links the complete source, host, CI and device records
 - Record Redmi's new Original/Expand FPS comparison, graphics settings, sound,
   controls and close/reopen result. Prior Redmi startup/gameplay/sound success is
   not a measured performance improvement for this candidate.
-- Resolve/retest the [current narrow-space camera report](camera-check-odin-build129-20261030.md)
-  or record Frostie's explicit deferral as a known issue. Original improves it
-  with residual stutter; near-target Manual 60 feels closer to Display. The
-  cause remains open. Keep older unusual-frame reports and broader long-play
-  character work separate; no camera fix is claimed.
+- Test the [primary-camera scene matching candidate](camera-primary-scene-fix-20261031.md)
+  on Odin. The second build-131 trace and actual-consumer replay expose primary
+  history being replaced by auxiliary history. The scoped correction passes
+  host checks; Android CI and device acceptance remain pending. Keep broader
+  pacing/guest adjustment, older unusual frames and long-play character work
+  separate. No accepted camera fix is claimed yet.
 - Select the exact reviewed release source, version name and increasing code;
   build the unsigned release candidate and verify its complete payload. Sign
   locally with the existing protected release key, then check update continuity,

@@ -1,66 +1,46 @@
 # Engineering handoff
 
-Updated: 30 October 2026.
+Updated: 31 October 2026.
 
-## Next release and narrow-space camera investigation
+## Next release and primary camera matching candidate
 
-Frostie wants to prepare the next release after the Redmi results return.
-The [draft notes](release-notes-next.md) and completion checklist now reflect
-the accepted build-111/121/125/127/128/129 fixes; the public version/feed remain
-v1.1.0/code 5. New Redmi FPS, broader long-play character rendering and the
-camera cause remain open. No release version is selected.
+Frostie wants the next release after the Redmi results return. The
+[draft notes](release-notes-next.md) retain accepted build-111/121/125/127/128/129
+fixes. Public v1.1.0/code 5 and release/feed identities remain unchanged; no new
+version is selected. Updated Redmi FPS and broader long-play character rendering
+remain open. Frostie handles messages, merges and releases.
 
-The [MD-003/004 investigation](camera-shaking-investigation-20261030.md)
-re-downloads and verifies the original 24 October Evidence ZIP, views all six
-relevant PNGs and correlates their actual device markers with native timing.
-The pictures locate a wooden interior, barred cells/TNT barrel and close walls.
-Frostie recalls shaking while walking through narrow spaces and suspects
-automatic camera adjustment. Some shake neighborhoods have uneven present
-delivery (E04: about 48–57/s against target 60), while E01 stays near 60.
-Projection-role mismatch remains constant there; no detailed camera/collision
-sequence was recorded. These findings do not establish the visual cause.
+The [second build-131 trace and correction](camera-primary-scene-fix-20261031.md)
+now establish a concrete renderer association defect during continuous movement.
+All 189 retained source files, the complete native delta, 53 native Runtime
+exports plus the separate Java-window export and request removal verify. The
+5.674-second burst contains 172 different consecutive primary views: 45 primary
+observations across 20 workloads select auxiliary history, and three lose their
+history when an auxiliary appears. Matching by matrix proximity lets another
+scene take the primary's previous view despite sharing role 0x1000. Frostie
+reports substantial shaking during this repeat; exact video/present alignment
+is still unavailable.
 
-A new optional host camera-turn probe measures the current simple camera
-blend's axis contraction during synthetic sharp turns, with rigid/submitted
-opposing controls (182 cases, ASan/UBSan; no GPU). No native policy changes.
-The [current build-129 camera check](camera-check-odin-build129-20261030.md)
-now retains all seven actual events/PNGs, nine inputs and the supplied Display
-video. Frostie reports problems at Display, improvement with residual stutter
-at Original, and Manual 60 closer to Display. Native records confirm Display
-120 → Original → Display 120 → Manual 60, with other graphics unchanged.
-Manual-60 neighborhoods stay about 59.9–60.0 presents/s, so missing 120 alone
-cannot explain the report. Counter mismatch/bypass totals stay constant there.
-All Runtime exports and 550 retained source files verify; original PID 19109
-survives 117 checks through `save`. No optional trace needs cleanup.
+The candidate reserves the first perspective gameplay scene in both frames
+before generic proximity matching. It retains interpolation math/flags, viewport
+bypass and the other camera roles. Ten captured pairs pass through the actual
+producer/grouping/matcher/consumer; restoring the old source reproduces the
+logged old outputs, then fails continuity. The 25 retained viewport cases and
+12 scope controls pass. Full Android CI, downloaded paired-payload verification
+and Odin acceptance are still required. Test the same Display/Expand narrow walk,
+then dialogue and an open area. Keep MD-004 open until that result. Scene order
+outside captured coverage remains a device-regression consideration.
 
-MD-004 is now reproduced on the current build, with cause unresolved. MD-003
-and long-play deformation remain distinct. The phone video is Display by
-Frostie's explicit identification; metadata place it after capture, so it has
-no exact native-frame/marker alignment. The next
-[diagnostic candidate](camera-trace-diagnostic-20261030.md) adds a bounded
-12-second/1,440-step consecutive raw/consumed camera observer, armed only after
-verified manual `playing`. No camera policy changes or fix is claimed. Full
-Android [CI 131](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41042131830)
-and independent downloaded paired-APK checks now pass, including source-matching
-helpers and the native observer. Built integration is
-`aa277b14262c951b395a39d4345845e6ecf481d4` is now installed on Odin. The
-[complete build-131 trace review](camera-check-odin-build131-20261030.md)
-verifies all 1,440 steps/11,520 matrices and request removal. Three tagged
-transforms exhaust the budget after 7.767 seconds, yielding 480 main-camera
-outputs. Main inputs change only around seconds 2.834–3.967; the output follows
-the existing blend, with no bad previous-view match or viewport bypass.
-The largest observed column contraction is about 0.017%; one separate tagged
-transform is singular, so do not switch every `0x1000` matrix to rigid blending.
-Frostie is unsure whether the visible shake happened during this short burst
-and keeps the game open. Repeat the installed recorder with walking already
-started when entering `playing`; confirm the visible symptom falls within the
-first few seconds. No rebuild or private-file cleanup is needed. The marker's
-literal description ends in `Displa`; it is after the burst. MD-004 remains
-open. Guest adjustment/input values and a render-load control remain possible
-next discriminators once the visible event is aligned.
-Existing five-second scene sampling cannot recover that motion. The release
-needs a tested correction or Frostie's explicit known-issue
-deferral; Redmi FPS remains pending.
+The [first burst](camera-check-odin-build131-20261030.md) remains useful limited
+coverage: only a brief input tilt, correct primary matching, ~0.017% contraction,
+and a singular auxiliary view. Do not change every tagged view to rigid blending.
+The [build-129 comparison](camera-check-odin-build129-20261030.md) and separate
+Display video retain Original improvement/residual stutter and Manual 60 closer
+to Display. Uneven pacing and guest automatic camera adjustment may remain
+separate contributors; this candidate does not establish a complete visual fix.
+Older MD-003 unusual frames and long-play deformation stay separate. The
+[historical investigation](camera-shaking-investigation-20261030.md) retains
+source evidence and the synthetic turn measurement.
 
 Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).

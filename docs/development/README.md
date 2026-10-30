@@ -14,6 +14,8 @@ changing generated code, runtime behavior or dependencies.
 
 ## Technical guides
 
+- [Primary camera scene matching candidate](camera-primary-scene-fix-20261031.md): captured-input replay, scoped correction and pending Odin acceptance.
+
 - [Mod import, transactions and runtime integration](mod-support.md).
 - [Android ROM selection and private import](rom-selection.md).
 - [Startup update design and release identity](update-plan.md).

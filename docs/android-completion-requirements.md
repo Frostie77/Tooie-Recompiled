@@ -311,14 +311,14 @@ manual acceptance, not full-game/device coverage or publication.
   independently supplied Display video. Frostie reports improvement with
   residual stutter at Original, with near-target Manual 60 closer to Display.
 - [ ] Resolve/retest MD-004 or record Frostie's explicit known-issue deferral.
-  The cause is not established by the current comparison or synthetic camera
-  turn probe. The [bounded observer candidate](development/camera-trace-diagnostic-20261030.md)
-  passes full CI 131 and downloaded paired-payload verification. The
-  [device burst](development/camera-check-odin-build131-20261030.md) now verifies
-  1,440 steps/11,520 matrices and cleanup, but contains only one brief input tilt
-  within 7.767 seconds. Frostie is unsure whether that includes the shake; an
-  aligned repeat on the installed build is next. Older MD-003
-  unusual-frame reports and broader long-play deformation remain separate.
+  The [second build-131 trace and candidate](development/camera-primary-scene-fix-20261031.md)
+  now reproduce wrong primary/auxiliary scene association in the actual CPU
+  matcher/consumer. Reserving primary history passes ten captured pairs, 25
+  viewport cases and 12 scope controls; old source reproduces logged outputs
+  and fails continuity. Full Android CI/artifact verification and Odin narrow
+  walking/turning, dialogue and open-area checks remain required. Uneven pacing
+  and guest adjustment remain separate possibilities if shaking persists.
+  Older MD-003 unusual frames and long-play deformation remain separate.
 - [ ] Obtain the new Redmi Original/Expand performance and close/reopen results.
   Prior startup/gameplay/sound success remains accepted within its reported
   scope; quarter-step resolution controls and native/packaging CI do not prove
