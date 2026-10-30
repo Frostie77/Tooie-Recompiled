@@ -36,11 +36,14 @@ survives 117 checks through `save`. No optional trace needs cleanup.
 MD-004 is now reproduced on the current build, with cause unresolved. MD-003
 and long-play deformation remain distinct. The phone video is Display by
 Frostie's explicit identification; metadata place it after capture, so it has
-no exact native-frame/marker alignment. No native camera policy changes or new
-build. Further mode toggles add little: a bounded consecutive raw/consumed
-camera trace is the next discriminator, with guest adjustment/input values if
-raw views oscillate. Existing five-second scene sampling cannot recover that
-motion. The release needs a tested correction or Frostie's explicit known-issue
+no exact native-frame/marker alignment. The next
+[diagnostic candidate](camera-trace-diagnostic-20261030.md) adds a bounded
+12-second/1,440-step consecutive raw/consumed camera observer, armed only after
+verified manual `playing`. No camera policy changes or fix is claimed. Full
+Android CI and the device burst are pending. Further mode toggles add little;
+guest adjustment/input values are the next step if raw views oscillate.
+Existing five-second scene sampling cannot recover that motion. The release
+needs a tested correction or Frostie's explicit known-issue
 deferral; Redmi FPS remains pending.
 
 Start with the [completion checklist](../android-completion-requirements.md),

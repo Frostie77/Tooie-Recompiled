@@ -41,6 +41,8 @@ HUD_HASH = hashlib.sha256(HUD_CONTENTS).hexdigest()
 RENDER_REQUEST = 'files/data/render-trace-v1'
 RENDER_CONTENTS = b'tooie-render-trace-v1\n'
 RENDER_HASH = hashlib.sha256(RENDER_CONTENTS).hexdigest()
+CAMERA_REQUEST = 'files/data/camera-trace-v1'
+CAMERA_HEADER = b'tooie-camera-trace-v1\n'
 
 
 def hud_request_script(enable):
@@ -82,6 +84,16 @@ def render_request_script(enable):
             .replace(HUD_HASH, RENDER_HASH).replace('tooie-hud-trace-v1', 'tooie-render-trace-v1')
             .replace('HUD trace', 'Render trace').replace('HUD request', 'Render request')
             .replace('TOOIE_HUD_TRACE_', 'TOOIE_RENDER_TRACE_'))
+
+
+def camera_request_script(enable, token):
+    require(re.fullmatch('[0-9a-f]{32}', token), 'Invalid camera request token.')
+    content = CAMERA_HEADER + token.encode('ascii') + b'\n'
+    return (hud_request_script(enable).replace(HUD_REQUEST, CAMERA_REQUEST)
+            .replace(HUD_HASH, digest(content))
+            .replace('tooie-hud-trace-v1 >', 'tooie-camera-trace-v1 ' + token + ' >')
+            .replace('HUD trace', 'Camera trace').replace('HUD request', 'Camera request')
+            .replace('TOOIE_HUD_TRACE_', 'TOOIE_CAMERA_TRACE_'))
 
 
 class HudTraceRequest:
@@ -129,6 +141,17 @@ class RenderTraceRequest(HudTraceRequest):
     script = staticmethod(render_request_script)
 
 
+class CameraTraceRequest(HudTraceRequest):
+    label, description, request = 'Camera', '12-second consecutive camera', CAMERA_REQUEST
+    def __init__(self):
+        super().__init__()
+        self.token = uuid.uuid4().hex
+        self.request_hash = digest(CAMERA_HEADER + self.token.encode('ascii') + b'\n')
+
+    def script(self, enable):
+        return camera_request_script(enable, self.token)
+
+
 def finish_before_collection(c, requests):
     # Final log reads and processing can be large. Remove our temporary
     # requests as soon as recording ends, while the device is still connected.
@@ -141,7 +164,7 @@ def finish_before_collection(c, requests):
     c.collect = collect
 
 
-def guard_observer_command(args, adb, serial, hud_trace=False, render_trace=False):
+def guard_observer_command(args, adb, serial, hud_trace=False, render_trace=False, camera=None):
     values = list(map(str, args))
     if not values or values[0] != str(adb):
         return
@@ -169,6 +192,9 @@ def guard_observer_command(args, adb, serial, hud_trace=False, render_trace=Fals
         return
     if render_trace and any(words == ['run-as', 'io.github.banjotooierecompiled', 'sh', '-c', render_request_script(enable)]
                             for enable in (False, True)):
+        return
+    if camera is not None and any(words == ['run-as', 'io.github.banjotooierecompiled', 'sh', '-c', camera.script(enable)]
+                                  for enable in (False, True)):
         return
     simple = {'date', 'pidof', 'getprop', 'dumpsys', 'sha256sum'}
     if words[0] in simple:
@@ -226,6 +252,10 @@ def verify_local(c, args):
             require(all(value in native for value in (b'render-trace-v1',
                     b'call_first=%u call_pages=%u', b'z_compare=%u z_write=%u')),
                     'This APK does not contain the paged renderer input observer.')
+        if getattr(args, 'camera_trace', False):
+            require(all(value in native for value in (b'camera-trace-v1', b'camera-step',
+                    b'camera-matrix', b'cpu-camera-inputs-not-gpu-readback')),
+                    'This APK does not contain the consecutive camera observer.')
     build_id = libraries['libmain.so']['build_id']
     require(re.fullmatch('[0-9a-f]{40}', build_id), 'Invalid CI Build ID.')
     signature = c.text(c.command([args.build_tools / 'apksigner', 'verify', '--verbose',
@@ -292,7 +322,7 @@ def observe_installed(c):
         }, indent=2) + '\n')
 
 
-def installed_main(c, args, hud=None, render=None):
+def installed_main(c, args, hud=None, render=None, camera=None):
     require(sys.stdin.isatty(), 'Run in the interactive Ubuntu terminal.')
     receipt, report, build_id, signature, manifest = verify_local(c, args)
     c.PROCESS_NAME = c.PKG + (':game' if report.get('driver_picker', False) else '')
@@ -314,7 +344,9 @@ def installed_main(c, args, hud=None, render=None):
     c.save('Authorization', 'User requested a marker-enabled playtest of the existing verified Debug app. '
            'Only observation, local evidence, foreground screenshot attempts and diagnostic markers. '
            'No installation, launch, forced stop, data reset, settings change or automated game input. '
-           + ('The explicit HUD trace option also permits creating/removing only its temporary private diagnostic request.\n' if hud else '\n'))
+           + ('Explicit diagnostic options also permit creating/removing only their temporary private requests: '
+              + ', '.join(request.label for request in (hud, render, camera) if request is not None) + '.\n'
+              if any(request is not None for request in (hud, render, camera)) else '\n'))
     require(c.text(c.adb('get-state')) == 'device', 'Expected Odin is unavailable.')
     require(c.text(c.adb('get-serialno')) == c.SERIAL, 'Device serial differs.')
     installed = c.text(c.adb('shell', '-T', 'pm path ' + c.PKG, name='Installed-APK-Path')).splitlines()
@@ -335,6 +367,8 @@ def installed_main(c, args, hud=None, render=None):
     if render is not None:
         render.enable(c)
     print('Verified the installed Debug build. Open Debug and load your existing save if needed.', flush=True)
+    if camera is not None:
+        print('Reach the narrow passage before typing playing. A 12-second camera burst starts after gameplay verification.', flush=True)
     while True:
         answer = c.prompt('When Banjo is controllable, type playing (or save to finish): ').casefold()
         if answer in ('save', 'stop'):
@@ -356,6 +390,9 @@ def installed_main(c, args, hud=None, render=None):
     c.save('Attached-Process', 'process_name=' + c.PROCESS_NAME + '\npid=' + str(c.original_pid) + '\n' +
            'Existing unique game-process PID plus package foreground after manual playing confirmation. '
            'No launch command was sent.\n')
+    if camera is not None:
+        camera.enable(c)
+        print('Camera burst armed. Walk through the narrow passage now; logging stops automatically after 12 seconds or 1440 steps.', flush=True)
     print('Recording until save. Use 1–30, optionally followed by a short description.', flush=True)
     print('Reuse numbers freely. Use note 30 DETAILS to annotate the latest marker 30. '
           'The first 30 fresh events attempt screenshots; every note is retained.', flush=True)
@@ -373,6 +410,7 @@ def parser():
     result.add_argument('--tool-revision', default='working-copy')
     result.add_argument('--hud-trace', action='store_true', help='Record HUD layout using a temporary private request, removed before archiving.')
     result.add_argument('--render-trace', action='store_true', help='Record paged renderer draw inputs using a temporary private request, removed before archiving.')
+    result.add_argument('--camera-trace', action='store_true', help='Arm a bounded consecutive camera burst after verified playing confirmation.')
     return result
 
 
@@ -384,7 +422,8 @@ def main(argv=None):
     c.GAMEPLAY_ONLY = True
     hud = HudTraceRequest() if args.hud_trace else None
     render = RenderTraceRequest() if args.render_trace else None
-    requests = [request for request in (hud, render) if request is not None]
+    camera = CameraTraceRequest() if args.camera_trace else None
+    requests = [request for request in (hud, render, camera) if request is not None]
     c.CAPTURE_SCOPE_OVERRIDE = (
         'ATTACH TO INSTALLED DEBUG: exact local APK hash, expected certificate and CI native-library '
         'hashes checked, then installed base.apk hash matched. User manually opens the app and declares '
@@ -402,15 +441,20 @@ def main(argv=None):
         c.CAPTURE_SCOPE_OVERRIDE += ('Explicit renderer trace: a temporary render-trace-v1 request enables bounded '
             'read-only draw/depth/texture/vertex records with rotating call pages. Creation/removal receipts are retained; '
             'it changes no game settings. Diagnostic logging cost is included in timings.\n')
+    if camera is not None:
+        c.CAPTURE_SCOPE_OVERRIDE += ('Explicit camera trace: after exact installed identity, game PID and foreground checks, '
+            'a unique temporary camera-trace-v1 request arms at most 12 seconds/1440 consecutive processed gameplay-camera '
+            'steps. Records copy CPU camera inputs and selected outputs, not GPU readback. Logging overhead is included; '
+            'no camera, input, rendering, game setting or save policy changes. The owned request is removed before collection.\n')
     c.TIMING_SCOPE_OVERRIDE = ('Use exact appended records from the attached PID and their stated units. '
         'This capture does not enable or infer compile-time timing/geometry/correction observers. '
         'Absent records are not a pass. Marker times are host receipt times, not exact visual onset.\n')
     original_command = c.command
     def command(args, *positional, **keywords):
-        guard_observer_command(args, c.ADB, c.SERIAL, hud is not None, render is not None)
+        guard_observer_command(args, c.ADB, c.SERIAL, hud is not None, render is not None, camera)
         return original_command(args, *positional, **keywords)
     c.command = command
-    c.main = lambda: installed_main(c, args, hud, render)
+    c.main = lambda: installed_main(c, args, hud, render, camera)
     finish_before_collection(c, requests)
     original_archive = c.archive_evidence
     def archive():

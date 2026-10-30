@@ -145,8 +145,8 @@ class InstalledCapture(unittest.TestCase):
         self.c.start_capture = lambda start: self.fail('Started capture for the wrong installed APK')
         class Terminal(io.StringIO):
             def isatty(self): return True
-        hud = types.SimpleNamespace(enable=lambda c: self.fail('Enabled HUD trace before installed APK verification'))
-        render = types.SimpleNamespace(enable=lambda c: self.fail('Enabled renderer trace before installed APK verification'))
+        hud = types.SimpleNamespace(label='HUD', enable=lambda c: self.fail('Enabled HUD trace before installed APK verification'))
+        render = types.SimpleNamespace(label='Render', enable=lambda c: self.fail('Enabled renderer trace before installed APK verification'))
         with patch.object(self.c.sys, 'stdin', Terminal()), self.assertRaisesRegex(RuntimeError, 'Installed APK differs'):
             capture.installed_main(self.c, self.args, hud, render)
         self.assertFalse(self.c.attempted)
@@ -336,6 +336,165 @@ class InstalledCapture(unittest.TestCase):
         self.report['libraries']['libmain.so']['sha256']=capture.digest(native)
         self.driver_profile();capture.verify_local(self.c,self.args)
         self.assertEqual(len(self.calls),2)
+
+    def camera_shell(self, request):
+        app = self.area / 'camera-app'
+        (app / 'files/data').mkdir(parents=True, exist_ok=True)
+        calls = []
+        def adb(*args, **kwargs):
+            capture.guard_observer_command(['adb', '-s', 'fixture-device', *args],
+                'adb', 'fixture-device', True, True, request)
+            words = shlex.split(args[2])
+            self.assertEqual(words[:4], ['run-as', self.c.PKG, 'sh', '-c'])
+            calls.append(words[4])
+            result = subprocess.run(['sh', '-c', words[4]], cwd=app, capture_output=True)
+            self.c.save(kwargs['name'], result.stdout)
+            self.c.save(kwargs['name'] + '-status', 'returncode=' + str(result.returncode) + '\n' + result.stderr.decode())
+            return result
+        self.c.adb = adb
+        return app / request.request, calls
+
+    def test_camera_request_owns_one_nonce_and_is_removed_before_collection(self):
+        request = capture.CameraTraceRequest()
+        path, calls = self.camera_shell(request)
+        requests = [capture.HudTraceRequest(), capture.RenderTraceRequest(), request]
+        sentinel = path.parent / 'saved-game'
+        sentinel.write_bytes(b'untouched')
+        original_collect = self.c.collect
+        def collect():
+            self.assertFalse(any((path.parent / Path(item.request).name).exists() for item in requests))
+            return original_collect()
+        self.c.collect = collect
+        with contextlib.redirect_stdout(io.StringIO()):
+            for item in requests: item.enable(self.c)
+            self.assertEqual(path.read_bytes(), capture.CAMERA_HEADER + request.token.encode() + b'\n')
+            self.assertEqual(capture.digest(path.read_bytes()), request.request_hash)
+            with self.assertRaises(AssertionError): self.c.collect()
+            capture.finish_before_collection(self.c, requests)
+            self.c.collect()
+            for item in requests: item.finish(self.c)
+        self.assertEqual(len(calls), 6)
+        self.assertEqual(sentinel.read_bytes(), b'untouched')
+        with zipfile.ZipFile(Path(str(self.c.prefix) + '-Evidence.zip')) as bundle:
+            for label in ('HUD', 'Render', 'Camera'):
+                receipt = json.loads(bundle.read(self.c.prefix.name + '-' + label + '-Trace-Request.txt'))
+                self.assertTrue(receipt['enable_acknowledged'] and receipt['removal_acknowledged'])
+                self.assertIsNone(receipt['error'])
+
+    def test_camera_request_preserves_existing_and_changed_owners(self):
+        request = capture.CameraTraceRequest()
+        path, calls = self.camera_shell(request)
+        path.write_bytes(b'existing owner')
+        with self.assertRaisesRegex(RuntimeError, 'not acknowledged'): request.enable(self.c)
+        request.finish(self.c)
+        self.assertEqual(path.read_bytes(), b'existing owner')
+        self.assertEqual(len(calls), 1)
+        path.unlink()
+        request = capture.CameraTraceRequest()
+        # This guard was bound to the first nonce, so it must reject a new owner.
+        with self.assertRaises(RuntimeError): request.enable(self.c)
+        original = capture.CameraTraceRequest()
+        path, _ = self.camera_shell(original)
+        self.c.prefix = self.area / 'new-camera-owner'
+        with contextlib.redirect_stdout(io.StringIO()): original.enable(self.c)
+        path.write_bytes(b'another owner')
+        original.finish(self.c)
+        self.assertEqual(path.read_bytes(), b'another owner')
+        self.assertFalse(original.removed)
+        self.assertIn('not verified', original.error)
+
+    def test_camera_request_preserves_symlink_target(self):
+        request = capture.CameraTraceRequest()
+        path, calls = self.camera_shell(request)
+        target = path.parent / 'saved-game'
+        target.write_bytes(b'save')
+        path.symlink_to(target)
+        with self.assertRaisesRegex(RuntimeError, 'not acknowledged'): request.enable(self.c)
+        request.finish(self.c)
+        self.assertTrue(path.is_symlink())
+        self.assertEqual(target.read_bytes(), b'save')
+        self.assertEqual(len(calls), 1)
+
+    def test_camera_guard_requires_exact_owned_nonce_and_script(self):
+        request, other = capture.CameraTraceRequest(), capture.CameraTraceRequest()
+        base = ['adb', '-s', 'device', 'shell', '-T']
+        def remote(script): return shlex.join(['run-as', self.c.PKG, 'sh', '-c', script])
+        for enable in (False, True):
+            command = base + [remote(request.script(enable))]
+            for hud, render in ((False, False), (True, False), (False, True), (True, True)):
+                with self.assertRaises(RuntimeError):
+                    capture.guard_observer_command(command, 'adb', 'device', hud, render)
+            capture.guard_observer_command(command, 'adb', 'device', camera=request)
+            for script in (other.script(enable), request.script(enable) + '\npm clear ' + self.c.PKG,
+                           request.script(enable).replace('camera-trace-v1', 'saved-game')):
+                with self.assertRaises(RuntimeError):
+                    capture.guard_observer_command(base + [remote(script)], 'adb', 'device', camera=request)
+        for token in ('a' * 31, 'A' * 32, 'a' * 32 + '; rm file'):
+            with self.assertRaises(RuntimeError): capture.camera_request_script(True, token)
+
+    def test_camera_native_gate_precedes_sdk_and_checks_complete_observer(self):
+        self.args.camera_trace = True
+        for markers in (b'', b'camera-trace-v1\0camera-step\0'):
+            native = self.native + markers
+            self.app['lib/arm64-v8a/libmain.so'] = native
+            self.report['libraries']['libmain.so']['sha256'] = capture.digest(native)
+            self.driver_profile()
+            with self.assertRaisesRegex(RuntimeError, 'consecutive camera observer'):
+                capture.verify_local(self.c, self.args)
+            self.assertEqual(self.calls, [])
+        native = self.native + b'camera-trace-v1\0camera-step\0camera-matrix\0cpu-camera-inputs-not-gpu-readback\0'
+        self.app['lib/arm64-v8a/libmain.so'] = native
+        self.report['libraries']['libmain.so']['sha256'] = capture.digest(native)
+        self.driver_profile()
+        capture.verify_local(self.c, self.args)
+        self.assertEqual(len(self.calls), 2)
+
+    def test_camera_arms_only_after_manual_playing_unique_pid_and_foreground(self):
+        class Terminal(io.StringIO):
+            def isatty(self): return True
+        for mode in ('good', 'save', 'no-pid', 'wrong-foreground', 'wrong-installed'):
+            with self.subTest(mode=mode):
+                events = []
+                def adb(*args, **kwargs):
+                    if args == ('get-state',): payload = 'device'
+                    elif args == ('get-serialno',): payload = 'device'
+                    elif args[-1].startswith('pm path '): payload = 'package:/data/app/fixture/base.apk'
+                    elif args[-1].startswith('sha256sum '): payload = ('0' * 64 if mode == 'wrong-installed' else self.sha) + '  base.apk'
+                    elif args[-1].startswith('run-as '): payload = 'baseline\n'
+                    elif args[-1].startswith('dumpsys activity '):
+                        events.append('foreground')
+                        package = 'other.app' if mode == 'wrong-foreground' else self.c.PKG
+                        payload = 'mResumedActivity: ActivityRecord{abc u0 ' + package + '/.Game t1}'
+                    else: raise AssertionError(args)
+                    return subprocess.CompletedProcess(args, 0, payload.encode(), b'')
+                def prompt(message):
+                    self.assertNotIn('armed', events)
+                    events.append('playing' if mode != 'save' else 'save')
+                    return events[-1]
+                def pids(name):
+                    events.append('pid')
+                    return [] if mode == 'no-pid' else [1234]
+                def enable(c):
+                    self.assertEqual(events, ['playing', 'pid', 'foreground'])
+                    self.assertEqual(c.original_pid, 1234)
+                    self.assertTrue(Path(str(c.prefix) + '-Attached-Process.txt').is_file())
+                    events.append('armed')
+                camera = types.SimpleNamespace(enable=enable, label='Camera')
+                self.c.SERIAL, self.c.adb = 'device', adb
+                self.c.start_capture = lambda start: None
+                self.c.clock = lambda name: '2026-10-30 21:00:00'
+                self.c.prompt, self.c.pids = prompt, pids
+                with patch.object(capture.sys, 'stdin', Terminal()), \
+                     patch.object(capture, 'verify_local', return_value=(self.receipt, self.report, 'b' * 40, 'signature', 'manifest')), \
+                     patch.object(capture, 'observe_installed', side_effect=lambda c: events.append('observed')), \
+                     contextlib.redirect_stdout(io.StringIO()):
+                    if mode in ('no-pid', 'wrong-foreground', 'wrong-installed'):
+                        with self.assertRaises(RuntimeError): capture.installed_main(self.c, self.args, camera=camera)
+                    else: capture.installed_main(self.c, self.args, camera=camera)
+                expected = {'good': ['playing', 'pid', 'foreground', 'armed', 'observed'],
+                            'save': ['save'], 'no-pid': ['playing', 'pid'],
+                            'wrong-foreground': ['playing', 'pid', 'foreground'], 'wrong-installed': []}
+                self.assertEqual(events, expected[mode])
 
     def test_continuous_observation_runs_past_old_timer_and_stops_on_save(self):
         self.c.input_hub = lambda: types.SimpleNamespace(phase='')

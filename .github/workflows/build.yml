@@ -147,6 +147,7 @@ jobs:
             python3 tools/test_pose_validation_diagnostics.py
             python3 tools/probe_dialogue_camera.py
             python3 tools/probe_dialogue_projection.py --opaque-window-types
+            python3 tools/probe_dialogue_projection.py --opaque-window-types --camera-trace
             python3 tools/probe_deformed_vertices.py
             python3 tools/probe_deformed_vertices.py --seams
             python3 tools/probe_deformed_vertices.py --scene-trace

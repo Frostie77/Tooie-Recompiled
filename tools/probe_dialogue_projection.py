@@ -16,8 +16,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--opaque-window-types', action='store_true',
                         help='Supply unused opaque X11 handles on minimal host machines')
-    parser.add_argument('--camera-turns', action='store_true',
+    cases = parser.add_mutually_exclusive_group()
+    cases.add_argument('--camera-turns', action='store_true',
                         help='Measure synthetic camera turns; this does not replay a captured collision')
+    cases.add_argument('--camera-trace', action='store_true',
+                       help='Test the bounded observer through the actual camera consumer and failing controls')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     rt = root / 'lib/rt64/src'
@@ -73,14 +76,43 @@ def main():
                    'preset/rt64_preset_scene.cpp', 'preset/rt64_preset.cpp']
         exe = build / 'probe'
         print('Compiling production matcher and projection processor with ASan/UBSan.', flush=True)
-        fixture = 'camera_turn_probe.cpp' if args.camera_turns else 'dialogue_projection_probe.cpp'
-        subprocess.run([compiler, *flags, str(root / 'tests' / fixture),
-                        *map(str, sources), *(str(rt / s) for s in support),
-                        '-Wl,--gc-sections', '-o', str(exe)], check=True)
         env = {**os.environ, 'ASAN_OPTIONS': 'detect_leaks=0'}
         for name in ['TOOIE_TRACE_PROJ', 'BT_RT64_SKY_INFINITE']:
             env.pop(name, None)
-        subprocess.run([str(exe)], check=True, env=env)
+        fixture = 'camera_trace_probe.cpp' if args.camera_trace else ('camera_turn_probe.cpp' if args.camera_turns else 'dialogue_projection_probe.cpp')
+        original_processor = sources[1].read_text()
+        header_path = rt / 'render/rt64_camera_diagnostics.h'
+        profiles = ['current', 'missing-observer', 'raw-consumed', 'non-android'] if args.camera_trace else ['default']
+        for profile in profiles:
+            processor = original_processor
+            shadow = build / 'rt64_camera_diagnostics.h'
+            if shadow.exists(): shadow.unlink()
+            if profile == 'missing-observer':
+                processor, count = re.subn(r'^            cameraDiagnostics::observe\([\s\S]*?drawData, tracePreviousData, proj, fbPair\);\n', '', processor, flags=re.M)
+                assert count == 1
+            if profile == 'raw-consumed':
+                header = header_path.read_text()
+                old = 'matrix("consumed-view",s,d.modViewTransforms[s.transform]);'
+                assert header.count(old) == 1
+                header = header.replace(old, 'matrix("consumed-view",s,d.viewTransforms[s.transform]);')
+                header = header.replace('#include "../../../../src/runtime_diagnostics.h"', '#include "' + str(root / 'src/runtime_diagnostics.h') + '"')
+                shadow.write_text(header)
+            sources[1].write_text(processor)
+            trace_flags = ['-DTOOIE_CAMERA_TRACE_TEST'] if args.camera_trace and profile != 'non-android' else []
+            subprocess.run([compiler, *flags, *trace_flags, str(root / 'tests' / fixture),
+                            *map(str, sources), *(str(rt / s) for s in support),
+                            '-Wl,--gc-sections', '-o', str(exe)], check=True)
+            argv = [str(exe), str(build / (profile+'-data'))] if args.camera_trace else [str(exe)]
+            result = subprocess.run(argv, env=env, capture_output=True, text=True)
+            expected = 87 if profile in ('missing-observer', 'raw-consumed') else 0
+            output = result.stdout + result.stderr
+            if result.returncode != expected or 'runtime error:' in output or 'ERROR: AddressSanitizer' in output:
+                raise RuntimeError(profile+': '+output)
+            if expected:
+                assert 'camera trace failure' in output
+                print('PASS: '+profile+' fails its actual observed-camera assertion.', flush=True)
+            else:
+                print(output.strip(), flush=True)
 
 
 if __name__ == '__main__':

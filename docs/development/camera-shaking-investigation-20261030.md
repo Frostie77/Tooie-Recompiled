@@ -160,16 +160,13 @@ MD-003/004 fix or a device acceptance result.
 
 ## Next useful device evidence and release scope
 
-Use installed **build 129**; no installation is needed for a current check.
-Repeat the same narrow-space walk, first with the usual Display framerate and
-then with Framerate Original, keeping the aspect, resolution, MSAA and driver
-fixed. Retain short motion footage and distinct markers for the two runs.
-Continue briefly in each mode so ordinary camera movement and any shake can be
-compared. Original disables generated interpolation but also reduces rendering
-load, so a clean Original result alone cannot distinguish interpolation from
-pacing. If it still shakes there, the guest camera/collision path remains a
-candidate; if it only shakes with generated frames, correlate consecutive
-camera inputs/outputs before selecting a policy correction.
+The [completed build-129 comparison](camera-check-odin-build129-20261030.md)
+reproduces the issue: Original improves it with residual stutter, while Manual
+60 feels closer to Display. No further identical mode comparison is requested.
+The [consecutive camera diagnostic](camera-trace-diagnostic-20261030.md) is the
+next candidate. It observes actual submitted/consumed camera matrices for one
+short Display walk and preserves the existing camera policy. Full Android CI
+and device evidence are pending; the synthetic turn measurement is not a fix.
 
 The release plan is to prepare the next candidate after Redmi results arrive.
 The [draft notes](release-notes-next.md) and completion checklist now distinguish

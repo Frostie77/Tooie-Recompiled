@@ -5,6 +5,7 @@
 #include "rt64_projection_processor.h"
 
 #include "common/rt64_math.h"
+#include "rt64_camera_diagnostics.h"
 #include "hle/rt64_workload_queue.h"
 
 #include <atomic>
@@ -181,6 +182,9 @@ namespace RT64 {
             const RigidBody *rigidBody = nullptr;
             // TEMPORARY diagnostics: what this projection was paired with.
             bool traceMapped = false;
+            bool traceViewportBypass = false;
+            const DrawData *tracePreviousData = nullptr;
+            uint64_t tracePreviousWorkload = 0;
             int32_t tracePrevPairedTi = -1;
             uint32_t tracePrevPairedId = 0xFFFFFFFFU;
             const GameFrameMap::WorkloadMap &workloadMap = p.curFrame->frameMap.workloads[sceneProj.workloadIndex];
@@ -188,11 +192,14 @@ namespace RT64 {
                 const GameFrameMap::ViewProjectionMap &viewProjMap = workloadMap.viewProjections[proj.transformsIndex];
                 if (viewProjMap.mapped) {
                     const Workload &prevWorkload = p.workloadQueue->workloads[workloadMap.prevWorkloadIndex];
+                    tracePreviousData = &prevWorkload.drawData;
+                    tracePreviousWorkload = prevWorkload.workloadId;
                     const uint32_t currentGroup = drawData.viewProjTransformGroups[proj.transformsIndex];
                     const bool gameplayViewportTransition =
                         (drawData.transformGroups[currentGroup].matrixId == 0x00001000U) &&
                         !sameProjectionViewport(prevWorkload.drawData, viewProjMap.prevTransformIndex,
                                                 drawData, proj.transformsIndex);
+                    traceViewportBypass = gameplayViewportTransition;
                     if (gameplayViewportTransition) {
                         // Only Tooie's explicitly tagged gameplay cameras opt
                         // into this transition rule. Use BOTH submitted camera
@@ -293,6 +300,12 @@ namespace RT64 {
 
             interop::float4x4 &prevViewProjTransform = drawData.prevViewProjTransforms[proj.transformsIndex];
             prevViewProjTransform = hlslpp::mul(prevViewTransform, prevProjTransform);
+
+            cameraDiagnostics::observe({workload.workloadId, tracePreviousWorkload, sceneIndex, i,
+                proj.transformsIndex, curProjGroup.matrixId, tracePrevPairedId, tracePrevPairedTi,
+                p.curFrameWeight, p.prevFrameWeight, p.aspectRatioScale, projRatioScale,
+                traceMapped, traceViewportBypass, adjustAspectRatio, workload.debuggerCamera.enabled},
+                drawData, tracePreviousData, proj, fbPair);
 
             // TEMPORARY diagnostic (Banjo-Tooie port): see traceProjEnabled above.
             // splitErr0 is the RSP split's own round-trip error before any
