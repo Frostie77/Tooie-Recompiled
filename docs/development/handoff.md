@@ -8,7 +8,7 @@ Frostie wants to prepare the next release after the Redmi results return.
 The [draft notes](release-notes-next.md) and completion checklist now reflect
 the accepted build-111/121/125/127/128/129 fixes; the public version/feed remain
 v1.1.0/code 5. New Redmi FPS, broader long-play character rendering and the
-current narrow-space camera result remain open. No release version is selected.
+camera cause remain open. No release version is selected.
 
 The [MD-003/004 investigation](camera-shaking-investigation-20261030.md)
 re-downloads and verifies the original 24 October Evidence ZIP, views all six
@@ -23,10 +23,25 @@ sequence was recorded. These findings do not establish the visual cause.
 A new optional host camera-turn probe measures the current simple camera
 blend's axis contraction during synthetic sharp turns, with rigid/submitted
 opposing controls (182 cases, ASan/UBSan; no GPU). No native policy changes.
-Build 129 can check the same narrow route at Display versus Original without
-another install. Keep other graphics fixed and retain motion footage; Original
-also reduces load, so that comparison alone cannot assign interpolation as the
-cause. Old MD-003/004 reports are not automatically closed by later fixes.
+The [current build-129 camera check](camera-check-odin-build129-20261030.md)
+now retains all seven actual events/PNGs, nine inputs and the supplied Display
+video. Frostie reports problems at Display, improvement with residual stutter
+at Original, and Manual 60 closer to Display. Native records confirm Display
+120 → Original → Display 120 → Manual 60, with other graphics unchanged.
+Manual-60 neighborhoods stay about 59.9–60.0 presents/s, so missing 120 alone
+cannot explain the report. Counter mismatch/bypass totals stay constant there.
+All Runtime exports and 550 retained source files verify; original PID 19109
+survives 117 checks through `save`. No optional trace needs cleanup.
+
+MD-004 is now reproduced on the current build, with cause unresolved. MD-003
+and long-play deformation remain distinct. The phone video is Display by
+Frostie's explicit identification; metadata place it after capture, so it has
+no exact native-frame/marker alignment. No native camera policy changes or new
+build. Further mode toggles add little: a bounded consecutive raw/consumed
+camera trace is the next discriminator, with guest adjustment/input values if
+raw views oscillate. Existing five-second scene sampling cannot recover that
+motion. The release needs a tested correction or Frostie's explicit known-issue
+deferral; Redmi FPS remains pending.
 
 Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).

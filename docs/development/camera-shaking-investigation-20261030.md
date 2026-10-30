@@ -1,5 +1,11 @@
 # Narrow-space camera shaking and unusual frames — 30 October 2026
 
+The later [build-129 comparison and Display video](camera-check-odin-build129-20261030.md)
+now reproduce Frostie's narrow-space camera report: Original improves it with
+residual stutter, while near-target Manual 60 feels closer to Display. All seven
+actual events/images are reviewed. This supersedes the pending-test plan below
+without establishing a cause or native correction.
+
 **MD-003/004 remain open.** The recovered historical evidence narrows the
 locations and exposes uneven presentation around some shaking reports. A
 production CPU probe also measures distortion during a synthetic camera turn.

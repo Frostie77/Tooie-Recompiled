@@ -37,9 +37,11 @@ The [handoff](handoff.md) links the complete source, host, CI and device records
 - Record Redmi's new Original/Expand FPS comparison, graphics settings, sound,
   controls and close/reopen result. Prior Redmi startup/gameplay/sound success is
   not a measured performance improvement for this candidate.
-- Record a current result or explicit deferral for the [narrow-space camera
-  shaking/unusual frames](camera-shaking-investigation-20261030.md) and broader
-  long-play character issue. The historical investigation does not resolve them.
+- Resolve/retest the [current narrow-space camera report](camera-check-odin-build129-20261030.md)
+  or record Frostie's explicit deferral as a known issue. Original improves it
+  with residual stutter; near-target Manual 60 feels closer to Display. The
+  cause remains open. Keep older unusual-frame reports and broader long-play
+  character work separate; no camera fix is claimed.
 - Select the exact reviewed release source, version name and increasing code;
   build the unsigned release candidate and verify its complete payload. Sign
   locally with the existing protected release key, then check update continuity,

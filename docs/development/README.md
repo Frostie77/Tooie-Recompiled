@@ -54,6 +54,10 @@ gameplay acceptance.
 
 ## Evidence
 
+- [Build-129 narrow-space camera comparison and Display video](camera-check-odin-build129-20261030.md):
+  seven actual events/native PNGs, complete timing reconstruction, improved
+  Original versus near-target Manual-60/Display reports, and unresolved cause.
+
 - [30 October narrow-space camera investigation](camera-shaking-investigation-20261030.md):
   recovered 24 October MD-003/004 screenshots and native timing, Frostie's
   narrow-passage trigger, synthetic production camera-turn measurements and

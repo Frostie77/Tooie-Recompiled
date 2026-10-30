@@ -305,11 +305,15 @@ manual acceptance, not full-game/device coverage or publication.
 - [x] Correct the reproduced Graphics controller-navigation exception
   (MD-017), with [focused build-129 acceptance](development/menu-check-odin-build129-20261030.md)
   for MSAA 2× → 4× → 2×, normal navigation and leaving/reopening Graphics.
-- [ ] Record a current result or explicit deferral for MD-003 unusual frames
-  and MD-004 narrow-space screen shaking. The [30 October investigation](development/camera-shaking-investigation-20261030.md)
-  re-verifies the old archive and actual timing, retains Frostie's automatic
-  camera-adjustment hypothesis and measures synthetic camera-turn distortion.
-  It is not a current reproduction, a native correction or a device pass.
+- [x] Record a current narrow-space camera comparison on build 129 (MD-004).
+  The [complete review](development/camera-check-odin-build129-20261030.md)
+  verifies all seven events/native images, the native mode changes and the
+  independently supplied Display video. Frostie reports improvement with
+  residual stutter at Original, with near-target Manual 60 closer to Display.
+- [ ] Resolve/retest MD-004 or record Frostie's explicit known-issue deferral.
+  The cause is not established by the current comparison or synthetic camera
+  turn probe. Consecutive raw/consumed camera data remain missing. Older MD-003
+  unusual-frame reports and broader long-play deformation remain separate.
 - [ ] Obtain the new Redmi Original/Expand performance and close/reopen results.
   Prior startup/gameplay/sound success remains accepted within its reported
   scope; quarter-step resolution controls and native/packaging CI do not prove
