@@ -90,12 +90,20 @@ struct Pair {
         if (!affine(root)) return false;
         world.clear(); world.reserve(locals.size());
         for (unsigned i = 0; i < locals.size(); ++i) {
-            const auto &v = locals[i];
             M model;
             if (weight == 0 || weight == 1) model = matrix((weight == 0 ? previous : current)->bones[i].matrix);
             else {
-                const M local = v.body.lerp(weight, v.endpoints[0], v.endpoints[1], true);
-                model = hlslpp::mul(hlslpp::mul(hlslpp::mul(translation(-v.bind), local), translation(v.bind)), v.parent < 0 ? M::identity() : world[v.parent]);
+                // A shared mesh edge can differ from the authored bone pivot.
+                // Slerping relative rotation while linearly blending its
+                // compensating translation can open that edge between two
+                // otherwise welded source poses. Blend the completed model
+                // matrices together, then apply one common interpolated root.
+                // Endpoint-coincident vertices then remain coincident by
+                // linearity. Local hierarchy validation above stays intact.
+                const M a = matrix(previous->bones[i].matrix);
+                const M b = matrix(current->bones[i].matrix);
+                for (unsigned row = 0; row < 4; ++row)
+                    model[row] = a[row] * (1.0f - weight) + b[row] * weight;
             }
             if (!affine(model)) return false;
             world.push_back(model);

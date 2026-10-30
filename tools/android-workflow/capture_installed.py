@@ -35,7 +35,136 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def guard_observer_command(args, adb, serial):
+HUD_REQUEST = 'files/data/hud-trace-v1'
+HUD_CONTENTS = b'tooie-hud-trace-v1\n'
+HUD_HASH = hashlib.sha256(HUD_CONTENTS).hexdigest()
+RENDER_REQUEST = 'files/data/render-trace-v1'
+RENDER_CONTENTS = b'tooie-render-trace-v1\n'
+RENDER_HASH = hashlib.sha256(RENDER_CONTENTS).hexdigest()
+CAMERA_REQUEST = 'files/data/camera-trace-v1'
+CAMERA_HEADER = b'tooie-camera-trace-v1\n'
+
+
+def hud_request_script(enable):
+    common = 'set -eu\np=' + shlex.quote(HUD_REQUEST) + '\n'
+    if enable:
+        return common + r'''
+[ -d files/data ] || exit 44
+if [ -e "$p" ] || [ -L "$p" ]; then
+    printf '%s\n' 'HUD trace request already exists; nothing overwritten'
+    exit 45
+fi
+made=0
+trap 'if [ "$made" = 1 ]; then rm -- "$p"; fi' 0
+(umask 077; set -C; printf '%s\n' tooie-hud-trace-v1 > "$p")
+made=1
+set -- $(sha256sum "$p")
+[ "$1" = ''' + shlex.quote(HUD_HASH) + r''' ]
+made=0
+trap - 0
+printf '%s\n' TOOIE_HUD_TRACE_ENABLED
+'''
+    return common + r'''
+[ ! -L "$p" ] || { printf '%s\n' 'HUD request is a link; nothing removed'; exit 46; }
+if [ -e "$p" ]; then
+    [ -f "$p" ] || exit 47
+    set -- $(sha256sum "$p")
+    [ "$1" = ''' + shlex.quote(HUD_HASH) + r''' ] || {
+        printf '%s\n' 'HUD request contents differ; nothing removed'; exit 48;
+    }
+    rm -- "$p"
+fi
+printf '%s\n' TOOIE_HUD_TRACE_REMOVED
+'''
+
+
+def render_request_script(enable):
+    # This is a second closed request, not a general private-file writer.
+    return (hud_request_script(enable).replace(HUD_REQUEST, RENDER_REQUEST)
+            .replace(HUD_HASH, RENDER_HASH).replace('tooie-hud-trace-v1', 'tooie-render-trace-v1')
+            .replace('HUD trace', 'Render trace').replace('HUD request', 'Render request')
+            .replace('TOOIE_HUD_TRACE_', 'TOOIE_RENDER_TRACE_'))
+
+
+def camera_request_script(enable, token):
+    require(re.fullmatch('[0-9a-f]{32}', token), 'Invalid camera request token.')
+    content = CAMERA_HEADER + token.encode('ascii') + b'\n'
+    return (hud_request_script(enable).replace(HUD_REQUEST, CAMERA_REQUEST)
+            .replace(HUD_HASH, digest(content))
+            .replace('tooie-hud-trace-v1 >', 'tooie-camera-trace-v1 ' + token + ' >')
+            .replace('HUD trace', 'Camera trace').replace('HUD request', 'Camera request')
+            .replace('TOOIE_HUD_TRACE_', 'TOOIE_CAMERA_TRACE_'))
+
+
+class HudTraceRequest:
+    label, description, request, request_hash = 'HUD', 'HUD layout', HUD_REQUEST, HUD_HASH
+    script = staticmethod(hud_request_script)
+    def __init__(self):
+        self.enabled = self.was_enabled = self.removed = self.closed = False
+        self.error = None
+
+    def operation(self, c, enable):
+        remote = shlex.join(['run-as', c.PKG, 'sh', '-c', self.script(enable)])
+        return c.adb('shell', '-T', remote, name=self.label + '-Trace-' + ('Enable' if enable else 'Disable'), strict=False)
+
+    def enable(self, c):
+        result = self.operation(c, True)
+        require(result.returncode == 0 and c.text(result) == 'TOOIE_' + self.label.upper() + '_TRACE_ENABLED',
+                self.label + ' trace request was not acknowledged; inspect its retained status.')
+        self.enabled = self.was_enabled = True
+        print('Optional ' + self.description + ' trace enabled for this capture.', flush=True)
+
+    def finish(self, c):
+        if self.closed:
+            return
+        self.closed = True
+        if self.enabled:
+            try:
+                result = self.operation(c, False)
+                require(result.returncode == 0 and c.text(result) == 'TOOIE_' + self.label.upper() + '_TRACE_REMOVED',
+                        self.label + ' trace request removal was not verified; inspect its retained status.')
+                self.enabled = False
+                self.removed = True
+                print('PASS: ' + self.label + ' trace request removed.', flush=True)
+            except (OSError, RuntimeError) as error:
+                self.error = str(error)
+        if c.prefix is not None:
+            c.save(self.label + '-Trace-Request', json.dumps({'requested': True,
+                'path': self.request, 'sha256': self.request_hash,
+                'enable_acknowledged': self.was_enabled,
+                'removal_acknowledged': self.removed, 'error': self.error,
+                'scope': 'Only this diagnostic request; no game settings, saves, installation or input.'}, indent=2) + '\n')
+
+
+class RenderTraceRequest(HudTraceRequest):
+    label, description, request, request_hash = 'Render', 'renderer input', RENDER_REQUEST, RENDER_HASH
+    script = staticmethod(render_request_script)
+
+
+class CameraTraceRequest(HudTraceRequest):
+    label, description, request = 'Camera', '12-second consecutive camera', CAMERA_REQUEST
+    def __init__(self):
+        super().__init__()
+        self.token = uuid.uuid4().hex
+        self.request_hash = digest(CAMERA_HEADER + self.token.encode('ascii') + b'\n')
+
+    def script(self, enable):
+        return camera_request_script(enable, self.token)
+
+
+def finish_before_collection(c, requests):
+    # Final log reads and processing can be large. Remove our temporary
+    # requests as soon as recording ends, while the device is still connected.
+    # Archive/finally remain idempotent fallbacks and retain failed receipts.
+    original_collect = c.collect
+    def collect():
+        for request in requests:
+            request.finish(c)
+        return original_collect()
+    c.collect = collect
+
+
+def guard_observer_command(args, adb, serial, hud_trace=False, render_trace=False, camera=None):
     values = list(map(str, args))
     if not values or values[0] != str(adb):
         return
@@ -58,6 +187,15 @@ def guard_observer_command(args, adb, serial):
     require(len(shell) == 1, 'Unexpected observer shell arguments.')
     words = shlex.split(shell[0])
     require(words, 'Missing observer shell command.')
+    if hud_trace and any(words == ['run-as', 'io.github.banjotooierecompiled', 'sh', '-c', hud_request_script(enable)]
+                         for enable in (False, True)):
+        return
+    if render_trace and any(words == ['run-as', 'io.github.banjotooierecompiled', 'sh', '-c', render_request_script(enable)]
+                            for enable in (False, True)):
+        return
+    if camera is not None and any(words == ['run-as', 'io.github.banjotooierecompiled', 'sh', '-c', camera.script(enable)]
+                                  for enable in (False, True)):
+        return
     simple = {'date', 'pidof', 'getprop', 'dumpsys', 'sha256sum'}
     if words[0] in simple:
         return
@@ -106,6 +244,18 @@ def verify_local(c, args):
         native = archive.read('lib/arm64-v8a/libmain.so')
         require(native[:6] == b'\x7fELF\x02\x01' and native[18:20] == b'\xb7\x00', 'Expected ARM64 ELF.')
         require(report['native_version'].encode() in native, 'Native version stamp differs.')
+        if getattr(args, 'hud_trace', False):
+            require(all(value in native for value in (b'hud-trace-v1', b'tooie_hud_component_begin',
+                    b'tooie_hud_component_callback', b'tooie_hud_component_end')),
+                    'This APK does not contain the optional HUD layout observer.')
+        if getattr(args, 'render_trace', False):
+            require(all(value in native for value in (b'render-trace-v1',
+                    b'call_first=%u call_pages=%u', b'z_compare=%u z_write=%u')),
+                    'This APK does not contain the paged renderer input observer.')
+        if getattr(args, 'camera_trace', False):
+            require(all(value in native for value in (b'camera-trace-v1', b'camera-step',
+                    b'camera-matrix', b'cpu-camera-inputs-not-gpu-readback')),
+                    'This APK does not contain the consecutive camera observer.')
     build_id = libraries['libmain.so']['build_id']
     require(re.fullmatch('[0-9a-f]{40}', build_id), 'Invalid CI Build ID.')
     signature = c.text(c.command([args.build_tools / 'apksigner', 'verify', '--verbose',
@@ -172,7 +322,7 @@ def observe_installed(c):
         }, indent=2) + '\n')
 
 
-def installed_main(c, args):
+def installed_main(c, args, hud=None, render=None, camera=None):
     require(sys.stdin.isatty(), 'Run in the interactive Ubuntu terminal.')
     receipt, report, build_id, signature, manifest = verify_local(c, args)
     c.PROCESS_NAME = c.PKG + (':game' if report.get('driver_picker', False) else '')
@@ -193,7 +343,10 @@ def installed_main(c, args):
     c.save('SDK-Manifest', manifest + '\n')
     c.save('Authorization', 'User requested a marker-enabled playtest of the existing verified Debug app. '
            'Only observation, local evidence, foreground screenshot attempts and diagnostic markers. '
-           'No installation, launch, forced stop, data reset, settings change or automated game input.\n')
+           'No installation, launch, forced stop, data reset, settings change or automated game input. '
+           + ('Explicit diagnostic options also permit creating/removing only their temporary private requests: '
+              + ', '.join(request.label for request in (hud, render, camera) if request is not None) + '.\n'
+              if any(request is not None for request in (hud, render, camera)) else '\n'))
     require(c.text(c.adb('get-state')) == 'device', 'Expected Odin is unavailable.')
     require(c.text(c.adb('get-serialno')) == c.SERIAL, 'Device serial differs.')
     installed = c.text(c.adb('shell', '-T', 'pm path ' + c.PKG, name='Installed-APK-Path')).splitlines()
@@ -209,7 +362,13 @@ def installed_main(c, args):
     c.capture_start = c.clock('Capture-Start-Device-Time')
     c.attempted = True  # Reused collector's observation/final-read flag, not an installation attempt.
     c.start_capture(c.capture_start)
+    if hud is not None:
+        hud.enable(c)
+    if render is not None:
+        render.enable(c)
     print('Verified the installed Debug build. Open Debug and load your existing save if needed.', flush=True)
+    if camera is not None:
+        print('Reach the narrow passage before typing playing. A 12-second camera burst starts after gameplay verification.', flush=True)
     while True:
         answer = c.prompt('When Banjo is controllable, type playing (or save to finish): ').casefold()
         if answer in ('save', 'stop'):
@@ -231,6 +390,9 @@ def installed_main(c, args):
     c.save('Attached-Process', 'process_name=' + c.PROCESS_NAME + '\npid=' + str(c.original_pid) + '\n' +
            'Existing unique game-process PID plus package foreground after manual playing confirmation. '
            'No launch command was sent.\n')
+    if camera is not None:
+        camera.enable(c)
+        print('Camera burst armed. Walk through the narrow passage now; logging stops automatically after 12 seconds or 1440 steps.', flush=True)
     print('Recording until save. Use 1–30, optionally followed by a short description.', flush=True)
     print('Reuse numbers freely. Use note 30 DETAILS to annotate the latest marker 30. '
           'The first 30 fresh events attempt screenshots; every note is retained.', flush=True)
@@ -246,6 +408,9 @@ def parser():
         result.add_argument('--' + name, required=True)
     result.add_argument('--state', type=Path, default=Path.home() / 'projects/tooie-tools/workflow')
     result.add_argument('--tool-revision', default='working-copy')
+    result.add_argument('--hud-trace', action='store_true', help='Record HUD layout using a temporary private request, removed before archiving.')
+    result.add_argument('--render-trace', action='store_true', help='Record paged renderer draw inputs using a temporary private request, removed before archiving.')
+    result.add_argument('--camera-trace', action='store_true', help='Arm a bounded consecutive camera burst after verified playing confirmation.')
     return result
 
 
@@ -255,6 +420,10 @@ def main(argv=None):
     workflow = load_module('installed_debug_packager', HERE / 'tooie.py')
     c.ADB, c.SERIAL = args.adb, args.serial
     c.GAMEPLAY_ONLY = True
+    hud = HudTraceRequest() if args.hud_trace else None
+    render = RenderTraceRequest() if args.render_trace else None
+    camera = CameraTraceRequest() if args.camera_trace else None
+    requests = [request for request in (hud, render, camera) if request is not None]
     c.CAPTURE_SCOPE_OVERRIDE = (
         'ATTACH TO INSTALLED DEBUG: exact local APK hash, expected certificate and CI native-library '
         'hashes checked, then installed base.apk hash matched. User manually opens the app and declares '
@@ -265,29 +434,52 @@ def main(argv=None):
         'events attempt foreground screenshots. Native runtime records are included only when emitted '
         'by this build; historical timing-trace claims are not inherited. Host logging/ADB overhead is '
         'included. Screenshots and elapsed time alone do not establish correct speed or sound.\n')
+    if hud is not None:
+        c.CAPTURE_SCOPE_OVERRIDE += ('Explicit HUD trace: a temporary hud-trace-v1 request enables bounded read-only '
+            'HUD component/command records. Its creation/removal receipts are retained; it changes no game settings.\n')
+    if render is not None:
+        c.CAPTURE_SCOPE_OVERRIDE += ('Explicit renderer trace: a temporary render-trace-v1 request enables bounded '
+            'read-only draw/depth/texture/vertex records with rotating call pages. Creation/removal receipts are retained; '
+            'it changes no game settings. Diagnostic logging cost is included in timings.\n')
+    if camera is not None:
+        c.CAPTURE_SCOPE_OVERRIDE += ('Explicit camera trace: after exact installed identity, game PID and foreground checks, '
+            'a unique temporary camera-trace-v1 request arms at most 12 seconds/1440 consecutive processed gameplay-camera '
+            'steps. Records copy CPU camera inputs and selected outputs, not GPU readback. Logging overhead is included; '
+            'no camera, input, rendering, game setting or save policy changes. The owned request is removed before collection.\n')
     c.TIMING_SCOPE_OVERRIDE = ('Use exact appended records from the attached PID and their stated units. '
         'This capture does not enable or infer compile-time timing/geometry/correction observers. '
         'Absent records are not a pass. Marker times are host receipt times, not exact visual onset.\n')
     original_command = c.command
     def command(args, *positional, **keywords):
-        guard_observer_command(args, c.ADB, c.SERIAL)
+        guard_observer_command(args, c.ADB, c.SERIAL, hud is not None, render is not None, camera)
         return original_command(args, *positional, **keywords)
     c.command = command
-    c.main = lambda: installed_main(c, args)
+    c.main = lambda: installed_main(c, args, hud, render, camera)
+    finish_before_collection(c, requests)
     original_archive = c.archive_evidence
     def archive():
         c.save('User-Follow-Up', json.dumps(follow_up_records(c.live_events), indent=2, ensure_ascii=False) + '\n')
+        for request in requests:
+            request.finish(c)
         return original_archive()
     c.archive_evidence = archive
     with workflow.exclusive_lock(args.state, 'device'):
-        code = c.run()
-        if c.prefix is not None:
-            evidence = Path(str(c.prefix) + '-Evidence.zip')
-            if evidence.is_file():
-                workflow.package_evidence(evidence, {'name': 'installed-debug', 'identity': {'commit': c.SHA},
-                    'capture_mode': 'attach-only', 'apk_sha256': c.HASH, 'marker_range': [1, 30],
-                    'marker_screenshot_limit': 30, 'time_limit_seconds': None})
-        return code
+        try:
+            code = c.run()
+            if c.prefix is not None:
+                evidence = Path(str(c.prefix) + '-Evidence.zip')
+                if evidence.is_file():
+                    workflow.package_evidence(evidence, {'name': 'installed-debug', 'identity': {'commit': c.SHA},
+                        'capture_mode': 'attach-only', 'apk_sha256': c.HASH, 'marker_range': [1, 30],
+                        'marker_screenshot_limit': 30, 'time_limit_seconds': None})
+            errors = [request.error for request in requests if request.error]
+            if errors:
+                print('STOP: ' + '; '.join(errors), file=sys.stderr, flush=True)
+                return 1
+            return code
+        finally:
+            for request in requests:
+                request.finish(c)
 
 
 if __name__ == '__main__':

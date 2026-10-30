@@ -1,5 +1,5 @@
-// Reuse the retained-input parser and independently derived joint constraint.
-// Its offline main stays uncalled; this test executes the live consumer.
+// Reuse the retained-input parser and older pivot proposal as an opposing
+// control. Its offline main stays uncalled; this test executes the live consumer.
 #define TOOIE_HIERARCHY_HELPERS_ONLY
 #include "correction_hierarchy.cpp"
 #include "skeletal_pose_guest.h"
@@ -90,6 +90,14 @@ static void matchAll(WorkloadQueue &queue,GameFrame &current,GameFrameMap::Workl
     for(unsigned i=0;i<count;++i)current.matchTransform(queue.workloads[1],queue.workloads[0],map,history,i,i,modified);
     CHECK(!modified.positionVelocity);
 }
+static float meshTrajectory(const Pair &p,const std::vector<M> &world,float weight,bool warm) {
+    const auto root=blend(p.roots[0],p.roots[1],weight,warm);float error=0;
+    for(unsigned i=0;i<world.size();++i)for(V v:{V(0),V(1,0,0),V(0,1,0),V(0,0,1)}) {
+        const auto source=point(v,p.previous[i])*(1-weight)+point(v,p.current[i])*weight;
+        error=std::max(error,separation(point(v,world[i]),point(source,root)));
+    }
+    return error;
+}
 static void checkPose(const Pair &p,WorkloadQueue &queue,GameFrame &current,GameFrame &previous,float weight,bool frozen=false) {
     TransformProcessor processor;TransformProcessor::ProcessParams params;
     params.workloadQueue=&queue;params.curFrame=&current;params.prevFrame=&previous;params.curFrameWeight=weight;params.prevFrameWeight=.125f;
@@ -101,13 +109,11 @@ static void checkPose(const Pair &p,WorkloadQueue &queue,GameFrame &current,Game
         CHECK(difference(d.invTWorldTransforms[i],hlslpp::transpose(hlslpp::inverse(value)))<.001f);
     }
     if(!frozen && weight>0 && weight<1) {
-        const float error=constraint(p,output,weight,false);
-        if(error>=.006f)std::fprintf(stderr,"joint error=%g weight=%g pair=%p attempts=%zu\n",double(error),double(weight),current.frameMap.workloads[1].transforms[0].skeletalPair.get(),current.frameMap.workloads[1].skeletalPairs.size());
-        CHECK(constraint(p,output,weight,false)<.006f);
-        const auto expected=proposal(p,weight,false);
-        for(unsigned i=0;i<output.size();++i)CHECK(difference(output[i],expected[i])<.003f);
+        const float error=meshTrajectory(p,output,weight,false);
+        if(error>=.006f)std::fprintf(stderr,"mesh trajectory error=%g weight=%g pair=%p attempts=%zu\n",double(error),double(weight),current.frameMap.workloads[1].transforms[0].skeletalPair.get(),current.frameMap.workloads[1].skeletalPairs.size());
+        CHECK(meshTrajectory(p,output,weight,false)<.006f);
         std::vector<M> old;for(unsigned i=1;i<d.prevWorldTransforms.size();++i)old.push_back(d.prevWorldTransforms[i]);
-        CHECK(constraint(p,old,.125f,false)<.006f);
+        CHECK(meshTrajectory(p,old,.125f,false)<.006f);
     }
 }
 static void transportControls(std::shared_ptr<const tooie::skeletal::Pose> pose) {
@@ -234,5 +240,5 @@ int main(int argc,char **argv) {
         ++cases;
     }
     actorOwnershipControls();rigidActorControls();
-    CHECK(cases);std::printf("PASS: %u player/constructed-actor triangle cases through continuous producer/task/RSP/vertex/matcher/live consumer; authored joints, exact fixed endpoints, previous-frame weights, inverse normals, cold/warm/missing history and unsafe-input controls\n",cases);
+    CHECK(cases);std::printf("PASS: %u player/constructed-actor triangle cases through continuous producer/task/RSP/vertex/matcher/live consumer; model-space vertex trajectories, exact fixed endpoints, previous-frame weights, inverse normals, cold/warm/missing history and unsafe-input controls\n",cases);
 }

@@ -1,6 +1,6 @@
 # Tooie Recompiled completion checklist
 
-Updated: 26 October 2026.
+Updated: 28 October 2026.
 
 The goal is a reliable native Android ARM64 release,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
@@ -146,6 +146,13 @@ acceptance passed; broader background/sleep and full-game coverage remain open.
 
 ## Still required for full completion
 
+**30 October update:** Frostie plans the next release after the Redmi results
+return. The [draft release notes](development/release-notes-next.md) and
+[handoff](development/handoff.md) distinguish accepted focused fixes from the
+remaining camera/long-play/performance work. This full-project list is broader
+than the focused acceptance of an individual update. Public version/feed remain
+v1.1.0/code 5; the next release identity is not selected.
+
 **Next update priorities:** the Poco/Turnip working run is now accepted within
 its manual scope. Share startup log (MD-010) is now resolved on Odin in the signed
 277c candidate: share menu, readable attachment and cancel/return passed. The
@@ -203,10 +210,11 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
   signer. The source-6f3e CI artifact and local SDK/payload checks passed; ADB
   replacement returned Success and Frostie confirmed save/settings intact.
   See the [Debug update record](development/android-debug-refresh-odin-20261026.md).
-- [ ] Obtain a fresh retained Debug capture from the new pinned recorder,
-  including installed-APK readback and actual `:game` PID attachment. Host/CI
-  checks passed, but no new marker recording was supplied. The focused
-  save-backup test below used a separate app; the old 1bc recorder is historical.
+- [x] Obtain a fresh retained Debug capture with installed-APK readback and
+  actual game-process attachment. Multiple subsequent sessions are reviewed;
+  the [build-129 check](development/menu-check-odin-build129-20261030.md) retains
+  the actual original PID, marker/image, configuration changes and requested
+  `save`. This does not complete broader gameplay or performance coverage.
 - [x] Test save-backup restoration using disposable data in the separate Odin
   test app from `410532de5c42`. Importing A restored only the first save and it
   loaded into gameplay; exporting and importing the earlier recovery copy
@@ -260,17 +268,72 @@ The Retroid Pocket 5 investigation remains parked pending more data. See the
 The mod interface supports import, enable/disable and supplied configuration. 
 Broad mod compatibility remains a coverage item.
 
-## Minor issues deferred beyond the first release
+## Focused graphics/control work for the next update
 
-The Jiggy-challenge screen lines (marker 1) and the brief shunt
-when dialogue animation starts (marker 2) remain follow-up work after the first
-release. The [26 October dialogue investigation](development/dialogue-screen-shift-investigation-20261026.md)
-reviews existing evidence and two synthetic renderer mechanisms; the cause and
-gameplay fix remain unconfirmed. The [Jiggy-challenge investigation](development/jiggy-challenge-lines-investigation-20261026.md)
-records the static-like straight-line description and captured-image sampling
-path; MD-001 also remains unresolved. Keep both in known issues. Focused Save
-Management/settings testing has resumed and passed; no new graphics-defect
-capture is recorded.
+The current installed Odin build is **129**. Its full CI and independently
+verified paired native payloads pass; source/tree identities are recorded in
+[the handoff](development/handoff.md). The following checkmarks reflect focused
+manual acceptance, not full-game/device coverage or publication.
+
+- [x] Correct the reported Jiggy static lines (MD-001) and dialogue-entry shunt
+  (MD-002). Build 107 has the corresponding manual reports and markers in the
+  [complete review](development/graphics-check-odin-20261027.md). Broader
+  Original/Expand, transition and device coverage remains separate.
+- [x] Correct the specific animated limb-gap report at Display framerate
+  (MD-005), with the [build-111 result](development/character-limb-flight-check-odin-20261028.md).
+  Preserve the earlier unsuccessful build-108/109 candidates and all markers.
+- [ ] Resolve broader intermittent character deformation after longer play.
+  The [28 October evidence](development/late-play-and-lagoon-check-odin-20261028.md)
+  and later reports remain open. Short intact-looking captures do not close it.
+- [x] Keep the opening logos steady at Display (MD-011), accepted in the
+  [build-125 check](development/graphics-batch-check-odin-20261029.md).
+- [x] Separate stationary aim inversion from coherent flight steering/aim
+  inversion, and restore stick roles after stationary aiming (MD-014). The
+  [build-121 review](development/scoped-controls-check-odin-20261028.md) retains
+  all nine checks and Frostie's later manual Breegull Blaster confirmation.
+- [x] Correct wide HUD value visibility and countdown placement (MD-012).
+  The [build-127 review](development/hud-water-check-odin-build127-20261029.md)
+  verifies all 27 native images and recovered native option changes. Frostie
+  accepts Original/Expand/16:9 counter and timer placement, available egg types,
+  gold feathers and flight red feathers. This completes the requested focused
+  HUD test; do not repeat it merely because older records say pending.
+- [x] Keep Jiggy Challenge controls unchanged with stationary stick swapping
+  Off and On (MD-015), accepted in the build-125 review above.
+- [x] Correct the reported Lagoon missing-water/stray-polygons/lines failure
+  (MD-016), with [focused build-128 acceptance](development/water-check-odin-build128-20261030.md)
+  at Expand/Display and MSAA 2× and None. No separate 4× visual acceptance is claimed.
+- [x] Correct the reproduced Graphics controller-navigation exception
+  (MD-017), with [focused build-129 acceptance](development/menu-check-odin-build129-20261030.md)
+  for MSAA 2× → 4× → 2×, normal navigation and leaving/reopening Graphics.
+- [x] Record a current narrow-space camera comparison on build 129 (MD-004).
+  The [complete review](development/camera-check-odin-build129-20261030.md)
+  verifies all seven events/native images, the native mode changes and the
+  independently supplied Display video. Frostie reports improvement with
+  residual stutter at Original, with near-target Manual 60 closer to Display.
+- [ ] Resolve/retest MD-004 or record Frostie's explicit known-issue deferral.
+  The [second build-131 trace and candidate](development/camera-primary-scene-fix-20261031.md)
+  now reproduce wrong primary/auxiliary scene association in the actual CPU
+  matcher/consumer. Reserving primary history passes ten captured pairs, 25
+  viewport cases and 12 scope controls; old source reproduces logged outputs
+  and fails continuity. Full Android CI/artifact verification and Odin narrow
+  walking/turning, dialogue and open-area checks remain required. Uneven pacing
+  and guest adjustment remain separate possibilities if shaking persists.
+  Older MD-003 unusual frames and long-play deformation remain separate.
+- [ ] Obtain the new Redmi Original/Expand performance and close/reopen results.
+  Prior startup/gameplay/sound success remains accepted within its reported
+  scope; quarter-step resolution controls and native/packaging CI do not prove
+  an FPS improvement. See [the test instructions](development/redmi-combined-test-20261029.md).
+- [ ] Investigate the earlier Split Up-pad freeze (MD-013) if it recurs.
+  [Build-109 E09/E10](development/graphics-check-odin-20261027-222732.md) record a
+  successful later attempt, not a reproduced cause or a confirmed freeze fix.
+- [ ] Extend Display/framerate acceptance to broader joint/camera continuity,
+  game speed/audio and measured pacing. Existing extended runs and focused
+  passes do not establish sustained display-rate delivery or full-game correctness.
+
+After selecting the release source/version and receiving the relevant results,
+verify the protected-key-signed release update and retained saves/settings on
+Odin. Keep public release state unchanged until Frostie publishes. Full-adventure,
+phone/touch/driver/lifecycle and distribution milestones above retain their scope.
 
 ## First Android release milestone
 

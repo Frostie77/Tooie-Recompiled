@@ -29,6 +29,7 @@
 #include "rt64_present_queue.h"
 #include "rt64_rdp.h"
 #include "rt64_rsp.h"
+#include "rt64_hud_scope.h"
 #include "rt64_rdp_tmem.h"
 #include "rt64_workload_queue.h"
 
@@ -123,6 +124,9 @@ namespace RT64 {
         External ext;
 
         struct Extended {
+#if defined(__ANDROID__)
+            TooieHudScope hud;
+#endif
             hlslpp::float2 texcoordWrapPoint = { 8092.0f, 8092.0f };
             uint16_t refreshRate = UINT16_MAX;
             uint8_t renderToRAM = UINT8_MAX;

@@ -3679,7 +3679,16 @@ namespace plume {
             VkAttachmentDescription attachment = {};
             attachment.format = toVk(depthAttachmentViewDesc.format);
             attachment.samples = VkSampleCountFlagBits(depthAttachment->desc.multisampling.sampleCount);
+#if defined(__ANDROID__)
+            // Read-only does not mean unused. After a decal, depth-tested
+            // transparent draws can remain in this same pass without writing
+            // depth. LOAD_OP_NONE leaves their attachment values undefined on
+            // tile renderers. Load the prior depth; STORE_OP_NONE below still
+            // avoids a write while the image is also sampled by decals.
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+#else
             attachment.loadOp = preferNoneForReadOnly ? VK_ATTACHMENT_LOAD_OP_NONE_EXT : VK_ATTACHMENT_LOAD_OP_LOAD;
+#endif
             attachment.storeOp = preferNoneForReadOnly ? VK_ATTACHMENT_STORE_OP_NONE_EXT : VK_ATTACHMENT_STORE_OP_STORE;
             attachment.stencilLoadOp = attachment.loadOp;
             attachment.stencilStoreOp = attachment.storeOp;
@@ -4237,11 +4246,23 @@ namespace plume {
 
     void VulkanCommandList::setScissors(const RenderRect *scissorRects, uint32_t count) {
 #if defined(__ANDROID__)
+        // Wide HUD alignment can put a scissor just left of the target (for
+        // example x=-1 after integer-scale alignment). Vulkan requires
+        // nonnegative offsets. Intersect with that legal coordinate domain
+        // while preserving the right/bottom edges and all covered pixels.
         graphicsScissors.clear();
-        for (uint32_t i = 0; i < count; ++i) graphicsScissors.push_back(VkRect2D{
-            { scissorRects[i].left, scissorRects[i].top },
-            { uint32_t(scissorRects[i].right - scissorRects[i].left), uint32_t(scissorRects[i].bottom - scissorRects[i].top) } });
-#endif
+        for (uint32_t i = 0; i < count; ++i) {
+            const int32_t left = std::max(scissorRects[i].left, 0);
+            const int32_t top = std::max(scissorRects[i].top, 0);
+            const int32_t right = std::max(scissorRects[i].right, left);
+            const int32_t bottom = std::max(scissorRects[i].bottom, top);
+            graphicsScissors.push_back(VkRect2D{
+                { left, top }, { uint32_t(right - left), uint32_t(bottom - top) } });
+        }
+        // Cache exactly what was submitted so temporary clear operations
+        // restore the same valid state for single and multiple scissors.
+        vkCmdSetScissor(vk, 0, count, graphicsScissors.data());
+#else
         if (count > 1) {
             thread_local std::vector<VkRect2D> scissorVector;
             scissorVector.clear();
@@ -4259,6 +4280,7 @@ namespace plume {
             VkRect2D scissor = VkRect2D{ VkOffset2D{ scissorRects[0].left, scissorRects[0].top }, VkExtent2D{ uint32_t(scissorRects[0].right - scissorRects[0].left), uint32_t(scissorRects[0].bottom - scissorRects[0].top) } };
             vkCmdSetScissor(vk, 0, 1, &scissor);
         }
+#endif
     }
 
     void VulkanCommandList::setFramebuffer(const RenderFramebuffer *framebuffer) {
@@ -4288,11 +4310,27 @@ namespace plume {
 
         if (clearRectsCount > 0) {
             for (uint32_t i = 0; i < clearRectsCount; i++) {
+                // RDP FillRect retains the original coordinates, while the
+                // framebuffer extent comes from its scissor intersection. A
+                // partial depth clear (e.g. a cursor at the bottom edge) can
+                // therefore extend outside the attachment's actual view.
+                // vkCmdClearAttachments requires every rectangle to fit the
+                // render area; it does not apply the dynamic scissor for us.
+                // Intersect before subtracting/casting, including extreme or
+                // fully outside coordinates. Never turn an empty batch into
+                // the zero-count convention for a whole-attachment clear.
+                const int64_t left = std::max<int64_t>(clearRects[i].left, 0);
+                const int64_t top = std::max<int64_t>(clearRects[i].top, 0);
+                const int64_t right = std::min<int64_t>(clearRects[i].right, width);
+                const int64_t bottom = std::min<int64_t>(clearRects[i].bottom, height);
+                if (right <= left || bottom <= top) {
+                    continue;
+                }
                 VkClearRect clearRect;
-                clearRect.rect.offset.x = clearRects[i].left;
-                clearRect.rect.offset.y = clearRects[i].top;
-                clearRect.rect.extent.width = clearRects[i].right - clearRects[i].left;
-                clearRect.rect.extent.height = clearRects[i].bottom - clearRects[i].top;
+                clearRect.rect.offset.x = int32_t(left);
+                clearRect.rect.offset.y = int32_t(top);
+                clearRect.rect.extent.width = uint32_t(right - left);
+                clearRect.rect.extent.height = uint32_t(bottom - top);
                 clearRect.baseArrayLayer = 0;
                 clearRect.layerCount = 1;
                 rectVector.emplace_back(clearRect);
@@ -4779,10 +4817,12 @@ namespace plume {
         rejectTransferClear(targetFramebuffer, attachmentIndex, "partial-rectangles", vk);
 #endif
 #endif
-        checkActiveRenderPass();
-
         thread_local std::vector<VkClearRect> rectVector;
         clearCommonRectVector(targetFramebuffer->getWidth(), targetFramebuffer->getHeight(), clearRects, clearRectsCount, rectVector);
+        if (rectVector.empty()) {
+            return;
+        }
+        checkActiveRenderPass();
 
         VkClearAttachment attachment = {};
         auto &rgba = attachment.clearValue.color.float32;
@@ -4805,10 +4845,12 @@ namespace plume {
         assert(targetFramebuffer != nullptr);
         assert((clearRectsCount == 0) || (clearRects != nullptr));
 
-        checkActiveRenderPass();
-
         thread_local std::vector<VkClearRect> rectVector;
         clearCommonRectVector(targetFramebuffer->getWidth(), targetFramebuffer->getHeight(), clearRects, clearRectsCount, rectVector);
+        if (rectVector.empty()) {
+            return;
+        }
+        checkActiveRenderPass();
 
         VkClearAttachment attachment = {};
         attachment.clearValue.depthStencil.depth = depthValue;

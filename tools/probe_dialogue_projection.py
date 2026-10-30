@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Probe synthetic camera/aspect transitions through production RT64 CPU code.
+"""Check captured camera scene identity and synthetic viewport transitions.
 
-This is not a replay of MD-002 and cannot identify its cause. No ROM, GPU,
-Android SDK, installation or device access is used.
+The default replays captured CPU projection inputs, not draw calls or GPU work.
+No ROM, Android SDK, installation or device access is used.
 """
 import argparse
 import os
@@ -16,6 +16,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--opaque-window-types', action='store_true',
                         help='Supply unused opaque X11 handles on minimal host machines')
+    cases = parser.add_mutually_exclusive_group()
+    cases.add_argument('--camera-turns', action='store_true',
+                        help='Measure synthetic camera turns; this does not replay a captured collision')
+    cases.add_argument('--camera-trace', action='store_true',
+                       help='Test the bounded observer through the actual camera consumer and failing controls')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     rt = root / 'lib/rt64/src'
@@ -71,13 +76,58 @@ def main():
                    'preset/rt64_preset_scene.cpp', 'preset/rt64_preset.cpp']
         exe = build / 'probe'
         print('Compiling production matcher and projection processor with ASan/UBSan.', flush=True)
-        subprocess.run([compiler, *flags, str(root / 'tests/dialogue_projection_probe.cpp'),
-                        *map(str, sources), *(str(rt / s) for s in support),
-                        '-Wl,--gc-sections', '-o', str(exe)], check=True)
         env = {**os.environ, 'ASAN_OPTIONS': 'detect_leaks=0'}
         for name in ['TOOIE_TRACE_PROJ', 'BT_RT64_SKY_INFINITE']:
             env.pop(name, None)
-        subprocess.run([str(exe)], check=True, env=env)
+        fixture = 'camera_trace_probe.cpp' if args.camera_trace else ('camera_turn_probe.cpp' if args.camera_turns else 'dialogue_projection_probe.cpp')
+        original_processor = sources[1].read_text()
+        original_matcher = sources[0].read_text()
+        header_path = rt / 'render/rt64_camera_diagnostics.h'
+        profiles = (['current', 'missing-observer', 'raw-consumed', 'non-android'] if args.camera_trace
+                    else ['default'] if args.camera_turns else ['current', 'nearest-scene-control'])
+        for profile in profiles:
+            processor = original_processor
+            matcher = original_matcher
+            if profile == 'nearest-scene-control':
+                matcher, count = re.subn(r'^            // TOOIE_PRIMARY_GAMEPLAY_CAMERA_BEGIN\n[\s\S]*?^            // TOOIE_PRIMARY_GAMEPLAY_CAMERA_END\n', '', matcher, flags=re.M)
+                assert count == 1
+            sources[0].write_text(matcher)
+            shadow = build / 'rt64_camera_diagnostics.h'
+            if shadow.exists(): shadow.unlink()
+            if profile == 'missing-observer':
+                processor, count = re.subn(r'^            cameraDiagnostics::observe\([\s\S]*?drawData, tracePreviousData, proj, fbPair\);\n', '', processor, flags=re.M)
+                assert count == 1
+            if profile == 'raw-consumed':
+                header = header_path.read_text()
+                old = 'matrix("consumed-view",s,d.modViewTransforms[s.transform]);'
+                assert header.count(old) == 1
+                header = header.replace(old, 'matrix("consumed-view",s,d.viewTransforms[s.transform]);')
+                header = header.replace('#include "../../../../src/runtime_diagnostics.h"', '#include "' + str(root / 'src/runtime_diagnostics.h') + '"')
+                shadow.write_text(header)
+            sources[1].write_text(processor)
+            trace_flags = ['-DTOOIE_CAMERA_TRACE_TEST'] if args.camera_trace and profile != 'non-android' else []
+            subprocess.run([compiler, *flags, *trace_flags, str(root / 'tests' / fixture),
+                            *map(str, sources), *(str(rt / s) for s in support),
+                            '-Wl,--gc-sections', '-o', str(exe)], check=True)
+            argv = [str(exe), str(build / (profile+'-data'))] if args.camera_trace else [str(exe)]
+            if profile == 'nearest-scene-control':
+                baseline = subprocess.run([str(exe), '--recorded-camera-scenes'], env=env,
+                                          capture_output=True, text=True)
+                output = baseline.stdout + baseline.stderr
+                if baseline.returncode or 'runtime error:' in output or 'ERROR: AddressSanitizer' in output:
+                    raise RuntimeError('Recorded nearest-scene baseline: '+output)
+                print(output.strip(), flush=True)
+            result = subprocess.run(argv, env=env, capture_output=True, text=True)
+            expected = (87 if profile in ('missing-observer', 'raw-consumed')
+                        else 88 if profile == 'nearest-scene-control' else 0)
+            output = result.stdout + result.stderr
+            if result.returncode != expected or 'runtime error:' in output or 'ERROR: AddressSanitizer' in output:
+                raise RuntimeError(profile+': '+output)
+            if expected:
+                assert ('camera scene continuity failure' if expected == 88 else 'camera trace failure') in output
+                print('PASS: '+profile+' fails its actual camera-consumer assertion.', flush=True)
+            else:
+                print(output.strip(), flush=True)
 
 
 if __name__ == '__main__':

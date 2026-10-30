@@ -3,12 +3,13 @@
 #include <limits>
 #include <thread>
 static bool started=true, disabled=false, binding=false;
+namespace tooie::input { bool swap_aiming_sticks(int) { return false; } }
 namespace ultramodern { bool is_game_started() { return started; } }
 namespace recompinput {
 bool game_input_disabled() { return disabled; }
 bool all_input_disabled() { return binding; }
 namespace profiles {
-bool get_n64_input(int player, uint16_t* buttons, float* x, float* y) {
+bool get_n64_input(int player, uint16_t* buttons, float* x, float* y, bool swap) {
     *buttons=disabled?0:0x20; *x=disabled?0:.25f; *y=disabled?0:-.4f; return player==0;
 }
 }
