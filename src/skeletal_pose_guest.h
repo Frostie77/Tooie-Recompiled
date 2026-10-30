@@ -21,9 +21,17 @@ struct Source {
     uint64_t frame = 0;
     uint64_t nextReport = 0, buildersSeen = 0, published = 0;
     std::array<uint64_t, 5> rejected{};
+    // Context for the existing bounded actor-draw record, never a pose policy.
+    const char *lastRejection = "none";
+    uint32_t lastBuilderSkeleton = 0, lastBuilderBones = 0;
 };
 inline Source &source() { static thread_local Source value; return value; }
-inline std::shared_ptr<const Pose> reject(unsigned reason) { ++source().rejected[reason]; return {}; }
+inline std::shared_ptr<const Pose> reject(unsigned reason, const char *detail = nullptr) {
+    auto &s = source(); ++s.rejected[reason];
+    static constexpr const char *names[] = {"owner", "missing-builder", "schema", "builder-output", "invalid-copy"};
+    s.lastRejection = detail ? detail : names[reason];
+    return {};
+}
 inline void frameBegin() {
     auto &s = source(); ++s.frame;
     const uint64_t now = diagnostics::monotonicUs();
@@ -64,7 +72,9 @@ inline void end(const uint8_t *ram) {
 }
 inline std::shared_ptr<const Pose> pose(const uint8_t *ram, uint32_t list, uint32_t player, uint32_t model,
                                       std::shared_ptr<const Pose> cached = {}, uint32_t actor = 0, uint64_t actorGeneration = 0) {
-    if (!valid(model, 64) || !valid(list, 0x50)) return reject(0);
+    auto &s = source(); s.lastRejection = "none";
+    s.lastBuilderSkeleton = s.lastBuilderBones = 0;
+    if (!valid(model, 64) || !valid(list, 0x50)) return reject(0, "invalid-input");
     if (actorGeneration) {
         // The actor bridge has already checked the constructor generation,
         // active draw scope and exact marker -> movable-array relationship.
@@ -76,16 +86,18 @@ inline std::shared_ptr<const Pose> pose(const uint8_t *ram, uint32_t list, uint3
         if (!valid(occupant, 4) || (actor && actor != occupant)) return reject(0);
         actor = occupant;
     }
-    auto &s = source(); auto it = s.builders.find(list + 0x50); if (it == s.builders.end()) return reject(1);
+    auto it = s.builders.find(list + 0x50); if (it == s.builders.end()) return reject(1);
     const auto &b = *it->second; const unsigned count = unsigned(b.bones.size());
+    s.lastBuilderSkeleton = b.skeleton; s.lastBuilderBones = count;
     // B27E0 supplies model + model[0x18] as AE820's skeleton. Require the
     // actual latest builder and unchanged authored bytes, not a guessed model.
     const uint32_t offset = word(ram, model + 0x18);
-    if (!offset || uint64_t(model) + offset != b.skeleton || word(ram, list) != count) return reject(2);
+    if (!offset || uint64_t(model) + offset != b.skeleton) return reject(2, "model-skeleton");
+    if (word(ram, list) != count) return reject(2, "bone-count");
     for (unsigned i = 0; i < count; ++i) {
         std::array<uint32_t, 4> bind;
         Words result;
-        if (!copy(ram, b.skeleton + 8 + i * 16, bind) || bind != b.bones[i].bind) return reject(2);
+        if (!copy(ram, b.skeleton + 8 + i * 16, bind) || bind != b.bones[i].bind) return reject(2, "authored-bind");
         if (!copy(ram, b.output + i * 64, result) || result != b.bones[i].matrix) return reject(3);
     }
     Words header, root;

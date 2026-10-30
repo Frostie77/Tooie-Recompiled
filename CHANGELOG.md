@@ -13,6 +13,15 @@
   [guide](docs/development/android-save-backups.md) for instructions and tested
   scope; transfers between devices or app channels remain untested.
 
+- **Invert Flight y-axis** and **Swap Joystick Aiming Controls** below aiming
+  inversion. Flight steering/airborne aim share the flight preference;
+  swapping applies to stationary aiming and restores normal controls on exit.
+  The nine scoped controls checks and manual Breegull Blaster comparison pass
+  on Odin; Jiggy Challenge controls retain their normal behavior with swap on.
+- Manual graphics resolution scale with quarter-step choices. The combined
+  Redmi test retains the supported Mali startup correction; updated Redmi FPS
+  measurements are pending. No performance gain is claimed yet.
+
 ### Changed
 
 - Move the **Touch** settings tab between **Controls** and **Sound**.
@@ -21,6 +30,47 @@
 - Clarify Save Management with a parenthesised note that app settings, ROMs and
   mods are separate, plus instructions to use it at the launcher after saving
   and exiting any running game and reopening the app.
+
+### Fixed in focused Odin checks
+
+- Clip partial attachment-clear rectangles to their actual framebuffer/view.
+  Frostie reports the Jiggy-challenge static lines gone in the 27 October Debug
+  check; the marker screenshot shows the low paw without the previous streaks.
+- Keep the submitted gameplay camera and projection together when its viewport
+  changes, retaining normal blending with a stable viewport. Frostie reports
+  the dialogue shunt appears gone and recorded `no dialogue shunt`.
+
+- Correct the tested animated limb gaps at Display framerate (build 111),
+  and keep the opening logos steady in the focused Display check (build 125).
+  Broader intermittent long-play character rendering remains open.
+- Correct HUD count visibility and countdown placement in Original, Expand and
+  16:9 (build 127). Tested egg ammunition and feather icons/counts remain aligned.
+- Keep Jiggy Challenge input unchanged by stationary aiming stick swapping
+  (build 125).
+- Preserve loaded depth in Android read-only depth passes used by Lagoon water.
+  The focused Odin Expand/Display water checks pass with MSAA 2× and None
+  (build 128).
+- Recover controller focus through the active menu navigation tree instead of
+  throwing when an old focused branch is excluded. The MSAA 2× → 4× → 2×,
+  navigation and leave/reopen check passes on Odin (build 129).
+
+These corrections are intended for the next update. The
+[handoff](docs/development/handoff.md) links the exact host/CI/device evidence and
+focused scope; other modes/devices and complete gameplay remain separate.
+
+### Under investigation
+
+- Intermittent character deformation after longer play still needs a current
+  failing capture or explicit disposition; the specific limb-gap pass is retained.
+- Historical unusual frames and shaking now have a recovered-evidence
+  [narrow-space camera investigation](docs/development/camera-shaking-investigation-20261030.md).
+  The [current build-129 comparison](docs/development/camera-check-odin-build129-20261030.md)
+  reproduces the camera report: Original improves it with residual stutter,
+  while near-target Manual 60 feels closer to Display. The cause remains open;
+  no camera correction is advertised.
+- Updated Redmi Original/Expand FPS and reopen results remain pending. The
+  [next-release draft](docs/development/release-notes-next.md) keeps those results
+  separate from accepted Odin fixes.
 
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
 

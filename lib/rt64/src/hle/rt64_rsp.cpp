@@ -506,7 +506,11 @@ namespace RT64 {
             drawData.viewProjTransforms.emplace_back(hlslpp::mul(extended.invViewProjMatrix, viewProjMatrixStack[projectionMatrixStackSize - 1]));
             drawData.viewProjTransformGroups.emplace_back(extended.curViewProjMatrixIdGroupIndex);
             drawData.rspViewports.emplace_back(viewportStack[viewportStackSize - 1]);
+#if defined(__ANDROID__)
+            drawData.viewportOrigins.emplace_back(state->extended.hud.origin(extended.viewportOriginStack[viewportStackSize - 1]));
+#else
             drawData.viewportOrigins.emplace_back(extended.viewportOriginStack[viewportStackSize - 1]);
+#endif
 
             for (uint32_t j = 0; j < 4; j++) {
                 drawData.viewportClipRatios.emplace_back(clipRatios[j]);
@@ -522,11 +526,21 @@ namespace RT64 {
 #if TOOIE_SKELETAL_POSE_ENABLED
     tooie::skeletal::BindingPtr RSP::skeletalBinding() const {
         const auto &g = extended.modelMatrixIdStack[extended.modelMatrixIdStackSize - 1];
-        const auto &b = g.skeletal;
+        auto b = g.skeletal;
         alignas(16) const hlslpp::float4x4 viewProjection = extended.viewProjMatrix;
         if (!b || !b->pose || b->bone >= b->pose->bones.size() || modelViewProjInserted ||
-            modelMatrixPhysicalAddressStack[modelMatrixStackSize - 1] != b->address ||
             !isMatrixIdentity(viewProjection)) return {};
+        const uint32_t address = modelMatrixPhysicalAddressStack[modelMatrixStackSize - 1];
+        if (address != b->address) {
+            // Tooie reloads parent/copy matrices inside a bone group. Preserve
+            // ownership only when this task's same owned pose proves the exact
+            // fixed payload and an unambiguous bone. Never search other models.
+            if (address > 0x800000U - sizeof(FixedMatrix)) return {};
+            tooie::skeletal::Words loaded;
+            std::memcpy(loaded.data(), state->fromRDRAM(address), sizeof(FixedMatrix));
+            b = tooie::skeletal::TaskScope::findFixed(b, address, loaded);
+            if (!b) return {};
+        }
         FixedMatrix fixed; std::memcpy(&fixed, b->fixed.data(), sizeof(fixed));
         alignas(16) const hlslpp::float4x4 expected = fixed.toMatrix4x4();
         alignas(16) const hlslpp::float4x4 actual = modelMatrixStack[modelMatrixStackSize - 1];
@@ -1318,6 +1332,9 @@ namespace RT64 {
             const int stackIndex = stackSize - 1;
             TransformGroup* dstGroup = &stack[stackIndex];
             dstGroup->matrixId = id;
+#if defined(__ANDROID__)
+            dstGroup->cameraRelative = false;
+#endif
 #if TOOIE_SKELETAL_POSE_ENABLED
             dstGroup->skeletal.reset();
 #endif

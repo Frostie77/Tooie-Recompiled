@@ -170,6 +170,12 @@ namespace RT64 {
 
         void matrixGroupV1(State *state, DisplayList **dl) {
             matrixGroupCommand(state, dl, false, false);
+#if defined(__ANDROID__)
+            if (((*dl)->w0 & TOOIE_CAMERA_RELATIVE_GROUP) && !((*dl)->w0 & 2U)) {
+                auto &rsp = *state->rsp;
+                rsp.extended.modelMatrixIdStack[rsp.extended.modelMatrixIdStackSize - 1].cameraRelative = true;
+            }
+#endif
 #if TOOIE_SKELETAL_POSE_ENABLED
             // V1 reserves this word. Only the queued native task can resolve a
             // token; ordinary/mod commands and desktop retain their old policy.
@@ -404,6 +410,18 @@ namespace RT64 {
             }
         }
 
+        void tooieHudScopeV1(State *state, DisplayList **dl) {
+#if defined(__ANDROID__)
+            state->flush();
+            if ((*dl)->w1 & 0x80000000U) state->extended.hud.end();
+            else state->extended.hud.begin(uint16_t((*dl)->w1 & 0xFFFU));
+            state->rsp->viewportChanged = true;
+            state->updateDrawStatusAttribute(DrawAttribute::Scissor);
+#else
+            (void)state; (void)dl;
+#endif
+        }
+
         void extendedOp(State *state, DisplayList **dl) {
             assert(MapInitialized);
 
@@ -425,6 +443,7 @@ namespace RT64 {
             Map[G_EX_SETVIEWPORT_V1] = &setViewportV1;
             Map[G_EX_SETSCISSOR_V1] = &setScissorV1;
             Map[G_EX_SETRECTALIGN_V1] = &setRectAlignV1;
+            Map[G_EX_TOOIEHUDSCOPE_V1] = &tooieHudScopeV1;
             Map[G_EX_SETVIEWPORTALIGN_V1] = &setViewportAlignV1;
             Map[G_EX_SETSCISSORALIGN_V1] = &setScissorAlignV1;
             Map[G_EX_SETREFRESHRATE_V1] = &setRefreshRateV1;

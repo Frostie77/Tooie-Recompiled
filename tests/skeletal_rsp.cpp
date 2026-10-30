@@ -39,9 +39,12 @@ void decodeActorRoots(RT64::WorkloadQueue &queue, unsigned slot, uint8_t *ram, u
     rsp.projectionIndex=0;rsp.viewProjMatrixStack[0]=hlslpp::float4x4::identity();
     for(unsigned i=0;i<count;++i) {
         auto *dl=reinterpret_cast<DisplayList*>(ram+0x500000+i*40);
-        rsp.matrix(dl->w1&0x7FFFFF,3);++dl;GBI_EXTENDED::matrixGroupV1(&state,&dl);
+        rsp.matrix(dl->w1&0x7FFFFF,3);++dl;
+        const bool tagged=dl->w0==0x6400000C;
+        if(tagged)GBI_EXTENDED::matrixGroupV1(&state,&dl);
         rsp.vertices[0]={};rsp.vertices[0].x=1;rsp.setVertexCommon<true,16>(0x600000,0,1);rsp.popMatrix(1);
-        dl=reinterpret_cast<DisplayList*>(ram+0x500000+i*40+32);GBI_EXTENDED::popMatrixGroupV1(&state,&dl);
+        dl=reinterpret_cast<DisplayList*>(ram+0x500000+i*40+32);
+        if(tagged)GBI_EXTENDED::popMatrixGroupV1(&state,&dl);
     }
     REQUIRE(queue.workloads[slot].drawData.worldTransforms.size()==count+1);
     REQUIRE(queue.workloads[slot].drawData.skeletalTransforms.empty());
@@ -80,4 +83,73 @@ void decodeSkeletal(RT64::WorkloadQueue &queue, unsigned slot, uint8_t *ram, uns
     REQUIRE(d.worldTransforms.size()==count+1); // real workload identity sentinel
     REQUIRE(d.skeletalTransforms.size()==(fault ? 0 : count));
     for(auto &entry:d.skeletalTransforms) REQUIRE(entry.second->bone+1==entry.first);
+}
+
+// Decode the actual root/bone packets from deformed_vertices.cpp. Vertex
+// coordinate decoding supplies the actual dbanim-written signed x coordinate;
+// the production setVertexCommon path owns all attribute/matrix associations.
+void decodeDeformed(RT64::WorkloadQueue &queue,unsigned slot,uint8_t *ram,int16_t cpuX) {
+    using namespace RT64;
+    queue.writeCursor=slot;queue.workloads[slot].resetDrawData();
+    GBI gbi{};TestInterpreter interpreter{&gbi};State state{ram,{}, {&queue,&interpreter},nullptr};
+    RSP rsp(&state);state.rsp=&rsp;rsp.projMask=4;rsp.loadMask=2;rsp.pushMask=1;
+    rsp.projectionIndex=0;rsp.viewProjMatrixStack[0]=hlslpp::float4x4::identity();
+    auto *root=reinterpret_cast<DisplayList*>(ram+0x500000);
+    rsp.matrix(root->w1&0x7FFFFF,3);++root;GBI_EXTENDED::matrixGroupV1(&state,&root);
+    rsp.vertices[0]={};rsp.vertices[0].x=cpuX;rsp.setVertexCommon<true,16>(0x6B0018,0,1);
+    auto *bone=reinterpret_cast<DisplayList*>(ram+0x500100);
+    rsp.matrix(bone->w1&0x7FFFFF,3);++bone;GBI_EXTENDED::matrixGroupV1(&state,&bone);
+    rsp.vertices[0]={};rsp.setVertexCommon<true,16>(0x600000,0,1);
+    rsp.popMatrix(1);bone=reinterpret_cast<DisplayList*>(ram+0x500120);GBI_EXTENDED::popMatrixGroupV1(&state,&bone);
+    rsp.popMatrix(1);bone=reinterpret_cast<DisplayList*>(ram+0x500128);GBI_EXTENDED::popMatrixGroupV1(&state,&bone);
+    REQUIRE(queue.workloads[slot].drawData.worldTransforms.size()==3);
+}
+
+void decodeSkeletalSeam(RT64::WorkloadQueue &queue,unsigned slot,uint8_t *ram) {
+    using namespace RT64;
+    queue.writeCursor=slot;queue.workloads[slot].resetDrawData();
+    GBI gbi{};TestInterpreter interpreter{&gbi};State state{ram,{}, {&queue,&interpreter},nullptr};
+    RSP rsp(&state);state.rsp=&rsp;rsp.projMask=4;rsp.loadMask=2;rsp.pushMask=1;
+    rsp.projectionIndex=0;rsp.viewProjMatrixStack[0]=hlslpp::float4x4::identity();
+    rsp.extended.viewProjMatrix=hlslpp::float4x4::identity();
+    for(unsigned bone=0;bone<2;++bone) {
+        auto *dl=reinterpret_cast<DisplayList*>(ram+0x500000+bone*40);
+        rsp.matrix(dl->w1&0x7FFFFF,3);++dl;GBI_EXTENDED::matrixGroupV1(&state,&dl);
+        for(unsigned v=0;v<3;++v) {
+            rsp.vertices[v]={};rsp.vertices[v].x=10;rsp.vertices[v].y=int(v)-1;
+        }
+        rsp.setVertexCommon<true,16>(0x600000+bone*48,0,3);
+        rsp.popMatrix(1);dl=reinterpret_cast<DisplayList*>(ram+0x500000+bone*40+32);
+        GBI_EXTENDED::popMatrixGroupV1(&state,&dl);
+    }
+    REQUIRE(queue.workloads[slot].drawData.worldTransforms.size()==3);
+    REQUIRE(queue.workloads[slot].drawData.skeletalTransforms.size()==2);
+}
+
+// Real fixed reload/copy operations with a still-active child group, as in the
+// Odin input capture. Group packets come from the native publisher above.
+void decodeSkeletalCopies(RT64::WorkloadQueue &queue,unsigned slot,uint8_t *ram,
+                          int16_t x,int16_t y,int16_t z) {
+    using namespace RT64;
+    queue.writeCursor=slot;queue.workloads[slot].resetDrawData();
+    GBI gbi{};TestInterpreter interpreter{&gbi};State state{ram,{}, {&queue,&interpreter},nullptr};
+    RSP rsp(&state);state.rsp=&rsp;rsp.projMask=4;rsp.loadMask=2;rsp.pushMask=1;
+    rsp.projectionIndex=0;rsp.viewProjMatrixStack[0]=hlslpp::float4x4::identity();
+    auto point=[&] {rsp.vertices[0]={};rsp.vertices[0].x=x;rsp.vertices[0].y=y;rsp.vertices[0].z=z;
+                   rsp.setVertexCommon<true,16>(0x600000,0,1);};
+    const uint32_t parentAddress=reinterpret_cast<DisplayList*>(ram+0x500000)->w1&0x7FFFFF;
+    constexpr uint32_t copyAddress=0x490000;
+    std::memcpy(ram+copyAddress,ram+parentAddress,64);
+    for(unsigned bone=0;bone<2;++bone) {
+        auto *dl=reinterpret_cast<DisplayList*>(ram+0x500000+bone*40);
+        rsp.matrix(dl->w1&0x7FFFFF,3);++dl;GBI_EXTENDED::matrixGroupV1(&state,&dl);point();
+        if(bone==0) {rsp.matrix(copyAddress,2);point();}
+        else {
+            rsp.matrix(parentAddress,2);point(); // parent under child group
+            rsp.matrix(copyAddress,2);point();   // copied parent under child group
+        }
+        rsp.popMatrix(1);dl=reinterpret_cast<DisplayList*>(ram+0x500000+bone*40+32);
+        GBI_EXTENDED::popMatrixGroupV1(&state,&dl);
+    }
+    REQUIRE(queue.workloads[slot].drawData.worldTransforms.size()==6);
 }

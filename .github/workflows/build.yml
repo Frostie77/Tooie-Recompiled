@@ -15,6 +15,10 @@ on:
         description: 'Build a separately named Debug playtest candidate (normal Debug also supports local signing)'
         type: boolean
         default: false
+      paired_gpu_test:
+        description: 'Also package a separate GPU test app from the same verified native runtime'
+        type: boolean
+        default: false
       prepare_candidate:
         description: 'Export an UNSIGNED release candidate (no installation or publication)'
         type: boolean
@@ -133,6 +137,23 @@ jobs:
             python3 tools/android-workflow/tests/test_installed_capture.py
             python3 tools/test_transform_upload.py
             python3 tools/test_aiming_controls.py
+            python3 tools/test_optional_raytracing_compose.py
+            python3 tools/test_hud_diagnostics.py
+            python3 tools/test_hud_placement.py
+            python3 tools/test_depth_preservation.py
+            python3 tools/test_widescreen_visibility.py
+            python3 tools/test_manual_resolution.py
+            python3 tools/test_ui_navigation.py
+            python3 tools/test_pose_validation_diagnostics.py
+            python3 tools/probe_dialogue_camera.py
+            python3 tools/probe_dialogue_projection.py --opaque-window-types
+            python3 tools/probe_dialogue_projection.py --opaque-window-types --camera-trace
+            python3 tools/probe_deformed_vertices.py
+            python3 tools/probe_deformed_vertices.py --seams
+            python3 tools/probe_deformed_vertices.py --scene-trace
+            python3 tools/probe_deformed_vertices.py --copies
+            python3 tools/probe_deformed_vertices.py --player-lifetime
+            python3 tools/probe_deformed_vertices.py --intro
             python3 tools/test_android_release.py
             python3 tools/test_update_metadata.py
             python3 tools/test_android_updates.py --android-jar "$ANDROID_HOME/platforms/android-36/android.jar" --jni-include "$JAVA_HOME/include"
@@ -167,6 +188,20 @@ jobs:
           python3 tools/test_touch_debug_preparation.py \
             --integration-work .ci-android \
             --build-tools "$ANDROID_HOME/build-tools/36.0.0"
+
+      - name: Package the separate GPU test from the same runtime
+        id: paired_gpu
+        if: env.TOOIE_ANDROID_TOUCH_TEST != '1' && env.TOOIE_ANDROID_DRIVER_TEST != '1' && (github.head_ref == 'investigate/jiggy-screen-line' || (github.event_name == 'workflow_dispatch' && inputs.paired_gpu_test))
+        run: bash tools/ci/build_android.sh paired-gpu
+
+      - name: Upload verified GPU test APK and build report
+        if: steps.paired_gpu.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Tooie-GPU-Test-Android-arm64-${{ github.sha }}-${{ github.run_attempt }}
+          path: .ci-android/gpu-test-artifacts/*
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload verified Android APK and build report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

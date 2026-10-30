@@ -1,0 +1,66 @@
+{
+  "parent_source": "4fb2e33e6ace2ad5076a649e3fd502966386a9b0",
+  "functions": {
+    "func_800EEAA4": {
+      "file": "RecompiledFuncs/funcs_33.c",
+      "canonical_sha256": "aed6410f585379b3844407f912f0afb750cffef5e645f6cf688186717a69a610",
+      "old_sha256": "aed6410f585379b3844407f912f0afb750cffef5e645f6cf688186717a69a610"
+    },
+    "func_800CACEC": {
+      "file": "RecompiledFuncs/funcs_28.c",
+      "canonical_sha256": "fd2639ed7438228a8e590ed52f43bc40a38b4fb0d82c882a80b29323db70c291",
+      "old_sha256": "fd2639ed7438228a8e590ed52f43bc40a38b4fb0d82c882a80b29323db70c291"
+    },
+    "func_800CAB70": {
+      "file": "RecompiledFuncs/funcs_28.c",
+      "canonical_sha256": "ad6e1d6a10f4ecfea6f2cccd8cb144da93b86081b4bfd6b7659d2b5e1abcdbdf",
+      "old_sha256": "ad6e1d6a10f4ecfea6f2cccd8cb144da93b86081b4bfd6b7659d2b5e1abcdbdf"
+    },
+    "func_800CACD8": {
+      "file": "RecompiledFuncs/funcs_28.c",
+      "canonical_sha256": "f20f925e2d464104295fdf03a5514c389866cfb8f5f95a02f21dce870570a97c",
+      "old_sha256": "f20f925e2d464104295fdf03a5514c389866cfb8f5f95a02f21dce870570a97c"
+    },
+    "static_3_800CAB84": {
+      "file": "RecompiledFuncs/funcs_82.c",
+      "canonical_sha256": "fd04c1d1d64195e2fda1e0ec20d806bdbe28e82da54d290ba343efb97d968538",
+      "old_sha256": "fd04c1d1d64195e2fda1e0ec20d806bdbe28e82da54d290ba343efb97d968538"
+    },
+    "func_800CAA24": {
+      "file": "RecompiledFuncs/funcs_28.c",
+      "canonical_sha256": "fcc824626b011acbde1ff3395971c98b73629f26a01d648b770b16be213382a1",
+      "old_sha256": "fcc824626b011acbde1ff3395971c98b73629f26a01d648b770b16be213382a1"
+    },
+    "func_800CAB5C": {
+      "file": "RecompiledFuncs/funcs_28.c",
+      "canonical_sha256": "fc448291634af6e3c71356331cb705a1af638ae133b07998fd40ed0074e4831e",
+      "old_sha256": "fc448291634af6e3c71356331cb705a1af638ae133b07998fd40ed0074e4831e"
+    },
+    "static_3_800CAA38": {
+      "file": "RecompiledFuncs/funcs_82.c",
+      "canonical_sha256": "c471266642bd47a00fee0ab1d0c4ab046d6889822e2fdcf743b3d812e7d99465",
+      "old_sha256": "c471266642bd47a00fee0ab1d0c4ab046d6889822e2fdcf743b3d812e7d99465"
+    },
+    "func_800E3E8C": {
+      "file": "RecompiledFuncs/funcs_31.c",
+      "canonical_sha256": "a063c85db23664a2c47097f085948cd9ce9655208393d5e804bbe47e84803587",
+      "old_sha256": "2e640b0ae3237178fe88c852b00d0eecccecba33deacfecc83179ce3f7c55411"
+    },
+    "func_800E3DC0": {
+      "file": "RecompiledFuncs/funcs_31.c",
+      "canonical_sha256": "8f1cef395ec3bca1c56a99f01b0e80c20f9a4939ab36fc9f024f844ad18e3fc3",
+      "old_sha256": "be37cf61bef239e2f871b906bdb968e86a52f1cf72fe28c52e8ec2d8a6eadbd7"
+    },
+    "func_800EE88C": {
+      "file": "RecompiledFuncs/funcs_32.c",
+      "canonical_sha256": "0f55f367d3b77fcef69385ab846228adc61cc48839a7483181959a00718f3f08",
+      "old_sha256": "0f55f367d3b77fcef69385ab846228adc61cc48839a7483181959a00718f3f08"
+    },
+    "func_800E3D0C": {
+      "file": "RecompiledFuncs/funcs_31.c",
+      "canonical_sha256": "cacebb4d02ff7b50a73922432b543d64c412519f638935225a7a49d84ab6a4b0",
+      "old_sha256": "efc80ca0a2bde80a8481c9bcfb5a8bd175112624745d70293f3de417cfc024c3"
+    }
+  },
+  "scope": "Unchanged guest instructions, including original cross-function split tails and vector math; old wrapper override reconstructed and hash-checked for the failing control."
+}

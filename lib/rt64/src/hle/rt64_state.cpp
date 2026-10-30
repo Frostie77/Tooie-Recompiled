@@ -217,6 +217,10 @@ namespace RT64 {
             drawCall.scissorMode = rdp->scissorModeStack[rdp->scissorStackSize - 1];
             drawCall.scissorLeftOrigin = rdp->extended.scissorLeftOriginStack[rdp->scissorStackSize - 1];
             drawCall.scissorRightOrigin = rdp->extended.scissorRightOriginStack[rdp->scissorStackSize - 1];
+#if defined(__ANDROID__)
+            drawCall.scissorLeftOrigin = extended.hud.origin(drawCall.scissorLeftOrigin);
+            drawCall.scissorRightOrigin = extended.hud.origin(drawCall.scissorRightOrigin);
+#endif
         }
         
         if (drawStatus.isChanged(DrawAttribute::Texture) || textureCheck) {
@@ -784,6 +788,10 @@ namespace RT64 {
     }
     
     void State::listProcessBegin() {
+#if defined(__ANDROID__)
+        if (extended.hud.active()) rsp->viewportChanged = true;
+        extended.hud.reset();
+#endif
         dlCpuProfiler.start();
     }
 

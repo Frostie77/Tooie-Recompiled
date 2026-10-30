@@ -371,40 +371,62 @@ namespace recompinput {
         return "SERIAL_" + guid.serial + "_VID_" + std::to_string(guid.vendor) + "_PID_" + std::to_string(guid.product) +"_VERSION_" + std::to_string(guid.version) +"_CRC16_" + std::to_string(guid.crc16);
     }
 
+    static input_mapping stick_bindings(input_mapping bindings, bool swap_sticks) {
+        if (swap_sticks) for (auto& field : bindings) {
+            if (field.input_type != InputType::ControllerAnalog) continue;
+            const bool positive = field.input_id > 0;
+            const auto axis = positive ? field.input_id - 1 : -int64_t(field.input_id) - 1;
+            int replacement;
+            switch (axis) {
+            case SDL_CONTROLLER_AXIS_LEFTX: replacement = SDL_CONTROLLER_AXIS_RIGHTX; break;
+            case SDL_CONTROLLER_AXIS_LEFTY: replacement = SDL_CONTROLLER_AXIS_RIGHTY; break;
+            case SDL_CONTROLLER_AXIS_RIGHTX: replacement = SDL_CONTROLLER_AXIS_LEFTX; break;
+            case SDL_CONTROLLER_AXIS_RIGHTY: replacement = SDL_CONTROLLER_AXIS_LEFTY; break;
+            default: continue; // Triggers, buttons and keyboard keep their bindings.
+            }
+            field.input_id = positive ? replacement + 1 : -(replacement + 1);
+        }
+        return bindings;
+    }
+
     bool profiles::get_n64_input(int player_index, uint16_t* buttons_out, float* x_out, float* y_out) {
+        return get_n64_input(player_index, buttons_out, x_out, y_out, false);
+    }
+
+    bool profiles::get_n64_input(int player_index, uint16_t* buttons_out, float* x_out, float* y_out, bool swap_sticks) {
         uint16_t cur_buttons = 0;
         float cur_x = 0.0f;
         float cur_y = 0.0f;
         if (!recompinput::game_input_disabled()) {
-            auto check_buttons = [&](int profile_index) {
+            auto check_buttons = [&](int profile_index, bool swap) {
                 if (profile_index < 0) {
                     return;
                 }
 
                 const input_mapping_array &mappings = input_profiles[profile_index].mappings;
                 for (size_t i = 0; i < n64_button_values.size(); i++) {
-                    cur_buttons |= recompinput::get_input_digital(player_index, mappings[(size_t)(GameInput::N64_BUTTON_START) + i]) ? n64_button_values[i] : 0;
+                    cur_buttons |= recompinput::get_input_digital(player_index, stick_bindings(mappings[(size_t)(GameInput::N64_BUTTON_START) + i], swap)) ? n64_button_values[i] : 0;
                 }
             };
 
-            auto check_joystick = [&](int profile_index) {
+            auto check_joystick = [&](int profile_index, bool swap) {
                 if (profile_index < 0) {
                     return;
                 }
 
                 const input_mapping_array &mappings = input_profiles[profile_index].mappings;
-                cur_x += recompinput::get_input_analog(player_index, mappings[(size_t)GameInput::X_AXIS_POS]) - recompinput::get_input_analog(player_index, mappings[(size_t)GameInput::X_AXIS_NEG]);
-                cur_y += recompinput::get_input_analog(player_index, mappings[(size_t)GameInput::Y_AXIS_POS]) - recompinput::get_input_analog(player_index, mappings[(size_t)GameInput::Y_AXIS_NEG]);
+                cur_x += recompinput::get_input_analog(player_index, stick_bindings(mappings[(size_t)GameInput::X_AXIS_POS], swap)) - recompinput::get_input_analog(player_index, stick_bindings(mappings[(size_t)GameInput::X_AXIS_NEG], swap));
+                cur_y += recompinput::get_input_analog(player_index, stick_bindings(mappings[(size_t)GameInput::Y_AXIS_POS], swap)) - recompinput::get_input_analog(player_index, stick_bindings(mappings[(size_t)GameInput::Y_AXIS_NEG], swap));
             };
             
             int profile_index_cont = players::is_single_player_mode() ? profiles::get_sp_controller_profile_index() : players_input_profile_indices[player_index].first;
             int profile_index_kb = players::is_single_player_mode() ? profiles::get_sp_keyboard_profile_index() : players_input_profile_indices[player_index].second;
-            check_buttons(profile_index_cont);
-            check_buttons(profile_index_kb);
+            check_buttons(profile_index_cont, swap_sticks);
+            check_buttons(profile_index_kb, false);
 
-            check_joystick(profile_index_cont);
+            check_joystick(profile_index_cont, swap_sticks);
             recompinput::apply_joystick_deadzone(cur_x, cur_y, &cur_x, &cur_y);
-            check_joystick(profile_index_kb);
+            check_joystick(profile_index_kb, false);
         }
 
         *buttons_out = cur_buttons;

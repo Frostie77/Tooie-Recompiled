@@ -491,8 +491,8 @@ forever. Fixed by clearing the freeze where the game signals the barrier
 
 ## 7. Findings: rendering
 
-Four defects were found and three fixed; each was settings-gated, so none was a
-regression in the default configuration.
+The initial rendering defects were settings-gated. Later Android candidates
+and their device acceptance scopes are recorded alongside the original findings.
 
 ### 7.1 `Expand` culls geometry at the frame edges
 
@@ -508,9 +508,14 @@ discarded by the game before RT64 sees a display list. The three wrappers are in
 |`func_800E3E8C`|sphere|
 
 Each sets `$v0 = $v1` immediately before `jr $ra`; `$v0 == 0` means culled, and
-callers branch straight on it. `tooie_expand_visibility` flips that verdict **only
-when `ar_option == Expand`**, reading the applied graphics config directly rather
-than mirroring the frontend's option callback.
+callers branch straight on it. The old `tooie_expand_visibility` forced every
+rejection visible in Expand, including rear and vertical geometry. The
+29 October candidate scopes these wrappers and widens only their horizontal
+camera planes using RT64's applied target/source aspect, published atomically.
+Original/Manual and other direct primitive callers keep the guest path. No
+camera bytes change. All 864 retained-wrapper/primitive cases and both failing
+controls pass; lagoon water causality and device acceptance remain open. See
+`docs/development/graphics-batch-candidate-20261029.md`.
 
 ### 7.2 `Display`/`Manual` refresh distorted the player model
 
@@ -526,11 +531,15 @@ the quaternion takes the short arc), plus the skybox layers. Verified against
 RT64's own parser counters: one enable per frame, exactly 26/37 groups decoded,
 transforms matched by id every frame, 0 failures across 4081 frames.
 
-⚠ **Identity is the stable player-state slot**, found by scanning
-`0x80135490..0x801354B0`; root ids are `0x10000000 + slot * 0x100`, leaving
-`0x100` ids for bones. Bone identity is the model's own bone index — stable per
-model but not globally unique across Tooie's 25- and 36-bone variants, which is
-why it is a sub-id *under* the root group.
+⚠ **Player identity must include the actual player-state pointer and model.**
+The earlier 256-entry permanent lookup silently stopped emitting IDs after
+256 unique pairs. The 29 October candidate retires inactive lookup entries
+and allocates non-recycled `0x100`-wide blocks in `0x10000000..0x1FFFFFFF`.
+This avoids reusing an identity while old work remains queued. Bone identity
+is the model's bone index under that root, not a global index. A 602-case
+actual-consumer reload test passes; the previous pool fails at model 257.
+The canonical player slots remain an ownership check, not the root ID formula.
+The later long-play report still requires device acceptance.
 
 ⚠ **The enable word must be derived, not copied.** `recomp_api.cpp` includes
 `rt64_extended_gbi.h` with `F3DEX_GBI_2` defined so `RT64_HOOK_OPCODE` is Tooie's
@@ -543,6 +552,73 @@ that writes a command, so a hook at that write appends past the game's command,
 which the game then overwrites. The append returns true and nothing is emitted.
 Every metadata site had to be verified against RT64's decode counters, not
 against the append's return value.
+
+### Scoped intro and HUD candidates — 29 October 2026
+
+Special intro model branches bypass the normal actor draw scope. Use their
+actual registered marker/generation; do not guess a pictured logo's type ID.
+Only explicitly marked camera-relative rigid roots blend in view-local space
+with the actual processed camera. Authored skeletal bindings keep their common
+pose consumer. All 36 branch/weight cases and both controls pass.
+
+HUD entries at `0x80123880` have authored X/Y at `+0/+2`, animated draw X/Y at
+`+6/+8`. Anchor the complete component, including associated text, from the
+authored position; never assign per-glyph or animated-position origins. The
+private scope must reach rectangle, model viewport and scissor consumers and
+restore preceding state. Original HUD mode emits no placement packets.
+Build 125 has a focused Odin logo pass and improved counter placement, but
+wide HUD modes hide the challenge countdown. The follow-up preserves the
+working Original command path only for stable layout slot 11 and component
+kind 14; other counters keep their anchors. All 72 retained and 54 countdown
+consumer cases pass; new countdown visibility still needs Odin acceptance.
+See docs/development/hud-timer-redmi-followup-20261029.md.
+
+### Android owned-pose mesh edges — 27 October 2026
+
+The later Odin limb-gap report disappears at Original framerate in Frostie's
+manual comparison; Manual 60 still needs a tested correction. The first
+CPU-deformed-vertex candidate did not resolve that report. See the full result
+and marker ledger in `docs/development/character-limb-check-odin-20261027.md`.
+
+A bone-pivot constraint is insufficient to prove a welded mesh edge. The new
+constructed regression (`tools/probe_deformed_vertices.py --seams`) executes
+the actual producer/RSP/matcher/consumer and demonstrates an old intermediate
+edge gap while the older pivot metric passes. The candidate blends complete
+model-space bone matrices under a common smooth root; ownership/schema/local
+validation and exact submitted endpoints stay intact. Unowned rigid objects
+retain decomposition. Linear bone matrices may contract between poses, and a
+singular result requires coherent whole-pose fallback. This is host evidence,
+not acceptance of the actual NPC. Build 109 was signed and installed, but
+Frostie reports the same gaps at Manual 60 and Display, with Original fine.
+This second candidate is unsuccessful for MD-005. Before another interpolation
+policy change, obtain the affected draw's actual vertices/matrices, ownership,
+matching, weights and rendered outputs. Preserve the host controls without
+mistaking their synthetic mesh for an actual-model replay. The same manual
+follow-up separately reports opening-logo vertical jitter at interpolated rates
+(MD-011) and ineffective HUD Placement (MD-012); do not assume shared causes.
+See `docs/development/graphics-framerate-follow-up-odin-20261027.md`.
+
+Build-109 raw logs confirm the new consumer running and all three HUD values
+reaching RT64. The later 22:27 session adds standalone-Kazooie wing reports and
+a successful Split Up attempt; E13/E14 are excluded as later-learned moves.
+The prior freeze remains separate. Optional scene-input diagnostics are OFF
+unless a private request file is staged. Copy inputs under the workload lock,
+respect actual raw/processed upload selection (Original can leave old processed
+arrays around), bound traversal/logging and report omissions/observer cost.
+Host immutable-output and stale-buffer controls pass; this is not GPU readback
+or visual acceptance. See `docs/development/graphics-input-diagnostics-20261027.md`.
+
+The first build-110 scene-input capture (28 October) exposes fixed matrix
+reloads/copies inside an owned model scope losing their bone binding. Identical
+current/previous matrices then receive different intermediate consumers; one
+actual sampled vertex differs by 0.578295 world units at weight 0.25. The copy
+candidate resolves only through the same immutable queued task and explicit
+pose, with exact fixed bytes, address preference and ambiguous-bone rejection.
+Keep the existing actual/source/projection checks. Do not infer model ownership
+from coincident matrices globally or assume an address stride. The 12 recorded-
+subset host cases pass with ASan/UBSan; exact-old-RSP and restored-unowned
+controls fail on rendered-position drift as intended. No device fix is claimed. See
+`docs/development/graphics-input-check-odin-20261028.md` and the copy candidate.
 
 ### 7.3 Skybox flicker
 

@@ -24,6 +24,9 @@ build_and_record() {
     grep -q 'PASS: Android WSI lifecycle BGRA/RGBA' "$test_dir/$mode.out"
     grep -q 'PASS: failed/incomplete surface enumeration' "$test_dir/$mode.out"
     grep -q 'PASS: VI nearest/linear/pixel and UI' "$test_dir/$mode.out"
+    grep -q 'PASS: production depth clears clip edge/negative/extreme rectangles' "$test_dir/$mode.out"
+    grep -q 'PASS: 24 production depth attachment cases preserve defined depth tests after decals' "$test_dir/$mode.out"
+    grep -q 'PASS: 26 regular Vulkan scissor cases' "$test_dir/$mode.out"
     grep -q 'Surface format selected: requested=44 selected=37 colorSpace=0' "$test_dir/log-$mode/banjotooi-debug.log"
     grep -q 'UI pipeline: path=composite format=20 samples=1' "$test_dir/log-$mode/banjotooi-debug.log"
     grep -q 'Surface format request: vkFormat=44' "$test_dir/log-$mode/banjotooi-debug.log"
@@ -172,3 +175,68 @@ if "${CXX:-clang++}" "${common_flags[@]}" -UNDEBUG \
 fi
 grep -q 'fallback comparison is forbidden' "$test_dir/debug-conflict.out"
 echo 'PASS: exact rejection reasons, no rejected clear recording/submission, late category logs, retained controls, and five-second timeout'
+
+# Reinstall the pre-fix scissor submission in a temporary production source.
+# The captured geometry must fail at the recorded Vulkan offset, rather than
+# passing only because the fixture duplicates the clipping implementation.
+python3 - "$plume_dir/plume_vulkan.cpp" "$test_dir/unclipped-scissors.cpp" <<'PYTEST'
+from pathlib import Path
+import sys
+source = Path(sys.argv[1]).read_text()
+start = source.index('    void VulkanCommandList::setScissors(')
+end = source.index('    void VulkanCommandList::setFramebuffer(', start)
+function = source[start:end]
+assert function.count('#if defined(__ANDROID__)') == 1
+begin = function.index('#if defined(__ANDROID__)')
+alternate = function.index('#else', begin)
+finish = function.index('#endif', alternate)
+unclipped = function[:begin] + function[alternate + len('#else'):finish] + function[finish + len('#endif'):]
+Path(sys.argv[2]).write_text(source[:start] + unclipped + source[end:])
+PYTEST
+"${CXX:-clang++}" "${common_flags[@]}" -DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=0 \
+    "$test_dir/unclipped-scissors.cpp" "$repo_root/tests/android_vulkan_clear.cpp" \
+    -ldl -o "$test_dir/unclipped-scissors"
+mkdir -p "$test_dir/log-unclipped"
+python3 - "$test_dir/unclipped-scissors" "$test_dir/log-unclipped" <<'PYTEST'
+import os
+import resource
+import signal
+import subprocess
+import sys
+resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+result = subprocess.run([sys.argv[1], '--hud-scissors-only'],
+                        env={**os.environ, 'APP_FOLDER_PATH': sys.argv[2]}, capture_output=True, text=True)
+assert result.returncode == -signal.SIGABRT, (result.returncode, result.stdout, result.stderr)
+assert 'recorded.offset.x >= 0 && recorded.offset.y >= 0' in result.stderr, result.stderr
+print('PASS: restoring pre-fix scissor submission fails the captured HUD Vulkan offset check')
+PYTEST
+
+# Restore the old read-only depth load in a temporary production source. The
+# permitted tile-memory consumer must reject its undefined depth comparisons.
+python3 - "$plume_dir/plume_vulkan.cpp" "$test_dir/unloaded-depth.cpp" <<'PYTEST'
+from pathlib import Path
+import sys
+source = Path(sys.argv[1]).read_text()
+start = source.index('const bool preferNoneForReadOnly =')
+needle = 'attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;'
+position = source.index(needle, start)
+old = 'attachment.loadOp = preferNoneForReadOnly ? VK_ATTACHMENT_LOAD_OP_NONE_EXT : VK_ATTACHMENT_LOAD_OP_LOAD;'
+Path(sys.argv[2]).write_text(source[:position] + old + source[position + len(needle):])
+PYTEST
+"${CXX:-clang++}" "${common_flags[@]}" -DTOOIE_VULKAN_QUEUE_ISOLATION_TEST=0 \
+    "$test_dir/unloaded-depth.cpp" "$repo_root/tests/android_vulkan_clear.cpp" \
+    -ldl -o "$test_dir/unloaded-depth"
+mkdir -p "$test_dir/log-unloaded-depth"
+python3 - "$test_dir/unloaded-depth" "$test_dir/log-unloaded-depth" <<'PYTEST'
+import os
+import resource
+import signal
+import subprocess
+import sys
+resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+result = subprocess.run([sys.argv[1], '--depth-preservation-only'],
+                        env={**os.environ, 'APP_FOLDER_PATH': sys.argv[2]}, capture_output=True, text=True)
+assert result.returncode == -signal.SIGABRT, (result.returncode, result.stdout, result.stderr)
+assert 'std::isfinite(loaded)' in result.stderr, result.stderr
+print('PASS: restoring pre-fix NONE depth load fails the defined-depth occlusion consumer')
+PYTEST

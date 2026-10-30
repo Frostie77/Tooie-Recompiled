@@ -8,9 +8,12 @@
 #include "../src/android_presentation_lifecycle.h"
 #include "../lib/rt64/src/hle/rt64_android_surface.h"
 #include "plume_vulkan_clear_shaders.h"
+#include "hud_capture_fixture.h"
 #include <cstdio>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <unordered_map>
 #include <vector>
 using namespace plume;
@@ -56,6 +59,9 @@ static VkRenderPass selectedPass;
 static VkClearColorValue selectedValue;
 static VkImage selectedImage;
 static bool inPass = false, simulateTimeout = false, invalidState = false;
+static bool depthClearRecording = false;
+static std::vector<VkClearRect> recordedDepthRects;
+static VkClearAttachment recordedDepthAttachment{};
 static bool transferFeature = true;
 static const char *clearRejectionCase = nullptr;
 static bool rejectBeforeRecording = false;
@@ -505,11 +511,24 @@ static void clearImage(VkCommandBuffer, VkImage image, VkImageLayout layout,
           imageLayouts.at(image) == layout);
   REQUIRE(count == 1 && range->levelCount == 1 && range->layerCount == 1);
 }
-static void clearAttachments(VkCommandBuffer, uint32_t,
-                             const VkClearAttachment *, uint32_t,
-                             const VkClearRect *) {
+static void clearAttachments(VkCommandBuffer, uint32_t attachmentCount,
+                             const VkClearAttachment *attachments, uint32_t count,
+                             const VkClearRect *rects) {
   REQUIRE(!rejectBeforeRecording);
   REQUIRE(inPass);
+  if (depthClearRecording) {
+    REQUIRE(attachmentCount == 1 && count > 0);
+    recordedDepthAttachment = attachments[0];
+    REQUIRE(attachments[0].aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT);
+    recordedDepthRects.assign(rects, rects + count);
+    for (const auto &r : recordedDepthRects) {
+      REQUIRE(r.rect.offset.x >= 0 && r.rect.offset.y >= 0);
+      REQUIRE(r.rect.extent.width > 0 && r.rect.extent.height > 0);
+      REQUIRE(uint64_t(r.rect.offset.x) + r.rect.extent.width <= expectedFramebufferExtent.width);
+      REQUIRE(uint64_t(r.rect.offset.y) + r.rect.extent.height <= expectedFramebufferExtent.height);
+      REQUIRE(r.baseArrayLayer == 0 && r.layerCount == 1);
+    }
+  }
   commands.push_back('C');
 }
 static void draw(VkCommandBuffer, uint32_t, uint32_t, uint32_t, uint32_t) {
@@ -698,6 +717,144 @@ static void initialize(VulkanTexture &texture, VulkanDevice &device,
   texture.barrierStages = RenderBarrierStage::GRAPHICS;
   imageLayouts[texture.vk] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 }
+// Exercise the real backend method and inspect the exact Vulkan command.
+// No GPU or alleged MD-001 draw inputs are substituted into these fixtures.
+static void testDepthClearDomain(VulkanDevice &device, VulkanCommandList &list) {
+  depthClearRecording = true;
+  for (bool mipView : {false, true}) {
+    expectedFramebufferExtent = mipView ? VkExtent2D{320, 241} : VkExtent2D{640, 480};
+    VulkanTexture depth;
+    initialize(depth, device, mipView ? 1 : 2, RenderFormat::R8G8B8A8_UNORM);
+    depth.desc.format = RenderFormat::D32_FLOAT;
+    depth.desc.flags = RenderTextureFlag::DEPTH_TARGET;
+    depth.desc.height = mipView ? 482 : 480;
+    depth.desc.mipLevels = mipView ? 2 : 1;
+    depth.imageFormat = VK_FORMAT_D32_SFLOAT;
+    depth.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    depth.textureLayout = RenderTextureLayout::DEPTH_WRITE;
+    imageLayouts[depth.vk] = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    std::unique_ptr<RenderTextureView> view;
+    RenderFramebufferDesc desc(nullptr, 0, &depth);
+    if (mipView) {
+      auto vd = RenderTextureViewDesc::Texture2D(RenderFormat::D32_FLOAT);
+      vd.mipSlice = 1;
+      vd.mipLevels = vd.arraySize = 1;
+      view = depth.createTextureView(vd);
+      desc.depthAttachment = nullptr;
+      desc.depthAttachmentView = view.get();
+    }
+    VulkanFramebuffer framebuffer(&device, desc);
+    const int32_t w = int32_t(expectedFramebufferExtent.width);
+    const int32_t h = int32_t(expectedFramebufferExtent.height);
+    auto clear = [&](const RenderRect *rects, uint32_t count) {
+      list.begin();
+      list.setFramebuffer(&framebuffer);
+      commands.clear();
+      recordedDepthRects.clear();
+      list.clearDepthStencil(true, false, 0.625f, 0, rects, count);
+    };
+    const RenderRect edge(w - 20, h - 15, w + 40, h + 80);
+    clear(&edge, 1);
+    REQUIRE(commands == std::vector<char>({'B', 'C'}));
+    REQUIRE(recordedDepthRects.size() == 1);
+    REQUIRE(recordedDepthRects[0].rect.offset.x == w - 20 && recordedDepthRects[0].rect.offset.y == h - 15);
+    REQUIRE(recordedDepthRects[0].rect.extent.width == 20 && recordedDepthRects[0].rect.extent.height == 15);
+    REQUIRE(recordedDepthAttachment.clearValue.depthStencil.depth == 0.625f);
+    list.setFramebuffer(nullptr); list.end();
+
+    const RenderRect mixed[] = {{-20, -10, 30, 40}, {w + 1, h + 1, w + 2, h + 2},
+                                {10, 20, 15, 29}};
+    clear(mixed, 3);
+    REQUIRE(recordedDepthRects.size() == 2);
+    REQUIRE(recordedDepthRects[0].rect.offset.x == 0 && recordedDepthRects[0].rect.offset.y == 0);
+    REQUIRE(recordedDepthRects[0].rect.extent.width == 30 && recordedDepthRects[0].rect.extent.height == 40);
+    REQUIRE(recordedDepthRects[1].rect.offset.x == 10 && recordedDepthRects[1].rect.offset.y == 20);
+    REQUIRE(recordedDepthRects[1].rect.extent.width == 5 && recordedDepthRects[1].rect.extent.height == 9);
+    list.setFramebuffer(nullptr); list.end();
+
+    const RenderRect outside[] = {{-30, -20, -1, -1}, {w, h, w + 10, h + 10},
+                                  {5, 5, 5, 10}, {8, 8, 2, 2}};
+    clear(outside, 4);
+    REQUIRE(commands.empty() && recordedDepthRects.empty());
+    list.setFramebuffer(nullptr); list.end();
+
+    const RenderRect extreme(INT32_MIN, INT32_MIN, INT32_MAX, INT32_MAX);
+    clear(&extreme, 1);
+    REQUIRE(recordedDepthRects.size() == 1);
+    REQUIRE(recordedDepthRects[0].rect.offset.x == 0 && recordedDepthRects[0].rect.offset.y == 0);
+    REQUIRE(recordedDepthRects[0].rect.extent.width == uint32_t(w) && recordedDepthRects[0].rect.extent.height == uint32_t(h));
+    list.setFramebuffer(nullptr); list.end();
+    clear(nullptr, 0);
+    REQUIRE(recordedDepthRects.size() == 1 && recordedDepthRects[0].rect.extent.width == uint32_t(w) && recordedDepthRects[0].rect.extent.height == uint32_t(h));
+    list.setFramebuffer(nullptr); list.end();
+  }
+  depthClearRecording = false;
+  expectedFramebufferExtent = {640, 480};
+  std::puts("PASS: production depth clears clip edge/negative/extreme rectangles to the actual framebuffer/mip view; outside batches record no commands; full and in-bounds clears preserved, MSAA2X and 1X.");
+}
+
+// A decal samples the depth image without fixed-function depth testing. The
+// later lagoon calls compare depth but do not write it, so RT64 keeps using
+// this same read-only attachment. NONE does not load defined attachment values
+// for those comparisons, even though the backing image remains preserved.
+static void testReadOnlyDepthPreservation(VulkanDevice &device) {
+  const bool previousSupport = device.loadStoreOpNoneSupported;
+  unsigned checked = 0;
+  for (bool supported : {false, true}) {
+    device.loadStoreOpNoneSupported = supported;
+    for (bool readOnly : {false, true}) {
+      for (uint32_t samples : {1U, 2U, 4U}) {
+        for (bool explicitView : {false, true}) {
+          VulkanTexture depth;
+          initialize(depth, device, samples, RenderFormat::R8G8B8A8_UNORM);
+          depth.desc.format = RenderFormat::D32_FLOAT;
+          depth.desc.flags = RenderTextureFlag::DEPTH_TARGET;
+          depth.imageFormat = VK_FORMAT_D32_SFLOAT;
+          depth.imageUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+          RenderFramebufferDesc desc(nullptr, 0, &depth);
+          desc.depthAttachmentReadOnly = readOnly;
+          std::unique_ptr<RenderTextureView> view;
+          if (explicitView) {
+            auto vd = RenderTextureViewDesc::Texture2D(RenderFormat::D32_FLOAT);
+            vd.mipLevels = vd.arraySize = 1;
+            view = depth.createTextureView(vd);
+            desc.depthAttachment = nullptr;
+            desc.depthAttachmentView = view.get();
+          }
+          VulkanFramebuffer framebuffer(&device, desc);
+          const auto &record = passes.at(framebuffer.renderPass);
+          REQUIRE(record.depth.attachment != VK_ATTACHMENT_UNUSED);
+          const auto &attachment = record.attachments.at(record.depth.attachment);
+          REQUIRE(attachment.samples == VkSampleCountFlagBits(samples));
+          REQUIRE(record.depth.layout == (readOnly
+              ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+              : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
+          REQUIRE(attachment.storeOp == (readOnly && supported
+              ? VK_ATTACHMENT_STORE_OP_NONE_EXT : VK_ATTACHMENT_STORE_OP_STORE));
+          // An independent permitted tile-memory consumer. Only LOAD defines
+          // the existing values inside this pass; NONE may leave all samples
+          // undefined. Exercise both occluded and visible transparent pixels.
+          const float stored[] = {0.2f, 0.8f, 0.1f, 0.9f};
+          const bool visible[] = {false, true, false, true};
+          for (unsigned pixel = 0; pixel < 4; ++pixel) {
+            for (uint32_t sample = 0; sample < samples; ++sample) {
+              const float loaded = attachment.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD
+                  ? stored[pixel] : std::numeric_limits<float>::quiet_NaN();
+              REQUIRE(std::isfinite(loaded));
+              REQUIRE((0.5f < loaded) == visible[pixel]);
+            }
+          }
+          REQUIRE(attachment.stencilLoadOp == attachment.loadOp &&
+                  attachment.stencilStoreOp == attachment.storeOp);
+          ++checked;
+        }
+      }
+    }
+  }
+  device.loadStoreOpNoneSupported = previousSupport;
+  std::printf("PASS: %u production depth attachment cases preserve defined depth tests after decals, including read-only NONE-store support, direct/explicit views and 1x/2x/4x samples; recording/contract consumer, not GPU execution.\n", checked);
+}
+
 static void resetSurfaceEnumeration() {
   surfaceCreateResult = supportQueryResult = surfaceQueryResult =
       formatCountResult = formatDataResult = modeCountResult = modeDataResult =
@@ -1147,6 +1304,57 @@ static void testAndroidSurfaceLifecycle(VulkanCommandQueue &queue, VulkanCommand
   std::puts("PASS: Android WSI lifecycle BGRA/RGBA pause/resume, native-window ownership, queue retirement, framebuffer/view ordering, failed creation and surface-loss recovery");
 }
 
+static void testRegularScissorBounds(VulkanCommandList &list) {
+  // The captured 304x228 HUD scissor in its expanded 320x241 native target can
+  // give left-aligned glyphs a negative scissor after integer alignment. Vulkan
+  // forbids negative offsets even when the glyph itself is inside the target.
+  const int32_t low = std::numeric_limits<int32_t>::min();
+  const int32_t high = std::numeric_limits<int32_t>::max();
+  const RenderRect cases[] = {
+      {0, 0, 320, 240}, {HudCapture::ClipLeft, HudCapture::ClipTop,
+                       HudCapture::ClipRight, HudCapture::ClipBottom}, {-4, -3, 100, 200},
+      {-20, 2, -1, 18}, {2, -20, 18, -1}, {-30, -20, -2, -1},
+      {20, 10, 10, 30}, {10, 20, 30, 10}, {5, 7, 5, 7},
+      {low, low, high, high}, {high, high, low, low},
+      {high - 2, high - 3, high, high}, {4, 5, 9, 12}};
+  unsigned checked = 0;
+  auto check = [&](const RenderRect &source, const VkRect2D &recorded) {
+    REQUIRE(recorded.offset.x >= 0 && recorded.offset.y >= 0);
+    REQUIRE(int64_t(recorded.offset.x) + recorded.extent.width <= high);
+    REQUIRE(int64_t(recorded.offset.y) + recorded.extent.height <= high);
+    // Independent pixel-membership oracle: clipping to the legal coordinate
+    // domain preserves every covered nonnegative pixel, including edges and
+    // the captured glyph region. Inverted/outside rectangles cover nothing.
+    std::vector<int64_t> xs = {0, 1, 7, 31, 184, 219, 224, 259, 1518, high};
+    std::vector<int64_t> ys = {0, 1, 7, 31, 995, 1064, 1139, high};
+    for (int64_t edge : {int64_t(source.left), int64_t(source.right)})
+      for (int delta : {-1, 0, 1}) if (edge + delta >= 0 && edge + delta <= high) xs.push_back(edge + delta);
+    for (int64_t edge : {int64_t(source.top), int64_t(source.bottom)})
+      for (int delta : {-1, 0, 1}) if (edge + delta >= 0 && edge + delta <= high) ys.push_back(edge + delta);
+    for (int64_t x : xs) for (int64_t y : ys) {
+      const bool before = x >= source.left && x < source.right && y >= source.top && y < source.bottom;
+      const bool after = x >= recorded.offset.x && x < int64_t(recorded.offset.x) + recorded.extent.width &&
+                         y >= recorded.offset.y && y < int64_t(recorded.offset.y) + recorded.extent.height;
+      REQUIRE(before == after);
+    }
+    ++checked;
+  };
+  for (const auto &rectangle : cases) {
+    list.setScissors(&rectangle, 1);
+    REQUIRE(boundScissors.size() == 1);
+    check(rectangle, boundScissors[0]);
+  }
+  list.setScissors(cases, uint32_t(std::size(cases)));
+  REQUIRE(boundScissors.size() == std::size(cases));
+  for (size_t i = 0; i < std::size(cases); ++i) check(cases[i], boundScissors[i]);
+  // Cached graphics state is used by the existing temporary-clear restoration
+  // tests below; it must retain the same legal scissors sent to Vulkan.
+  REQUIRE(list.graphicsScissors.size() == boundScissors.size());
+  for (size_t i = 0; i < boundScissors.size(); ++i)
+    REQUIRE(std::memcmp(&list.graphicsScissors[i], &boundScissors[i], sizeof(VkRect2D)) == 0);
+  std::printf("PASS: %u regular Vulkan scissor cases preserve nonnegative pixel coverage, captured HUD alignment, arrays, extremes and cached restoration state.\n", checked);
+}
+
 int main(int argc, char **argv) {
   simulateTimeout = argc > 1 && std::strcmp(argv[1], "--timeout") == 0;
   invalidState = argc > 1 && std::strcmp(argv[1], "--invalid-state") == 0;
@@ -1210,7 +1418,21 @@ int main(int argc, char **argv) {
   device.queueFamilies[0].queues[0].mutex = std::make_unique<std::mutex>();
   VulkanCommandQueue queue(&device, RenderCommandListType::DIRECT);
   VulkanCommandList list(&queue);
+  if (argc == 1 || (argc == 2 && !std::strcmp(argv[1], "--hud-scissors-only"))) {
+    testRegularScissorBounds(list);
+    if (argc == 2) return 0;
+  }
   device.independentBlendSupported = true;
+  if (argc > 1 && std::strcmp(argv[1], "--depth-preservation-only") == 0) {
+    testReadOnlyDepthPreservation(device);
+    REQUIRE(destroyedPasses == createdPasses && framebufferExtents.empty());
+    return 0;
+  }
+  if (argc > 1 && std::strcmp(argv[1], "--depth-rects-only") == 0) {
+    testDepthClearDomain(device, list);
+    REQUIRE(destroyedPasses == createdPasses && framebufferExtents.empty());
+    return 0;
+  }
   if (argc > 1 && std::strncmp(argv[1], "--framebuffer-reject=", 21) == 0) {
     VulkanTexture texture;
     initialize(texture, device, 1, RenderFormat::R8G8B8A8_UNORM);
@@ -1695,6 +1917,8 @@ int main(int argc, char **argv) {
     !defined(TOOIE_VULKAN_ALLOW_ATTACHMENT_CLEAR_FALLBACK)
   testAttachmentClearDomain(device, list);
 #endif
+  testDepthClearDomain(device, list);
+  testReadOnlyDepthPreservation(device);
   REQUIRE(destroyedPasses == createdPasses && framebufferExtents.empty());
   list.begin();
   REQUIRE(list.graphicsPipeline == VK_NULL_HANDLE &&

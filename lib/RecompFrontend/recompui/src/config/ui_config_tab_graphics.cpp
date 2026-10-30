@@ -23,6 +23,7 @@ namespace recompui {
             {ultramodern::renderer::Resolution::Original, "Original", "Original"},
             {ultramodern::renderer::Resolution::Original2x, "Original2x", "Original 2x"},
             {ultramodern::renderer::Resolution::Auto, "Auto", "Auto"},
+            {ultramodern::renderer::Resolution::Manual, "Manual", "Manual"},
         };
 
         enum class DownsamplingOption {
@@ -95,7 +96,7 @@ namespace recompui {
             {ultramodern::renderer::HUDRatioMode::Full, "Expand"},
         };
 
-        static const std::string get_downsampling_details(ultramodern::renderer::Resolution res_option, DownsamplingOption ds_option) {
+        static const std::string get_downsampling_details(ultramodern::renderer::Resolution res_option, DownsamplingOption ds_option, float manual_scale) {
             switch (res_option) {
                 default:
                 case ultramodern::renderer::Resolution::Auto:
@@ -105,6 +106,13 @@ namespace recompui {
                         return "Rendered in 480p and scaled to 240p";
                     } else if (ds_option == DownsamplingOption::X4) {
                         return "Rendered in 960p and scaled to 240p";
+                    }
+                    return "";
+                case ultramodern::renderer::Resolution::Manual:
+                    if (ds_option == DownsamplingOption::X2 || ds_option == DownsamplingOption::X4) {
+                        const int output_height = static_cast<int>(240.0f * ultramodern::renderer::clamp_manual_resolution_scale(manual_scale));
+                        return "Rendered at " + std::to_string(output_height * static_cast<int>(ds_option)) +
+                            "p and scaled to " + std::to_string(output_height) + "p";
                     }
                     return "";
                 case ultramodern::renderer::Resolution::Original2x:
@@ -148,7 +156,8 @@ namespace recompui {
 
         static void determine_downsampling_display(ultramodern::renderer::Resolution res_option, OptionChangeContext change_context) {
             DownsamplingOption ds_opt = get_graphics_enum_value<DownsamplingOption>(graphics::options::ds_option, change_context);
-            get_graphics_config().update_option_enum_details(graphics::options::ds_option, get_downsampling_details(res_option, ds_opt));
+            get_graphics_config().update_option_enum_details(graphics::options::ds_option, get_downsampling_details(res_option, ds_opt,
+                get_graphics_number_value<float>(graphics::options::res_manual_scale, change_context)));
         }
 
         static std::string get_framerate_text(uint32_t refresh_rate) {
@@ -166,6 +175,8 @@ namespace recompui {
             ultramodern::renderer::GraphicsConfig new_config;
             new_config.developer_mode = get_graphics_bool_value(graphics::options::developer_mode);
             new_config.res_option = get_graphics_enum_value<ultramodern::renderer::Resolution>(graphics::options::res_option);
+            new_config.res_manual_scale = ultramodern::renderer::clamp_manual_resolution_scale(
+                get_graphics_number_value<float>(graphics::options::res_manual_scale));
             new_config.wm_option = get_graphics_enum_value<ultramodern::renderer::WindowMode>(graphics::options::wm_option);
             new_config.hr_option = get_graphics_enum_value<ultramodern::renderer::HUDRatioMode>(graphics::options::hr_option);
             new_config.api_option = get_graphics_enum_value<ultramodern::renderer::GraphicsApi>(graphics::options::api_option);
@@ -235,7 +246,7 @@ namespace recompui {
             config.add_enum_option(
                 graphics::options::res_option,
                 "Resolution",
-                "Sets the output resolution of the game. <recomp-color primary>Original</recomp-color> matches the game's original 240p resolution. <recomp-color primary>Original 2x</recomp-color> will render at 480p. <recomp-color primary>Auto</recomp-color> will scale based on the game window's resolution.",
+                "Sets the output resolution of the game. <recomp-color primary>Original</recomp-color> matches the game's original 240p resolution. <recomp-color primary>Original 2x</recomp-color> will render at 480p. <recomp-color primary>Auto</recomp-color> will scale based on the game window's resolution. <recomp-color primary>Manual</recomp-color> lets you choose an intermediate scale.",
                 resolution_options,
                 ultramodern::renderer::Resolution::Auto
             );
@@ -249,10 +260,32 @@ namespace recompui {
                 );
             }
 
+            config.add_number_option(
+                graphics::options::res_manual_scale,
+                "Resolution Scale",
+                "Sets the resolution multiplier for Manual mode. 1x is 240p, 3x is 720p and 4.5x is 1080p. Lower values may improve performance.",
+                1.0, 8.0, 0.25, 2, false, 3.0
+            );
+            {
+                config.add_option_hidden_dependency(
+                    graphics::options::res_manual_scale, graphics::options::res_option,
+                    ultramodern::renderer::Resolution::Original,
+                    ultramodern::renderer::Resolution::Original2x,
+                    ultramodern::renderer::Resolution::Auto
+                );
+                config.add_option_change_callback(
+                    graphics::options::res_manual_scale,
+                    [](recomp::config::ConfigValueVariant, recomp::config::ConfigValueVariant, OptionChangeContext context) {
+                        determine_downsampling_display(
+                            get_graphics_enum_value<ultramodern::renderer::Resolution>(graphics::options::res_option, context), context);
+                    }
+                );
+            }
+
             config.add_enum_option(
                 graphics::options::ds_option,
                 "Downsampling Quality",
-                "Renders at a higher resolution and scales it down to the output resolution for increased quality. Only available in <recomp-color primary>Original</recomp-color> and <recomp-color primary>Original 2x</recomp-color> resolution."
+                "Renders at a higher resolution and scales it down to the output resolution for increased quality. Only available in <recomp-color primary>Original</recomp-color>, <recomp-color primary>Original 2x</recomp-color> and <recomp-color primary>Manual</recomp-color> resolution."
                 "<br />"
                 "<br />"
                 "Note: <recomp-color primary>4x</recomp-color> downsampling quality at <recomp-color primary>Original 2x</recomp-color> resolution may cause performance issues on low end devices, as it will cause the game to render <recomp-color warning>at almost 4k internal resolution</recomp-color>.",

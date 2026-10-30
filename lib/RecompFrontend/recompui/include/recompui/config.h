@@ -52,6 +52,7 @@ namespace recompui {
             namespace options {
                 inline const std::string developer_mode = "developer_mode";
                 inline const std::string res_option = "res_option";
+                inline const std::string res_manual_scale = "res_manual_scale";
                 inline const std::string wm_option = "wm_option";
                 inline const std::string hr_option = "hr_option";
                 inline const std::string api_option = "api_option";

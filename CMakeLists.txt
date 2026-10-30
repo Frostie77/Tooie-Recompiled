@@ -113,6 +113,9 @@ set(SOURCES
     ${CMAKE_SOURCE_DIR}/src/main.cpp
     ${CMAKE_SOURCE_DIR}/src/recomp_api.cpp
     ${CMAKE_SOURCE_DIR}/src/aiming_controls.cpp
+    ${CMAKE_SOURCE_DIR}/src/hud_diagnostics.cpp
+    ${CMAKE_SOURCE_DIR}/src/hud_placement.cpp
+    ${CMAKE_SOURCE_DIR}/src/widescreen_visibility.cpp
     ${CMAKE_SOURCE_DIR}/src/android_updates.cpp
     ${CMAKE_SOURCE_DIR}/src/android_save_transfer.cpp
     ${CMAKE_SOURCE_DIR}/src/android_updates_jni.cpp
