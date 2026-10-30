@@ -42,7 +42,7 @@ future launches.
 ### Graphics and controller settings
 
 Configure graphics, input mappings and audio through the launcher menus.
-Current Odin testing uses **Manual 60** in Graphics.
+Current testing uses **Display** in Graphics.
 
 ### Touch controls
 
