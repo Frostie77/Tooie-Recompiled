@@ -1,6 +1,6 @@
 # Read-only depth preservation candidate — 29 October 2026
 
-Status: **full CI 128 and focused Odin manual water checks pass; image review pending**.
+Status: **focused build-128 Odin pass with complete evidence review; full CI 129 retains the correction**.
 The complete [build-127 review](hud-water-check-odin-build127-20261029.md) now
 includes the verified native recovery, all 27 events and all 27 viewed images.
 
@@ -86,7 +86,13 @@ The completed capture's eight events comprise four marker-1 views, two marker-2
 views and two marker-3 views. Preserve those repetitions rather than treating
 the proposed three test labels as three screenshots. Initial native review
 records 2× → None → 2× → 4× → 2× on original PID 10919, then a new PID 12064.
-All eight PNGs and full per-member/runtime reconstruction still need review.
+The [complete build-128 review](water-check-odin-build128-20261030.md) now verifies
+all eight native PNGs and every supplied member, and reconstructs the omitted
+Runtime exports against their original hashes. All pictured water surfaces
+remain visible without the previous stray land polygons or horizontal dash
+pattern. The actual input labels and configuration sequence are preserved;
+no separate 4× visual acceptance or exact screenshot-to-GPU-frame alignment is
+claimed. This is focused Lagoon acceptance, not broad long-play character coverage.
 
 The capture ends with a [menu-navigation exception](menu-navigation-crash-20261030.md)
 during the reported 4× → 2× change. The stack identifies the UI navigation path;

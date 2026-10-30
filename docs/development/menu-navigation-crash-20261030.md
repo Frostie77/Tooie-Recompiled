@@ -1,6 +1,6 @@
 # Menu-navigation crash — 30 October 2026
 
-Status: **source correction and host regressions pass; Android CI and device confirmation pending**.
+Status: **full CI 129 and independent packaged-APK checks pass; Odin controller confirmation pending**.
 The focused build-128 water acceptance stands separately from this menu fault.
 
 ## Recorded evidence
@@ -9,8 +9,10 @@ Frostie reports a crash while testing MSAA 4× and returning to 2×. The initial
 read of `Tooie-66dcd14b6792-Installed-Debug-Odin-20261030-003820-1836169a-Share-20261030-004513-48df0711.zip`
 passes ZIP CRC checks. It is 29,481,424 bytes, with computed SHA-256
 `af4cbb8fadfa08f7efccbf97daade830b5a35e11f54fa76b1a874aaa91b2e6d4`.
-Full per-member/runtime reconstruction and visual review of its eight PNGs
-remain pending; the facts below come from the initial raw-record inspection.
+The [complete evidence review](water-check-odin-build128-20261030.md) now verifies
+all supplied source-member hashes, reconstructs the omitted Runtime exports and
+visually reviews all eight native PNGs. The facts below are retained from the
+raw-record inspection and confirmed by that audit.
 
 - Source `66dcd14b6792ee5d620800e5a1c8da98fb57d001`, native Build ID
   `19dab4c51070e2b8c45e7fc88c34781d6c809a2c`, original game PID 10919.
@@ -79,3 +81,24 @@ Device follow-up should repeat 4× → 2× and leaving/reopening the graphics pa
 with the controller. The accepted water, HUD, logos and scoped game-control
 checks do not need a full repeat just to identify this menu fault. Broader
 long-play character rendering and new Redmi FPS remain open.
+
+## Build 129
+
+Full [Android CI 129](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40953973175)
+passes host regressions, ARM64 compilation, normal packaging/local-signing checks
+and paired GPU Test packaging. Engineering
+`60c4a6b1446f36d544c15a0aff21d02aac04fd1f` and integration
+`60cb4007223ff338639e95206f4078cfced19bfe` have the tested tree
+`79f90c6e2b537fd46f241ea0328fa63d2b76ba17`.
+
+The downloaded [normal Debug](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40953973175/artifacts/12935845084)
+and [GPU Test](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40953973175/artifacts/12934049618)
+ZIPs match GitHub's byte lengths/digests and pass CRC checks. All seven ARM64
+libraries match their normal reports and ELF Build IDs; the GPU package has
+byte-identical native libraries. Main Build ID is
+`f7ee4d483389aedad9895d5d545854ef28e650a8`. The packaged main library exports
+`RecompNav::find_nav_parent` and omits the old exception message. Packaged
+capture/signing helpers and Redmi instructions match source. Reviewed host logs
+contain both navigation checks and the retained depth/scissor failing controls;
+the actual navigation compiler command retains ARM64/API24 and C++20.
+No build-129 device result is claimed yet.
