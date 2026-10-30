@@ -1,6 +1,6 @@
 # Menu-navigation crash — 30 October 2026
 
-Status: **full CI 129 and independent packaged-APK checks pass; Odin controller confirmation pending**.
+Status: **full CI 129, independent packaged-APK checks and focused Odin controller follow-up pass**.
 The focused build-128 water acceptance stands separately from this menu fault.
 
 ## Recorded evidence
@@ -101,4 +101,10 @@ byte-identical native libraries. Main Build ID is
 capture/signing helpers and Redmi instructions match source. Reviewed host logs
 contain both navigation checks and the retained depth/scissor failing controls;
 the actual navigation compiler command retains ARM64/API24 and C++20.
-No build-129 device result is claimed yet.
+The [complete build-129 Odin follow-up](menu-check-odin-build129-20261030.md)
+now records focused acceptance: native 2× → 4× → 2×, a hash-matched Graphics
+screen with 2× applied, and original PID 17118 present throughout all 20 periodic
+checks and finalization after `save`. Frostie accepts normal controller
+navigation, leaving the menu and reopening it. No original-process fatal is
+recorded. The capture does not identify whether the pruned-focus recovery branch
+itself executed; this is a focused regression check, not broad crash-free proof.

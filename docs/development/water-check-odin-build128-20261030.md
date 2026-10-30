@@ -94,7 +94,8 @@ Frostie reports this while trying 4× and returning to 2×; the native settings
 retain those changes. The exact widget/key and a causal GPU allocation failure
 are not recorded. See the [menu correction](menu-navigation-crash-20261030.md),
 which reproduces the guard with the actual builder/consumer and passes full CI
-129 plus independent downloaded-APK checks. Its controller test remains pending.
+129 plus independent downloaded-APK checks. Its subsequent
+[focused build-129 controller check](menu-check-odin-build129-20261030.md) now passes.
 
 The recorder stops on loss of the original PID rather than following the new
 process. The owned render-trace request has acknowledged enable/removal, no

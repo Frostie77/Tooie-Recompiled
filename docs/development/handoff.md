@@ -17,9 +17,18 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The current installed Odin test build is **128**, integration source
-`66dcd14b6792ee5d620800e5a1c8da98fb57d001`. Full CI 128 and the independent
-downloaded paired-APK checks pass. Frostie reports the Lagoon water glitches
+The current installed Odin test build is **129**, integration source
+`60cb4007223ff338639e95206f4078cfced19bfe`, with tested tree
+`79f90c6e2b537fd46f241ea0328fa63d2b76ba17`. Full CI and independent downloaded
+paired-APK checks pass. The [complete build-129 menu check](menu-check-odin-build129-20261030.md)
+now confirms native 2× → 4× → 2×, a Graphics-page screenshot with 2× restored,
+and the original process staying alive through the requested `save`. Frostie
+accepts controller navigation, returning to gameplay and reopening Graphics.
+This is a focused pass for the menu correction. Broader long-play character
+rendering and new Redmi FPS remain open.
+
+On the preceding build **128**, source
+`66dcd14b6792ee5d620800e5a1c8da98fb57d001`, Frostie reports the Lagoon water glitches
 completely gone at Expand/Display/MSAA 2×, gone with None, and other previously
 affected spots clear after restoring 2×. The [complete build-128 review](water-check-odin-build128-20261030.md)
 now verifies all eight actual events, their native screenshots, the complete
@@ -31,13 +40,13 @@ The [menu-navigation correction](menu-navigation-crash-20261030.md) reproduces
 the same exception with the actual producer/consumer and recovers focus through
 the active navigation tree. Normal and address/undefined-sanitized host checks
 pass, including the failing old-source control. Full [Android CI 129](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40953973175)
-and independent downloaded paired-APK checks now pass; controller confirmation
-for the menu fix is next. Its integration source is
+and independent downloaded paired-APK checks pass; the focused Odin controller
+follow-up above now passes too. Its integration source is
 `60cb4007223ff338639e95206f4078cfced19bfe`, with tested tree
 `79f90c6e2b537fd46f241ea0328fa63d2b76ba17`. The packaged library contains the
 new active-tree lookup and omits the old navigation exception message.
-The installed app remains 128 until Frostie updates it. Broader long-play character
-rendering and new Redmi FPS remain open.
+The packaged source and focused device acceptance are recorded together in the
+menu investigation and follow-up above.
 
 The preceding installed Odin test build was **127**, integration source
 `88262a661566d9bb784ce41960b652c3522f43b2`. Frostie accepts the left counter
@@ -56,7 +65,7 @@ the complete appended native log. Windows ADB expands LF to CRLF, so the helper
 derives native offsets from the verified archived baseline and transfers
 encoded chunks. Future collector integration needs the same byte handling.
 See the
-[shared clipping fix](hud-shared-clipping-fix-20261029.md). Menu-fix device confirmation, broader
+[shared clipping fix](hud-shared-clipping-fix-20261029.md). Broader
 long-play character rendering and new Redmi FPS results remain open.
 
 The preceding build-127 water follow-up failed with MSAA 2×. None changes
