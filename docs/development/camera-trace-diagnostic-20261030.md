@@ -108,5 +108,8 @@ The four packaged signing/capture helpers and Redmi instructions match source.
 The production projection compiler retains NDK 28.2.13676358 and ARM64/API 24.
 
 See the [verification record](evidence/camera-trace-ci131-20261030.json).
-Build 129 remains the last confirmed installed Odin build. No installation or
-device burst is claimed here; MD-004 is still open and no camera fix is advertised.
+Build 131 is now installed. The [device trace review](camera-check-odin-build131-20261030.md)
+verifies the burst and cleanup, but the three-projection budget expires after
+7.767 seconds. It captures one brief camera tilt; Frostie is unsure whether that
+includes the visible shake, so an immediate-movement repeat on the installed
+build is next. MD-004 is still open and no camera fix is advertised.

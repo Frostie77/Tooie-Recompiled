@@ -43,11 +43,21 @@ verified manual `playing`. No camera policy changes or fix is claimed. Full
 Android [CI 131](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41042131830)
 and independent downloaded paired-APK checks now pass, including source-matching
 helpers and the native observer. Built integration is
-`aa277b14262c951b395a39d4345845e6ecf481d4`; the device burst remains pending.
-Build 129 is still the last confirmed installed Odin build. Prepare the new
-launcher with `--camera-trace` before the normal Debug update; reach the passage
-at Display before typing `playing`. Further mode toggles add little;
-guest adjustment/input values are the next step if raw views oscillate.
+`aa277b14262c951b395a39d4345845e6ecf481d4` is now installed on Odin. The
+[complete build-131 trace review](camera-check-odin-build131-20261030.md)
+verifies all 1,440 steps/11,520 matrices and request removal. Three tagged
+transforms exhaust the budget after 7.767 seconds, yielding 480 main-camera
+outputs. Main inputs change only around seconds 2.834–3.967; the output follows
+the existing blend, with no bad previous-view match or viewport bypass.
+The largest observed column contraction is about 0.017%; one separate tagged
+transform is singular, so do not switch every `0x1000` matrix to rigid blending.
+Frostie is unsure whether the visible shake happened during this short burst
+and keeps the game open. Repeat the installed recorder with walking already
+started when entering `playing`; confirm the visible symptom falls within the
+first few seconds. No rebuild or private-file cleanup is needed. The marker's
+literal description ends in `Displa`; it is after the burst. MD-004 remains
+open. Guest adjustment/input values and a render-load control remain possible
+next discriminators once the visible event is aligned.
 Existing five-second scene sampling cannot recover that motion. The release
 needs a tested correction or Frostie's explicit known-issue
 deferral; Redmi FPS remains pending.
@@ -67,7 +77,7 @@ serves the verified code-5 entry. See the
 [publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
 reporter replies; do not close issues as part of release work.
 
-The current installed Odin test build is **129**, integration source
+The last accepted Odin menu check used build **129**, integration source
 `60cb4007223ff338639e95206f4078cfced19bfe`, with tested tree
 `79f90c6e2b537fd46f241ea0328fa63d2b76ba17`. Full CI and independent downloaded
 paired-APK checks pass. The [complete build-129 menu check](menu-check-odin-build129-20261030.md)

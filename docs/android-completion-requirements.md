@@ -313,8 +313,11 @@ manual acceptance, not full-game/device coverage or publication.
 - [ ] Resolve/retest MD-004 or record Frostie's explicit known-issue deferral.
   The cause is not established by the current comparison or synthetic camera
   turn probe. The [bounded observer candidate](development/camera-trace-diagnostic-20261030.md)
-  passes full CI 131 and downloaded paired-payload verification; its device
-  burst and consecutive raw/consumed data remain pending. Older MD-003
+  passes full CI 131 and downloaded paired-payload verification. The
+  [device burst](development/camera-check-odin-build131-20261030.md) now verifies
+  1,440 steps/11,520 matrices and cleanup, but contains only one brief input tilt
+  within 7.767 seconds. Frostie is unsure whether that includes the shake; an
+  aligned repeat on the installed build is next. Older MD-003
   unusual-frame reports and broader long-play deformation remain separate.
 - [ ] Obtain the new Redmi Original/Expand performance and close/reopen results.
   Prior startup/gameplay/sound success remains accepted within its reported

@@ -166,7 +166,11 @@ reproduces the issue: Original improves it with residual stutter, while Manual
 The [consecutive camera diagnostic](camera-trace-diagnostic-20261030.md) is the
 next candidate. It observes actual submitted/consumed camera matrices for one
 short Display walk and preserves the existing camera policy. Full Android CI
-and device evidence are pending; the synthetic turn measurement is not a fix.
+131 and the [first device burst](camera-check-odin-build131-20261030.md) now
+verify. The cap expires at 7.767 seconds with three tagged projections; only one
+brief input tilt is captured and Frostie is unsure whether it includes the
+visible shake. Repeat with movement already started on the installed build;
+the synthetic turn measurement is not a fix.
 
 The release plan is to prepare the next candidate after Redmi results arrive.
 The [draft notes](release-notes-next.md) and completion checklist now distinguish
