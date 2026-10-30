@@ -185,4 +185,5 @@ int main() {
         kGameplayProjectionId + 1);
     REQUIRE(otherRole.mapped && !otherRole.bypassed && near(otherRole.viewX, 25));
     std::puts("PASS: viewport entry/exit use current camera/projection; stable letterbox, FOV-only animation and draw-scissor controls retain blending in production CPU consumers. MD-002 needs device verification.");
+    return 0;
 }

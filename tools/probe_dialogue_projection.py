@@ -16,6 +16,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--opaque-window-types', action='store_true',
                         help='Supply unused opaque X11 handles on minimal host machines')
+    parser.add_argument('--camera-turns', action='store_true',
+                        help='Measure synthetic camera turns; this does not replay a captured collision')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     rt = root / 'lib/rt64/src'
@@ -71,7 +73,8 @@ def main():
                    'preset/rt64_preset_scene.cpp', 'preset/rt64_preset.cpp']
         exe = build / 'probe'
         print('Compiling production matcher and projection processor with ASan/UBSan.', flush=True)
-        subprocess.run([compiler, *flags, str(root / 'tests/dialogue_projection_probe.cpp'),
+        fixture = 'camera_turn_probe.cpp' if args.camera_turns else 'dialogue_projection_probe.cpp'
+        subprocess.run([compiler, *flags, str(root / 'tests' / fixture),
                         *map(str, sources), *(str(rt / s) for s in support),
                         '-Wl,--gc-sections', '-o', str(exe)], check=True)
         env = {**os.environ, 'ASAN_OPTIONS': 'detect_leaks=0'}

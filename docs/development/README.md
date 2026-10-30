@@ -24,6 +24,10 @@ changing generated code, runtime behavior or dependencies.
 
 ## Release work
 
+The [next-update draft](release-notes-next.md) reflects the accepted focused
+fixes through Odin build 129. Redmi performance results and current camera/
+long-play findings remain separate pending work; the public release is unchanged.
+
 The [release preparation guide](release.md) records notice sources, version
 inputs, signing continuity and the candidate package verifier.
 
@@ -49,6 +53,11 @@ gameplay acceptance.
   APK identity, manually reported results and remaining notice/browser checks.
 
 ## Evidence
+
+- [30 October narrow-space camera investigation](camera-shaking-investigation-20261030.md):
+  recovered 24 October MD-003/004 screenshots and native timing, Frostie's
+  narrow-passage trigger, synthetic production camera-turn measurements and
+  the missing motion/consecutive-input evidence; no native camera fix claimed.
 
 - [HUD component drawing path](hud-placement-investigation-20261028.md):
   missing origins, located authored component boundary and remaining identity/anchor checks.

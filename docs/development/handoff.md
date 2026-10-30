@@ -2,6 +2,32 @@
 
 Updated: 30 October 2026.
 
+## Next release and narrow-space camera investigation
+
+Frostie wants to prepare the next release after the Redmi results return.
+The [draft notes](release-notes-next.md) and completion checklist now reflect
+the accepted build-111/121/125/127/128/129 fixes; the public version/feed remain
+v1.1.0/code 5. New Redmi FPS, broader long-play character rendering and the
+current narrow-space camera result remain open. No release version is selected.
+
+The [MD-003/004 investigation](camera-shaking-investigation-20261030.md)
+re-downloads and verifies the original 24 October Evidence ZIP, views all six
+relevant PNGs and correlates their actual device markers with native timing.
+The pictures locate a wooden interior, barred cells/TNT barrel and close walls.
+Frostie recalls shaking while walking through narrow spaces and suspects
+automatic camera adjustment. Some shake neighborhoods have uneven present
+delivery (E04: about 48–57/s against target 60), while E01 stays near 60.
+Projection-role mismatch remains constant there; no detailed camera/collision
+sequence was recorded. These findings do not establish the visual cause.
+
+A new optional host camera-turn probe measures the current simple camera
+blend's axis contraction during synthetic sharp turns, with rigid/submitted
+opposing controls (182 cases, ASan/UBSan; no GPU). No native policy changes.
+Build 129 can check the same narrow route at Display versus Original without
+another install. Keep other graphics fixed and retain motion footage; Original
+also reduces load, so that comparison alone cannot assign interpolation as the
+cause. Old MD-003/004 reports are not automatically closed by later fixes.
+
 Start with the [completion checklist](../android-completion-requirements.md),
 [build instructions](../../BUILDING.md) and [AGENTS.md](../../AGENTS.md).
 Use the current repository refs and workflow profile for exact source identities.
