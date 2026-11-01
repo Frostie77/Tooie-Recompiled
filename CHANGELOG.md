@@ -14,7 +14,8 @@ release until the signed candidate is checked and published.
   export, cancelled/damaged import, restoration and recovery checks passed on
   Odin 2 Portal with disposable saves on 26 October 2026. See the
   [guide](docs/development/android-save-backups.md) for instructions and tested
-  scope; transfers between devices or app channels remain untested.
+  scope. Debug → Release save transfer also passes on Odin in the signed
+  build-135 candidate; other device/channel transfers remain untested.
 
 - **Invert Flight y-axis** and **Swap Joystick Aiming Controls** below aiming
   inversion. Flight steering/airborne aim share the flight preference;
@@ -29,6 +30,11 @@ release until the signed candidate is checked and published.
 
 ### Changed
 
+- Clarify **Game Aspect Ratio** and put **Expand** first in its choices.
+- Rename HUD Placement choices to **Auto**, **Classic 4:3** and **16:9**.
+  Auto follows the selected game image and is the default for new settings;
+  existing saved HUD preferences are preserved.
+- Put **Display** first in **Framerate** and **Auto** first in **Resolution**.
 - Move the **Touch** settings tab between **Controls** and **Sound**.
 - Rename **Aiming Invert** to **Invert Aiming y-axis**, retaining the saved
   preference and existing aiming behavior.

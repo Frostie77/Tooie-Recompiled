@@ -20,9 +20,9 @@ namespace recompui {
 
         using EnumOptionVector = const std::vector<recomp::config::ConfigOptionEnumOption>;
         static EnumOptionVector resolution_options = {
+            {ultramodern::renderer::Resolution::Auto, "Auto", "Auto"},
             {ultramodern::renderer::Resolution::Original, "Original", "Original"},
             {ultramodern::renderer::Resolution::Original2x, "Original2x", "Original 2x"},
-            {ultramodern::renderer::Resolution::Auto, "Auto", "Auto"},
             {ultramodern::renderer::Resolution::Manual, "Manual", "Manual"},
         };
 
@@ -66,8 +66,8 @@ namespace recompui {
         };
 
         static EnumOptionVector aspect_ratio_options = {
-            {ultramodern::renderer::AspectRatio::Original, "Original"},
             {ultramodern::renderer::AspectRatio::Expand, "Expand"},
+            {ultramodern::renderer::AspectRatio::Original, "Original"},
             {ultramodern::renderer::AspectRatio::Ratio16x9, "16:9"},
             {ultramodern::renderer::AspectRatio::Ratio16x10, "16:10"},
             {ultramodern::renderer::AspectRatio::Ratio3x2, "3:2"},
@@ -82,8 +82,8 @@ namespace recompui {
         };
 
         static EnumOptionVector refresh_rate_options = {
-            {ultramodern::renderer::RefreshRate::Original, "Original"},
             {ultramodern::renderer::RefreshRate::Display, "Display"},
+            {ultramodern::renderer::RefreshRate::Original, "Original"},
             {ultramodern::renderer::RefreshRate::Manual, "Manual"},
         };
 
@@ -94,9 +94,9 @@ namespace recompui {
         };
 
         static EnumOptionVector hud_ratio_mode_options = {
-            {ultramodern::renderer::HUDRatioMode::Original, "Original"},
+            {ultramodern::renderer::HUDRatioMode::Full, "Expand", "Auto"},
+            {ultramodern::renderer::HUDRatioMode::Original, "Original", "Classic 4:3"},
             {ultramodern::renderer::HUDRatioMode::Clamp16x9, "Clamp16x9", "16:9"},
-            {ultramodern::renderer::HUDRatioMode::Full, "Expand"},
         };
 
         static const std::string get_downsampling_details(ultramodern::renderer::Resolution res_option, DownsamplingOption ds_option, float manual_scale) {
@@ -321,8 +321,8 @@ namespace recompui {
 
             config.add_enum_option(
                 graphics::options::ar_option,
-                "Aspect Ratio",
-                "Sets the horizontal aspect ratio. <recomp-color primary>Original</recomp-color> uses the game's original 4:3 aspect ratio. <recomp-color primary>Expand</recomp-color> matches the game window. The fixed ratios preserve their shape with black bars where needed.",
+                "Game Aspect Ratio",
+                "Sets the game image's aspect ratio. <recomp-color primary>Expand</recomp-color> matches the game window. <recomp-color primary>Original</recomp-color> uses the game's original 4:3 aspect ratio. Fixed ratios preserve their shape with black bars where needed. The launcher and settings menus continue to fill the display.",
                 aspect_ratio_options,
                 ultramodern::renderer::AspectRatio::Expand
             );
@@ -372,9 +372,9 @@ namespace recompui {
             config.add_enum_option(
                 graphics::options::hr_option,
                 "HUD Placement",
-                "Adjusts HUD icons, values and timers within the selected game aspect ratio. <recomp-color primary>Original</recomp-color> keeps the original placement, <recomp-color primary>16:9</recomp-color> limits the HUD to a 16:9 area, and <recomp-color primary>Expand</recomp-color> uses the full game image.",
+                "Automatically positions HUD icons, values and timers to match the selected game aspect ratio when set to <recomp-color primary>Auto</recomp-color>. <recomp-color primary>Classic 4:3</recomp-color> keeps the original, more central positions. <recomp-color primary>16:9</recomp-color> limits the HUD to a centred 16:9 area within the game image.",
                 hud_ratio_mode_options,
-                ultramodern::renderer::HUDRatioMode::Clamp16x9
+                ultramodern::renderer::HUDRatioMode::Full
             );
 
             config.add_enum_option(

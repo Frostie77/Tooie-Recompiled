@@ -5,6 +5,8 @@ Public v1.1.0/code 5 remains the latest published release. Redmi's qualitative
 playability follow-up has arrived; the final
 camera check passes. Build 134 now has focused Odin acceptance for fixed-preset
 visibility and Jiggy-wipe coverage; see the [review](build134-odin-review-20261102.md).
+The [signed build-135 checkpoint](release-candidate-135-20261102.md) now accepts
+Debug → Release save transfer and 21:9 persistence after save/quit/reload.
 
 ## Added
 
@@ -22,6 +24,15 @@ visibility and Jiggy-wipe coverage; see the [review](build134-odin-review-202611
   Expand. HUD icons, values, counters and timers follow the selected game image
   according to HUD Placement. HUD values/timers and fixed-ratio 3D visibility
   pass their focused Odin checks.
+
+## Settings clarity
+
+- Name the setting **Game Aspect Ratio**, with **Expand** first.
+- HUD Placement choices are **Auto**, **Classic 4:3** and **16:9**. Auto follows
+  the selected game image and is the default for new settings; existing saved
+  choices keep their behaviour.
+- Put **Display** first in Framerate and **Auto** first in Resolution,
+  preserving saved preferences.
 
 ## Corrections with focused device acceptance
 
@@ -62,8 +73,9 @@ The [handoff](handoff.md) links the complete source, host, CI and device records
   readout; Android version and a new close/reopen result are still unreported.
 - Retain the [build-133 camera/HUD/recorder acceptance](build133-odin-review-20261101.md).
   The [build-134 visibility/transition check](build134-odin-review-20261102.md)
-  now passes too. Include one preset persistence check in the signed release
-  reopen test. Broader pacing and older unusual-frame reports remain separate
+  now passes too. Signed build 135 also passes Debug-save import and 21:9
+  persistence. Check the requested settings labels/order in the replacement
+  candidate. Broader pacing and older unusual-frame reports remain separate
   from these focused passes.
 - Build the consolidated reviewed source as an unsigned **1.2.0 / code 6**
   release candidate and verify its complete payload. Sign
