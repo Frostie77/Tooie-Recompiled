@@ -1,8 +1,13 @@
-# Wide visibility and Jiggy transition candidate — 1 November 2026
+# Wide visibility and Jiggy transition correction — 1 November 2026
 
-This batch follows the [build-133 Odin review](build133-odin-review-20261101.md).
-Camera continuity and HUD values/timers have focused acceptance; two wide-image
-defects remain. Final pixels for this correction still require an Odin check.
+**Accepted on Odin, 2 November:** [build 134](build134-odin-review-20261102.md)
+passes CI, independent payload verification and Frostie's focused device check.
+He explicitly reports transitions good in Expand/all ratios and no clipping in
+any ratio. All four actual marker images and the native preset changes verify.
+The images show completed gameplay; animation acceptance is his manual report.
+
+This batch follows the [build-133 Odin review](build133-odin-review-20261101.md),
+which accepted camera/HUD behavior and exposed these two wide-image defects.
 
 ## Fixed presets must use the applied visibility width
 
@@ -51,6 +56,7 @@ The TOML hook and committed generated instruction location match exactly.
 
 This is source/CPU-consumer verification with controlled viewport/model inputs.
 It does not replay the original wipe mesh or establish its final GPU pixels.
-The candidate needs one combined CI build, then a short check of the four fixed
-ratios at the clipping location and a close/open transition in Expand and 21:9.
-Keep the existing camera, controls, HUD values/timers and long-play acceptances.
+Combined Android CI 134 and the focused Odin check above now pass. Keep the
+existing camera, controls, HUD values/timers and long-play acceptances. Preset
+persistence after an app restart remains part of the signed release check;
+the accepted visibility/transition checks do not need another graphics build.

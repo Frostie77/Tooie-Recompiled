@@ -1,6 +1,6 @@
 # Tooie Recompiled completion checklist
 
-Updated: 28 October 2026.
+Updated: 2 November 2026.
 
 The goal is a reliable native Android ARM64 release,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
@@ -270,8 +270,9 @@ Broad mod compatibility remains a coverage item.
 
 ## Focused graphics/control work for the next update
 
-The current installed Odin build is **129**. Its full CI and independently
-verified paired native payloads pass; source/tree identities are recorded in
+The current installed Odin build is **134**. Its full CI, independently verified
+Debug payload and [focused visibility/transition check](development/build134-odin-review-20261102.md)
+pass; source/tree identities are recorded in that review and
 [the handoff](development/handoff.md). The following checkmarks reflect focused
 manual acceptance, not full-game/device coverage or publication.
 
@@ -303,10 +304,17 @@ manual acceptance, not full-game/device coverage or publication.
   build 133; [native settings and actual events](development/build133-odin-review-20261101.md)
   are reviewed. Four separate HUD markers were not recorded; retain his manual
   report and the all-48-slot host coverage, without inventing screenshots.
-- [ ] Confirm the [fixed-preset visibility and Jiggy-wipe correction](development/wide-visibility-transition-fix-20261101.md).
-  Build 133 clips 3D objects in the fixed presets and its wide rotating wipe
-  vanishes before clearing the edges. Actual-consumer and failure-control host
-  checks pass; final Android pixels and one preset/reopen check remain open.
+- [x] Correct scenery/character clipping in the four fixed aspect ratios.
+  The [build-134 review](development/build134-odin-review-20261102.md) verifies
+  the installed identity, all four actual events/images and native settings for
+  every preset. Frostie reports no clipping in any aspect ratio.
+- [x] Correct the wide Jiggy wipe disappearing before it clears the screen.
+  Build 134 has explicit manual transition passes for Expand and all aspect
+  ratios. The review above distinguishes moving-animation acceptance from its
+  completed-gameplay still images. Host consumer/failure controls and CI pass.
+- [ ] Confirm a selected fixed aspect ratio survives closing/reopening the app.
+  Host persistence checks pass; the build-134 device capture keeps one process.
+  Include this in the next signed release update/save/settings/reopen check.
 - [x] Keep Jiggy Challenge controls unchanged with stationary stick swapping
   Off and On (MD-015), accepted in the build-125 review above.
 - [x] Correct the reported Lagoon missing-water/stray-polygons/lines failure

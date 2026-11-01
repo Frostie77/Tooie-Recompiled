@@ -1,9 +1,12 @@
 # Fixed game aspect ratios and HUD — 1 November 2026
 
-**Device follow-up:** the [build-133 review](build133-odin-review-20261101.md)
-records accepted camera and HUD values/timers, with failed 3D visibility in the
-fixed presets. The [visibility/transition correction](wide-visibility-transition-fix-20261101.md)
-is the next candidate; retain the accepted tests below.
+**Device follow-up, 2 November:** the [build-134 review](build134-odin-review-20261102.md)
+records accepted visibility and Jiggy transitions across the ratios, with all
+four native fixed targets retained in the log. This follows the
+[build-133 camera/HUD pass and visibility failure](build133-odin-review-20261101.md)
+and the accepted [visibility/transition correction](wide-visibility-transition-fix-20261101.md).
+Retain these focused passes; include preset/reopen persistence in the signed
+release check instead of repeating the graphics checks.
 
 Frostie requests more aspect ratios and explicitly includes the corrected HUD
 values in their scope. The [Redmi request](redmi-playability-20261031.md) names

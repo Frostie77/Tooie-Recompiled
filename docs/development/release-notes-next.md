@@ -2,8 +2,8 @@
 
 Version and Android version code are not selected. Public v1.1.0/code 5 remains
 unchanged. Redmi's qualitative playability follow-up has arrived; the final
-camera check passes. Fixed-preset visibility and the Jiggy-wipe coverage
-correction still need their final device check.
+camera check passes. Build 134 now has focused Odin acceptance for fixed-preset
+visibility and Jiggy-wipe coverage; see the [review](build134-odin-review-20261102.md).
 
 ## Added
 
@@ -19,8 +19,8 @@ correction still need their final device check.
   3.50 playable with occasional lag spikes; no measured FPS improvement is claimed.
 - Fixed **16:9, 16:10, 3:2 and 21:9** game aspect ratios alongside Original and
   Expand. HUD icons, values, counters and timers follow the selected game image
-  according to HUD Placement. HUD values/timers pass on Odin; the fixed-ratio
-  3D visibility correction below still needs its final device check.
+  according to HUD Placement. HUD values/timers and fixed-ratio 3D visibility
+  pass their focused Odin checks.
 
 ## Corrections with focused Odin acceptance
 
@@ -41,12 +41,12 @@ correction still need their final device check.
 - Collect large diagnostic logs automatically in verified chunks. Build 133
   completed both large native reads without manual recovery.
 
-## Next candidate corrections awaiting device acceptance
-
 - Apply widened visibility to the four fixed aspect ratios, preventing scenery
-  and characters from being rejected at the old view boundary.
+  and characters from being rejected at the old view boundary. Frostie reports
+  no clipping in any ratio on build 134.
 - Enlarge the model-based Jiggy transition for the selected wide image so its
   remaining mask can clear the edges before the original animation finishes.
+  Frostie accepts Expand and all-ratio transitions on build 134.
 
 These are the recorded focused checks, not full-game or all-device acceptance.
 The [handoff](handoff.md) links the complete source, host, CI and device records.
@@ -57,9 +57,10 @@ The [handoff](handoff.md) links the complete source, host, CI and device records
   playability with occasional lag spikes. The screenshots contain no FPS/settings
   readout; Android version and a new close/reopen result are still unreported.
 - Retain the [build-133 camera/HUD/recorder acceptance](build133-odin-review-20261101.md).
-  Test the [visibility and transition corrections](wide-visibility-transition-fix-20261101.md)
-  together, with one preset persistence check after reopening. Broader pacing
-  and older unusual-frame reports remain separate from these focused passes.
+  The [build-134 visibility/transition check](build134-odin-review-20261102.md)
+  now passes too. Include one preset persistence check in the signed release
+  reopen test. Broader pacing and older unusual-frame reports remain separate
+  from these focused passes.
 - Select the exact reviewed release source, version name and increasing code;
   build the unsigned release candidate and verify its complete payload. Sign
   locally with the existing protected release key, then check update continuity,

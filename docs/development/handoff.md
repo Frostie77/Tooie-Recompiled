@@ -1,21 +1,27 @@
 # Engineering handoff
 
-Updated: 1 November 2026.
+Updated: 2 November 2026.
 
 ## Release finishing batch
 
-**Build 133 device review:** the [complete uploaded capture](build133-odin-review-20261101.md)
-supports focused camera acceptance in the narrow passage, dialogue and open area,
-and successful chunked collection of 103.8/108.4 MB native snapshots. All four
-actual events and screenshots are reviewed. Frostie accepts HUD values/timers
-across the new ratios, but 3D scenery/characters clip in every fixed preset.
-The [new correction](wide-visibility-transition-fix-20261101.md) extends the
-guest visibility gate to those presets and scales the model-based Jiggy wipe
-for the applied wide image. The uploaded phone video clearly pictures the
-premature disappearance of its remaining mask. Host consumer/failure controls
-pass; combined CI and final Odin visibility/transition checks remain pending.
-Frostie parks the recording-command exit observation; do not divert this batch
-into crash diagnostics or request more footage already supplied.
+**Build 134 accepted:** the [complete uploaded capture](build134-odin-review-20261102.md)
+verifies the exact installed Debug identity, all four actual events/images and
+native settings for every fixed ratio. Frostie reports transitions good in
+Expand/all ratios and no clipping in any ratio. Both focused graphics items
+are complete. CI 134, independent downloaded-payload verification and the
+actual-consumer/failure-control host checks pass. The retained gameplay window
+ends on requested save with original PID 1055 throughout; native reads of
+112.5/114.9 MB complete in 27/28 chunks with the exact fresh delta included.
+
+The [build-133 review](build133-odin-review-20261101.md) retains the accepted
+narrow-passage/dialogue/open-area camera and HUD values/timers, plus the failures
+that motivated the [now accepted correction](wide-visibility-transition-fix-20261101.md).
+Keep the recording-command exit observation parked as Frostie requested.
+Next is release preparation: select source/version/code, verify and sign the
+release candidate locally with the existing protected key, then check the
+update, save/settings retention and reopen. Include fixed-preset persistence
+in that reopen check; the build-134 capture is one continuous process. Do not
+request another visibility/transition build solely to repeat accepted results.
 
 **Long-play character rendering: accepted manual pass.** On 1 November,
 Frostie reports that during an extended session the previous night the
@@ -35,15 +41,15 @@ Do not request another FPS comparison solely to replace the missing number.
 The [fixed-aspect batch](fixed-aspect-presets-20261101.md) adds 16:9, 16:10, 3:2
 and 21:9, retaining Original/Expand and the corrected complete HUD components.
 Config/renderer and all-slot HUD suites pass at every new ratio and all three
-HUD placements. Frostie now accepts combining these with the camera correction
-and [bounded log collection](chunked-log-collection-20261101.md) in **one next
-test build**. The recorder's native-byte/Windows/transfer-failure, existing
+HUD placements. These were combined with the camera correction and
+[bounded log collection](chunked-log-collection-20261101.md) in build 133, then
+the visibility/transition correction in build 134. The recorder's native-byte/Windows/transfer-failure, existing
 collector and package checks pass. The older camera candidate **132**, whose
 [CI run](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41067300155)
 passed at `6021dde0872f67058a0f8fe60b6967ac4dbacd39`, remains the native baseline.
-Build 133 has now passed CI, downloaded-payload checks and the focused camera
-check above. Next is the combined visibility/transition correction, with
-downloaded-payload verification before handing over its normal Debug bundle.
+Builds 133/134 have passed CI, downloaded-payload checks and their focused
+camera/HUD and visibility/transition device checks above. Public release state
+is unchanged; Frostie handles merges and publication.
 
 ## Next release and primary camera matching candidate
 
