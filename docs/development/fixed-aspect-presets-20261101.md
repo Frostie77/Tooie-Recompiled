@@ -1,5 +1,10 @@
 # Fixed game aspect ratios and HUD — 1 November 2026
 
+**Device follow-up:** the [build-133 review](build133-odin-review-20261101.md)
+records accepted camera and HUD values/timers, with failed 3D visibility in the
+fixed presets. The [visibility/transition correction](wide-visibility-transition-fix-20261101.md)
+is the next candidate; retain the accepted tests below.
+
 Frostie requests more aspect ratios and explicitly includes the corrected HUD
 values in their scope. The [Redmi request](redmi-playability-20261031.md) names
 16:9, 16:10, 3:2 and 21:9. This batch starts from build-132 source

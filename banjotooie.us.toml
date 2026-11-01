@@ -418,10 +418,18 @@ text = "tooie_reregister_shifted_overlay(rdram, ctx);"
 # below widen only the horizontal plane pair to RT64's applied target aspect.
 # Return hooks unwind the scope without overriding any rejection. Original,
 # Manual and direct primitive callers retain the original game path.
+# Named fixed wide ratios share the applied-aspect policy with Expand.
 [[patches.hook]]
 func = "func_800E3D0C"
 before_vram = 0x800E3DB8
 text = "tooie_expand_visibility_scope(rdram, ctx, 0U);"
+
+# Correct model-wipe coverage at its final draw-scale store. This helper is
+# called by opening/closing model transitions, outside the timer/state update.
+[[patches.hook]]
+func = "func_80800098_gctransitionDll"
+before_vram = 0x808000C4
+text = "tooie_transition_coverage(rdram, ctx);"
 
 [[patches.hook]]
 func = "func_800E3DC0"

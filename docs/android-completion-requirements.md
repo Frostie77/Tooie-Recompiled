@@ -149,7 +149,7 @@ acceptance passed; broader background/sleep and full-game coverage remain open.
 **1 November update:** The Redmi follow-up has arrived and Frostie accepts the
 long-play character check. The [draft release notes](development/release-notes-next.md) and
 [handoff](development/handoff.md) distinguish accepted focused fixes from the
-remaining camera/preset device checks. This full-project list is broader
+remaining visibility/transition device checks. This full-project list is broader
 than the focused acceptance of an individual update. Public version/feed remain
 v1.1.0/code 5; the next release identity is not selected.
 
@@ -299,10 +299,14 @@ manual acceptance, not full-game/device coverage or publication.
   accepts Original/Expand/16:9 counter and timer placement, available egg types,
   gold feathers and flight red feathers. This completes the requested focused
   HUD test; do not repeat it merely because older records say pending.
-- [ ] Confirm the new fixed 16:9/16:10/3:2/21:9 game presets and corrected HUD
-  values on the combined Android candidate. The [preset batch](development/fixed-aspect-presets-20261101.md)
-  passes config/renderer and all-48-slot HUD host checks at each new ratio and
-  all three HUD placements. Existing focused HUD acceptance above is retained.
+- [x] Check HUD values/timers at the new fixed ratios. Frostie accepts these on
+  build 133; [native settings and actual events](development/build133-odin-review-20261101.md)
+  are reviewed. Four separate HUD markers were not recorded; retain his manual
+  report and the all-48-slot host coverage, without inventing screenshots.
+- [ ] Confirm the [fixed-preset visibility and Jiggy-wipe correction](development/wide-visibility-transition-fix-20261101.md).
+  Build 133 clips 3D objects in the fixed presets and its wide rotating wipe
+  vanishes before clearing the edges. Actual-consumer and failure-control host
+  checks pass; final Android pixels and one preset/reopen check remain open.
 - [x] Keep Jiggy Challenge controls unchanged with stationary stick swapping
   Off and On (MD-015), accepted in the build-125 review above.
 - [x] Correct the reported Lagoon missing-water/stray-polygons/lines failure
@@ -316,15 +320,19 @@ manual acceptance, not full-game/device coverage or publication.
   verifies all seven events/native images, the native mode changes and the
   independently supplied Display video. Frostie reports improvement with
   residual stutter at Original, with near-target Manual 60 closer to Display.
-- [ ] Resolve/retest MD-004 or record Frostie's explicit known-issue deferral.
+- [x] Correct the reported narrow-passage camera shaking (MD-004).
   The [second build-131 trace and candidate](development/camera-primary-scene-fix-20261031.md)
   now reproduce wrong primary/auxiliary scene association in the actual CPU
   matcher/consumer. Reserving primary history passes ten captured pairs, 25
   viewport cases and 12 scope controls; old source reproduces logged outputs
-  and fails continuity. Full Android CI 132 passes; downloaded-artifact verification and Odin narrow
-  walking/turning, dialogue and open-area checks remain required. Uneven pacing
-  and guest adjustment remain separate possibilities if shaking persists.
+  and fails continuity. Full Android CI 132/133 and the downloaded build-133
+  payload verify. Frostie accepts narrow walking/turning, dialogue and open area
+  in the [reviewed build-133 capture](development/build133-odin-review-20261101.md).
+  Broader pacing and guest adjustment remain separate from this focused pass.
   Older MD-003 unusual frames remain separate; the long-play check is accepted above.
+- [x] Verify automatic chunked native-log collection on Odin. Build 133 retains
+  successful 25/26-chunk reads and the complete 4,662,160-byte fresh delta,
+  without manual recovery. The review above records its exact scope.
 - [x] Review the new [Redmi playability follow-up](development/redmi-playability-20261031.md):
   reported 240p + Expand playable, and scale 3.50 playable with occasional lag
   spikes. All eight attached gameplay images were reviewed. No measured FPS

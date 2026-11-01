@@ -49,6 +49,18 @@ namespace ultramodern {
             Ratio21x9,
             OptionCount
         };
+        inline bool uses_widened_view(AspectRatio option) {
+            switch (option) {
+                case AspectRatio::Expand:
+                case AspectRatio::Ratio16x9:
+                case AspectRatio::Ratio16x10:
+                case AspectRatio::Ratio3x2:
+                case AspectRatio::Ratio21x9:
+                    return true;
+                default:
+                    return false;
+            }
+        }
         enum class Antialiasing {
             None,
             MSAA2X,

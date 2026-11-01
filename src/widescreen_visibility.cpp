@@ -15,7 +15,7 @@ float signedHalf(const uint8_t *r,uint32_t p){int16_t v;std::memcpy(&v,r+((p&0x7
 struct Plane {std::array<float,3> n;float d;};
 }
 extern "C" void tooie_expand_visibility_scope(uint8_t*,const recomp_context*,uint32_t stage) {
-    if(stage==1)scopes.push_back(ultramodern::renderer::get_graphics_config().ar_option==ultramodern::renderer::AspectRatio::Expand?
+    if(stage==1)scopes.push_back(ultramodern::renderer::uses_widened_view(ultramodern::renderer::get_graphics_config().ar_option)?
         tooie::visibility::widthRatio.load(std::memory_order_relaxed):1.f);
     else if(!scopes.empty())scopes.pop_back();
 }

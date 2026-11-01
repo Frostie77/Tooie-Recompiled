@@ -2,7 +2,8 @@
 
 Version and Android version code are not selected. Public v1.1.0/code 5 remains
 unchanged. Redmi's qualitative playability follow-up has arrived; the final
-camera and new-preset device checks remain outstanding.
+camera check passes. Fixed-preset visibility and the Jiggy-wipe coverage
+correction still need their final device check.
 
 ## Added
 
@@ -18,7 +19,8 @@ camera and new-preset device checks remain outstanding.
   3.50 playable with occasional lag spikes; no measured FPS improvement is claimed.
 - Fixed **16:9, 16:10, 3:2 and 21:9** game aspect ratios alongside Original and
   Expand. HUD icons, values, counters and timers follow the selected game image
-  according to HUD Placement. Host checks pass; Android visual acceptance is pending.
+  according to HUD Placement. HUD values/timers pass on Odin; the fixed-ratio
+  3D visibility correction below still needs its final device check.
 
 ## Corrections with focused Odin acceptance
 
@@ -34,6 +36,17 @@ camera and new-preset device checks remain outstanding.
   passes the focused Expand/Display checks with MSAA 2× and None.
 - Prevent the reproduced controller-navigation exception in Graphics. The focused
   MSAA 2× → 4× → 2× and leave/reopen check passes on Odin.
+- Keep the gameplay camera's own history during narrow-space turns. Frostie
+  accepts the build-133 narrow-passage, dialogue and open-area checks.
+- Collect large diagnostic logs automatically in verified chunks. Build 133
+  completed both large native reads without manual recovery.
+
+## Next candidate corrections awaiting device acceptance
+
+- Apply widened visibility to the four fixed aspect ratios, preventing scenery
+  and characters from being rejected at the old view boundary.
+- Enlarge the model-based Jiggy transition for the selected wide image so its
+  remaining mask can clear the edges before the original animation finishes.
 
 These are the recorded focused checks, not full-game or all-device acceptance.
 The [handoff](handoff.md) links the complete source, host, CI and device records.
@@ -43,17 +56,10 @@ The [handoff](handoff.md) links the complete source, host, CI and device records
 - Retain the [Redmi follow-up](redmi-playability-20261031.md) as reported
   playability with occasional lag spikes. The screenshots contain no FPS/settings
   readout; Android version and a new close/reopen result are still unreported.
-- Test the [primary-camera scene matching candidate](camera-primary-scene-fix-20261031.md)
-  on Odin. The second build-131 trace and actual-consumer replay expose primary
-  history being replaced by auxiliary history. The scoped correction passes
-  host checks and Android CI 132; downloaded-payload verification and device
-  acceptance remain pending. Keep broader
-  pacing/guest adjustment and older unusual frames separate from the accepted
-  long-play check. No accepted camera fix is claimed yet.
-- Check the four new presets and corrected HUD values on the combined candidate
-  using the [focused plan](fixed-aspect-presets-20261101.md), together with the
-  camera correction. The candidate also includes verified chunked recorder
-  reads; no separate build-132 install or long-log soak is required.
+- Retain the [build-133 camera/HUD/recorder acceptance](build133-odin-review-20261101.md).
+  Test the [visibility and transition corrections](wide-visibility-transition-fix-20261101.md)
+  together, with one preset persistence check after reopening. Broader pacing
+  and older unusual-frame reports remain separate from these focused passes.
 - Select the exact reviewed release source, version name and increasing code;
   build the unsigned release candidate and verify its complete payload. Sign
   locally with the existing protected release key, then check update continuity,

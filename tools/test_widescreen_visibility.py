@@ -30,6 +30,15 @@ def main():
         needle=f'    // 0x{pc:08X}:';assert parents[name].count(needle)==1
         parents[name]=parents[name].replace(needle,'    tooie_expand_visibility(rdram, ctx);\n'+needle)
         assert hashlib.sha256(parents[name].encode()).hexdigest()==fixture['functions'][name]['old_sha256']
+    transition=json.loads((root/'tests/fixtures/transition-scale-parent.json').read_text())
+    name=transition['function']
+    body=re.search(r'^RECOMP_FUNC void '+name+r'\(.*?(?=^RECOMP_FUNC |\Z)',(root/transition['file']).read_text(),re.M|re.S).group()
+    canonical=body.replace('    tooie_transition_coverage(rdram, ctx);\n','')
+    assert hashlib.sha256(canonical.encode()).hexdigest()==transition['canonical_sha256']
+    hook=[h for h in cfg['patches']['hook'] if h['func']==name and h['before_vram']==int(transition['before_vram'],16)]
+    assert len(hook)==1 and hook[0]['text']=='tooie_transition_coverage(rdram, ctx);'
+    assert '    '+hook[0]['text']+'\n    // '+transition['before_vram']+':' in body
+    bodies[name]=body;parents[name]=canonical
     current=''.join(bodies.values());parent=''.join(parents.values())
     for name in sorted(bodies,key=len,reverse=True):parent=re.sub(r'\b'+name+r'\b','parent_'+name,parent)
     parent=parent.replace('tooie_expand_visibility(rdram, ctx);','parent_expand_visibility(rdram, ctx);')
@@ -50,10 +59,28 @@ def main():
             if line.startswith('PASS:'):print(line,flush=True)
     cc,cxx=os.environ.get('CC','gcc'),os.environ.get('CXX','g++');obj=build/'guest.o';binary=build/'test'
     run([cc,'-std=c11',*flags,'-c',build/'guest.c','-o',obj],'compile')
-    run([cxx,'-std=c++20',*flags,root/'tests/widescreen_visibility.cpp',root/'src/widescreen_visibility.cpp',obj,'-no-pie','-o',binary],'link')
+    test=build/'test.o';visibility=build/'visibility.o';coverage=build/'coverage.o'
+    run([cxx,'-std=c++20',*flags,'-c',root/'tests/widescreen_visibility.cpp','-o',test],'compile-test')
+    run([cxx,'-std=c++20',*flags,'-c',root/'src/widescreen_visibility.cpp','-o',visibility],'compile-visibility')
+    run([cxx,'-std=c++20',*flags,'-c',root/'src/transition_coverage.cpp','-o',coverage],'compile-coverage')
+    run([cxx,*flags,test,visibility,coverage,obj,'-no-pie','-o',binary],'link')
     run([binary],'current');run([binary,'--old-uncull'],'old-control',84);run([binary,'--no-widen'],'no-width-control',84)
+    old_gate=build/'old-gate.cpp'
+    source=(root/'src/widescreen_visibility.cpp').read_text()
+    needle='ultramodern::renderer::uses_widened_view(ultramodern::renderer::get_graphics_config().ar_option)'
+    assert source.count(needle)==1
+    old_gate.write_text(source.replace(needle,'ultramodern::renderer::get_graphics_config().ar_option==ultramodern::renderer::AspectRatio::Expand'))
+    run([cxx,'-std=c++20',*flags,'-c',old_gate,'-o',build/'old-gate.o'],'compile-old-gate')
+    run([cxx,*flags,test,build/'old-gate.o',coverage,obj,'-no-pie','-o',build/'old-gate'],'link-old-gate')
+    run([build/'old-gate'],'old-preset-gate-control',84)
+    missing=build/'missing-coverage.cpp'
+    missing.write_text('#include "tooie_recomp.h"\nextern "C" void tooie_transition_coverage(uint8_t*,recomp_context*) {}\n')
+    run([cxx,'-std=c++20',*flags,'-c',missing,'-o',build/'missing-coverage.o'],'compile-missing-coverage')
+    run([cxx,*flags,test,visibility,build/'missing-coverage.o',obj,'-no-pie','-o',build/'missing-coverage'],'link-missing-coverage')
+    run([build/'missing-coverage'],'missing-transition-coverage-control',84)
     print('PASS: exact prior unconditional uncull fails rear/vertical visibility; disabling horizontal widening fails the newly visible side region.',flush=True)
-    print('Scope: constructed camera/bounds with complete guest visibility consumers; no causal replay or GPU/device acceptance of the lagoon water report.',flush=True)
+    print('PASS: restoring the Expand-only gate fails a named fixed ratio; omitting transition expansion fails the real guest draw-scale handoff.',flush=True)
+    print('Scope: constructed camera/bounds and original transition helper through actual guest consumers; animation/model geometry and final pixels remain device checks.',flush=True)
 
 
 if __name__=='__main__':main()

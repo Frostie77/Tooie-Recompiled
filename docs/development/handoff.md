@@ -4,6 +4,19 @@ Updated: 1 November 2026.
 
 ## Release finishing batch
 
+**Build 133 device review:** the [complete uploaded capture](build133-odin-review-20261101.md)
+supports focused camera acceptance in the narrow passage, dialogue and open area,
+and successful chunked collection of 103.8/108.4 MB native snapshots. All four
+actual events and screenshots are reviewed. Frostie accepts HUD values/timers
+across the new ratios, but 3D scenery/characters clip in every fixed preset.
+The [new correction](wide-visibility-transition-fix-20261101.md) extends the
+guest visibility gate to those presets and scales the model-based Jiggy wipe
+for the applied wide image. The uploaded phone video clearly pictures the
+premature disappearance of its remaining mask. Host consumer/failure controls
+pass; combined CI and final Odin visibility/transition checks remain pending.
+Frostie parks the recording-command exit observation; do not divert this batch
+into crash diagnostics or request more footage already supplied.
+
 **Long-play character rendering: accepted manual pass.** On 1 November,
 Frostie reports that during an extended session the previous night the
 character stayed correct throughout, and explicitly asks to check this issue
@@ -28,9 +41,9 @@ test build**. The recorder's native-byte/Windows/transfer-failure, existing
 collector and package checks pass. The older camera candidate **132**, whose
 [CI run](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41067300155)
 passed at `6021dde0872f67058a0f8fe60b6967ac4dbacd39`, remains the native baseline.
-Use the combined candidate for the next narrow-passage/dialogue/open-area and
-preset/HUD checks; a separate build-132 install is no longer required. Verify
-the combined downloaded payload before handing over its normal Debug bundle.
+Build 133 has now passed CI, downloaded-payload checks and the focused camera
+check above. Next is the combined visibility/transition correction, with
+downloaded-payload verification before handing over its normal Debug bundle.
 
 ## Next release and primary camera matching candidate
 
@@ -57,10 +70,11 @@ before generic proximity matching. It retains interpolation math/flags, viewport
 bypass and the other camera roles. Ten captured pairs pass through the actual
 producer/grouping/matcher/consumer; restoring the old source reproduces the
 logged old outputs, then fails continuity. The 25 retained viewport cases and
-12 scope controls pass. Full Android CI 132 passes; downloaded paired-payload
-verification and Odin acceptance still need recording. Test the same Display/Expand narrow walk,
-then dialogue and an open area. Keep MD-004 open until that result. Scene order
-outside captured coverage remains a device-regression consideration.
+12 scope controls pass. Full Android CI 132 and combined CI 133 pass; the normal
+build-133 download verifies. Frostie accepts the Display/Expand narrow walk,
+dialogue and open area in the reviewed build-133 capture above. MD-004 has a
+focused pass. Broader scene-order changes outside that coverage retain their
+usual device-regression consideration.
 
 The [first burst](camera-check-odin-build131-20261030.md) remains useful limited
 coverage: only a brief input tilt, correct primary matching, ~0.017% contraction,

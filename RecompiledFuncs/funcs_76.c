@@ -765,6 +765,7 @@ RECOMP_FUNC void func_80800098_gctransitionDll(uint8_t* rdram, recomp_context* c
     CHECK_FR(ctx, 8);
     NAN_CHECK(ctx->f4.fl); NAN_CHECK(ctx->f8.fl); 
     ctx->f10.fl = MUL_S(ctx->f4.fl, ctx->f8.fl);
+    tooie_transition_coverage(rdram, ctx);
     // 0x808000C4: swc1        $f10, 0x0($v0)
     MEM_W(0X0, ctx->r2) = ctx->f10.u32l;
     // 0x808000C8: lw          $ra, 0x14($sp)

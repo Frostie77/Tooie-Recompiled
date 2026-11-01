@@ -85,9 +85,10 @@ void tooie_hud_component_end(const uint8_t* rdram, const recomp_context* ctx);
 void tooie_demo_pacing(uint8_t* rdram, recomp_context* ctx, uint32_t event);
 
 // Scope the actual visibility wrappers and widen only their horizontal camera
-// planes to the applied Expand aspect; preserve rear/vertical rejection.
+// planes to the applied wide aspect; preserve rear/vertical rejection.
 void tooie_expand_visibility_scope(uint8_t* rdram, const recomp_context* ctx, uint32_t stage);
 uint32_t tooie_expand_frustum(const uint8_t* rdram, recomp_context* ctx, uint32_t kind);
+void tooie_transition_coverage(uint8_t* rdram, recomp_context* ctx);
 
 // RT64 interpolation metadata. The game emits none of its own, so every
 // transform looks new to RT64 and it blends matrices that do not correspond,

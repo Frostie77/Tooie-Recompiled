@@ -5,7 +5,11 @@ continuous walking/turning. The main gameplay view sometimes selects an
 auxiliary view from the previous workload; once it loses its previous match
 when an auxiliary appears. A scoped correction now reserves the first tagged
 perspective gameplay scene before the generic nearest-matrix assignment.
-**Host regression passes; Android candidate and Odin acceptance are pending.**
+**1 November follow-up:** Frostie accepts the build-133 narrow-passage,
+dialogue and open-area camera checks. The [complete capture review](build133-odin-review-20261101.md)
+records all actual markers and the healthy original PID through save. This
+focused acceptance supersedes the earlier pending device-test status; repeat
+the camera check only if it regresses.
 
 ## Repeat capture verification
 

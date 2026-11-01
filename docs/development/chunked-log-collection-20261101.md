@@ -1,5 +1,9 @@
 # Automatic bounded native-log collection — 1 November 2026
 
+**Device follow-up:** [build 133](build133-odin-review-20261101.md) completed
+verified 25/26-chunk native reads and retained the complete fresh delta without
+manual recovery. This completes the requested focused recorder check.
+
 Frostie accepts including reliable large-log collection in the next combined
 camera/aspect/HUD test. No additional gameplay feature is added by the recorder.
 
