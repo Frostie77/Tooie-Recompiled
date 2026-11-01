@@ -1,5 +1,19 @@
 # Android release signing
 
+## Next candidate — 1.2.0 / code 6
+
+The [next-update notes](release-notes-next.md) collect the accepted changes.
+Use the consolidated `main` source in **Actions → Android APK → Run workflow**:
+enable `prepare_candidate`, enter `1.2.0` / `6`, and leave the GPU, paired-GPU
+and touch-test inputs off. This prepares an unsigned candidate and the local
+signing helpers. Verify that artifact before protected local signing and the
+Odin update/save/settings/reopen check, including fixed-preset persistence.
+The existing release package, protected key and retained Debug app keep their
+identities. Publish and advance the stable feed after the signed result is
+accepted; public v1.1.0 / code 5 remains current until then.
+
+## Published releases
+
 Frostie approved and published the first Android release,
 [v1.0.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/Banjo-Tooie),
 on **24 October 2026 (AEDT)**. Its Android version code is **3** and its public

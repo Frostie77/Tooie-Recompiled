@@ -1,0 +1,14 @@
+{
+  "source_commit": "4fb2e33e6ace2ad5076a649e3fd502966386a9b0",
+  "scope": "Complete retained HUD loop and component consumer; no component-ID/anchor mapping is inferred.",
+  "functions": {
+    "func_800FA508": {
+      "file": "RecompiledFuncs/funcs_35.c",
+      "sha256": "19af48286a55e70b7e13e7460729d55077325491b120d1036e5a66deab81a9c5"
+    },
+    "scinfobar_entrypoint_24": {
+      "file": "RecompiledFuncs/funcs_79.c",
+      "sha256": "662e3efead853ab70b644f8e5b63c82be3405a6d443146919bbb64cbfc588bf3"
+    }
+  }
+}

@@ -9,11 +9,12 @@ static jobject activity;
 static bool started=false,disabled=false,binding=false;
 static int queries=0;
 static std::vector<SDL_Event> events;
+namespace tooie::input { bool swap_aiming_sticks(int) { return false; } }
 namespace ultramodern { bool is_game_started() { ++queries;return started; } }
 namespace recompinput {
 bool game_input_disabled() { return disabled; }
 bool all_input_disabled() { return binding; }
-namespace profiles { bool get_n64_input(int player,uint16_t* b,float* x,float* y) { *b=disabled?0:0x20;*x=disabled?0:.25f;*y=disabled?0:-.4f;return player==0; } }
+namespace profiles { bool get_n64_input(int player,uint16_t* b,float* x,float* y,bool swap) { *b=disabled?0:0x20;*x=disabled?0:.25f;*y=disabled?0:-.4f;return player==0; } }
 }
 namespace recompui { void queue_event(const SDL_Event& event) { events.push_back(event); } }
 extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* value,void*) { vm=value;return JNI_VERSION_1_6; }

@@ -20246,6 +20246,9 @@ L_80803A5C:
 RECOMP_FUNC void func_80803A78_chintrochar(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie_rt64_intro_scope(rdram, ctx, 1U);
+#endif
     // 0x80803A78: addiu       $sp, $sp, -0x78
     ctx->r29 = ADD32(ctx->r29, -0X78);
     // 0x80803A7C: sw          $ra, 0x2C($sp)
@@ -20462,6 +20465,9 @@ L_80803B58:
     // 0x80803BAC: lw          $t2, 0x74($sp)
     ctx->r10 = MEM_W(ctx->r29, 0X74);
 L_80803BB0:
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie_rt64_intro_scope(rdram, ctx, 2U);
+#endif
     // 0x80803BB0: jal         0x800E39A8
     // 0x80803BB4: addiu       $a0, $sp, 0x54
     ctx->r4 = ADD32(ctx->r29, 0X54);
@@ -20719,6 +20725,9 @@ L_80803CE0:
     // 0x80803CF8: lw          $ra, 0x2C($sp)
     ctx->r31 = MEM_W(ctx->r29, 0X2C);
 L_80803CFC:
+#if TOOIE_ACTOR_POSE_ENABLED
+    tooie_rt64_intro_scope(rdram, ctx, 3U);
+#endif
     // 0x80803CFC: lw          $s0, 0x28($sp)
     ctx->r16 = MEM_W(ctx->r29, 0X28);
     // 0x80803D00: addiu       $sp, $sp, 0x78
@@ -34414,6 +34423,7 @@ L_80802000:
 RECOMP_FUNC void func_80802030_chjiggygamenew(uint8_t* rdram, recomp_context* ctx) {
     uint64_t hi = 0, lo = 0, result = 0;
     int c1cs = 0;
+    tooie_jiggy_input_context(rdram, ctx);
     // 0x80802030: addiu       $sp, $sp, -0x30
     ctx->r29 = ADD32(ctx->r29, -0X30);
     // 0x80802034: sw          $ra, 0x24($sp)

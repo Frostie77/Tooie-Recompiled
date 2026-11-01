@@ -19006,6 +19006,7 @@ RECOMP_FUNC void scinfobar_entrypoint_24(uint8_t* rdram, recomp_context* ctx) {
     // 0x808007CC: lbu         $v0, 0x2($s0)
     ctx->r2 = MEM_BU(ctx->r16, 0X2);
     skip_1:
+    tooie_hud_component_callback(rdram, ctx);
     // 0x808007D0: jalr        $v0
     // 0x808007D4: or          $a3, $s3, $zero
     ctx->r7 = ctx->r19 | 0;

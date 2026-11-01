@@ -1,0 +1,233 @@
+{
+  "share_sha256": "e02e955913f6b9b348f500fba6d9bcd440612f30a20dc50fadb21426ec5d51a9",
+  "source_identity": {
+    "commit": "aa277b14262c951b395a39d4345845e6ecf481d4",
+    "hash": "c2950841ad94d85650d7d7e8d2f3bc7b23e36714bb484fb1d2e64b0e4af5e367",
+    "build_id": "2ac5aeb2745839ca5ac5e25b11eb29f0d06da09f",
+    "serial": "7907333f",
+    "capture_mode": "attach-to-installed-debug",
+    "process_name": "io.github.banjotooierecompiled:game",
+    "capture_tool_revision": "aa277b14262c951b395a39d4345845e6ecf481d4"
+  },
+  "manifest_source_modes": {
+    "verbatim": 180,
+    "local-only": 2
+  },
+  "source_count": 182,
+  "newlog_bytes": 6097602,
+  "newlog_sha256": "f4ffb26640ace932fc2107994ca15666f4bd26c64e78fa48362d5ca41f431ddb",
+  "journal_inputs": 3,
+  "events": [
+    {
+      "sequence": 1,
+      "marker": 1,
+      "id": "bb47afd420924600968bdc13fddadc1c",
+      "description": "narrow passage - camera trace Displa",
+      "host_receipt": "2026-10-30T22:31:19.527+11:00",
+      "device_marker_wall": "2026-10-30T22:31:18.141815+11:00",
+      "estimated_marker_native_us": 1012239599410,
+      "effective_framerate": "Display",
+      "screenshot_sha256": "09f738cccda767d0c0d4d5694cd98ec85327d238e422cb53e1c71104c6defa35",
+      "present_windows": [
+        {
+          "start_native_us": 1012229433996,
+          "end_native_us": 1012234447492,
+          "count": 301,
+          "elapsed_us": 5013496,
+          "native_presents_per_second": 60.037945577297755,
+          "maximum_gap_us": 24258,
+          "target_hz": 120,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1012234447491,
+          "end_native_us": 1012239454378,
+          "count": 363,
+          "elapsed_us": 5006887,
+          "native_presents_per_second": 72.5001383094925,
+          "maximum_gap_us": 25793,
+          "target_hz": 120,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1012239454378,
+          "end_native_us": 1012244465950,
+          "count": 400,
+          "elapsed_us": 5011572,
+          "native_presents_per_second": 79.81527552632188,
+          "maximum_gap_us": 25179,
+          "target_hz": 120,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1012244465950,
+          "end_native_us": 1012249468567,
+          "count": 426,
+          "elapsed_us": 5002617,
+          "native_presents_per_second": 85.15542964812218,
+          "maximum_gap_us": 23513,
+          "target_hz": 120,
+          "source_hz": 30
+        }
+      ],
+      "nearby_interpolation_samples": [
+        {
+          "native_us": 1012229786440,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 17
+        },
+        {
+          "native_us": 1012234818308,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 17
+        },
+        {
+          "native_us": 1012239822749,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 17
+        }
+      ]
+    }
+  ],
+  "notes": 0,
+  "runtime_total": 13766,
+  "runtime_pid_counts": {
+    "21801": 13766
+  },
+  "runtime_counts": {
+    "camera-step": 1440,
+    "camera-matrix": 11520,
+    "camera-burst": 2,
+    "audio": 45,
+    "vi": 43,
+    "present": 43,
+    "config": 1,
+    "workload-stages": 44,
+    "render-stages": 44,
+    "present-stages": 44,
+    "vulkan-build": 113,
+    "shader-build": 40,
+    "interpolation": 43,
+    "present-queue": 44,
+    "matching-stages": 44,
+    "mesh-motion": 25,
+    "skeletal-source": 41,
+    "skeletal": 40,
+    "actor-source": 43,
+    "actor-draw": 65,
+    "visibility": 42
+  },
+  "runtime_exports_reconstructed": 53,
+  "java_window_records": 4,
+  "clock_calibration": {
+    "median_wall_minus_uptime_seconds": 1792347638.5424047,
+    "observed_spread_ms": 0.8409023284912109,
+    "scope": "Observed Java uptime/Logcat consistency, not a bound on visual onset or exact wall-clock accuracy."
+  },
+  "native_configs": [
+    {
+      "native_us": 1012087632411,
+      "approximate_device_wall": "2026-10-30T22:28:46.174816+11:00",
+      "values": {
+        "antialiasing": "MSAA2X",
+        "aspectRatio": "Expand",
+        "aspectTarget": 1.7777777910232544,
+        "developerMode": false,
+        "displayBuffering": 1,
+        "downsampleMultiplier": 1,
+        "extAspectRatio": "Expand",
+        "extAspectTarget": 1.7777777910232544,
+        "filtering": "AntiAliasedPixelScaling",
+        "graphicsAPI": "Automatic",
+        "hardwareResolve": "Automatic",
+        "idleWorkActive": true,
+        "internalColorFormat": "Standard",
+        "refreshRate": "Display",
+        "refreshRateTarget": 60,
+        "resolution": "WindowIntegerScale",
+        "resolutionMultiplier": 2.0,
+        "threePointFiltering": true,
+        "upscale2D": "ScaledOnly"
+      }
+    }
+  ],
+  "window": {
+    "host_start": "2026-10-30T22:31:03.585077+11:00",
+    "host_end": "2026-10-30T22:32:21.926866+11:00",
+    "host_start_monotonic_seconds": 142315.439633583,
+    "host_end_monotonic_seconds": 142393.781487856,
+    "requested_seconds": null,
+    "user_requested_finish": true,
+    "scope": "Continuous capture after the user declared playable gameplay. No automatic time limit, install, launch or game input. Elapsed time alone does not prove active play."
+  },
+  "duration_seconds": 78.341789,
+  "original_process_assessments": 15,
+  "nonzero_statuses": [],
+  "vulkan_build_results": {
+    "0": 113
+  },
+  "optional_trace_requests": [
+    "camera-trace-v1"
+  ],
+  "video_setting": null,
+  "camera_trace": {
+    "burst": "879d682251dc4d8491324f3b84f8d179",
+    "steps": 1440,
+    "matrix_records": 11520,
+    "recorded_seconds": 7.767172,
+    "reason": "step-limit",
+    "dropped_records": 0,
+    "captured_gameplay_camera_outputs": 480,
+    "three_tagged_transforms": true,
+    "duplicate_transform": "3 copies 1, including selected previous matrices",
+    "current_view_ranks": {
+      "2": 480,
+      "3": 960
+    },
+    "main_workloads": 234,
+    "first_workload": 3897,
+    "last_workload": 4130,
+    "main_unique_submitted_views": 36,
+    "main_view_changed_workload_transitions": 35,
+    "first_changed_seconds": 2.833892,
+    "last_changed_seconds": 3.967234,
+    "pitch_range_degrees": [
+      -4.919579816314127,
+      13.911506658762342
+    ],
+    "max_selected_rotation_delta_degrees": 2.397879175975262,
+    "minimum_relative_column_lengths": [
+      1.0,
+      0.9998358734498891,
+      0.999831736096409
+    ],
+    "previous_view_correspondence_max_error": 0.0,
+    "max_view_linear_blend_absolute_error": 0.0001275000004170579,
+    "max_projection_blend_absolute_error": 1.975000003540117e-06,
+    "max_combined_matrix_product_absolute_error": 0.00012313094885030296,
+    "emission_total_us": 111591,
+    "emission_max_us": 450,
+    "emission_fraction_of_window": 0.014367005133914892,
+    "weights": {
+      "0.25": 232,
+      "0.75": 233,
+      "1": 13,
+      "0.5": 2
+    },
+    "native_record_timestamps_monotonic": true,
+    "request_removed": true,
+    "visual_shake_alignment": "not established; marker is after the bounded burst",
+    "camera_cause": "unresolved"
+  },
+  "manual_burst_alignment_answer": "I'm not sure",
+  "visible_shake_confirmed_in_burst": null,
+  "source_zip_library_file_id": "libfile_fd50974478408191acc514afb23de1a5",
+  "share_bytes": 2493176,
+  "share_members": 184,
+  "camera_policy_changed": false,
+  "native_fatal_scan": {
+    "NewLog": 0,
+    "Logcat": 0,
+    "Logcat-Dump": 0
+  }
+}

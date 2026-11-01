@@ -83,6 +83,35 @@ public:
         s->used.emplace(*i);
         return i->second;
     }
+    // A model display list can reload a parent or a fixed copy while a child
+    // group remains active. Resolve only to an existing immutable binding in
+    // this queued task and the SAME explicitly owned pose. This cannot discover
+    // an owner for an untagged draw. Exact addresses win; copied bytes must name
+    // one unique bone. Coincident bones are deliberately ambiguous.
+    static BindingPtr findFixed(const BindingPtr &anchor, uint32_t address, const Words &fixed) {
+        auto s = current();
+        if (!s || !s->entries || !anchor || !anchor->pose) return {};
+        bool anchored = false;
+        BindingPtr direct, copy;
+        bool directAmbiguous = false, copyAmbiguous = false;
+        for (const auto &entry : *s->entries) {
+            const auto &candidate = entry.second;
+            anchored |= candidate == anchor;
+            if (!candidate || candidate->pose != anchor->pose || candidate->fixed != fixed ||
+                candidate->bone >= candidate->pose->bones.size()) continue;
+            if (copy && copy->bone != candidate->bone) copyAmbiguous = true;
+            else if (!copy) copy = candidate;
+            if (candidate->address == address) {
+                if (direct && direct->bone != candidate->bone) directAmbiguous = true;
+                else if (!direct) direct = candidate;
+            }
+        }
+        if (!anchored || directAmbiguous || (!direct && copyAmbiguous)) return {};
+        const auto result = direct ? direct : copy;
+        if (result) for (const auto &entry : *s->entries)
+            if (entry.second == result) s->used.emplace(entry);
+        return result;
+    }
 };
 }
 #endif

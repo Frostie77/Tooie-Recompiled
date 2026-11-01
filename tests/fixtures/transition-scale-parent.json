@@ -1,0 +1,7 @@
+{
+  "source_commit": "7ba1260eb907fd866b93228dcb772333877f9787",
+  "file": "RecompiledFuncs/funcs_76.c",
+  "function": "func_80800098_gctransitionDll",
+  "before_vram": "0x808000C4",
+  "canonical_sha256": "78c104386d754a958aa43f468b456b5ffa249b97f0497d07447203d689736e6b"
+}

@@ -71,8 +71,8 @@ export ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1:print_stacktrac
 "$t/test" "$t/fixture.json"
 "${CXX:-g++}" "${flags[@]}" "${san[@]}" "$t/api.o" "$t/actor-generated.o" "${objects[@]}" "$t/parent-rt64_game_frame.cpp" "$t/parent-rt64_transform_processor.cpp" -Wl,--gc-sections -o "$t/parent"
 if "$t/parent" "$t/fixture.json" > "$t/control.log" 2>&1;then echo 'FAIL: exact parent accepted production hierarchy';exit 1;else test "$?" -eq 1;fi
-rg -q '^hierarchy failure:.*constraint\(p,output,weight,false\)' "$t/control.log"
-echo 'PASS: exact 60c0c89 parent rejects live hierarchy regression'
+rg -q '^hierarchy failure:.*meshTrajectory\(p,output,weight,false\)' "$t/control.log"
+echo 'PASS: exact 60c0c89 parent rejects live owned-mesh trajectory regression'
 for input in "$@";do
  python3 "$r/tools/replay_correction_trace.py" "$input" > "$t/external.json"
  "$t/test" "$t/external.json"

@@ -48,6 +48,7 @@
 #include "android_save_transfer.h"
 #include "mod_runtime.h"
 #include "aiming_controls.h"
+#include "controller_input.h"
 #if defined(__ANDROID__)
 #include "touch_input.h"
 #include "android_touch_controls.h"
@@ -244,6 +245,9 @@ std::vector<recomp::GameEntry> supported_games = {
         .has_compressed_code = true,
         .entrypoint_address = get_entrypoint_address(),
         .entrypoint = recomp_entrypoint,
+        .on_init_callback = [](uint8_t* rdram, recomp_context*) {
+            tooie::input::initialize_controls(rdram);
+        },
     },
 };
 
@@ -671,7 +675,7 @@ static int tooie_recomp_main(int argc, char** argv) {
 #if defined(__ANDROID__)
         .get_input = tooie::touch::read_n64_input,
 #else
-        .get_input = recompinput::profiles::get_n64_input,
+        .get_input = tooie::input::read_controller_input,
 #endif
         .set_rumble = recompinput::set_rumble,
         .get_connected_device_info = get_connected_device_info,

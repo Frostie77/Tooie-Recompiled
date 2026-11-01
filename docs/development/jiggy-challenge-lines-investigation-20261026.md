@@ -1,10 +1,13 @@
 # Jiggy-challenge lines investigation — 26 October 2026
 
-MD-001 remains **open: cause and fix unconfirmed**. The original capture was
-rechecked, and the challenge's captured-image drawing path was traced in source.
-This investigation changes no game code, graphics defaults or installed APK.
-Frostie later resumed focused Save Management and settings checks; no new
-capture of this graphics defect is recorded.
+MD-001 has a **focused Odin pass, intended for the next update**. The later
+[candidate](graphics-fix-candidates-20261027.md) clips attachment-clear rectangles
+to their framebuffer/view and passes the production backend regression. Build
+107 passed CI; Frostie installed its locally signed Debug APK and reports the
+static gone. The [device review](graphics-check-odin-20261027.md) retains E01,
+exact identities and limits. Broader modes/devices and the original offending
+command remain unverified. The earlier investigation below preserves the five
+noisy images, all six events, unparsed observation and source hypotheses.
 
 ## Observation and evidence boundary
 
@@ -22,9 +25,28 @@ There is no invented event ID or screenshot for this report.
 
 On **26 October**, Frostie clarified in conversation: **“they look like static
 in a straight line”**. Retain this as static-like noise along a straight line;
-he subsequently confirmed the line is **horizontal**. Its exact location and
-whether it flickers have not been specified. Do not rewrite it as a confirmed gap between puzzle
-pieces, ordinary jigsaw outlines or the unrelated dialogue shift MD-002.
+he subsequently confirmed the line is **horizontal**.
+
+On **27 October**, he supplied these further details, in order:
+
+| Order | Literal clarification |
+|---|---|
+| 1 | “it crosses the whole screen” |
+| 2 | “typically the top left side of the screen” |
+| 3 | “it goes about halfway across then dissapears and reappers quickly” |
+
+The description at that point was **a static-like horizontal line,
+usually near the top left, extending about halfway across and disappearing and
+reappearing quickly**. The later half-width estimate refines the initial
+whole-screen description; do not retain full width as an established dimension.
+Those were conversation reports. The subsequent capture locates broken
+horizontal coloured streaks and vertical fragments above the puzzle, over the
+surrounding room, in both wide and Original/pillarboxed compositions. Frostie
+reports that moving Banjo's paw toward the lower screen triggers them; all six
+images show the paw low, but stills do not measure onset or the input boundary.
+The [session review](jiggy-capture-odin-20261027.md) retains the literal report,
+all event identities, the unparsed entry and each image's limits. Do not rewrite
+this as only a gap between puzzle pieces or the unrelated dialogue shift MD-002.
 
 The rechecked source is
 `Tooie-af97304f201a-Release-Check-20261024-002120-9d5fcf94-Share.zip`,
@@ -76,6 +98,18 @@ The following are static source findings, not a recorded replay of marker 1:
    content, sampling bounds and scaling worth examining for static-like lines.
    It does **not** prove that `tileCopyUsed` or a particular shader branch was
    used for the reported frame; that state was not captured.
+5. After the main captured-image actor draw and the filter-state restoration,
+   `func_808024F0_chjiggygamenew` passes the object at actor offset `+0x3C` to
+   `func_80803668_chjiggygamenew`. That function projects the object's position
+   with `func_800E4140`, derives a square from projected centre and scale, then
+   calls `func_800E7DE4` before rendering the object with `func_80101870`.
+   The helper temporarily selects the buffer returned by `func_8001A0A8` as a
+   16-bit colour target, calls `func_800BC5B0` to emit a fill rectangle and
+   restores the colour target through `func_800E7CF4`. This is a concrete
+   position-dependent target/rectangle path to inspect alongside the reported
+   low-paw trigger. The capture does not identify this object's runtime model,
+   projected coordinates, target address, scissor or fill-state display list;
+   it does not prove that this path caused the visible streaks.
 
 Relevant source locations:
 
@@ -83,7 +117,9 @@ Relevant source locations:
   `func_808024F0_chjiggygamenew` and `func_80803928_chjiggygamenew`.
 - [Small image buffer and render-target helpers](../../RecompiledFuncs/funcs_32.c),
   `func_800E80A0`, `func_800E8144`, `func_800E81D0`, `func_800E7C28` and
-  `func_800E7CF4`.
+  `func_800E7CF4`, plus object-local helper `func_800E7DE4`.
+- [Projected-position helper](../../RecompiledFuncs/funcs_31.c), `func_800E4140`,
+  and [fill-rectangle emitter](../../RecompiledFuncs/funcs_26.c), `func_800BC5B0`.
 - [Target/dimension selection](../../RecompiledFuncs/funcs_24.c), `func_800A9828`.
 - [F3DEX2 other-mode decode](../../lib/rt64/src/gbi/rt64_gbi_f3dex2.cpp) and
   [filter definitions](../../lib/rt64/src/shared/rt64_f3d_defines.h).
@@ -94,25 +130,36 @@ The three generated source files, framebuffer renderer and texture sampler are
 byte-identical between the original af973 capture revision and the current
 investigation base. No source edit is claimed as a repair for MD-001.
 
-## Follow-up without requesting a new playthrough now
+## Follow-up after the focused capture
 
-The horizontal orientation directs the next source check toward copied-row
-bounds, image stride and vertical texture origins/clamping. Review of the copy
-setup/record and sampling paths does not identify which row or draw produced
-the report; their actual per-draw inputs were not captured.
+The 27 October capture supplies the requested whole-frame location and settings.
+The obvious streaks are outside the puzzle picture and include vertical
+fragments; a copied-row-only explanation is insufficient. One screenshot misses
+the obvious flicker, and its reported event remains retained. The fault is also
+visible in Original composition, so changing Expand alone is not a demonstrated
+repair. Images with the paw holding no piece still show it.
 
-The next useful clarification is whether the horizontal static-like line lies
-inside the puzzle picture, at a piece boundary or across the surrounding scene.
-Existing visual evidence would help if already available.
-
-For the next focused graphics test, capture the actual line and its settings before choosing
-one controlled comparison. If confined to the captured picture, compare native
-versus increased internal resolution, retaining the same driver, texture/mod
-state and other settings. Then inspect the affected draw's texture origin,
-stride, bounds and copy/replacement route. A changed picture alone would narrow
-the path; it would not identify a general filtering fix. Preserve the original
-save and avoid changing several settings together.
+The next useful check is the position-dependent object rectangle/target restore
+above, alongside paw/object geometry clipping and full-frame viewport/scissor
+state. Retain the captured-image sampling route as a separate candidate until
+actual draw inputs distinguish them. An observer should record object/model,
+projected centre/size, target/stride, rectangle/scissor and restored state while
+the paw moves between upper and lower screen regions; no such per-draw trace is
+in the current capture. These are investigation paths, not established causes.
+The screenshots already establish the visible defect; another general
+playthrough is not needed to reconfirm its appearance.
 
 Do not apply a global half-texel, filtering, coordinate-clamp, framebuffer or
 MSAA change solely from the written symptom. MD-001 and all other marker
 follow-ups remain unresolved.
+
+## Candidate after source and host checks
+
+The [27 October candidate record](graphics-fix-candidates-20261027.md) documents
+an actual backend bounds defect: partial attachment clears forwarded original
+RDP rectangles beyond their framebuffer/view to Vulkan. The candidate clips
+those rectangles, preserves valid clear contents and makes empty intersections
+no-ops. The exact parent backend fails the new emitted-command bounds test;
+all seven existing clear profiles pass with the candidate. This establishes
+invalid command construction, not that the captured noisy frame used it.
+Keep MD-001 open until the low-paw sequence passes on Odin.

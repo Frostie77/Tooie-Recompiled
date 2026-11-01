@@ -1,4 +1,7 @@
 #pragma once
+// Port-owned metadata in a reserved matrix-group flag bit. No guest matrix or
+// standard component flag changes; Android's consumer handles this explicitly.
+#define TOOIE_CAMERA_RELATIVE_GROUP 0x04000000U
 // Android-only policy. Desktop keeps its existing transform consumer.
 #ifndef TOOIE_ANDROID_SKELETAL_INTERPOLATION
 #define TOOIE_ANDROID_SKELETAL_INTERPOLATION 1

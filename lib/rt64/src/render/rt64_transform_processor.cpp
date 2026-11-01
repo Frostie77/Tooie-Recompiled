@@ -8,12 +8,68 @@
 #include "hle/rt64_game_frame.h"
 #include "hle/rt64_workload_queue.h"
 #include "rt64_correction_diagnostics.h"
+#include <cmath>
 
 #if defined(__ANDROID__) && defined(TOOIE_ANDROID_GEOMETRY_TRACE) && TOOIE_ANDROID_GEOMETRY_TRACE
 #include "rt64_geometry_diagnostics.h"
 #endif
 
 namespace RT64 {
+
+#if defined(__ANDROID__)
+    // The intro attaches selected rigid models to the current camera. Blending
+    // world placement and the view independently breaks that attachment while
+    // the camera rotates. Interpolate their actual view-local transform, then
+    // use the SAME processed view that the projection upload will consume.
+    static bool cameraRelativeMatrices(const DrawData &current, const DrawData &previous,
+                                       const GameFrameMap::WorkloadMap &map, size_t transform,
+                                       const TransformGroup &group, float currentWeight, float previousWeight,
+                                       hlslpp::float4x4 &currentResult, hlslpp::float4x4 &previousResult) {
+        if (!group.cameraRelative || transform >= current.worldTransformVertexIndices.size()) return false;
+#if TOOIE_SKELETAL_POSE_ENABLED
+        // Authored skeletons keep their common-pose consumer. This metadata
+        // addresses the rigid special-placement models, never independent bones.
+        if (current.skeletalTransforms.count(uint32_t(transform))) return false;
+#endif
+        const auto paired = map.transforms[transform].prevTransformIndex;
+        if (paired >= previous.worldTransformGroups.size() || paired >= previous.worldTransformVertexIndices.size() ||
+            !previous.transformGroups[previous.worldTransformGroups[paired]].cameraRelative) return false;
+        const auto vertex = current.worldTransformVertexIndices[transform];
+        const auto oldVertex = previous.worldTransformVertexIndices[paired];
+        if (!current.worldTransformVertexCount(uint32_t(transform)) || !previous.worldTransformVertexCount(paired) ||
+            vertex >= current.viewProjIndices.size() || oldVertex >= previous.viewProjIndices.size()) return false;
+        const auto projection = current.viewProjIndices[vertex], oldProjection = previous.viewProjIndices[oldVertex];
+        if (projection >= map.viewProjections.size() || !map.viewProjections[projection].mapped ||
+            map.viewProjections[projection].prevTransformIndex != oldProjection ||
+            projection >= current.viewTransforms.size() || oldProjection >= previous.viewTransforms.size() ||
+            projection >= current.modViewTransforms.size() || projection >= current.prevViewTransforms.size()) return false;
+        // One model transform cannot be corrected using two different cameras.
+        for (unsigned i = 0; i < current.worldTransformVertexCount(uint32_t(transform)); ++i)
+            if (vertex + i >= current.viewProjIndices.size() || current.viewProjIndices[vertex+i] != projection) return false;
+        for (unsigned i = 0; i < previous.worldTransformVertexCount(paired); ++i)
+            if (oldVertex + i >= previous.viewProjIndices.size() || previous.viewProjIndices[oldVertex+i] != oldProjection) return false;
+        const auto &a = previous.worldTransforms[paired], &b = current.worldTransforms[transform];
+        const auto localPrevious = hlslpp::mul(a, previous.viewTransforms[oldProjection]);
+        const auto localCurrent = hlslpp::mul(b, current.viewTransforms[projection]);
+        RigidBody local;
+        local.updateLinear(localPrevious, localCurrent, group.positionInterpolation);
+        local.updateAngular(localPrevious, localCurrent, group.rotationInterpolation, group.scaleInterpolation, group.skewInterpolation);
+        local.updatePerspective(localPrevious, localCurrent, group.perspectiveInterpolation);
+        local.updateDecomposition(localPrevious, localCurrent, group.decompose);
+        auto consume = [&](float weight, const hlslpp::float4x4 &view) -> hlslpp::float4x4 {
+            // Keep the exact submitted endpoints, including fixed conversion.
+            if (weight == 0) return a;
+            if (weight == 1) return b;
+            return hlslpp::mul(local.lerp(weight, localPrevious, localCurrent, true), hlslpp::inverse(view));
+        };
+        const auto now = consume(currentWeight, current.modViewTransforms[projection]);
+        const auto old = consume(previousWeight, current.prevViewTransforms[projection]);
+        for (unsigned i=0;i<4;++i) for (unsigned j=0;j<4;++j)
+            if (!std::isfinite(float(now[i][j])) || !std::isfinite(float(old[i][j]))) return false;
+        currentResult = now; previousResult = old;
+        return true;
+    }
+#endif
     // TransformProcessor
     
     TransformProcessor::TransformProcessor() { }
@@ -87,6 +143,11 @@ namespace RT64 {
                             }
                         }
 #endif
+#if defined(__ANDROID__)
+                        const auto &group = drawData.transformGroups[drawData.worldTransformGroups[t]];
+                        cameraRelativeMatrices(drawData, prevDrawData, workloadMap, t, group,
+                            p.curFrameWeight, p.prevFrameWeight, curMatrix, prevMatrix);
+#endif
                         invMatrix = hlslpp::inverse(curMatrix);
                         invTMatrix = hlslpp::transpose(invMatrix);
                         lerpWorldTransforms.emplace_back(curMatrix);
@@ -107,7 +168,7 @@ namespace RT64 {
                 counts.applied += skeletalApplied; counts.actors += actorApplied; counts.frozen += skeletalFrozen; counts.pairs += poses.size();
                 const auto now = tooie::diagnostics::monotonicUs();
                 if (now >= counts.next && (counts.applied || counts.frozen)) {
-                    char text[300]; std::snprintf(text, sizeof(text), "applied=%llu current_pose_fallback=%llu evaluated_pairs=%llu actor_applied=%llu player_applied=%llu policy=authored-hierarchy npc_policy=" TOOIE_ACTOR_POLICY,
+                    char text[360]; std::snprintf(text, sizeof(text), "applied=%llu current_pose_fallback=%llu evaluated_pairs=%llu actor_applied=%llu player_applied=%llu policy=authored-hierarchy interpolation=linear-model-matrices npc_policy=" TOOIE_ACTOR_POLICY,
                         (unsigned long long)counts.applied, (unsigned long long)counts.frozen, (unsigned long long)counts.pairs, (unsigned long long)counts.actors, (unsigned long long)(counts.applied - counts.actors));
                     tooie::diagnostics::log("skeletal", text);
                     counts = {}; counts.next = now + 5'000'000;

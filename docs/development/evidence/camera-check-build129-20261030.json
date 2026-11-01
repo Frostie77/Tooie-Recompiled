@@ -1,0 +1,651 @@
+{
+  "share_sha256": "be9ee2559722e949d68b540cdb538bc818f533aff941937f68af6da6c5cab9e1",
+  "source_identity": {
+    "commit": "60cb4007223ff338639e95206f4078cfced19bfe",
+    "hash": "78e15734539e7656498d302c9a8a24efeadba92f877cfb2534d9097b0c117120",
+    "build_id": "f7ee4d483389aedad9895d5d545854ef28e650a8",
+    "serial": "7907333f",
+    "capture_mode": "attach-to-installed-debug",
+    "process_name": "io.github.banjotooierecompiled:game",
+    "capture_tool_revision": "60cb4007223ff338639e95206f4078cfced19bfe"
+  },
+  "manifest_source_modes": {
+    "verbatim": 550,
+    "local-only": 2
+  },
+  "source_count": 552,
+  "newlog_bytes": 2502964,
+  "newlog_sha256": "876c8c9be2559544955a3cece729c7eb9f70f1dd1c95cbdcc2e727db414564c8",
+  "journal_inputs": 9,
+  "events": [
+    {
+      "sequence": 1,
+      "marker": 1,
+      "id": "eb89196994d94382886230f43174263e",
+      "description": "narrow passage - Display",
+      "host_receipt": "2026-10-30T20:43:03.535+11:00",
+      "device_marker_wall": "2026-10-30T20:43:02.087265+11:00",
+      "estimated_marker_native_us": 1011318878167,
+      "effective_framerate": "Display",
+      "screenshot_sha256": "a6485cda08c7f2999feb84fdab91d2753ef9b9a14666cca2a882b82fd7be34a8",
+      "present_windows": [
+        {
+          "start_native_us": 1011305479473,
+          "end_native_us": 1011310482498,
+          "count": 373,
+          "elapsed_us": 5003025,
+          "native_presents_per_second": 74.55489428895518,
+          "maximum_gap_us": 26428,
+          "target_hz": 120,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011310482499,
+          "end_native_us": 1011315487555,
+          "count": 383,
+          "elapsed_us": 5005056,
+          "native_presents_per_second": 76.52262032632602,
+          "maximum_gap_us": 26040,
+          "target_hz": 120,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011315487555,
+          "end_native_us": 1011320499293,
+          "count": 396,
+          "elapsed_us": 5011738,
+          "native_presents_per_second": 79.01450554677838,
+          "maximum_gap_us": 25518,
+          "target_hz": 120,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011320499293,
+          "end_native_us": 1011325504106,
+          "count": 296,
+          "elapsed_us": 5004813,
+          "native_presents_per_second": 59.14306888189429,
+          "maximum_gap_us": 27799,
+          "target_hz": 120,
+          "source_hz": 30
+        }
+      ],
+      "nearby_interpolation_samples": [
+        {
+          "native_us": 1011311029235,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        },
+        {
+          "native_us": 1011316035257,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        },
+        {
+          "native_us": 1011321063605,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        }
+      ]
+    },
+    {
+      "sequence": 2,
+      "marker": 1,
+      "id": "087b0d71b54e4addb9334268481480f3",
+      "description": "narrow passage - Display",
+      "host_receipt": "2026-10-30T20:43:16.731+11:00",
+      "device_marker_wall": "2026-10-30T20:43:15.255239+11:00",
+      "estimated_marker_native_us": 1011332046141,
+      "effective_framerate": "Display",
+      "screenshot_sha256": "0b5d8d104a3bc6641d0a0080165b80785df7a9355489411090fdf1f653ec40c2",
+      "present_windows": [
+        {
+          "start_native_us": 1011320499293,
+          "end_native_us": 1011325504106,
+          "count": 296,
+          "elapsed_us": 5004813,
+          "native_presents_per_second": 59.14306888189429,
+          "maximum_gap_us": 27799,
+          "target_hz": 120,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011325504108,
+          "end_native_us": 1011330510407,
+          "count": 402,
+          "elapsed_us": 5006299,
+          "native_presents_per_second": 80.29883952197022,
+          "maximum_gap_us": 26514,
+          "target_hz": 120,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011330510401,
+          "end_native_us": 1011335512707,
+          "count": 411,
+          "elapsed_us": 5002306,
+          "native_presents_per_second": 82.16210683632708,
+          "maximum_gap_us": 24866,
+          "target_hz": 120,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011335512710,
+          "end_native_us": 1011340518875,
+          "count": 597,
+          "elapsed_us": 5006165,
+          "native_presents_per_second": 119.25296109896497,
+          "maximum_gap_us": 22050,
+          "target_hz": 120,
+          "source_hz": 30
+        }
+      ],
+      "nearby_interpolation_samples": [
+        {
+          "native_us": 1011326068918,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        },
+        {
+          "native_us": 1011331096830,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        },
+        {
+          "native_us": 1011336126191,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        }
+      ]
+    },
+    {
+      "sequence": 3,
+      "marker": 2,
+      "id": "585d92aa7fa04cf19b0987ac9384b152",
+      "description": "narrow passage - Original",
+      "host_receipt": "2026-10-30T20:45:32.367+11:00",
+      "device_marker_wall": "2026-10-30T20:45:30.923406+11:00",
+      "estimated_marker_native_us": 1011467714308,
+      "effective_framerate": "Original",
+      "screenshot_sha256": "98c79ae76761ee9b58e244c3b9178b8752c433b410033576cde18de8674ccd22",
+      "present_windows": [
+        {
+          "start_native_us": 1011455842712,
+          "end_native_us": 1011460871765,
+          "count": 151,
+          "elapsed_us": 5029053,
+          "native_presents_per_second": 30.02553363426474,
+          "maximum_gap_us": 37988,
+          "target_hz": 0,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011460871765,
+          "end_native_us": 1011465909631,
+          "count": 151,
+          "elapsed_us": 5037866,
+          "native_presents_per_second": 29.973008412689023,
+          "maximum_gap_us": 38159,
+          "target_hz": 0,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011465909633,
+          "end_native_us": 1011470938210,
+          "count": 151,
+          "elapsed_us": 5028577,
+          "native_presents_per_second": 30.028375820833606,
+          "maximum_gap_us": 37982,
+          "target_hz": 0,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011470938211,
+          "end_native_us": 1011475941988,
+          "count": 150,
+          "elapsed_us": 5003777,
+          "native_presents_per_second": 29.977355105952963,
+          "maximum_gap_us": 37673,
+          "target_hz": 0,
+          "source_hz": 30
+        }
+      ],
+      "nearby_interpolation_samples": []
+    },
+    {
+      "sequence": 4,
+      "marker": 2,
+      "id": "c9a4d2e7013644c3ae68cbcd0b1ec454",
+      "description": "narrow passage - Original",
+      "host_receipt": "2026-10-30T20:45:51.557+11:00",
+      "device_marker_wall": "2026-10-30T20:45:50.067562+11:00",
+      "estimated_marker_native_us": 1011486858464,
+      "effective_framerate": "Original",
+      "screenshot_sha256": "19cbc27d2c28d0672b63d8d21789efbe5f263e89c8c35699ac9672c50dfcdbfe",
+      "present_windows": [
+        {
+          "start_native_us": 1011475941986,
+          "end_native_us": 1011480971656,
+          "count": 151,
+          "elapsed_us": 5029670,
+          "native_presents_per_second": 30.021850340081954,
+          "maximum_gap_us": 37870,
+          "target_hz": 0,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011480971659,
+          "end_native_us": 1011485974457,
+          "count": 150,
+          "elapsed_us": 5002798,
+          "native_presents_per_second": 29.983221389310543,
+          "maximum_gap_us": 37462,
+          "target_hz": 0,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011485974452,
+          "end_native_us": 1011490979146,
+          "count": 150,
+          "elapsed_us": 5004694,
+          "native_presents_per_second": 29.971862415564267,
+          "maximum_gap_us": 37905,
+          "target_hz": 0,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011490979146,
+          "end_native_us": 1011496009883,
+          "count": 151,
+          "elapsed_us": 5030737,
+          "native_presents_per_second": 30.015482820906758,
+          "maximum_gap_us": 37839,
+          "target_hz": 0,
+          "source_hz": 30
+        }
+      ],
+      "nearby_interpolation_samples": []
+    },
+    {
+      "sequence": 5,
+      "marker": 3,
+      "id": "fbe3f0e30a824a9e9a46f5a4fb094fd0",
+      "description": "narrow passsage - Display",
+      "host_receipt": "2026-10-30T20:47:11.142+11:00",
+      "device_marker_wall": "2026-10-30T20:47:09.687156+11:00",
+      "estimated_marker_native_us": 1011566478058,
+      "effective_framerate": "Display",
+      "screenshot_sha256": "5acebac1c57228c5b6315bdd2265bd8f91922193234960460b411bbf3049bd17",
+      "present_windows": [
+        {
+          "start_native_us": 1011556146835,
+          "end_native_us": 1011561155120,
+          "count": 451,
+          "elapsed_us": 5008285,
+          "native_presents_per_second": 90.05078584785011,
+          "maximum_gap_us": 22169,
+          "target_hz": 120,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011561155118,
+          "end_native_us": 1011566156650,
+          "count": 362,
+          "elapsed_us": 5001532,
+          "native_presents_per_second": 72.37782343489954,
+          "maximum_gap_us": 27072,
+          "target_hz": 120,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011566156652,
+          "end_native_us": 1011571170915,
+          "count": 452,
+          "elapsed_us": 5014263,
+          "native_presents_per_second": 90.14285848189455,
+          "maximum_gap_us": 23674,
+          "target_hz": 120,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011571170912,
+          "end_native_us": 1011576170970,
+          "count": 450,
+          "elapsed_us": 5000058,
+          "native_presents_per_second": 89.99895601211026,
+          "maximum_gap_us": 19959,
+          "target_hz": 120,
+          "source_hz": 30
+        }
+      ],
+      "nearby_interpolation_samples": [
+        {
+          "native_us": 1011556766041,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        },
+        {
+          "native_us": 1011561798220,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        },
+        {
+          "native_us": 1011566827664,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        }
+      ]
+    },
+    {
+      "sequence": 6,
+      "marker": 3,
+      "id": "b406cb3071bd4583994698416e9b9983",
+      "description": "narrow passage - Manual 60",
+      "host_receipt": "2026-10-30T20:48:14.323+11:00",
+      "device_marker_wall": "2026-10-30T20:48:12.866710+11:00",
+      "estimated_marker_native_us": 1011629657612,
+      "effective_framerate": "Manual",
+      "screenshot_sha256": "e1c9a4e3e5d5401956133ca3e0c6359613da949a3eb7c938272edd37dd08408b",
+      "present_windows": [
+        {
+          "start_native_us": 1011616233714,
+          "end_native_us": 1011621234410,
+          "count": 300,
+          "elapsed_us": 5000696,
+          "native_presents_per_second": 59.99164916243659,
+          "maximum_gap_us": 20930,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011621234413,
+          "end_native_us": 1011626237845,
+          "count": 300,
+          "elapsed_us": 5003432,
+          "native_presents_per_second": 59.958844249307276,
+          "maximum_gap_us": 20727,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011626237845,
+          "end_native_us": 1011631252174,
+          "count": 301,
+          "elapsed_us": 5014329,
+          "native_presents_per_second": 60.02797183830578,
+          "maximum_gap_us": 20814,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011631252171,
+          "end_native_us": 1011636252545,
+          "count": 300,
+          "elapsed_us": 5000374,
+          "native_presents_per_second": 59.99551233567729,
+          "maximum_gap_us": 20439,
+          "target_hz": 60,
+          "source_hz": 30
+        }
+      ],
+      "nearby_interpolation_samples": [
+        {
+          "native_us": 1011622027420,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        },
+        {
+          "native_us": 1011627028951,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        },
+        {
+          "native_us": 1011632059454,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        }
+      ]
+    },
+    {
+      "sequence": 7,
+      "marker": 3,
+      "id": "4a2c693e77244914be1c5f5f89e50a39",
+      "description": "narrow passage - Manual 60",
+      "host_receipt": "2026-10-30T20:48:21.627+11:00",
+      "device_marker_wall": "2026-10-30T20:48:20.189041+11:00",
+      "estimated_marker_native_us": 1011636979943,
+      "effective_framerate": "Manual",
+      "screenshot_sha256": "aaecd7dc6742a33fa4d5e470d66dc25468e785547db6106d8ffeaf32d8a892a6",
+      "present_windows": [
+        {
+          "start_native_us": 1011626237845,
+          "end_native_us": 1011631252174,
+          "count": 301,
+          "elapsed_us": 5014329,
+          "native_presents_per_second": 60.02797183830578,
+          "maximum_gap_us": 20814,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011631252171,
+          "end_native_us": 1011636252545,
+          "count": 300,
+          "elapsed_us": 5000374,
+          "native_presents_per_second": 59.99551233567729,
+          "maximum_gap_us": 20439,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011636252548,
+          "end_native_us": 1011641254517,
+          "count": 300,
+          "elapsed_us": 5001969,
+          "native_presents_per_second": 59.97638130104365,
+          "maximum_gap_us": 19889,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "start_native_us": 1011641254520,
+          "end_native_us": 1011646261345,
+          "count": 300,
+          "elapsed_us": 5006825,
+          "native_presents_per_second": 59.918211641109885,
+          "maximum_gap_us": 20898,
+          "target_hz": 60,
+          "source_hz": 30
+        }
+      ],
+      "nearby_interpolation_samples": [
+        {
+          "native_us": 1011627028951,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        },
+        {
+          "native_us": 1011632059454,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        },
+        {
+          "native_us": 1011637063341,
+          "projection_mismatch_total": 1,
+          "viewport_bypasses_total": 6
+        }
+      ]
+    }
+  ],
+  "notes": 0,
+  "runtime_total": 2118,
+  "runtime_pid_counts": {
+    "19109": 2118
+  },
+  "runtime_counts": {
+    "audio": 134,
+    "vi": 134,
+    "present": 134,
+    "config": 4,
+    "workload-stages": 134,
+    "render-stages": 135,
+    "present-stages": 134,
+    "vulkan-build": 231,
+    "shader-build": 55,
+    "interpolation": 102,
+    "present-queue": 134,
+    "matching-stages": 103,
+    "mesh-motion": 48,
+    "skeletal-source": 130,
+    "skeletal": 94,
+    "actor-source": 115,
+    "actor-draw": 166,
+    "visibility": 131
+  },
+  "runtime_exports_reconstructed": 50,
+  "java_window_records": 4,
+  "clock_calibration": {
+    "median_wall_minus_uptime_seconds": 1792342063.2090983,
+    "observed_spread_ms": 0.5729198455810547,
+    "scope": "Observed Java uptime/Logcat consistency, not a bound on visual onset or exact wall-clock accuracy."
+  },
+  "native_configs": [
+    {
+      "native_us": 1011023556281,
+      "approximate_device_wall": "2026-10-30T20:38:06.765379+11:00",
+      "values": {
+        "antialiasing": "MSAA2X",
+        "aspectRatio": "Expand",
+        "aspectTarget": 1.7777777910232544,
+        "developerMode": false,
+        "displayBuffering": 1,
+        "downsampleMultiplier": 1,
+        "extAspectRatio": "Expand",
+        "extAspectTarget": 1.7777777910232544,
+        "filtering": "AntiAliasedPixelScaling",
+        "graphicsAPI": "Automatic",
+        "hardwareResolve": "Automatic",
+        "idleWorkActive": true,
+        "internalColorFormat": "Standard",
+        "refreshRate": "Display",
+        "refreshRateTarget": 60,
+        "resolution": "WindowIntegerScale",
+        "resolutionMultiplier": 2.0,
+        "threePointFiltering": true,
+        "upscale2D": "ScaledOnly"
+      }
+    },
+    {
+      "native_us": 1011370978905,
+      "approximate_device_wall": "2026-10-30T20:43:54.188003+11:00",
+      "values": {
+        "antialiasing": "MSAA2X",
+        "aspectRatio": "Expand",
+        "aspectTarget": 1.7777777910232544,
+        "developerMode": false,
+        "displayBuffering": 1,
+        "downsampleMultiplier": 1,
+        "extAspectRatio": "Expand",
+        "extAspectTarget": 1.7777777910232544,
+        "filtering": "AntiAliasedPixelScaling",
+        "graphicsAPI": "Automatic",
+        "hardwareResolve": "Automatic",
+        "idleWorkActive": true,
+        "internalColorFormat": "Standard",
+        "refreshRate": "Original",
+        "refreshRateTarget": 60,
+        "resolution": "WindowIntegerScale",
+        "resolutionMultiplier": 2.0,
+        "threePointFiltering": true,
+        "upscale2D": "ScaledOnly"
+      }
+    },
+    {
+      "native_us": 1011526577002,
+      "approximate_device_wall": "2026-10-30T20:46:29.786100+11:00",
+      "values": {
+        "antialiasing": "MSAA2X",
+        "aspectRatio": "Expand",
+        "aspectTarget": 1.7777777910232544,
+        "developerMode": false,
+        "displayBuffering": 1,
+        "downsampleMultiplier": 1,
+        "extAspectRatio": "Expand",
+        "extAspectTarget": 1.7777777910232544,
+        "filtering": "AntiAliasedPixelScaling",
+        "graphicsAPI": "Automatic",
+        "hardwareResolve": "Automatic",
+        "idleWorkActive": true,
+        "internalColorFormat": "Standard",
+        "refreshRate": "Display",
+        "refreshRateTarget": 60,
+        "resolution": "WindowIntegerScale",
+        "resolutionMultiplier": 2.0,
+        "threePointFiltering": true,
+        "upscale2D": "ScaledOnly"
+      }
+    },
+    {
+      "native_us": 1011598002802,
+      "approximate_device_wall": "2026-10-30T20:47:41.211900+11:00",
+      "values": {
+        "antialiasing": "MSAA2X",
+        "aspectRatio": "Expand",
+        "aspectTarget": 1.7777777910232544,
+        "developerMode": false,
+        "displayBuffering": 1,
+        "downsampleMultiplier": 1,
+        "extAspectRatio": "Expand",
+        "extAspectTarget": 1.7777777910232544,
+        "filtering": "AntiAliasedPixelScaling",
+        "graphicsAPI": "Automatic",
+        "hardwareResolve": "Automatic",
+        "idleWorkActive": true,
+        "internalColorFormat": "Standard",
+        "refreshRate": "Manual",
+        "refreshRateTarget": 60,
+        "resolution": "WindowIntegerScale",
+        "resolutionMultiplier": 2.0,
+        "threePointFiltering": true,
+        "upscale2D": "ScaledOnly"
+      }
+    }
+  ],
+  "window": {
+    "host_start": "2026-10-30T20:39:04.824818+11:00",
+    "host_end": "2026-10-30T20:49:18.551141+11:00",
+    "host_start_monotonic_seconds": 135596.679373363,
+    "host_end_monotonic_seconds": 136210.405764541,
+    "requested_seconds": null,
+    "user_requested_finish": true,
+    "scope": "Continuous capture after the user declared playable gameplay. No automatic time limit, install, launch or game input. Elapsed time alone does not prove active play."
+  },
+  "duration_seconds": 613.726323,
+  "original_process_assessments": 117,
+  "nonzero_statuses": [],
+  "vulkan_build_results": {
+    "0": 231
+  },
+  "optional_trace_requests": [],
+  "video_setting": "Display, explicitly identified by Frostie; no native-frame synchronization to this ZIP is established.",
+  "video": {
+    "video": "Video-3 - Copy.mov",
+    "bytes": 1892543,
+    "sha256": "79318d3e08b75dbd88fcb88c84da218254b22a4f449ae45c267de192b923fbf7",
+    "user_identified_setting": "Display",
+    "decoded_frames": 353,
+    "frame_pts_gap_histogram_seconds": {
+      "0.033333": 224,
+      "0.033334": 112,
+      "0.041667": 11,
+      "0.041666": 5
+    },
+    "scope": "External phone video; no exact native frame/settings/marker synchronization is established. Converted video cadence cannot measure native presentation cadence.",
+    "dimensions": [
+      568,
+      320
+    ],
+    "duration_seconds": 11.898333,
+    "metadata_original_creationdate": "2026-10-30T20:50:37+1100"
+  }
+}

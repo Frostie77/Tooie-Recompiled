@@ -1,6 +1,6 @@
 # Android device compatibility reports
 
-Updated: 26 October 2026. These records describe the named builds and tested
+Updated: 2 November 2026. These records describe the named builds and tested
 scope; broader compatibility and a complete playthrough remain open.
 
 | Device | Android / GPU | Build | Recorded result |
@@ -8,8 +8,8 @@ scope; broader compatibility and a complete playthrough remain open.
 | AYN Odin 2 Portal | Android 13 / Adreno 740 | Public v1.0.1; signed v1.1.0 candidate identical to the public v1.1.0 APK | Retained progress/settings and working mods; focused Home-return sound/controls, simultaneous touch movement/jump, log sharing, Turnip/System Default switching and original-component cold launch passed. See the [v1.1.0 record](release-v1.1.0-check-20261026.md). |
 | Pixel 8 Pro | Android 17 / Mali-G715 MP7, as reported by Frostie | Public v1.0.1 | Frostie explicitly confirmed that it works on 25 October. This is a successful manual functional report. |
 | Poco X3 Pro | Android 12 / Adreno 640 | Historical public/c849 system failures; d6 on-device picker with regular Turnip R8 | Reporter confirms the game works; reviewed screenshot shows Turnip loaded and matching the running game. Share startup log failed in that d6 test; the fix is now published in v1.1.0 after Odin acceptance. No new Poco sharing result is claimed. See the [26 October result](poco-turnip-result-20261026.md). |
-| Retroid Pocket 5 | Android version pending / Adreno 650 | Original report and offered PR #27 test | Parked pending device details, a fresh log and the existing test result. |
-| Redmi Pad 2 | Android version not supplied in the initial report / reported Helio G100-Ultra, Mali-G57 MC2 | Initial APK/release not identified | [5ejfkhj reports an immediate startup crash](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6399188671). The initial comment supplies no Android version or log; no v1.1.0 result is recorded here. |
+| Retroid Pocket 5 | Android version pending / Adreno 650 | Original report and offered PR #27 test | Experiment retired and PR #27 closed at Frostie's request on 2 November after no further reply. Driver selection is available, but no successful Retroid result is established. |
+| Redmi Pad 2 | Android version unconfirmed / reported Helio G100-Ultra, Mali-G57 MC2 | Offered GPU Test 27a577cc85d5 / build 126 follow-up; no installed-hash readback | [31 October follow-up](redmi-playability-20261031.md): 240p + Expand reported playable; scale 3.50 also playable with occasional lag spikes. Eight gameplay images reviewed, without FPS/settings readout or a new close/reopen result. Earlier startup, movement and sound success remains scoped in the [previous result](redmi-gameplay-performance-20261029.md). |
 
 The Pixel report confirms working v1.0.1, rather than only a successful
 download or installation. No capture, play duration, route or input method was

@@ -16,7 +16,8 @@ from unittest.mock import patch
 import zipfile
 
 from verify_android import (check_update_java, check_touch_java, touch_test_profile,
-                            check_configuration, check_native_entries, apk_profile, check_driver_manifest, check_driver_java)
+                            check_configuration, check_native_entries, apk_profile, check_driver_manifest, check_driver_java,
+                            check_paired_gpu_apk)
 
 
 class UpdateJavaPackagingTests(unittest.TestCase):
@@ -125,7 +126,7 @@ class DriverVariantPackagingTests(unittest.TestCase):
             cache = "TOOIE_ANDROID_RUNTIME:BOOL=ON\nTOOIE_VULKAN_DESCRIPTOR_ALLOCATION_PROBE:BOOL=OFF\nANDROID_ABI:STRING=arm64-v8a\n"
             cache += "TOOIE_ANDROID_VULKAN_DRIVERS:BOOL=" + (cache_mode or "ON") + "\nANDROID_STL:STRING=c++_shared\n"
             (native / "CMakeCache.txt").write_text(cache)
-            targets = ["src/main.cpp", "src/recomp_api.cpp", "src/aiming_controls.cpp", "lib/rt64/src/contrib/plume/plume_vulkan.cpp",
+            targets = ["src/main.cpp", "src/recomp_api.cpp", "src/aiming_controls.cpp", "src/hud_diagnostics.cpp", "src/hud_placement.cpp", "src/widescreen_visibility.cpp", "lib/rt64/src/contrib/plume/plume_vulkan.cpp",
                        "lib/rt64/src/hle/rt64_present_queue.cpp", "lib/rt64/src/render/rt64_transform_processor.cpp"]
             if touch_sources: targets += ["src/android_touch_input.cpp", "src/android_touch_controls.cpp", "src/android_touch_jni.cpp"]
             if loader_source: targets += ["src/android_vulkan_driver.cpp"]
@@ -226,6 +227,50 @@ class DriverUiPackagingTests(unittest.TestCase):
         for missing in markers:
             with self.subTest(missing=missing), self.assertRaises(ValueError):
                 check({"classes.dex": b"\0".join(m for m in markers if m != missing), "assets/classes2.dex": missing})
+
+
+class PairedGpuPackagingTests(unittest.TestCase):
+    def fixture(self, folder):
+        work=Path(folder);(work/'artifacts').mkdir()
+        original={'source_commit':'a'*40,'native_version':'0.1.0-ci.fixture','package':'io.github.banjotooierecompiled',
+                  'libraries':{'libmain.so':{'sha256':'b'*64,'build_id':'c'*40}}}
+        (work/'artifacts/build-report.json').write_text(json.dumps(original))
+        source=work/'source';(source/'docs/development').mkdir(parents=True)
+        (source/'docs/development/redmi-combined-test-20261029.md').write_text('fixture instructions\n')
+        return source,work,original
+
+    def test_separate_output_retains_exact_native_identity_and_normal_report(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source,work,original=self.fixture(folder)
+            def package(s,w,n,output):
+                self.assertEqual(output,work/'gpu-test-artifacts');output.mkdir()
+                paired={**original,'package':'io.github.banjotooierecompiled.gputest.g'+'a'*12}
+                (output/'build-report.json').write_text(json.dumps(paired))
+            with patch('verify_android.driver_test_mode',return_value=True),patch('verify_android.check_apk',side_effect=package),contextlib.redirect_stdout(io.StringIO()):
+                check_paired_gpu_apk(source,work,work/'ndk')
+            self.assertEqual(json.loads((work/'artifacts/build-report.json').read_text()),original)
+            self.assertEqual((work/'gpu-test-artifacts/REDMI-TEST-INSTRUCTIONS.md').read_text(),'fixture instructions\n')
+
+    def test_different_native_hash_version_source_or_package_fails_pair_check(self):
+        for field,value in [('source_commit','d'*40),('native_version','other'),('libraries',{}),('package','io.github.banjotooierecompiled')]:
+            with self.subTest(field=field),tempfile.TemporaryDirectory() as folder:
+                source,work,original=self.fixture(folder)
+                def package(s,w,n,output):
+                    output.mkdir();paired={**original,'package':'other.gpu',field:value}
+                    (output/'build-report.json').write_text(json.dumps(paired))
+                with patch('verify_android.driver_test_mode',return_value=True),patch('verify_android.check_apk',side_effect=package),self.assertRaises(ValueError):
+                    check_paired_gpu_apk(source,work,work/'ndk')
+
+    def test_normal_report_overwrite_and_wrong_profile_are_rejected(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source,work,original=self.fixture(folder)
+            with patch('verify_android.driver_test_mode',return_value=False),self.assertRaisesRegex(ValueError,'separate test identity'):
+                check_paired_gpu_apk(source,work,work/'ndk')
+            def package(s,w,n,output):
+                output.mkdir();(output/'build-report.json').write_text(json.dumps({**original,'package':'other.gpu'}))
+                (work/'artifacts/build-report.json').write_text('{}')
+            with patch('verify_android.driver_test_mode',return_value=True),patch('verify_android.check_apk',side_effect=package),self.assertRaisesRegex(ValueError,'Normal Debug report'):
+                check_paired_gpu_apk(source,work,work/'ndk')
 
 
 if __name__ == "__main__":

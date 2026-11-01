@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## Unreleased — v1.2.0 candidate
+
+Target Android version code **6**. Public v1.1.0 / code 5 remains the latest
+release until the signed candidate is checked and published.
 
 ### Added
 
@@ -13,6 +16,17 @@
   [guide](docs/development/android-save-backups.md) for instructions and tested
   scope; transfers between devices or app channels remain untested.
 
+- **Invert Flight y-axis** and **Swap Joystick Aiming Controls** below aiming
+  inversion. Flight steering/airborne aim share the flight preference;
+  swapping applies to stationary aiming and restores normal controls on exit.
+  The nine scoped controls checks and manual Breegull Blaster comparison pass
+  on Odin; Jiggy Challenge controls retain their normal behavior with swap on.
+- Manual graphics resolution scale with quarter-step choices. The combined
+  Redmi tester reports 240p + Expand and scale 3.50 playable, with occasional
+  lag spikes at 3.50. This is reported playability, without measured FPS.
+- Fixed **16:9, 16:10, 3:2 and 21:9** game aspect ratios beside Original and
+  Expand, with HUD icons, values and timers following the selected image.
+
 ### Changed
 
 - Move the **Touch** settings tab between **Controls** and **Sound**.
@@ -21,6 +35,52 @@
 - Clarify Save Management with a parenthesised note that app settings, ROMs and
   mods are separate, plus instructions to use it at the launcher after saving
   and exiting any running game and reopening the app.
+
+### Fixed in focused device checks
+
+- Skip an unused ray-tracing compose pipeline during raster-only startup.
+  The Redmi Pad 2 reporter confirms gameplay, movement and sound after the
+  offered correction; no replacement Mali driver is required by the change.
+
+- Clip partial attachment-clear rectangles to their actual framebuffer/view.
+  Frostie reports the Jiggy-challenge static lines gone in the 27 October Debug
+  check; the marker screenshot shows the low paw without the previous streaks.
+- Keep the submitted gameplay camera and projection together when its viewport
+  changes, retaining normal blending with a stable viewport. Frostie reports
+  the dialogue shunt appears gone and recorded `no dialogue shunt`.
+
+- Correct the tested animated limb gaps at Display framerate (build 111),
+  and keep the opening logos steady in the focused Display check (build 125).
+  Frostie also accepts the long-play character check after an extended session
+  with the model staying correct throughout.
+- Correct HUD count visibility and countdown placement in Original, Expand and
+  16:9 (build 127). Tested egg ammunition and feather icons/counts remain aligned.
+- Keep Jiggy Challenge input unchanged by stationary aiming stick swapping
+  (build 125).
+- Preserve loaded depth in Android read-only depth passes used by Lagoon water.
+  The focused Odin Expand/Display water checks pass with MSAA 2× and None
+  (build 128).
+- Recover controller focus through the active menu navigation tree instead of
+  throwing when an old focused branch is excluded. The MSAA 2× → 4× → 2×,
+  navigation and leave/reopen check passes on Odin (build 129).
+- Keep the gameplay camera's own previous view during narrow-space turns.
+  Narrow-passage, dialogue and open-area checks pass on Odin (build 133).
+- Correct scenery/character clipping in every new fixed ratio and let the
+  rotating Jiggy transition clear the edges of the wide image (build 134).
+- Collect large native diagnostic logs in verified chunks without manual
+  recovery (builds 133/134).
+
+These corrections are intended for the next update. The
+[handoff](docs/development/handoff.md) links the exact host/CI/device evidence and
+focused scope; other modes/devices and complete gameplay remain separate.
+
+### Before publication
+
+Verify the protected-key-signed release update, retained saves/settings and
+reopening, including fixed-preset persistence. The
+[next-release draft](docs/development/release-notes-next.md) retains the focused
+acceptance scopes and broader coverage items. The unconfirmed Adreno 650
+descriptor experiment is retired and is excluded from this candidate.
 
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
 

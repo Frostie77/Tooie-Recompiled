@@ -6,6 +6,7 @@ import importlib.util
 import io
 import json
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import sys
@@ -210,7 +211,7 @@ def integration(work, tools):
                    preparation.digest(candidate.read_bytes()), "--expect-source", report["source_commit"],
                    "--expect-cert", fingerprint, "--keystore", str(key), "--build-tools", str(tools),
                    "--output-root", str(area / "prepared"), "--downloads", str(area / "downloads"),
-                   "--adb", str(adb), "--serial", "fixture-device"]
+                   "--adb", str(adb), "--serial", "fixture-device", "--camera-trace"]
         result = subprocess.run(command, text=True, capture_output=True, timeout=240)
         preparation.require(result.returncode == 0, "Real SDK local signing failed: " + result.stdout + result.stderr)
         folder, = (area / "prepared").iterdir()
@@ -228,6 +229,9 @@ def integration(work, tools):
         text = launcher.read_text()
         preparation.require(checked["apk_sha256"] in text and report["source_commit"] in text and fingerprint in text and
                             "fixture-device" in text and "capture-state" in text, "Capture launcher is not bound to new build")
+        capture_args = shlex.split(text.splitlines()[-1])
+        preparation.require(capture_args[0] == "exec" and capture_args[-1] == "--camera-trace" and
+                            capture_args.count("--camera-trace") == 1, "Camera option was not forwarded to the pinned recorder")
         changed = folder / "capture-tools/capture_installed.py"
         changed.chmod(0o600)
         changed.write_text("raise RuntimeError('Changed capture code executed')\n")

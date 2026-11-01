@@ -1,0 +1,95 @@
+{
+  "scope": "Captured CPU draw descriptions, not GPU readback. Native offsets and matrices are retained in the complete evidence review.",
+  "source_commit": "88262a661566d9bb784ce41960b652c3522f43b2",
+  "native_appended_sha256": "e73e1ba2606cb717c144e3748b8cf851bcda83c146f45b171310a4c176d12802",
+  "original_pid": 27464,
+  "sample": 1003705801840,
+  "workload": 102663,
+  "framebuffer": 3,
+  "projection": 1,
+  "aspect": "Original",
+  "refresh": "Original",
+  "antialiasing": "None",
+  "calls": [
+    {
+      "call": "138",
+      "triangles": "36",
+      "other_mode": "0x982C3F/0xF0A4030",
+      "z_compare": "1",
+      "z_write": "1",
+      "z_mode": "0x0"
+    },
+    {
+      "call": "139",
+      "triangles": "36",
+      "other_mode": "0x982C3F/0xC184DD8",
+      "z_compare": "1",
+      "z_write": "0",
+      "z_mode": "0xC00"
+    },
+    {
+      "call": "140",
+      "triangles": "7",
+      "other_mode": "0x99AC3F/0xC184250",
+      "z_compare": "1",
+      "z_write": "0",
+      "z_mode": "0x0"
+    },
+    {
+      "call": "141",
+      "triangles": "2",
+      "other_mode": "0x99AC3F/0xF0A4010",
+      "z_compare": "1",
+      "z_write": "0",
+      "z_mode": "0x0"
+    },
+    {
+      "call": "142",
+      "triangles": "8",
+      "other_mode": "0x99AC3F/0xC184250",
+      "z_compare": "1",
+      "z_write": "0",
+      "z_mode": "0x0"
+    },
+    {
+      "call": "143",
+      "triangles": "162",
+      "other_mode": "0x99AC3F/0xC184250",
+      "z_compare": "1",
+      "z_write": "0",
+      "z_mode": "0x0"
+    },
+    {
+      "call": "144",
+      "triangles": "40",
+      "other_mode": "0x99AC3F/0xC184250",
+      "z_compare": "1",
+      "z_write": "0",
+      "z_mode": "0x0"
+    },
+    {
+      "call": "145",
+      "triangles": "32",
+      "other_mode": "0x99AC3F/0xC184250",
+      "z_compare": "1",
+      "z_write": "0",
+      "z_mode": "0x0"
+    },
+    {
+      "call": "146",
+      "triangles": "2",
+      "other_mode": "0x992C3F/0xC184250",
+      "z_compare": "1",
+      "z_write": "0",
+      "z_mode": "0x0"
+    },
+    {
+      "call": "147",
+      "triangles": "2",
+      "other_mode": "0x992C3F/0xC184250",
+      "z_compare": "1",
+      "z_write": "0",
+      "z_mode": "0x0"
+    }
+  ]
+}
