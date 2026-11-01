@@ -43,14 +43,16 @@ guest dispatch, GBI, RSP/RDP and renderer coordinate consumers are used with
 controlled resources. The old countdown-inset and lost-scope controls still fail.
 
 These host results do not establish final Android pixels or performance.
-No Android build was started for this batch. Existing
+The next combined build includes [bounded recorder reads](chunked-log-collection-20261101.md).
+Existing
 [build 132](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41067300155)
-has passed CI and remains the camera-test build; it does not contain the presets.
+has passed CI and supplies the camera correction; it does not contain the presets.
 
 ## Batched device check
 
-After the build-132 narrow-passage/dialogue/open-area result, produce one
-combined candidate. On it, cycle the four presets in a scene with visible HUD
+Frostie accepts one combined candidate for camera, presets/HUD and the recorder.
+Check the narrow passage, dialogue and open-area movement. Cycle the four presets
+in a scene with visible HUD
 values and an active countdown, checking icon/value alignment, visibility and
 edge placement with HUD Expand. Check the HUD Original and 16:9 choices on
 21:9, then reopen once to confirm the saved preset. Retain existing accepted

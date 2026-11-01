@@ -1171,7 +1171,7 @@
   },
   "templates": {
     "build.sh": "c775cae75aefcce998e3fd89007baba0ce56ab68d75f50866ffaf096c67e6b2e",
-    "collector.py": "9472f2c36984de033355ed824b9c2a75ea5ef9735412a853f8e866ffb5bc8d45"
+    "collector.py": "f787f687c77f2eb452b7d2bd75695cae8326f7d94c366c977ad6fbd3f157b9fa"
   },
   "demo_only": false,
   "launcher_assets": {

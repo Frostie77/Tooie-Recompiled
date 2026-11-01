@@ -22,12 +22,15 @@ Do not request another FPS comparison solely to replace the missing number.
 The [fixed-aspect batch](fixed-aspect-presets-20261101.md) adds 16:9, 16:10, 3:2
 and 21:9, retaining Original/Expand and the corrected complete HUD components.
 Config/renderer and all-slot HUD suites pass at every new ratio and all three
-HUD placements. No Android build has been started for these changes. First use
-the already-built camera candidate **132**, whose
+HUD placements. Frostie now accepts combining these with the camera correction
+and [bounded log collection](chunked-log-collection-20261101.md) in **one next
+test build**. The recorder's native-byte/Windows/transfer-failure, existing
+collector and package checks pass. The older camera candidate **132**, whose
 [CI run](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41067300155)
-passed at `6021dde0872f67058a0f8fe60b6967ac4dbacd39`; independently downloaded
-paired-payload verification and Odin acceptance still need recording. Then
-batch the presets and any actual test-driven corrections into one candidate.
+passed at `6021dde0872f67058a0f8fe60b6967ac4dbacd39`, remains the native baseline.
+Use the combined candidate for the next narrow-passage/dialogue/open-area and
+preset/HUD checks; a separate build-132 install is no longer required. Verify
+the combined downloaded payload before handing over its normal Debug bundle.
 
 ## Next release and primary camera matching candidate
 

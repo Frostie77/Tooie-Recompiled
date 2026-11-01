@@ -1,5 +1,6 @@
 # Reusable task-delivery collector. One install/launch in this session; repeat sessions have distinct evidence.
 import datetime as dt
+import base64
 import hashlib
 import json
 import os
@@ -87,6 +88,81 @@ def command(args, name=None, strict=True, timeout=30):
 
 def adb(*args, **kwargs):
     return command([ADB, '-s', SERIAL, *args], **kwargs)
+
+NATIVE_LOG_CHUNK = 4 * 1024 * 1024
+NATIVE_LOG_LIMIT = 2 * 1024 * 1024 * 1024
+
+def private_log_script(name, operation, start=0, length=0):
+    require(name in ('Baseline', 'FullLog') and operation in ('size', 'hash', 'bytes'), 'Invalid native-log query.')
+    require(type(start) is int and type(length) is int and 0 <= start <= NATIVE_LOG_LIMIT and
+            0 <= length <= NATIVE_LOG_LIMIT - start, 'Invalid native-log range.')
+    header = f'# TOOIE_NATIVE_LOG {name} {operation} {start} {length}\n'
+    header += 'set -eu\np=files/data/banjotooi-debug.log\n[ -f "$p" ] && [ ! -L "$p" ] || exit 44\n'
+    if operation == 'size':
+        require(start == length == 0, 'Invalid native-log size query.')
+        return header + 'stat -c %s "$p"'
+    if operation == 'hash':
+        require(start == 0, 'Invalid native-log prefix query.')
+        return header + f'head -c {length} "$p" | sha256sum'
+    require(0 < length <= NATIVE_LOG_CHUNK, 'Invalid native-log chunk.')
+    block = 1024 * 1024
+    skip, trim = divmod(start, block)
+    count = (trim + length + block - 1) // block
+    return header + (f'dd if="$p" bs={block} skip={skip} count={count} 2>/dev/null | '
+                     f'tail -c +{trim + 1} | head -c {length} | base64')
+
+def parse_private_log_script(script):
+    match = re.match(r'# TOOIE_NATIVE_LOG (Baseline|FullLog) (size|hash|bytes) ([0-9]{1,10}) ([0-9]{1,10})\n', script)
+    if match is None:
+        return None
+    name, operation, start, length = match.groups()
+    try:
+        args = (name, operation, int(start), int(length))
+        return args if script == private_log_script(*args) else None
+    except RuntimeError:
+        return None
+
+def read_private_log(name):
+    # Read an immutable prefix, allowing the live logger to append meanwhile.
+    # Encode on-device so Windows ADB cannot alter native LF/CRLF or binary bytes.
+    data = bytearray()
+    receipt = {'verified': False, 'chunk_limit_bytes': NATIVE_LOG_CHUNK, 'chunks': []}
+    def query(operation, start=0, length=0):
+        script = private_log_script(name, operation, start, length)
+        result = adb('shell', '-T', shlex.join(['run-as', PKG, 'sh', '-c', script]), strict=False)
+        require(result.returncode == 0, f'Native-log {operation} read failed: ' + result.stderr.decode(errors='replace')[:500])
+        return result.stdout
+    def prefix_hash(size):
+        value = query('hash', length=size).decode('ascii').split()
+        require(len(value) == 2 and re.fullmatch('[0-9a-f]{64}', value[0]) and value[1] == '-', 'Invalid native-log hash.')
+        return value[0]
+    try:
+        raw = query('size').strip()
+        require(re.fullmatch(b'[0-9]{1,10}', raw) is not None, 'Invalid native-log size.')
+        size = int(raw)
+        require(size <= NATIVE_LOG_LIMIT, 'Native log exceeds the supported 2 GiB snapshot.')
+        receipt['size_bytes'] = size
+        receipt['sha256'] = prefix_hash(size)
+        print(f'Reading {name}: {size / (1024 * 1024):.1f} MiB in bounded chunks.', flush=True)
+        for start in range(0, size, NATIVE_LOG_CHUNK):
+            length = min(NATIVE_LOG_CHUNK, size - start)
+            encoded = query('bytes', start, length).translate(None, b' \t\r\n')
+            require(len(encoded) <= 4 * ((length + 2) // 3), 'Oversized encoded native-log chunk.')
+            chunk = base64.b64decode(encoded, validate=True)
+            require(len(chunk) == length, 'Short native-log chunk; snapshot changed or read failed.')
+            receipt['chunks'].append({'offset': start, 'size_bytes': length, 'sha256': hashlib.sha256(chunk).hexdigest()})
+            data.extend(chunk)
+        require(hashlib.sha256(data).hexdigest() == receipt['sha256'] == prefix_hash(size),
+                'Native-log snapshot changed or transfer hash differs.')
+        receipt['verified'] = True
+        result = sp.CompletedProcess([], 0, bytes(data), b'')
+    except Exception as error:
+        receipt['error'] = str(error)
+        result = sp.CompletedProcess([], -999, bytes(data), str(error).encode())
+    save(name, result.stdout)
+    save(name + '-status', f'returncode={result.returncode}\n' + result.stderr.decode(errors='replace'))
+    save(name + '-Transfer', json.dumps(receipt, indent=2) + '\n')
+    return result
 
 def text(r):
     return r.stdout.decode(errors='replace').replace('\r\n', '\n').strip()
@@ -798,7 +874,7 @@ def main():
     installed = installed_paths[0][len('package:'):]
     installed_hash = text(adb('shell', '-T', 'sha256sum ' + shlex.quote(installed), name='Installed-APK-SHA256'))
     require(re.match(r'^[0-9a-fA-F]{64}(?:\s|$)', installed_hash) and installed_hash.split()[0].lower() == HASH, 'Installed APK does not match the exact verified file; no launch.')
-    r = adb('shell', '-T', f'run-as {PKG} cat files/data/banjotooi-debug.log', name='Baseline', strict=False)
+    r = read_private_log('Baseline')
     baseline = r.stdout if r.returncode == 0 else None
     health()
     launch_existing_pids = pids('Before-Launch-PIDs')
@@ -1021,7 +1097,7 @@ def collect():
         reads = [
             ('Final-PIDs', ('shell', '-T', f'pidof {shlex.quote(process_name())}')),
             ('End-Device-Time', ('shell', '-T', 'date')),
-            ('FullLog', ('shell', '-T', f'run-as {PKG} cat files/data/banjotooi-debug.log')),
+            ('FullLog', ()),  # Verified chunked native snapshot, not an unbounded cat.
             ('Display-State', ('shell', '-T', 'dumpsys display')),
             ('Window-State', ('shell', '-T', 'dumpsys window displays')),
             ('Audio-State', ('shell', '-T', 'dumpsys audio')),
@@ -1032,7 +1108,7 @@ def collect():
         for name, args in reads:
             print('Saving evidence: '+name+' (bounded read; do not restart the app).',flush=True)
             try:
-                result = adb(*args, name=name, strict=False)
+                result = read_private_log(name) if name == 'FullLog' else adb(*args, name=name, strict=False)
                 if name == 'FullLog':
                     if result.returncode == 0 and baseline is not None and result.stdout.startswith(baseline):
                         delta = result.stdout[len(baseline):]

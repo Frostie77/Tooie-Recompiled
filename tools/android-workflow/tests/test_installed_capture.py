@@ -1,6 +1,8 @@
 """Real collector/packager with mocked device and SDK boundaries; no device access."""
 from pathlib import Path
 import contextlib
+import base64
+import hashlib
 import importlib.util
 import io
 import json
@@ -24,6 +26,12 @@ def module(name, path):
 
 capture = module('installed_capture_tests', ROOT / 'capture_installed.py')
 workflow = module('installed_workflow_tests', ROOT / 'tooie.py')
+
+def log_reply(c, remote, data):
+    _, operation, start, length = c.parse_private_log_script(shlex.split(remote)[4])
+    if operation == 'size': return str(len(data))
+    if operation == 'hash': return hashlib.sha256(data[:length]).hexdigest() + '  -\n'
+    return base64.b64encode(data[start:start + length]).decode('ascii')
 
 
 class InstalledCapture(unittest.TestCase):
@@ -460,7 +468,7 @@ class InstalledCapture(unittest.TestCase):
                     elif args == ('get-serialno',): payload = 'device'
                     elif args[-1].startswith('pm path '): payload = 'package:/data/app/fixture/base.apk'
                     elif args[-1].startswith('sha256sum '): payload = ('0' * 64 if mode == 'wrong-installed' else self.sha) + '  base.apk'
-                    elif args[-1].startswith('run-as '): payload = 'baseline\n'
+                    elif args[-1].startswith('run-as '): payload = log_reply(self.c, args[-1], b'baseline\n')
                     elif args[-1].startswith('dumpsys activity '):
                         events.append('foreground')
                         package = 'other.app' if mode == 'wrong-foreground' else self.c.PKG
@@ -558,13 +566,13 @@ class InstalledCapture(unittest.TestCase):
         operations = []
         def adb(*args, **kwargs):
             capture.guard_observer_command(['fixture-adb', '-s', 'fixture-device', *args],
-                                           'fixture-adb', 'fixture-device')
+                                           'fixture-adb', 'fixture-device', private_log=self.c.parse_private_log_script)
             operations.append(args)
             if args == ('get-state',): payload = 'device'
             elif args == ('get-serialno',): payload = 'fixture-device'
             elif args[-1].startswith('pm path '): payload = 'package:/data/app/fixture/base.apk'
             elif args[-1].startswith('sha256sum '): payload = self.sha + '  /data/app/fixture/base.apk'
-            elif args[-1].startswith('run-as '): payload = 'old log\n'
+            elif args[-1].startswith('run-as '): payload = log_reply(self.c, args[-1], b'old log\n')
             elif args[-1].startswith('date '): payload = '2026-10-24 21:30:00'
             elif args[-1].startswith('dumpsys activity '):
                 payload = 'mResumedActivity: ActivityRecord{abc u0 io.github.banjotooierecompiled/.BanjoTooieSDLActivity t1}'
@@ -645,11 +653,14 @@ class InstalledCapture(unittest.TestCase):
         calls = []
         def command(args, name=None, **kwargs):
             values = list(map(str, args))
-            capture.guard_observer_command(values, 'fixture-adb', 'fixture-device')
+            capture.guard_observer_command(values, 'fixture-adb', 'fixture-device', private_log=self.c.parse_private_log_script)
             calls.append(values)
             operation = values[3:]
             if operation[0] == 'logcat': payload = b'fixture app Logcat dump\n'
-            elif operation[-1].startswith('run-as '): payload = self.c.baseline + delta
+            elif operation[-1].startswith('run-as '):
+                _, action, start, length = self.c.parse_private_log_script(shlex.split(operation[-1])[4])
+                data = self.c.baseline + delta
+                payload = str(len(data)).encode() if action == 'size' else (hashlib.sha256(data[:length]).hexdigest() + '  -\n').encode() if action == 'hash' else base64.b64encode(data[start:start+length])
             elif operation[-1].startswith('pidof '): payload = b'1234\n'
             else: payload = b'fixture device state\n'
             if name is not None:
@@ -663,10 +674,83 @@ class InstalledCapture(unittest.TestCase):
         self.assertEqual(Path(prefix + '-NewLog.txt').read_bytes(), delta)
         self.assertEqual(Path(prefix + '-Logcat-Dump.txt').read_bytes(), b'fixture app Logcat dump\n')
         self.assertEqual(list(self.area.glob('*-read-error.txt')), [])
-        self.assertEqual(len(calls), 8)
+        self.assertEqual(len(calls), 11)
         self.assertTrue(any(op[-1] == 'pidof ' + self.c.PKG + ':game' for op in calls))
-        self.assertTrue(any(op[-1] == 'run-as ' + self.c.PKG + ' cat files/data/banjotooi-debug.log' for op in calls))
+        self.assertTrue(any('TOOIE_NATIVE_LOG FullLog bytes' in op[-1] for op in calls))
+        self.assertTrue(json.loads(Path(prefix + '-FullLog-Transfer.txt').read_text())['verified'])
         self.assertEqual(Path(prefix + '-Runtime-audio.txt').read_bytes(), delta.splitlines(keepends=True)[0])
+
+    def native_log_shell(self, data, fault='normal'):
+        self.c.ADB, self.c.SERIAL = 'fixture-adb', 'fixture-device'
+        self.c.NATIVE_LOG_CHUNK = 4096
+        self.c.prefix = self.area / fault
+        app = self.area / ('app-' + fault)
+        path = app / 'files/data/banjotooi-debug.log'
+        path.parent.mkdir(parents=True)
+        path.write_bytes(data)
+        queries = []
+        def command(args, **kwargs):
+            values = list(map(str, args))
+            capture.guard_observer_command(values, self.c.ADB, self.c.SERIAL,
+                private_log=self.c.parse_private_log_script)
+            script = shlex.split(values[-1])[4]
+            _, operation, start, length = self.c.parse_private_log_script(script)
+            queries.append((operation, start, length))
+            if operation == 'bytes' and start == 0:
+                if fault == 'grow':
+                    with path.open('ab') as stream: stream.write(b'new logger output\n')
+                if fault == 'truncate': path.write_bytes(b'')
+                if fault == 'replace': path.write_bytes(b'z' * len(data))
+            result = subprocess.run(['sh', '-c', script], cwd=app, capture_output=True, timeout=10)
+            if operation == 'size' and fault == 'huge': result.stdout = b'2147483649\n'
+            if operation == 'hash' and fault == 'hash': result.stdout = b'0' * 64 + b'  -\n'
+            if operation == 'bytes':
+                if fault == 'short': result.stdout = base64.b64encode(data[start:start + length - 1])
+                if fault == 'corrupt': result.stdout = b'!invalid!'
+                if fault == 'oversize': result.stdout = b'A' * (4 * ((length + 2) // 3) + 4)
+                if fault == 'timeout': result.returncode = -999
+            # Reproduce the Windows ADB newline expansion on every response.
+            result.stdout = result.stdout.replace(b'\n', b'\r\n')
+            return result
+        self.c.command = command
+        return path, queries
+
+    def test_chunked_log_preserves_native_bytes_and_accepts_concurrent_append(self):
+        data = b'p' * 4095 + b'\nmsg\r\n\x00\x1a\xff\n' + b'x' * 8192 + b'\r'
+        path, queries = self.native_log_shell(data, 'grow')
+        with contextlib.redirect_stdout(io.StringIO()): result = self.c.read_private_log('FullLog')
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, data)
+        self.assertEqual(path.read_bytes(), data + b'new logger output\n')
+        receipt = json.loads(Path(str(self.c.prefix) + '-FullLog-Transfer.txt').read_text())
+        self.assertTrue(receipt['verified'])
+        self.assertEqual(receipt['sha256'], hashlib.sha256(data).hexdigest())
+        self.assertGreater(len(receipt['chunks']), 1)
+        self.assertTrue(all(length <= 4096 for operation, _, length in queries if operation == 'bytes'))
+
+    def test_chunked_log_failure_controls_do_not_claim_verified_transfer(self):
+        for fault in ('short', 'corrupt', 'oversize', 'timeout', 'hash', 'truncate', 'replace', 'huge'):
+            with self.subTest(fault=fault):
+                self.native_log_shell(b'old\r\n' * 2500, fault)
+                with contextlib.redirect_stdout(io.StringIO()): result = self.c.read_private_log('FullLog')
+                self.assertNotEqual(result.returncode, 0)
+                receipt = json.loads(Path(str(self.c.prefix) + '-FullLog-Transfer.txt').read_text())
+                self.assertFalse(receipt['verified'])
+                self.assertIn('error', receipt)
+
+    def test_empty_native_log_and_closed_command_guard(self):
+        path, queries = self.native_log_shell(b'')
+        with contextlib.redirect_stdout(io.StringIO()): result = self.c.read_private_log('Baseline')
+        self.assertEqual((result.returncode, result.stdout), (0, b''))
+        self.assertFalse(any(operation == 'bytes' for operation, _, _ in queries))
+        original = self.c.private_log_script('FullLog', 'bytes', 0, 1)
+        for script in (original + '\nrm -rf files', original.replace('banjotooi-debug.log', 'save.dat')):
+            args = ['fixture-adb', '-s', 'fixture-device', 'shell', '-T',
+                    shlex.join(['run-as', self.c.PKG, 'sh', '-c', script])]
+            with self.assertRaises(RuntimeError):
+                capture.guard_observer_command(args, self.c.ADB, self.c.SERIAL,
+                    private_log=self.c.parse_private_log_script)
+        self.assertEqual(path.read_bytes(), b'')
 
     def test_live_router_cannot_hide_missing_original_game_process(self):
         self.c.PROCESS_NAME = self.c.PKG + ':game'

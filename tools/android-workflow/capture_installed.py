@@ -164,7 +164,7 @@ def finish_before_collection(c, requests):
     c.collect = collect
 
 
-def guard_observer_command(args, adb, serial, hud_trace=False, render_trace=False, camera=None):
+def guard_observer_command(args, adb, serial, hud_trace=False, render_trace=False, camera=None, private_log=None):
     values = list(map(str, args))
     if not values or values[0] != str(adb):
         return
@@ -187,6 +187,9 @@ def guard_observer_command(args, adb, serial, hud_trace=False, render_trace=Fals
     require(len(shell) == 1, 'Unexpected observer shell arguments.')
     words = shlex.split(shell[0])
     require(words, 'Missing observer shell command.')
+    if (private_log is not None and len(words) == 5 and
+            words[:4] == ['run-as', 'io.github.banjotooierecompiled', 'sh', '-c'] and private_log(words[4]) is not None):
+        return
     if hud_trace and any(words == ['run-as', 'io.github.banjotooierecompiled', 'sh', '-c', hud_request_script(enable)]
                          for enable in (False, True)):
         return
@@ -356,8 +359,7 @@ def installed_main(c, args, hud=None, render=None, camera=None):
     actual_hash = c.text(c.adb('shell', '-T', 'sha256sum ' + shlex.quote(path), name='Installed-APK-SHA256'))
     require(re.match(r'^[0-9a-fA-F]{64}(?:\s|$)', actual_hash) and
             actual_hash.split()[0].lower() == c.HASH, 'Installed APK differs; capture stopped without changing it.')
-    baseline = c.adb('shell', '-T', 'run-as ' + c.PKG + ' cat files/data/banjotooi-debug.log',
-                     name='Baseline', strict=False)
+    baseline = c.read_private_log('Baseline')
     c.baseline = baseline.stdout if baseline.returncode == 0 else None
     c.capture_start = c.clock('Capture-Start-Device-Time')
     c.attempted = True  # Reused collector's observation/final-read flag, not an installation attempt.
@@ -451,7 +453,7 @@ def main(argv=None):
         'Absent records are not a pass. Marker times are host receipt times, not exact visual onset.\n')
     original_command = c.command
     def command(args, *positional, **keywords):
-        guard_observer_command(args, c.ADB, c.SERIAL, hud is not None, render is not None, camera)
+        guard_observer_command(args, c.ADB, c.SERIAL, hud is not None, render is not None, camera, c.parse_private_log_script)
         return original_command(args, *positional, **keywords)
     c.command = command
     c.main = lambda: installed_main(c, args, hud, render, camera)

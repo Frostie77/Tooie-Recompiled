@@ -51,8 +51,9 @@ The [handoff](handoff.md) links the complete source, host, CI and device records
   pacing/guest adjustment and older unusual frames separate from the accepted
   long-play check. No accepted camera fix is claimed yet.
 - Check the four new presets and corrected HUD values on the combined candidate
-  using the [focused plan](fixed-aspect-presets-20261101.md), after the existing
-  build-132 camera test. Batch remaining changes before the next Android build.
+  using the [focused plan](fixed-aspect-presets-20261101.md), together with the
+  camera correction. The candidate also includes verified chunked recorder
+  reads; no separate build-132 install or long-log soak is required.
 - Select the exact reviewed release source, version name and increasing code;
   build the unsigned release candidate and verify its complete payload. Sign
   locally with the existing protected release key, then check update continuity,
