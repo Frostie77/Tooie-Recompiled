@@ -146,10 +146,10 @@ acceptance passed; broader background/sleep and full-game coverage remain open.
 
 ## Still required for full completion
 
-**30 October update:** Frostie plans the next release after the Redmi results
-return. The [draft release notes](development/release-notes-next.md) and
+**1 November update:** The Redmi follow-up has arrived and Frostie accepts the
+long-play character check. The [draft release notes](development/release-notes-next.md) and
 [handoff](development/handoff.md) distinguish accepted focused fixes from the
-remaining camera/long-play/performance work. This full-project list is broader
+remaining camera/preset device checks. This full-project list is broader
 than the focused acceptance of an individual update. Public version/feed remain
 v1.1.0/code 5; the next release identity is not selected.
 
@@ -282,9 +282,11 @@ manual acceptance, not full-game/device coverage or publication.
 - [x] Correct the specific animated limb-gap report at Display framerate
   (MD-005), with the [build-111 result](development/character-limb-flight-check-odin-20261028.md).
   Preserve the earlier unsuccessful build-108/109 candidates and all markers.
-- [ ] Resolve broader intermittent character deformation after longer play.
-  The [28 October evidence](development/late-play-and-lagoon-check-odin-20261028.md)
-  and later reports remain open. Short intact-looking captures do not close it.
+- [x] Complete the broader long-play character-rendering check. On 1 November,
+  Frostie reports the model stayed correct throughout the previous night's
+  extended session and explicitly accepts this item. Exact duration/build is
+  not restated; this is a manual pass. The [28 October failures](development/late-play-and-lagoon-check-odin-20261028.md)
+  remain historical evidence. Reopen only if the issue recurs.
 - [x] Keep the opening logos steady at Display (MD-011), accepted in the
   [build-125 check](development/graphics-batch-check-odin-20261029.md).
 - [x] Separate stationary aim inversion from coherent flight steering/aim
@@ -297,6 +299,10 @@ manual acceptance, not full-game/device coverage or publication.
   accepts Original/Expand/16:9 counter and timer placement, available egg types,
   gold feathers and flight red feathers. This completes the requested focused
   HUD test; do not repeat it merely because older records say pending.
+- [ ] Confirm the new fixed 16:9/16:10/3:2/21:9 game presets and corrected HUD
+  values on the combined Android candidate. The [preset batch](development/fixed-aspect-presets-20261101.md)
+  passes config/renderer and all-48-slot HUD host checks at each new ratio and
+  all three HUD placements. Existing focused HUD acceptance above is retained.
 - [x] Keep Jiggy Challenge controls unchanged with stationary stick swapping
   Off and On (MD-015), accepted in the build-125 review above.
 - [x] Correct the reported Lagoon missing-water/stray-polygons/lines failure
@@ -315,14 +321,15 @@ manual acceptance, not full-game/device coverage or publication.
   now reproduce wrong primary/auxiliary scene association in the actual CPU
   matcher/consumer. Reserving primary history passes ten captured pairs, 25
   viewport cases and 12 scope controls; old source reproduces logged outputs
-  and fails continuity. Full Android CI/artifact verification and Odin narrow
+  and fails continuity. Full Android CI 132 passes; downloaded-artifact verification and Odin narrow
   walking/turning, dialogue and open-area checks remain required. Uneven pacing
   and guest adjustment remain separate possibilities if shaking persists.
-  Older MD-003 unusual frames and long-play deformation remain separate.
-- [ ] Obtain the new Redmi Original/Expand performance and close/reopen results.
-  Prior startup/gameplay/sound success remains accepted within its reported
-  scope; quarter-step resolution controls and native/packaging CI do not prove
-  an FPS improvement. See [the test instructions](development/redmi-combined-test-20261029.md).
+  Older MD-003 unusual frames remain separate; the long-play check is accepted above.
+- [x] Review the new [Redmi playability follow-up](development/redmi-playability-20261031.md):
+  reported 240p + Expand playable, and scale 3.50 playable with occasional lag
+  spikes. All eight attached gameplay images were reviewed. No measured FPS
+  improvement, exact settings/Android readback or new close/reopen result is
+  supplied; those details remain outside the accepted device scope.
 - [ ] Investigate the earlier Split Up-pad freeze (MD-013) if it recurs.
   [Build-109 E09/E10](development/graphics-check-odin-20261027-222732.md) record a
   successful later attempt, not a reproduced cause or a confirmed freeze fix.

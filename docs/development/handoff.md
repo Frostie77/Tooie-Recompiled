@@ -1,14 +1,42 @@
 # Engineering handoff
 
-Updated: 31 October 2026.
+Updated: 1 November 2026.
+
+## Release finishing batch
+
+**Long-play character rendering: accepted manual pass.** On 1 November,
+Frostie reports that during an extended session the previous night the
+character stayed correct throughout, and explicitly asks to check this issue
+off. No exact duration or installed build is restated. This closes the tracked
+long-play acceptance item on his report; do not request another soak or keep
+listing it as a release blocker unless the problem recurs. Older failed
+captures remain historical evidence, distinct from the camera issue.
+
+Frostie requests fewer builds, focused checks and concise updates to finish the
+release efficiently. The [31 October Redmi follow-up](redmi-playability-20261031.md)
+has now been reviewed, including all eight screenshots: reported 240p + Expand
+playability and playable scale 3.50 with occasional lag spikes. This is a
+positive qualitative result, without measured FPS or a new close/reopen result.
+Do not request another FPS comparison solely to replace the missing number.
+
+The [fixed-aspect batch](fixed-aspect-presets-20261101.md) adds 16:9, 16:10, 3:2
+and 21:9, retaining Original/Expand and the corrected complete HUD components.
+Config/renderer and all-slot HUD suites pass at every new ratio and all three
+HUD placements. No Android build has been started for these changes. First use
+the already-built camera candidate **132**, whose
+[CI run](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41067300155)
+passed at `6021dde0872f67058a0f8fe60b6967ac4dbacd39`; independently downloaded
+paired-payload verification and Odin acceptance still need recording. Then
+batch the presets and any actual test-driven corrections into one candidate.
 
 ## Next release and primary camera matching candidate
 
 Frostie wants the next release after the Redmi results return. The
 [draft notes](release-notes-next.md) retain accepted build-111/121/125/127/128/129
 fixes. Public v1.1.0/code 5 and release/feed identities remain unchanged; no new
-version is selected. Updated Redmi FPS and broader long-play character rendering
-remain open. Frostie handles messages, merges and releases.
+version is selected. Redmi now has the reported-playability follow-up above;
+the long-play character check is accepted above. Frostie handles messages,
+merges and releases.
 
 The [second build-131 trace and correction](camera-primary-scene-fix-20261031.md)
 now establish a concrete renderer association defect during continuous movement.
@@ -26,8 +54,8 @@ before generic proximity matching. It retains interpolation math/flags, viewport
 bypass and the other camera roles. Ten captured pairs pass through the actual
 producer/grouping/matcher/consumer; restoring the old source reproduces the
 logged old outputs, then fails continuity. The 25 retained viewport cases and
-12 scope controls pass. Full Android CI, downloaded paired-payload verification
-and Odin acceptance are still required. Test the same Display/Expand narrow walk,
+12 scope controls pass. Full Android CI 132 passes; downloaded paired-payload
+verification and Odin acceptance still need recording. Test the same Display/Expand narrow walk,
 then dialogue and an open area. Keep MD-004 open until that result. Scene order
 outside captured coverage remains a device-regression consideration.
 
@@ -38,7 +66,7 @@ The [build-129 comparison](camera-check-odin-build129-20261030.md) and separate
 Display video retain Original improvement/residual stutter and Manual 60 closer
 to Display. Uneven pacing and guest automatic camera adjustment may remain
 separate contributors; this candidate does not establish a complete visual fix.
-Older MD-003 unusual frames and long-play deformation stay separate. The
+Older MD-003 unusual frames stay separate; the long-play check is now accepted. The
 [historical investigation](camera-shaking-investigation-20261030.md) retains
 source evidence and the synthetic turn measurement.
 
@@ -64,8 +92,8 @@ paired-APK checks pass. The [complete build-129 menu check](menu-check-odin-buil
 now confirms native 2× → 4× → 2×, a Graphics-page screenshot with 2× restored,
 and the original process staying alive through the requested `save`. Frostie
 accepts controller navigation, returning to gameplay and reopening Graphics.
-This is a focused pass for the menu correction. Broader long-play character
-rendering and new Redmi FPS remain open.
+This is a focused pass for the menu correction. The release-finishing section
+above records the later long-play acceptance and Redmi playability follow-up.
 
 On the preceding build **128**, source
 `66dcd14b6792ee5d620800e5a1c8da98fb57d001`, Frostie reports the Lagoon water glitches
@@ -105,8 +133,8 @@ the complete appended native log. Windows ADB expands LF to CRLF, so the helper
 derives native offsets from the verified archived baseline and transfers
 encoded chunks. Future collector integration needs the same byte handling.
 See the
-[shared clipping fix](hud-shared-clipping-fix-20261029.md). Broader
-long-play character rendering and new Redmi FPS results remain open.
+[shared clipping fix](hud-shared-clipping-fix-20261029.md). The later long-play
+acceptance and Redmi playability follow-up are recorded above.
 
 The preceding build-127 water follow-up failed with MSAA 2×. None changes
 its appearance to disappearing water/small screen lines, with intermittent
@@ -312,8 +340,8 @@ The timer candidate in slot 11 still emits draw commands; trace the actual
 placement/clipping consumers before choosing a correction. **MD-016 water still
 fails**, including main Original aspect and Original framerate. The native
 configuration changes are retained, but optional water draw inputs are absent.
-The capture ends with save and the owned HUD request is removed. Broader
-long-play character acceptance remains open. Preserve the literal repeated
+The capture ends with save and the owned HUD request is removed. Long-play
+acceptance was pending at this point and is now recorded above. Preserve the literal repeated
 marker 7 and combined marker-10 input; details belong in the review, not another
 generic replay of the already accepted controls.
 

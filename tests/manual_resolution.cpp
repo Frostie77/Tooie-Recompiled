@@ -147,4 +147,61 @@ int main(int argc,char **argv) {
     choose(edge,Resolution::Auto,3.,0);auto untouched=renderContext.app->discards;
     choose(edge,Resolution::Auto,4.5,0);CHECK(renderContext.app->discards==untouched);
     std::printf("PASS: %u resolution/settings/aspect/window cases through the actual Graphics menu, Config save/load, frontend mapping and workload method; legacy choices, fractional scales, cancel/apply, restart persistence, scale-only discard and invalid bounds.\n",cases);
+
+    // Fixed game ratios must survive Apply/restart, override the physical
+    // display shape, and drive the same HUD extension and culling consumers.
+    struct AspectCase {AspectRatio mode;const char *name;float target;};
+    const std::array<AspectCase,6> aspects{{
+        {AspectRatio::Original,"Original",4.f/3.f},
+        {AspectRatio::Expand,"Expand",0.f},
+        {AspectRatio::Ratio16x9,"16:9",16.f/9.f},
+        {AspectRatio::Ratio16x10,"16:10",16.f/10.f},
+        {AspectRatio::Ratio3x2,"3:2",3.f/2.f},
+        {AspectRatio::Ratio21x9,"21:9",21.f/9.f}}};
+    const std::array<hlslpp::uint2,6> windows{{{320,240},{1920,1080},{2560,1600},
+        {2400,1080},{2520,1080},{0,0}}};
+    unsigned aspectCases=0;
+    for(const auto &a:aspects) {
+        auto &pending=config::get_graphics_config();
+        const auto before=get_graphics_config().ar_option;
+        pending.update_option_value("ar_option",uint32_t(a.mode));
+        CHECK(get_graphics_config().ar_option==before);
+        pending.revert_temp_config();
+        CHECK(std::get<uint32_t>(pending.get_temp_option_value("ar_option"))==uint32_t(before));
+        const auto previousDiscards=renderContext.app->discards;
+        pending.update_option_value("ar_option",uint32_t(a.mode));CHECK(pending.save_config());
+        CHECK(renderContext.app->discards==previousDiscards+unsigned(before!=a.mode));
+        for(auto hud:{HUDRatioMode::Original,HUDRatioMode::Clamp16x9,HUDRatioMode::Full})
+        for(double scale:{1.,3.5}) {
+            auto &settings=config::get_graphics_config();
+            settings.update_option_value("hr_option",uint32_t(hud));
+            choose(settings,Resolution::Manual,scale,0);
+            CHECK(settings.get_json_config()["ar_option"]==a.name);
+            fresh();CHECK(get_graphics_config().ar_option==a.mode);
+            CHECK(get_graphics_config().hr_option==hud);
+            resources.userConfig=renderContext.app->userConfig;
+            if(a.mode!=AspectRatio::Original&&a.mode!=AspectRatio::Expand) {
+                CHECK(resources.userConfig.aspectRatio==RT64::UserConfiguration::AspectRatio::Manual);
+                CHECK(std::fabs(resources.userConfig.aspectTarget-a.target)<.000001);
+            }
+            for(auto window:windows) {
+                resources.swapChainWidth=window.x;resources.swapChainHeight=window.y;
+                queue.threadConfigurationUpdate(hlslpp::uint2(320,240),workload);
+                const float source=4.f/3.f;
+                const float target=a.mode==AspectRatio::Expand?
+                    (window.x&&window.y?std::max(float(window.x)/float(window.y),source):source):a.target;
+                CHECK(std::fabs(workload.aspectRatioTarget-target)<.000001f);
+                CHECK(std::fabs(float(workload.resolutionScale.y)-float(scale))<.00001f);
+                CHECK(std::fabs(float(workload.resolutionScale.x)-float(scale)*target/source)<.0001f);
+                const float extension=hud==HUDRatioMode::Full?1.f:
+                    hud==HUDRatioMode::Clamp16x9&&window.x&&window.y&&target>source?
+                    std::min(1.f,(16.f/9.f-source)/(target-source)):0.f;
+                CHECK(std::fabs(workload.extAspectPercentage-extension)<.00001f);
+                CHECK(std::fabs(tooie::visibility::widthRatio.load()-target/source)<.00001f);
+                ++aspectCases;
+            }
+        }
+    }
+    CHECK(nlohmann::json(AspectRatio::Manual)=="Manual");
+    std::printf("PASS: %u saved game-ratio/HUD/window/scale cases cover Original, Expand, 16:9, 16:10, 3:2 and 21:9; Apply/cancel, restart, ratio-change discard, effective targets, HUD limits and widened visibility.\n",aspectCases);
 }

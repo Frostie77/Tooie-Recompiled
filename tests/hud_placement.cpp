@@ -78,8 +78,9 @@ int main(int argc,char **argv){
         func_800FA508(r,&ctx);CHECK(ctx.r16==0x13572468&&ctx.r31==0x12345678&&ctx.r29==int32_t(0x807F0000));
         rect(r,Cursor,30,30);append(r,Cursor,0xFEED1234,(30U<<16)|30U);
         const auto end=word(r,Cursor);
-        // 4:3, 16:9 and ultrawide renderer consumers, independently of HUD mode.
-        for(float aspect:{1.f,.75f,.5f}) {
+        // Source / target for Original, 3:2, 16:10, 16:9, 21:9 and 8:3.
+        // Exercise every HUD mode at each selected game ratio.
+        for(float aspect:{1.f,8.f/9.f,5.f/6.f,.75f,4.f/7.f,.5f}) {
             const float extension=mode==ultramodern::renderer::HUDRatioMode::Original?0.f:mode==ultramodern::renderer::HUDRatioMode::Full?1.f:std::min(1.f,(4.f/3.f-1.f)/std::max(.0001f,1.f/aspect-1.f));
             const auto points=consumeHud(r,Start,end,aspect,extension,dropScope);
             CHECK(points.size()==icons*2+texts+2);
@@ -176,7 +177,7 @@ int main(int argc,char **argv){
             char digits[16];const unsigned n=unsigned(std::snprintf(digits,sizeof(digits),"%u",value));
             const unsigned textPasses=state==2?2:1;
             CHECK(texts==48*n*textPasses);
-            for(float ratio:{1.f,.75f,.5f})for(float scale:{1.f,5.f}) {
+            for(float ratio:{1.f,8.f/9.f,5.f/6.f,.75f,4.f/7.f,.5f})for(float scale:{1.f,5.f}) {
                 const float extension=mode==ultramodern::renderer::HUDRatioMode::Original?0.f:mode==ultramodern::renderer::HUDRatioMode::Full?1.f:std::min(1.f,(4.f/3.f-1.f)/std::max(.0001f,1.f/ratio-1.f));
                 const auto target=capturedHudTarget(ratio,scale);
                 const float alignmentTolerance=scale+target.misalignment+1;

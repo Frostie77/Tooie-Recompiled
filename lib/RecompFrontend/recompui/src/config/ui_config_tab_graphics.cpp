@@ -68,7 +68,10 @@ namespace recompui {
         static EnumOptionVector aspect_ratio_options = {
             {ultramodern::renderer::AspectRatio::Original, "Original"},
             {ultramodern::renderer::AspectRatio::Expand, "Expand"},
-            // {ultramodern::renderer::AspectRatio::Manual, "Manual"},
+            {ultramodern::renderer::AspectRatio::Ratio16x9, "16:9"},
+            {ultramodern::renderer::AspectRatio::Ratio16x10, "16:10"},
+            {ultramodern::renderer::AspectRatio::Ratio3x2, "3:2"},
+            {ultramodern::renderer::AspectRatio::Ratio21x9, "21:9"},
         };
 
         static EnumOptionVector antialiasing_options = {
@@ -319,7 +322,7 @@ namespace recompui {
             config.add_enum_option(
                 graphics::options::ar_option,
                 "Aspect Ratio",
-                "Sets the horizontal aspect ratio. <recomp-color primary>Original</recomp-color> uses the game's original 4:3 aspect ratio. <recomp-color primary>Expand</recomp-color> will adjust to match the game window's aspect ratio.",
+                "Sets the horizontal aspect ratio. <recomp-color primary>Original</recomp-color> uses the game's original 4:3 aspect ratio. <recomp-color primary>Expand</recomp-color> matches the game window. The fixed ratios preserve their shape with black bars where needed.",
                 aspect_ratio_options,
                 ultramodern::renderer::AspectRatio::Expand
             );
@@ -369,7 +372,7 @@ namespace recompui {
             config.add_enum_option(
                 graphics::options::hr_option,
                 "HUD Placement",
-                "Adjusts the placement of HUD elements to fit the selected aspect ratio. <recomp-color primary>Expand</recomp-color> will use the aspect ratio of the game's output window.",
+                "Adjusts HUD icons, values and timers within the selected game aspect ratio. <recomp-color primary>Original</recomp-color> keeps the original placement, <recomp-color primary>16:9</recomp-color> limits the HUD to a 16:9 area, and <recomp-color primary>Expand</recomp-color> uses the full game image.",
                 hud_ratio_mode_options,
                 ultramodern::renderer::HUDRatioMode::Clamp16x9
             );

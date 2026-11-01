@@ -1,7 +1,8 @@
 # Next Android update — draft
 
 Version and Android version code are not selected. Public v1.1.0/code 5 remains
-unchanged. Frostie wants to prepare the release after the Redmi results arrive.
+unchanged. Redmi's qualitative playability follow-up has arrived; the final
+camera and new-preset device checks remain outstanding.
 
 ## Added
 
@@ -13,13 +14,18 @@ unchanged. Frostie wants to prepare the release after the Redmi results arrive.
   swapping restores normal controls on exit. Flight steering and airborne aiming
   use the flight setting. Breegull Blaster controls retain their prior behavior.
 - Manual graphics resolution scale with quarter-step choices for finer control
-  of rendering load. Redmi performance results are still pending.
+  of rendering load. The Redmi tester reports 240p + Expand playable and scale
+  3.50 playable with occasional lag spikes; no measured FPS improvement is claimed.
+- Fixed **16:9, 16:10, 3:2 and 21:9** game aspect ratios alongside Original and
+  Expand. HUD icons, values, counters and timers follow the selected game image
+  according to HUD Placement. Host checks pass; Android visual acceptance is pending.
 
 ## Corrections with focused Odin acceptance
 
 - Remove the reported Jiggy Challenge static lines and dialogue-entry shunt.
-- Correct the tested animated limb gaps at Display framerate. Broader intermittent
-  character deformation after longer play remains under investigation.
+- Correct the tested animated limb gaps at Display framerate. Frostie also
+  accepts the long-play character check on 1 November after an extended session
+  with the model staying correct throughout.
 - Keep the opening logos steady at Display framerate.
 - Correct wide HUD counter visibility and countdown placement, including the
   tested Jiggy values, available egg ammunition and feather counters.
@@ -34,15 +40,19 @@ The [handoff](handoff.md) links the complete source, host, CI and device records
 
 ## Pending before the final release record
 
-- Record Redmi's new Original/Expand FPS comparison, graphics settings, sound,
-  controls and close/reopen result. Prior Redmi startup/gameplay/sound success is
-  not a measured performance improvement for this candidate.
+- Retain the [Redmi follow-up](redmi-playability-20261031.md) as reported
+  playability with occasional lag spikes. The screenshots contain no FPS/settings
+  readout; Android version and a new close/reopen result are still unreported.
 - Test the [primary-camera scene matching candidate](camera-primary-scene-fix-20261031.md)
   on Odin. The second build-131 trace and actual-consumer replay expose primary
   history being replaced by auxiliary history. The scoped correction passes
-  host checks; Android CI and device acceptance remain pending. Keep broader
-  pacing/guest adjustment, older unusual frames and long-play character work
-  separate. No accepted camera fix is claimed yet.
+  host checks and Android CI 132; downloaded-payload verification and device
+  acceptance remain pending. Keep broader
+  pacing/guest adjustment and older unusual frames separate from the accepted
+  long-play check. No accepted camera fix is claimed yet.
+- Check the four new presets and corrected HUD values on the combined candidate
+  using the [focused plan](fixed-aspect-presets-20261101.md), after the existing
+  build-132 camera test. Batch remaining changes before the next Android build.
 - Select the exact reviewed release source, version name and increasing code;
   build the unsigned release candidate and verify its complete payload. Sign
   locally with the existing protected release key, then check update continuity,

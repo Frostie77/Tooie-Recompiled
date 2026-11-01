@@ -1,5 +1,10 @@
 # Redmi gameplay comparison
 
+**Follow-up received:** see the [31 October review](redmi-playability-20261031.md).
+The instructions below are retained as the original request, not a new request
+to repeat the comparison. The tester reports playable 240p + Expand and playable
+scale 3.50 with occasional lag spikes.
+
 Install the APK whose filename ends in **GPU-Test.apk**. It appears as **Tooie GPU Test**
 followed by its build identifier, alongside the previous test and public app.
 It includes the startup correction previously tested on Redmi, corrected

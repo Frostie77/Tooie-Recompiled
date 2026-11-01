@@ -43,6 +43,10 @@ namespace ultramodern {
             Original,
             Expand,
             Manual,
+            Ratio16x9,
+            Ratio16x10,
+            Ratio3x2,
+            Ratio21x9,
             OptionCount
         };
         enum class Antialiasing {
@@ -122,6 +126,10 @@ namespace ultramodern {
             {ultramodern::renderer::AspectRatio::Original, "Original"},
             {ultramodern::renderer::AspectRatio::Expand, "Expand"},
             {ultramodern::renderer::AspectRatio::Manual, "Manual"},
+            {ultramodern::renderer::AspectRatio::Ratio16x9, "16:9"},
+            {ultramodern::renderer::AspectRatio::Ratio16x10, "16:10"},
+            {ultramodern::renderer::AspectRatio::Ratio3x2, "3:2"},
+            {ultramodern::renderer::AspectRatio::Ratio21x9, "21:9"},
         });
 
         NLOHMANN_JSON_SERIALIZE_ENUM(ultramodern::renderer::Antialiasing, {
