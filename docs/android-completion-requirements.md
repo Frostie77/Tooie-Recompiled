@@ -228,9 +228,12 @@ Frostie retired the unconfirmed Adreno 650 experiment and closed PR #27 on
   store/codec/runtime/JNI and Android CI checks. Focused Odin checks covered
   verified exports, no-save feedback, cancellation, damaged-file rejection,
   the running-game guard and real save restoration. This is unreleased work.
-- [ ] Verify save transfers between devices and between Debug, Release and test
-  app channels. They share the backup format, but the accepted Odin test
-  exported and imported within one isolated app.
+- [x] Verify Debug → Release save transfer on Odin. Frostie imports his Debug
+  save into signed build 135, saves/quits and reloads successfully; see the
+  [signed checkpoint](development/release-candidate-135-20261102.md).
+- [ ] Verify transfers on other devices and remaining app-channel directions.
+  The backup format is shared; the signed Odin result above covers only
+  Debug → Release, alongside the earlier within-test-app restoration checks.
 - [ ] Complete broader coexistence checks for the public release and retained
   local Debug app: independent ROM imports, saves and mods across restarts and
   updates. Basic settings separation passed; each app retains its own
@@ -271,9 +274,12 @@ Broad mod compatibility remains a coverage item.
 
 ## Focused graphics/control work for the next update
 
-The current installed Odin build is **134**. Its full CI, independently verified
-Debug payload and [focused visibility/transition check](development/build134-odin-review-20261102.md)
-pass; source/tree identities are recorded in that review and
+The current installed Odin release candidate is **135**, version 1.2.0/code 6.
+CI, unsigned-payload checks and protected local signing pass; the
+[signed checkpoint](development/release-candidate-135-20261102.md) records the
+successful replacement, Debug-save import and 21:9 persistence. Retain the
+[build-134 visibility/transition pass](development/build134-odin-review-20261102.md).
+Exact identities are recorded in those reviews and
 [the handoff](development/handoff.md). The following checkmarks reflect focused
 manual acceptance, not full-game/device coverage or publication.
 
@@ -313,9 +319,10 @@ manual acceptance, not full-game/device coverage or publication.
   Build 134 has explicit manual transition passes for Expand and all aspect
   ratios. The review above distinguishes moving-animation acceptance from its
   completed-gameplay still images. Host consumer/failure controls and CI pass.
-- [ ] Confirm a selected fixed aspect ratio survives closing/reopening the app.
-  Host persistence checks pass; the build-134 device capture keeps one process.
-  Include this in the next signed release update/save/settings/reopen check.
+- [x] Confirm a selected fixed aspect ratio survives save/quit/reload. Frostie
+  reports 21:9 remains selected on signed build 135; see the signed checkpoint
+  above. The requested label/order/default follow-up still needs its brief
+  replacement-candidate settings check.
 - [x] Keep Jiggy Challenge controls unchanged with stationary stick swapping
   Off and On (MD-015), accepted in the build-125 review above.
 - [x] Correct the reported Lagoon missing-water/stray-polygons/lines failure

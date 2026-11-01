@@ -4,6 +4,22 @@ Updated: 2 November 2026.
 
 ## Release finishing batch
 
+**Signed build 135 and settings follow-up:** the
+[checkpoint](release-candidate-135-20261102.md) records CI/payload verification,
+protected local signing and the successful code-5 replacement. Frostie imports
+his Debug save into Release, saves/quits at 21:9 and reloads with that preference
+retained. Those two manual checks pass; do not leave them pending or claim they
+independently establish pre-import release save/settings/mod retention.
+
+Frostie requests Game Aspect Ratio with Expand first; HUD Placement labels
+Auto, Classic 4:3 and 16:9; Auto defaulting new settings; Display first in
+Framerate; and Auto first in Resolution. Preserve saved enum values/JSON keys
+and existing choices. Keep the
+launcher/settings full-display and all rendering/placement math unchanged.
+Use one replacement unsigned candidate for 1.2.0/code 6, followed by a brief
+settings check. Retain the accepted camera/HUD/visibility/transition/controls
+and long-play results instead of requesting the full graphics test again.
+
 **PR cleanup and next candidate, 2 November:** Frostie asks to consolidate the
 accepted work and prepare the next update. PR #43 includes every commit of #41.
 Its Mali startup code, regression test and test runner are byte-identical to
@@ -17,9 +33,9 @@ Keep its unconfirmed Retroid report separate from a compatibility-fix claim.
 Prepare **1.2.0 / code 6** from the consolidated main source using one manual
 Android APK run with `prepare_candidate=true`. Leave GPU, paired-GPU and
 touch-test inputs off. Retain the tested native code; only the release version stamp changes.
-The protected key/password stay on Frostie's PC. Signed update continuity,
-retained saves/settings and fixed-preset persistence after reopening remain the
-next Odin check. Public v1.1.0/code 5 and its stable feed stay live until the new
+The protected key/password stay on Frostie's PC. Build 135's signed checkpoint
+above records the completed save-transfer/preset checks and their limits.
+The replacement candidate needs its settings check. Public v1.1.0/code 5 and its stable feed stay live until the new
 signed candidate is accepted and publication is authorized.
 
 **Build 134 accepted:** the [complete uploaded capture](build134-odin-review-20261102.md)

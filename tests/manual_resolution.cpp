@@ -95,6 +95,7 @@ int main(int argc,char **argv) {
     const auto index=schema.options_by_id.at("res_manual_scale");
     CHECK(c.is_config_option_hidden(index));
     CHECK(get_graphics_config().res_option==Resolution::Auto);
+    CHECK(get_graphics_config().hr_option==HUDRatioMode::Full);
     RT64::TestResources resources;RT64::WorkloadQueue queue;queue.ext.sharedResources=&resources;
     RT64::WorkloadQueue::WorkloadConfiguration workload;unsigned cases=0;
     for (auto mode:{Resolution::Original,Resolution::Original2x,Resolution::Auto,Resolution::Manual}) {
@@ -204,4 +205,27 @@ int main(int argc,char **argv) {
     }
     CHECK(nlohmann::json(AspectRatio::Manual)=="Manual");
     std::printf("PASS: %u saved game-ratio/HUD/window/scale cases cover Original, Expand, 16:9, 16:10, 3:2 and 21:9; Apply/cancel, restart, ratio-change discard, effective targets, HUD limits and widened visibility.\n",aspectCases);
+
+    // Renamed/reordered labels must still read and save pre-update choices.
+    // Only a missing HUD preference should take the new Auto default.
+    const std::array<std::pair<const char*,HUDRatioMode>,3> legacyHud{{
+        {"Original",HUDRatioMode::Original},
+        {"Clamp16x9",HUDRatioMode::Clamp16x9},
+        {"Expand",HUDRatioMode::Full}}};
+    for(const auto &[key,mode]:legacyHud) {
+        auto legacy=config::get_graphics_config().get_json_config();
+        legacy["ar_option"]="21:9";legacy["hr_option"]=key;
+        {std::ofstream out(configPath/"graphics.json");out<<legacy;}
+        auto &loaded=fresh();
+        CHECK(get_graphics_config().ar_option==AspectRatio::Ratio21x9);
+        CHECK(get_graphics_config().hr_option==mode);
+        CHECK(loaded.get_json_config()["hr_option"]==key);
+        CHECK(loaded.save_config());
+        fresh();CHECK(get_graphics_config().hr_option==mode);
+    }
+    auto missing=config::get_graphics_config().get_json_config();missing.erase("hr_option");
+    {std::ofstream out(configPath/"graphics.json");out<<missing;}
+    auto &defaults=fresh();CHECK(get_graphics_config().hr_option==HUDRatioMode::Full);
+    CHECK(defaults.get_json_config()["hr_option"]=="Expand");
+    std::puts("PASS: all three pre-update HUD choices survive save/reload; a missing preference defaults to Auto without changing the saved game ratio.");
 }
