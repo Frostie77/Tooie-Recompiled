@@ -1234,6 +1234,10 @@ namespace RT64 {
         drawCall.rectDtdy = dtdy;
         drawCall.rectLeftOrigin = extAlignment.leftOrigin;
         drawCall.rectRightOrigin = extAlignment.rightOrigin;
+#if defined(__ANDROID__)
+        drawCall.rectLeftOrigin = state->extended.hud.origin(drawCall.rectLeftOrigin);
+        drawCall.rectRightOrigin = state->extended.hud.origin(drawCall.rectRightOrigin);
+#endif
         drawCall.rectAspect = extended.global.rectAspect;
 
         if (flushedState) {

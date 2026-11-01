@@ -12,6 +12,9 @@
 namespace RT64 {
     struct TransformGroup {
         uint32_t matrixId = G_EX_ID_AUTO;
+#if defined(__ANDROID__)
+        bool cameraRelative = false;
+#endif
 #if TOOIE_SKELETAL_POSE_ENABLED
         tooie::skeletal::BindingPtr skeletal;
 #endif

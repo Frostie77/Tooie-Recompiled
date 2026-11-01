@@ -2143,6 +2143,8 @@ L_800FA5B8:
 L_800FA5C8:
     // 0x800FA5C8: lh          $a2, 0x6($s0)
     ctx->r6 = MEM_H(ctx->r16, 0X6);
+    tooie_hud_component_begin(rdram, ctx);
+    tooie_hud_placement_begin(rdram, ctx);
     // 0x800FA5CC: jal         0x8008A640
     // 0x800FA5D0: lh          $a3, 0x8($s0)
     ctx->r7 = MEM_H(ctx->r16, 0X8);
@@ -2151,6 +2153,8 @@ L_800FA5C8:
     // 0x800FA5D0: lh          $a3, 0x8($s0)
     ctx->r7 = MEM_H(ctx->r16, 0X8);
     after_2:
+    tooie_hud_placement_end(rdram, ctx);
+    tooie_hud_component_end(rdram, ctx);
     // 0x800FA5D4: addiu       $s0, $s0, 0x1C
     ctx->r16 = ADD32(ctx->r16, 0X1C);
 L_800FA5D8:

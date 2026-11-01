@@ -104,10 +104,13 @@ inline void note(const uint8_t *ram, const Owner &owner, uint32_t model, uint32_
     auto &s = stats(); const auto now = diagnostics::monotonicUs();
     auto &next = s.details[list != 0];
     if (now < next) return;
-    char text[450]; std::snprintf(text, sizeof(text),
-        "marker=0x%X generation=%llu actor=0x%X type=%u callback=0x%X model=0x%X list=0x%X bones=%u result=%s",
+    const auto &source = guest::source();
+    char text[600]; std::snprintf(text, sizeof(text),
+        "marker=0x%X generation=%llu actor=0x%X type=%u callback=0x%X model=0x%X list=0x%X bones=%u result=%s validation=%s builder_skeleton=0x%X builder_bones=%u model_skeleton_offset=0x%X",
         owner.marker, (unsigned long long)owner.generation, owner.actor, unsigned(half(ram, owner.marker + 0x14)),
-        owner.drawCallback, model, list, guest::word(ram, list), result);
+        owner.drawCallback, model, list, guest::word(ram, list), result,
+        list ? source.lastRejection : "none", list ? source.lastBuilderSkeleton : 0,
+        list ? source.lastBuilderBones : 0, list && guest::valid(model, 64) ? guest::word(ram, model + 0x18) : 0);
     diagnostics::log("actor-draw", text); next = now + 5'000'000;
 }
 inline std::shared_ptr<const Pose> pose(const uint8_t *ram, uint32_t list, uint32_t model,

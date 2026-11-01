@@ -85,13 +85,14 @@ namespace recompui {
     public:
         // Element that was focused before navigating.
         Element *original_focused_element = nullptr;
+        Element *document = nullptr;
         // Navigation directional value: -1 for up/left, 1 for down/right.
         int nav_dir_value;
         // In this case, only used to represent whether navigating vertically or horizontally.
         NavigationType nav_dir_type;
         NavDirection nav_direction;
 
-        RecompNav(Document *doc, int key_identifier) {
+        RecompNav(Document *doc, int key_identifier) : document(doc) {
             switch (key_identifier) {
                 case Rml::Input::KI_UP:    nav_dir_value = -1; nav_dir_type = NavigationType::Vertical;   nav_direction = NavDirection::Up;    break;
                 case Rml::Input::KI_DOWN:  nav_dir_value =  1; nav_dir_type = NavigationType::Vertical;   nav_direction = NavDirection::Down;  break;
@@ -182,6 +183,21 @@ namespace recompui {
             return closest;
         }
 
+        // Use the rebuilt navigation tree, not the physical element hierarchy.
+        // Hidden/disabled pages can retain both focus and old nav_children while
+        // being excluded from this document's current navigation tree.
+        static Element *find_nav_parent(Element *root, Element *element) {
+            for (Element *child : root->nav_children) {
+                if (child == element) {
+                    return root;
+                }
+                if (Element *parent = find_nav_parent(child, element)) {
+                    return parent;
+                }
+            }
+            return nullptr;
+        }
+
         // Try to navigate in the given direction, and if it isn't possible then try from the element's nav parent.
         Element *unwind_nav_in_direction(
             Element *this_element,
@@ -191,15 +207,17 @@ namespace recompui {
             print_debug_id(this_element, "↑ ");
             #endif
 
-            Element *nav_parent = this_element->get_nav_parent();
+            Element *nav_parent = find_nav_parent(document, this_element);
             if (nav_parent == nullptr) {
-                return this_element;
+                if (this_element == document) {
+                    return this_element;
+                }
+                // Focus outlived its navigation branch. Recover through the
+                // current tree so the next direction reaches an active control.
+                return dive_nav_from_direction(document);
             }
 
             int cur_element_index = get_element_index(this_element, nav_parent->nav_children);
-            if (cur_element_index == -1) {
-                throw std::runtime_error("This should never ever ever happen. Element not found in its parent's nav children.");
-            }
 
             // Process grid navigation if retained_grid_index is valid and grid navs are different.
             if (

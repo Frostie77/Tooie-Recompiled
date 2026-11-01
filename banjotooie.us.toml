@@ -414,30 +414,24 @@ func = "ovl_shift"
 before_vram = 0x80082528
 text = "tooie_reregister_shifted_overlay(rdram, ctx);"
 
-# `Aspect Ratio: Expand` widens only the projection handed to RT64. Tooie's own
-# visibility tests still build their planes from the original 4:3 camera, so
-# geometry in the expanded side regions is discarded by the game before any
-# display list reaches RT64 and the sides render as bare background.
-#
-# These are the three wrappers that produce those verdicts: func_800E3D0C
-# (float AABB), func_800E3DC0 (s16 AABB) and func_800E3E8C (sphere). Each leaves
-# 0 in $v0 for "culled" and non-zero for "visible", so hooking the return lets
-# the host turn a rejection into "visible" -- and only while the applied aspect
-# ratio is Expand, so Original and Manual keep the game's exact behaviour.
+# Scope the float AABB, s16 AABB and sphere wrappers. Their primitive hooks
+# below widen only the horizontal plane pair to RT64's applied target aspect.
+# Return hooks unwind the scope without overriding any rejection. Original,
+# Manual and direct primitive callers retain the original game path.
 [[patches.hook]]
 func = "func_800E3D0C"
 before_vram = 0x800E3DB8
-text = "tooie_expand_visibility(rdram, ctx);"
+text = "tooie_expand_visibility_scope(rdram, ctx, 0U);"
 
 [[patches.hook]]
 func = "func_800E3DC0"
 before_vram = 0x800E3E84
-text = "tooie_expand_visibility(rdram, ctx);"
+text = "tooie_expand_visibility_scope(rdram, ctx, 0U);"
 
 [[patches.hook]]
 func = "func_800E3E8C"
 before_vram = 0x800E3EF4
-text = "tooie_expand_visibility(rdram, ctx);"
+text = "tooie_expand_visibility_scope(rdram, ctx, 0U);"
 
 # RT64 interpolation metadata for the player model. RT64's Display/Manual
 # refresh-rate modes present frames blended between the game's own 20/30 Hz
@@ -806,25 +800,109 @@ tooie_demo_pacing(rdram, ctx, 3U);
 #endif
 """
 
-# Saved aiming preference, after Y reads only.
-# bsfirstp 0x80804904 is walking input and deliberately remains unchanged.
+# Independent stationary aiming and Banjo/Kazooie flight preferences.
+# Kazooie-rifle bsfirstp and all shared stick getters remain original.
 [[patches.hook]]
 func = "func_808000B4_baeggaim"
 before_vram = 0x80800100
-text = "tooie_aiming_invert(rdram, ctx);"
+text = "tooie_aiming_invert(rdram, ctx, MEM_W(0x28, ctx->r29));"
 
 [[patches.hook]]
 func = "func_808002A4_bafpctrl"
 before_vram = 0x80800320
-text = "tooie_aiming_invert(rdram, ctx);"
+text = "tooie_aiming_invert(rdram, ctx, ctx->r16);"
 
 [[patches.hook]]
-func = "func_80804848_bsfirstp"
-before_vram = 0x8080491C
-text = "tooie_aiming_invert(rdram, ctx);"
+func = "bafly_entrypoint_10"
+before_vram = 0x80800590
+text = "tooie_flight_invert(rdram, ctx, MEM_W(0x20, ctx->r29));"
+
+# Read-only HUD identity/layout capture; OFF unless hud-trace-v1 is requested.
+# The core loop supplies a stable component entry; include its callback and text.
+[[patches.hook]]
+func = "func_800FA508"
+before_vram = 0x800FA5CC
+text = """
+tooie_hud_component_begin(rdram, ctx);
+tooie_hud_placement_begin(rdram, ctx);
+"""
 
 [[patches.hook]]
-func = "func_80804848_bsfirstp"
-before_vram = 0x808049D4
-text = "tooie_aiming_invert(rdram, ctx);"
+func = "func_800FA508"
+before_vram = 0x800FA5D4
+text = """
+tooie_hud_placement_end(rdram, ctx);
+tooie_hud_component_end(rdram, ctx);
+"""
 
+[[patches.hook]]
+func = "scinfobar_entrypoint_24"
+before_vram = 0x808007D0
+text = "tooie_hud_component_callback(rdram, ctx);"
+
+
+# Keep Jiggy Challenge controls outside the stationary stick swap.
+# Publish the controller marker; its live canonical state gates the paw input.
+[[patches.hook]]
+func = "func_80802030_chjiggygamenew"
+before_vram = 0x80802030
+text = "tooie_jiggy_input_context(rdram, ctx);"
+
+# Intro special-placement models bypass the standard actor model draw scope.
+
+[[patches.hook]]
+func = "func_80803A78_chintrochar"
+before_vram = 0x80803A78
+text = """
+#if TOOIE_ACTOR_POSE_ENABLED
+tooie_rt64_intro_scope(rdram, ctx, 1U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_80803A78_chintrochar"
+before_vram = 0x80803BB0
+text = """
+#if TOOIE_ACTOR_POSE_ENABLED
+tooie_rt64_intro_scope(rdram, ctx, 2U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_80803A78_chintrochar"
+before_vram = 0x80803CFC
+text = """
+#if TOOIE_ACTOR_POSE_ENABLED
+tooie_rt64_intro_scope(rdram, ctx, 3U);
+#endif
+"""
+
+[[patches.hook]]
+func = "func_800E3D0C"
+before_vram = 0x800E3D0C
+text = "tooie_expand_visibility_scope(rdram, ctx, 1U);"
+
+[[patches.hook]]
+func = "func_800E3DC0"
+before_vram = 0x800E3DC0
+text = "tooie_expand_visibility_scope(rdram, ctx, 1U);"
+
+[[patches.hook]]
+func = "func_800E3E8C"
+before_vram = 0x800E3E8C
+text = "tooie_expand_visibility_scope(rdram, ctx, 1U);"
+
+[[patches.hook]]
+func = "func_800CAA24"
+before_vram = 0x800CAA24
+text = "if (tooie_expand_frustum(rdram, ctx, 0U)) return;"
+
+[[patches.hook]]
+func = "func_800CAB70"
+before_vram = 0x800CAB70
+text = "if (tooie_expand_frustum(rdram, ctx, 1U)) return;"
+
+[[patches.hook]]
+func = "func_800CACEC"
+before_vram = 0x800CACEC
+text = "if (tooie_expand_frustum(rdram, ctx, 2U)) return;"

@@ -283,8 +283,10 @@ namespace RT64 {
             boxFilter.pipeline = device->createComputePipeline(pipelineDesc);
         }
 
-        // Raytracing compose.
-        {
+        // Raytracing compose. Raster-only builds/devices never consume this
+        // pipeline and must not require optional FP32 attachment blending.
+#if RT_ENABLED
+        if (deviceCapabilities.raytracing) {
             RaytracingComposeDescriptorSet descriptorSet(samplerLibrary);
             layoutBuilder.begin();
             layoutBuilder.addDescriptorSet(descriptorSet);
@@ -301,6 +303,7 @@ namespace RT64 {
             pipelineDesc.pixelShader = pixelShader.get();
             compose.pipeline = device->createGraphicsPipeline(pipelineDesc);
         }
+#endif
 
         /*
         RT64_LOG_PRINTF("Creating the Im3d pipeline state");

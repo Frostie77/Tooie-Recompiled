@@ -1,0 +1,82 @@
+{
+  "ci_run": 41042131830,
+  "build": 131,
+  "source": "aa277b14262c951b395a39d4345845e6ecf481d4",
+  "native_version": "0.1.0-ci.131.1+gaa277b14262c",
+  "main_build_id": "2ac5aeb2745839ca5ac5e25b11eb29f0d06da09f",
+  "libraries": {
+    "libmain.so": {
+      "sha256": "624c3d2164c7f4b479aa19b49cdcb423f5266179d15380dae5a0b79d7c3c7ce5",
+      "build_id": "2ac5aeb2745839ca5ac5e25b11eb29f0d06da09f"
+    },
+    "libSDL2.so": {
+      "sha256": "5086b54c850cad20db46859deace58630ade9e2d729057fdfdf41d1bfd620251",
+      "build_id": "1b8a7474bbce4fc8cd3aaffe8eb4a2b091512fc8"
+    },
+    "libmain_hook.so": {
+      "sha256": "deddb9be965528ee70c125f2982203dd29f6fff0600808ff12cb7af1aa894303",
+      "build_id": "845d6bacc412339b2707d5e9e7eb902b01fb63e7"
+    },
+    "libhook_impl.so": {
+      "sha256": "2eec64ef08193690dde15d7e16a77e94c9cc08ef904660a0e1dfd65e688b338b",
+      "build_id": "9581e5cc6f687ece4b0af9b975c5bb93146e830f"
+    },
+    "libfile_redirect_hook.so": {
+      "sha256": "ff10d094fa70307e5aba2ace2072be0282438dfb81af3666b0a5634cb395e12d",
+      "build_id": "45f9ded89a3a367ecf9a46d9d3a73b86de53cb01"
+    },
+    "libgsl_alloc_hook.so": {
+      "sha256": "75d2c45369074d7f2efdcd6a10be882001fa8c5115e1c74f43780ea9204fec59",
+      "build_id": "c544bfa45d4c10f565c645030d72089829294301"
+    },
+    "libc++_shared.so": {
+      "sha256": "cd61762848882a16c8244c964a6f396c0caa0b440588a210ce9cc4ab0e6d9f0c",
+      "build_id": "7befe631535aa853c4f4ac1293e49dcea34c9b6e"
+    }
+  },
+  "native_libraries_byte_identical": true,
+  "source_matching_helpers": {
+    "capture_installed.py": "01eb4fbeb34c12b42427b2782e60573aa4a6f4d5cf17f0ab3ea8c548ba48ef70",
+    "collector.py": "9472f2c36984de033355ed824b9c2a75ea5ef9735412a853f8e866ffb5bc8d45",
+    "tooie.py": "03b1004f4b0b07e4d31cfa428c408d3c13c2005cad54340372e6dfc316d32807",
+    "prepare_touch_debug.py": "74f80fc0f8a41d73dad7dfa2bd701b20850e8c70f5c027842ba7806d65ffe50a"
+  },
+  "camera_native_markers": true,
+  "ci_camera_negative_controls": true,
+  "redmi_instructions_source_match": true,
+  "normal_apk_sha256": "6f728e72e0cffa63efba3eeda30dff43d9a49192addab7ac6553c8931408c20f",
+  "gpu_apk_sha256": "cce771a0add916bc71490b78a65863eb5d5ed23021e34cf0af445a3290c821b4",
+  "engineering": "c856c9f5effa24d7214b350619b953c3a7592ce3",
+  "engineering_tree": "5df45e5b96427ea5e0879f6bb4fc07d0fc15e99d",
+  "tested_tree": "6b9ee8ac45dbe61496706c334c5d01d592bb67e0",
+  "engineering_integration_difference": [
+    "README.md"
+  ],
+  "android_compiler": {
+    "ndk": "28.2.13676358",
+    "target": "aarch64-none-linux-android24"
+  },
+  "camera_policy_changed": false,
+  "device_burst": "pending",
+  "last_confirmed_installed_odin_build": 129,
+  "artifacts": [
+    {
+      "id": 12972886562,
+      "name": "Tooie-Recompiled-Android-arm64-aa277b14262c951b395a39d4345845e6ecf481d4-1.zip",
+      "size": 15467867,
+      "sha256": "0a22633c21581bef945acc9e6770b9d78532edd613eb1d75223fc8511c5f02ac"
+    },
+    {
+      "id": 12972507417,
+      "name": "Tooie-GPU-Test-Android-arm64-aa277b14262c951b395a39d4345845e6ecf481d4-1.zip",
+      "size": 15362113,
+      "sha256": "fa76657affd2b1c3b5eb826d4e2ba0fba9c9b25a6d8157ca36b274c019349c8f"
+    },
+    {
+      "id": 12972343091,
+      "name": "Android-build-logs-aa277b14262c951b395a39d4345845e6ecf481d4-1.zip",
+      "size": 77943,
+      "sha256": "85a8546bb752574331159c5afce5a313ad670d20c3333956aed0196be653bd8e"
+    }
+  ]
+}

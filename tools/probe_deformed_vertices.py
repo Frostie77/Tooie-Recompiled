@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+"""Execute the deforming-vertex and skeletal seam regression without a ROM/GPU.
+
+Real generated deformation functions, native metadata, RSP/GBI, matcher,
+transform processor and shader expression run; queue/RAM/allocation are fixtures.
+"""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import tempfile
+import tomllib
+
+
+def method(source, needle):
+    pos = source.index(needle)
+    start = source.rfind('\n', 0, pos) + 1
+    end = source.index('{', pos) + 1
+    depth = 1
+    while depth:
+        depth += (source[end] == '{') - (source[end] == '}')
+        end += 1
+    return source[start:end]
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--baseline-api', type=Path)
+    parser.add_argument('--seams', action='store_true', help='Run the welded rotating mesh-edge regression')
+    parser.add_argument('--scene-trace', action='store_true', help='Check the optional renderer-input observer')
+    parser.add_argument('--copies', action='store_true', help='Replay the recorded bone matrix copy/reload inputs')
+    parser.add_argument('--player-lifetime', action='store_true', help='Exercise long-play player identity through the RSP and matcher')
+    parser.add_argument('--intro', action='store_true', help='Exercise the actual intro draw and camera attachment consumers')
+    parser.add_argument('--baseline-rsp', type=Path, help='Verify the recorded-input drift against the old RSP source')
+    args = parser.parse_args()
+    if sum((args.copies,args.seams,args.scene_trace,args.player_lifetime,args.intro))>1:
+        parser.error('Select one probe mode')
+    if args.baseline_rsp and not args.copies:
+        parser.error('--baseline-rsp requires --copies')
+    root = Path(__file__).resolve().parents[1]
+    rt = root/'lib/rt64/src'
+    with tempfile.TemporaryDirectory(prefix='tooie-deformed-vertices-') as folder:
+        build = Path(folder)
+        if args.scene_trace:
+            scene=(rt/'render/rt64_scene_diagnostics.h').read_text().replace(
+                '#include "../../../../src/runtime_diagnostics.h"','#include "runtime_diagnostics.h"')
+            faults=[('scene-first-page-control.h','sceneDiagnosticsFirstPage',
+                     'const unsigned callFirst = unsigned(c.callPage % pages) * MaxCalls;',
+                     'const unsigned callFirst = 0;'),
+                    ('scene-early-stop-control.h','sceneDiagnosticsEarlyStop',
+                     'if (visits++ >= MaxCallVisits)',
+                     'if (inspected >= MaxIndices || visits++ >= MaxCallVisits)')]
+            for name,namespace,before,after in faults:
+                assert scene.count(before)==1
+                (build/name).write_text(scene.replace('namespace RT64::sceneDiagnostics {',
+                    'namespace RT64::'+namespace+' {').replace(before,after))
+        (build/'matching_queue.h').write_text('#pragma once\n#include "hle/rt64_workload.h"\nnamespace RT64 {struct WorkloadQueue {std::array<Workload,4> workloads;int writeCursor=0;};}\n')
+        stub = build/'platform/X11/Xlib.h';stub.parent.mkdir(parents=True)
+        stub.write_text('#pragma once\ntypedef struct _XDisplay Display;typedef unsigned long Window;\n')
+        for name in ['hle/rt64_game_frame.cpp','render/rt64_transform_processor.cpp','render/rt64_projection_processor.cpp']:
+            s=(rt/name).read_text().replace('#include "rt64_workload_queue.h"','#include "matching_queue.h"').replace('#include "hle/rt64_workload_queue.h"','#include "matching_queue.h"')
+            s=s.replace('#include "../../../../src/render_diagnostics.h"','#include "render_diagnostics.h"')
+            (build/Path(name).name).write_text(s)
+        source=(args.baseline_rsp or rt/'hle/rt64_rsp.cpp').read_text()
+        names=['RSP','reset','clearExtended','maskPhysicalAddress','fromSegmented','fromSegmentedMasked','matrixCommon','matrix','popMatrix','skeletalBinding','matrixId','popMatrixId','computeModelViewProj']
+        bodies='\n'.join(method(source,'RSP::'+n+'(') for n in names)
+        for name in ['readExtendedVertexSegment','setVertexCommon']:
+            body=method(source,'RSP::'+name+'(');pos=source.index(body)
+            bodies+='\n'+source[source.rfind('    template<',0,pos):pos]+body
+        src=(rt/'gbi/rt64_gbi.cpp').read_text()
+        for name in ['p0','p1']:bodies+='\n'+method(src,'DisplayList::'+name+'(')
+        bodies+='\n'+method((rt/'hle/rt64_workload.cpp').read_text(),'Workload::resetDrawData(')
+        (build/'skeletal-rsp.inc').write_text(bodies)
+        src=(rt/'gbi/rt64_gbi_extended.cpp').read_text()
+        (build/'skeletal-gbi.inc').write_text('\n'.join(method(src,'void '+n+'(') for n in ['matrixGroupCommand','matrixGroupV1','popMatrixGroupV1']))
+        shader=(rt/'shaders/RSPWorldCS.hlsl').read_text()
+        matches=re.findall(r'^    const float4 worldPos = [^;]+;',shader,re.M)
+        assert len(matches)==1
+        (build/'shader-position.inc').write_text(matches[0]+'\n')
+        funcs={'dbanim_entrypoint_0':'funcs_73.c','func_800B2190':'funcs_25.c','func_800B2344':'funcs_25.c','func_800ADE2C':'funcs_25.c','func_800ADE40':'funcs_25.c','func_80116568':'funcs_38.c'}
+        extracted=[]
+        for name,file in funcs.items():
+            source=(root/'RecompiledFuncs'/file).read_text()
+            found=re.findall(r'^RECOMP_FUNC void '+name+r'\(.*?(?=^RECOMP_FUNC |\Z)',source,re.M|re.S)
+            assert len(found)==1;extracted.append(found[0])
+        source=''.join(extracted);calls=set(re.findall(r'\b(\w+)\(rdram, ctx\);',source))
+        header='#include "tooie_recomp.h"\n'+''.join('void '+n+'(uint8_t*,recomp_context*);\n' for n in sorted(calls|funcs.keys()))
+        (build/'deform.c').write_text(header+source)
+        runtime=(root/'lib/N64ModernRuntime/librecomp/src/recomp.cpp').read_text()
+        (build/'coprocessor.cpp').write_text('#include "recomp.h"\nenum class StatusReg { FR=0x04000000 };\n'+
+            '\n'.join(method(runtime, name+'(') for name in ['cop0_status_write','cop0_status_read']))
+        inc=[build,build/'platform',root/'src',root/'include',root/'RecompiledFuncs',root/'tests/android_headers',root/'lib/N64Recomp/include',
+             root/'lib/N64ModernRuntime/librecomp/include',root/'lib/N64ModernRuntime/librecomp/src',root/'lib/N64ModernRuntime/ultramodern/include',
+             root/'lib/N64ModernRuntime/thirdparty',root/'lib/N64ModernRuntime/thirdparty/concurrentqueue',root/'lib/N64Recomp/lib/fmt/include',
+             root/'lib/N64Recomp/lib/tomlplusplus',root/'lib/rt64/include',rt,rt/'render',rt/'hle',rt/'common',rt/'contrib',rt/'contrib/hlslpp/include',
+             rt/'contrib/json/single_include',rt/'contrib/dxc/inc',rt/'contrib/plume',rt/'contrib/mupen64plus-core/src/api']
+        flags=['-O1','-pthread','-DNDEBUG','-D__ANDROID__','-DHLSL_CPU','-D__PRFCHWINTRIN_H','-ffunction-sections','-fdata-sections',
+               '-fsanitize=address,undefined','-fno-omit-frame-pointer','-fno-pie',*['-I'+str(p) for p in inc]]
+        env={**os.environ,'ASAN_OPTIONS':'detect_leaks=0','UBSAN_OPTIONS':'halt_on_error=1:print_stacktrace=1','APP_FOLDER_PATH':str(build)}
+        def run(cmd):subprocess.run([str(x) for x in cmd],check=True,env=env,cwd=root)
+        run([os.environ.get('CC','gcc'),'-std=c11','-fwrapv',*flags,'-c',build/'deform.c','-o',build/'deform.o'])
+        extra=[]
+        if args.intro:
+            row=json.loads((root/'tests/fixtures/intro-draw-parent.json').read_text())
+            body=re.search(r'^RECOMP_FUNC void func_80803A78_chintrochar\(.*?(?=^RECOMP_FUNC |\Z)',(root/row['file']).read_text(),re.M|re.S).group()
+            plain=re.sub(r'#if TOOIE_ACTOR_POSE_ENABLED\n    tooie_rt64_intro_scope\(rdram, ctx, [123]U\);\n#endif\n','',body)
+            assert hashlib.sha256(plain.encode()).hexdigest()==row['sha256']
+            cfg=tomllib.loads((root/'banjotooie.us.toml').read_text())
+            hooks=[h for h in cfg['patches']['hook'] if 'tooie_rt64_intro_scope' in h['text']]
+            assert len(hooks)==3
+            for stage,pc in [(1,0x80803A78),(2,0x80803BB0),(3,0x80803CFC)]:
+                text=f'tooie_rt64_intro_scope(rdram, ctx, {stage}U);'
+                assert text+'\n#endif\n    // 0x'+f'{pc:08X}:' in body
+                assert any(h['func']=='func_80803A78_chintrochar' and h['before_vram']==pc and text in h['text'] for h in hooks)
+            calls=set(re.findall(r'\b(\w+)\(rdram, ctx\);',body))
+            names={n for n in calls if n!='tooie_rt64_intro_scope'}
+            for n in names:body=re.sub(r'\b'+n+r'\b','intro_'+n,body)
+            generated=build/'intro.c'
+            generated.write_text('#include "tooie_recomp.h"\n'+''.join('void intro_'+n+'(uint8_t*,recomp_context*);\n' for n in sorted(names))+body)
+            obj=build/'intro.o'
+            run([os.environ.get('CC','gcc'),'-std=c11','-fwrapv',*flags,'-c',generated,'-o',obj])
+            extra=[obj,build/'rt64_projection_processor.cpp']
+        cpp=[root/('tests/intro_graphics.cpp' if args.intro else 'tests/player_model_lifetime.cpp' if args.player_lifetime else 'tests/skeletal_copies.cpp' if args.copies else 'tests/scene_diagnostics.cpp' if args.scene_trace else 'tests/skeletal_seams.cpp' if args.seams else 'tests/deformed_vertices.cpp'),root/'tests/skeletal_rsp.cpp',args.baseline_api or root/'src/recomp_api.cpp',build/'rt64_game_frame.cpp',build/'rt64_transform_processor.cpp',build/'coprocessor.cpp',*extra]
+        cpp += [rt/p for p in ['hle/rt64_rigid_body.cpp','common/rt64_math.cpp','hle/rt64_framebuffer_changes.cpp','hle/rt64_framebuffer_storage.cpp','hle/rt64_projection.cpp','common/rt64_common.cpp','preset/rt64_preset_scene.cpp','preset/rt64_preset.cpp']]
+        exe=build/'probe'
+        run([os.environ.get('CXX','g++'),'-std=c++20',*flags,*cpp,build/'deform.o','-Wl,--gc-sections','-no-pie','-o',exe])
+        if args.baseline_api:
+            control=subprocess.run([str(exe)],env=env,capture_output=True,text=True)
+            if args.player_lifetime:
+                assert control.returncode==71 and 'consumed long-play x=4 expected=1' in control.stderr,control.stderr
+                print(control.stderr.strip())
+                print('PASS: exact previous native identity pool fails consumed interpolation after 256 player models.',flush=True)
+                return
+            assert control.returncode==31 and 'seam gap=' in control.stderr and 'gap<.001f' in control.stderr,control.stderr
+            print(control.stderr.strip())
+            print('PASS: exact baseline metadata fails the rendered-position seam check.',flush=True)
+            return
+        if args.baseline_rsp:
+            control=subprocess.run([str(exe)],env=env,capture_output=True,text=True)
+            assert args.copies and control.returncode==61 and 'copied-matrix drift=' in control.stderr and 'gap<.002f' in control.stderr,control.stderr
+            print(control.stderr.strip())
+            print('PASS: exact old RSP source fails the recorded copied-matrix rendered-position check.',flush=True)
+            return
+        run([exe])
+        if args.intro:
+            for option,detail in [('--drop-identities','transforms[1].mapped'),('--drop-camera','camera attachment drift=')]:
+                control=subprocess.run([str(exe),option],env=env,capture_output=True,text=True)
+                assert control.returncode==81 and detail in control.stderr,control.stderr
+            print('PASS: missing intro identities and independent world/camera interpolation each fail the intended consumer assertion.',flush=True)
+            print('Scope: retained guest branch and constructed camera/model services; no full logo asset or GPU/device acceptance.',flush=True)
+            return
+        if args.player_lifetime:
+            print('Scope: constructed long-play renderer regression; no GPU/device or full Odin-scene replay.',flush=True)
+            return
+        if args.copies:
+            control=subprocess.run([str(exe),'--force-unowned-aliases'],env=env,capture_output=True,text=True)
+            assert control.returncode==61 and 'copied-matrix drift=' in control.stderr and 'gap<.002f' in control.stderr,control.stderr
+            print('PASS: restoring unowned copy/reload behavior fails the recorded rendered-position check.',flush=True)
+            print('Scope: recorded matrix/vertex subset with controlled ownership/schema; no full NPC mesh or GPU/device execution.',flush=True)
+            return
+        if args.scene_trace:
+            for option,detail in [('--first-page-only','bad.calls==2'),('--early-index-stop','bad.calls==2')]:
+                control=subprocess.run([str(exe),option],env=env,capture_output=True,text=True)
+                assert control.returncode==51 and detail in control.stderr,control.stderr
+            print('PASS: restoring first-page-only or stopping calls at the earlier vertex budget each loses the late draw and fails its expected assertion.',flush=True)
+            print('Scope: copied CPU upload inputs in controlled fixtures; no device/GPU or visual acceptance.',flush=True)
+            return
+        if args.seams:
+            print('Scope: constructed rotating mesh seam, not a replay of the Odin NPC; no GPU/device execution.',flush=True)
+            return
+        control=subprocess.run([str(exe),'--force-skip'],env=env,capture_output=True,text=True)
+        assert control.returncode==31 and 'seam gap=' in control.stderr and 'gap<.001f' in control.stderr,control.stderr
+        print('PASS: forcing the former SKIP vertex policy fails the rendered-position seam check.',flush=True)
+        print('Scope: controlled translating seam, not a replay of the supplied NPC video; no GPU/device execution.',flush=True)
+
+
+if __name__=='__main__':main()

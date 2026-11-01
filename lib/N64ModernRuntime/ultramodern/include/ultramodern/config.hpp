@@ -3,6 +3,8 @@
 
 #include <string>
 #include <optional>
+#include <algorithm>
+#include <cmath>
 
 #include "json/json.hpp"
 
@@ -12,8 +14,13 @@ namespace ultramodern {
             Original,
             Original2x,
             Auto,
+            Manual,
             OptionCount
         };
+        inline float clamp_manual_resolution_scale(float scale) {
+            return std::isfinite(scale) ? std::clamp(scale, 1.0f, 8.0f) : 3.0f;
+        }
+
         enum class WindowMode {
             Windowed,
             Fullscreen,
@@ -36,6 +43,10 @@ namespace ultramodern {
             Original,
             Expand,
             Manual,
+            Ratio16x9,
+            Ratio16x10,
+            Ratio3x2,
+            Ratio21x9,
             OptionCount
         };
         enum class Antialiasing {
@@ -67,6 +78,7 @@ namespace ultramodern {
         public:
             bool developer_mode;
             Resolution res_option;
+            float res_manual_scale = 3.0f;
             WindowMode wm_option;
             HUDRatioMode hr_option;
             GraphicsApi api_option;
@@ -89,6 +101,7 @@ namespace ultramodern {
             {ultramodern::renderer::Resolution::Original, "Original"},
             {ultramodern::renderer::Resolution::Original2x, "Original2x"},
             {ultramodern::renderer::Resolution::Auto, "Auto"},
+            {ultramodern::renderer::Resolution::Manual, "Manual"},
         });
 
         NLOHMANN_JSON_SERIALIZE_ENUM(ultramodern::renderer::WindowMode, {
@@ -113,6 +126,10 @@ namespace ultramodern {
             {ultramodern::renderer::AspectRatio::Original, "Original"},
             {ultramodern::renderer::AspectRatio::Expand, "Expand"},
             {ultramodern::renderer::AspectRatio::Manual, "Manual"},
+            {ultramodern::renderer::AspectRatio::Ratio16x9, "16:9"},
+            {ultramodern::renderer::AspectRatio::Ratio16x10, "16:10"},
+            {ultramodern::renderer::AspectRatio::Ratio3x2, "3:2"},
+            {ultramodern::renderer::AspectRatio::Ratio21x9, "21:9"},
         });
 
         NLOHMANN_JSON_SERIALIZE_ENUM(ultramodern::renderer::Antialiasing, {

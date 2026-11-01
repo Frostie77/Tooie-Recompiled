@@ -1,4 +1,5 @@
 #include "touch_input.h"
+#include "controller_input.h"
 #include "android_debug_log.h"
 #include <atomic>
 #include <chrono>
@@ -13,7 +14,7 @@ bool gameplay_allowed() {
     return ultramodern::is_game_started() && !recompinput::game_input_disabled() && !recompinput::all_input_disabled();
 }
 bool read_n64_input(int player, uint16_t* buttons, float* x, float* y) {
-    const bool connected = recompinput::profiles::get_n64_input(player, buttons, x, y);
+    const bool connected = tooie::input::read_controller_input(player, buttons, x, y);
     auto& state = input_state();
     state.set_gameplay(gameplay_allowed());
     const auto touch = state.snapshot();

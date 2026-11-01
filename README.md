@@ -182,8 +182,15 @@ See the [release notes](docs/development/release-notes-v1.1.0.md) for more detai
 
 ## Known issues
 
-- Minor visual lines during the Jiggy challenge.
-- A brief screen shift when dialogue animation begins.
+- Jiggy-challenge static lines and the dialogue screen shift have corrections
+  planned for the next update. Focused Odin Debug checks passed on 27 October;
+  [broader coverage remains open](docs/development/graphics-check-odin-20261027.md).
+- Character limbs can briefly separate and rejoin during interpolated animation.
+  The latest Debug candidate still shows gaps at Manual 60 and Display;
+  Original is fine in the manual Odin comparison. The
+  [follow-up](docs/development/graphics-framerate-follow-up-odin-20261027.md)
+  also tracks opening-logo vertical jitter in those interpolated modes and
+  HUD Placement having no visible effect. All three remain under investigation.
 - Intro/demo stutter and animation cadence still need further work.
 - Startup compatibility reports for Retroid Pocket 5 / Adreno 650 and Redmi Pad
   2 / Mali-G57 MC2 need further investigation. The Poco X3 Pro reporter obtained

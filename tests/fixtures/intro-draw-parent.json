@@ -1,0 +1,7 @@
+{
+  "parent_source": "4fb2e33e6ace2ad5076a649e3fd502966386a9b0",
+  "file": "RecompiledFuncs/funcs_64.c",
+  "function": "func_80803A78_chintrochar",
+  "sha256": "f91cb601a31675f9363322725042cac9d21ee96fed2e6308504c617bdbc44113",
+  "scope": "Complete unmodified guest draw body before three native ownership/attachment hooks; resources, camera and shared model submission supplied by the fixture."
+}

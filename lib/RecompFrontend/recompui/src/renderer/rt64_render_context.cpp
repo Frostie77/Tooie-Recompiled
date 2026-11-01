@@ -88,6 +88,10 @@ RT64::UserConfiguration::AspectRatio to_rt64(ultramodern::renderer::AspectRatio 
         case ultramodern::renderer::AspectRatio::Expand:
             return RT64::UserConfiguration::AspectRatio::Expand;
         case ultramodern::renderer::AspectRatio::Manual:
+        case ultramodern::renderer::AspectRatio::Ratio16x9:
+        case ultramodern::renderer::AspectRatio::Ratio16x10:
+        case ultramodern::renderer::AspectRatio::Ratio3x2:
+        case ultramodern::renderer::AspectRatio::Ratio21x9:
             return RT64::UserConfiguration::AspectRatio::Manual;
         case ultramodern::renderer::AspectRatio::OptionCount:
             return RT64::UserConfiguration::AspectRatio::OptionCount;
@@ -153,6 +157,12 @@ void set_application_user_config(RT64::Application* application, const ultramode
             application->userConfig.resolution = RT64::UserConfiguration::Resolution::WindowIntegerScale;
             application->userConfig.downsampleMultiplier = 1;
             break;
+        case ultramodern::renderer::Resolution::Manual:
+            application->userConfig.resolution = RT64::UserConfiguration::Resolution::Manual;
+            application->userConfig.resolutionMultiplier =
+                ultramodern::renderer::clamp_manual_resolution_scale(config.res_manual_scale) * std::max(config.ds_option, 1);
+            application->userConfig.downsampleMultiplier = std::max(config.ds_option, 1);
+            break;
         case ultramodern::renderer::Resolution::Original:
             application->userConfig.resolution = RT64::UserConfiguration::Resolution::Manual;
             application->userConfig.resolutionMultiplier = std::max(config.ds_option, 1);
@@ -180,6 +190,23 @@ void set_application_user_config(RT64::Application* application, const ultramode
     }
 
     application->userConfig.aspectRatio = to_rt64(config.ar_option);
+    switch (config.ar_option) {
+        case ultramodern::renderer::AspectRatio::Ratio16x9:
+            application->userConfig.aspectTarget = 16.0 / 9.0;
+            break;
+        case ultramodern::renderer::AspectRatio::Ratio16x10:
+            application->userConfig.aspectTarget = 16.0 / 10.0;
+            break;
+        case ultramodern::renderer::AspectRatio::Ratio3x2:
+            application->userConfig.aspectTarget = 3.0 / 2.0;
+            break;
+        case ultramodern::renderer::AspectRatio::Ratio21x9:
+            application->userConfig.aspectTarget = 21.0 / 9.0;
+            break;
+        default:
+            // Preserve the legacy Original, Expand and hidden Manual modes.
+            break;
+    }
     application->userConfig.antialiasing = to_rt64(config.msaa_option);
     application->userConfig.refreshRate = to_rt64(config.rr_option);
     application->userConfig.refreshRateTarget = config.rr_manual_value;
@@ -418,7 +445,8 @@ bool renderer::RT64Context::update_config(const ultramodern::renderer::GraphicsC
     set_application_user_config(app.get(), new_config);
 
     // When updating the user configuration, only discard framebuffers if an option was changed that affects the resolution.
-    bool resolution_changed = new_config.res_option != old_config.res_option;
+    bool resolution_changed = new_config.res_option != old_config.res_option ||
+        (new_config.res_option == ultramodern::renderer::Resolution::Manual && new_config.res_manual_scale != old_config.res_manual_scale);
     bool aspect_ratio_changed = new_config.ar_option != old_config.ar_option;
     bool downsampling_changed = new_config.ds_option != old_config.ds_option;
     bool msaa_changed = new_config.msaa_option != old_config.msaa_option;

@@ -1,0 +1,576 @@
+{
+  "schema": 1,
+  "review_date": "2026-10-31",
+  "source_commit": "aa277b14262c951b395a39d4345845e6ecf481d4",
+  "share": {
+    "filename": "Tooie-aa277b14262c-Installed-Debug-Odin-20261030-231344-33f4396d-Share-20261030-231635-d641d8d4.zip",
+    "bytes": 2624351,
+    "sha256": "e3e180e8e4e879a9e31d1899c8f3ae9694efc1fc5f6779659579c4212a5e161e",
+    "members": 193,
+    "verbatim_sources_verified": 189,
+    "omitted_local_only_sources": [
+      "Tooie-aa277b14262c-Installed-Debug-Odin-20261030-231344-33f4396d-Baseline.txt",
+      "Tooie-aa277b14262c-Installed-Debug-Odin-20261030-231344-33f4396d-FullLog.txt"
+    ]
+  },
+  "newlog": {
+    "bytes": 4426314,
+    "sha256": "0bf4631e65d2f77e971647d86901534937ec57a252a08867dc2f8ee0303cfd28",
+    "runtime_records": 13429,
+    "runtime_exports_reconstructed": 54,
+    "all_runtime_pid": 21801,
+    "fresh_config_records": 0,
+    "fresh_java_window_records": 0
+  },
+  "journal": [
+    {
+      "host_read_wall": "2026-10-30T23:14:44.132+11:00",
+      "host_read_mono_seconds": 144935.987588014,
+      "phase_at_read": "prompt: When Banjo is controllable, type playing (or save to finish): ",
+      "text": "playing"
+    },
+    {
+      "host_read_wall": "2026-10-30T23:16:04.633+11:00",
+      "host_read_mono_seconds": 145016.487925994,
+      "phase_at_read": "Gameplay-Installed",
+      "text": "1 camera stutters harshly while walk/turning im narrows spaces"
+    },
+    {
+      "host_read_wall": "2026-10-30T23:16:15.873+11:00",
+      "host_read_mono_seconds": 145027.727843427,
+      "phase_at_read": "Gameplay-Installed",
+      "text": "save"
+    }
+  ],
+  "event": {
+    "id": "863ca8124ab548cea7cdff1e50213bd1",
+    "sequence": 1,
+    "marker": 1,
+    "kind": "event",
+    "description": "camera stutters harshly while walk/turning im narrows spaces",
+    "original_game_pid": 21801,
+    "host_read_wall": "2026-10-30T23:16:04.633+11:00",
+    "host_read_mono_seconds": 145016.487925994,
+    "phase_at_read": "Gameplay-Installed",
+    "phase_at_handling": "Gameplay-Installed",
+    "delivery": "pending",
+    "timing_scope": "Host timestamp when the terminal line was read, not proof of bug onset. Device log timestamp is later if an ADB operation delayed handling."
+  },
+  "original_pid_checks": 18,
+  "final_original_pid_present": true,
+  "camera_request": {
+    "requested": true,
+    "path": "files/data/camera-trace-v1",
+    "sha256": "41d0b9336fabb388814150a6b94724dd0cd70da05ba9bc472cfff6dc22333adb",
+    "enable_acknowledged": true,
+    "removal_acknowledged": true,
+    "error": null,
+    "scope": "Only this diagnostic request; no game settings, saves, installation or input."
+  },
+  "camera": {
+    "burst": "8f2bb96f569445f3bc10cc6b3cb5367f",
+    "begin": {
+      "mono_us": "1014844809851",
+      "pid": "21801",
+      "tid": "21874",
+      "burst": "8f2bb96f569445f3bc10cc6b3cb5367f",
+      "event": "begin",
+      "duration_us": "12000000",
+      "step_limit": "1440",
+      "observation": "cpu-camera-inputs-not-gpu-readback"
+    },
+    "end": {
+      "mono_us": "1014850484187",
+      "pid": "21801",
+      "tid": "21874",
+      "burst": "8f2bb96f569445f3bc10cc6b3cb5367f",
+      "event": "end",
+      "reason": "step-limit",
+      "steps": "1440",
+      "records_before_end": "12943",
+      "payload_bytes_before_end": "3349459",
+      "elapsed_us": "5674474",
+      "emission_total_us": "105195",
+      "emission_max_us": "326",
+      "dropped_records": "0"
+    },
+    "steps": 1440,
+    "matrices": 11502,
+    "source_workloads": 172,
+    "main_observations": 429,
+    "unique_main_views": 172,
+    "wrong_primary_previous_observations": [
+      {
+        "step": 6,
+        "workload": 82477,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 48.28637000000026,
+        "injected_blend_component_bias": 36.214777500000196
+      },
+      {
+        "step": 11,
+        "workload": 82477,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 48.28637000000026,
+        "injected_blend_component_bias": 12.071592500000065
+      },
+      {
+        "step": 16,
+        "workload": 82478,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 48.680419999999685,
+        "injected_blend_component_bias": 36.510314999999764
+      },
+      {
+        "step": 21,
+        "workload": 82478,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 48.680419999999685,
+        "injected_blend_component_bias": 12.170104999999921
+      },
+      {
+        "step": 26,
+        "workload": 82478,
+        "weight": 1.0,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 48.680419999999685,
+        "injected_blend_component_bias": 0.0
+      },
+      {
+        "step": 41,
+        "workload": 82480,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 49.43237999999974,
+        "injected_blend_component_bias": 37.074284999999804
+      },
+      {
+        "step": 46,
+        "workload": 82480,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 49.43237999999974,
+        "injected_blend_component_bias": 12.358094999999935
+      },
+      {
+        "step": 51,
+        "workload": 82480,
+        "weight": 1.0,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 49.43237999999974,
+        "injected_blend_component_bias": 0.0
+      },
+      {
+        "step": 56,
+        "workload": 82481,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 50.17358999999988,
+        "injected_blend_component_bias": 37.63019249999991
+      },
+      {
+        "step": 61,
+        "workload": 82481,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 50.17358999999988,
+        "injected_blend_component_bias": 12.54339749999997
+      },
+      {
+        "step": 66,
+        "workload": 82481,
+        "weight": 1.0,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 50.17358999999988,
+        "injected_blend_component_bias": 0.0
+      },
+      {
+        "step": 116,
+        "workload": 82485,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 50.22608000000014,
+        "injected_blend_component_bias": 37.669560000000104
+      },
+      {
+        "step": 121,
+        "workload": 82485,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 50.22608000000014,
+        "injected_blend_component_bias": 12.556520000000035
+      },
+      {
+        "step": 126,
+        "workload": 82485,
+        "weight": 1.0,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 50.22608000000014,
+        "injected_blend_component_bias": 0.0
+      },
+      {
+        "step": 131,
+        "workload": 82486,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 49.73741999999993,
+        "injected_blend_component_bias": 37.30306499999995
+      },
+      {
+        "step": 136,
+        "workload": 82486,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 49.73741999999993,
+        "injected_blend_component_bias": 12.434354999999982
+      },
+      {
+        "step": 141,
+        "workload": 82486,
+        "weight": 1.0,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 49.73741999999993,
+        "injected_blend_component_bias": 0.0
+      },
+      {
+        "step": 146,
+        "workload": 82487,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 49.042959999999994,
+        "injected_blend_component_bias": 36.782219999999995
+      },
+      {
+        "step": 151,
+        "workload": 82487,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 49.042959999999994,
+        "injected_blend_component_bias": 12.260739999999998
+      },
+      {
+        "step": 156,
+        "workload": 82487,
+        "weight": 1.0,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 49.042959999999994,
+        "injected_blend_component_bias": 0.0
+      },
+      {
+        "step": 161,
+        "workload": 82488,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 48.0777599999999,
+        "injected_blend_component_bias": 36.058319999999924
+      },
+      {
+        "step": 166,
+        "workload": 82488,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 48.0777599999999,
+        "injected_blend_component_bias": 12.019439999999975
+      },
+      {
+        "step": 171,
+        "workload": 82488,
+        "weight": 1.0,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 48.0777599999999,
+        "injected_blend_component_bias": 0.0
+      },
+      {
+        "step": 176,
+        "workload": 82489,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 46.909790000000044,
+        "injected_blend_component_bias": 35.18234250000003
+      },
+      {
+        "step": 181,
+        "workload": 82489,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 46.909790000000044,
+        "injected_blend_component_bias": 11.727447500000011
+      },
+      {
+        "step": 234,
+        "workload": 82494,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 71.80249000000003,
+        "injected_blend_component_bias": 53.851867500000026
+      },
+      {
+        "step": 240,
+        "workload": 82494,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 71.80249000000003,
+        "injected_blend_component_bias": 17.95062250000001
+      },
+      {
+        "step": 246,
+        "workload": 82495,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 76.15087900000003,
+        "injected_blend_component_bias": 57.113159250000024
+      },
+      {
+        "step": 252,
+        "workload": 82495,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 76.15087900000003,
+        "injected_blend_component_bias": 19.037719750000008
+      },
+      {
+        "step": 258,
+        "workload": 82496,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 80.69463600000006,
+        "injected_blend_component_bias": 60.520977000000045
+      },
+      {
+        "step": 264,
+        "workload": 82497,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 84.0654300000001,
+        "injected_blend_component_bias": 63.04907250000008
+      },
+      {
+        "step": 270,
+        "workload": 82497,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 84.0654300000001,
+        "injected_blend_component_bias": 21.016357500000026
+      },
+      {
+        "step": 276,
+        "workload": 82498,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 87.13109999999983,
+        "injected_blend_component_bias": 65.34832499999987
+      },
+      {
+        "step": 282,
+        "workload": 82498,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 87.13109999999983,
+        "injected_blend_component_bias": 21.78277499999996
+      },
+      {
+        "step": 288,
+        "workload": 82499,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 88.7452400000002,
+        "injected_blend_component_bias": 66.55893000000015
+      },
+      {
+        "step": 293,
+        "workload": 82499,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 88.7452400000002,
+        "injected_blend_component_bias": 22.18631000000005
+      },
+      {
+        "step": 298,
+        "workload": 82500,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 96.27440999999999,
+        "injected_blend_component_bias": 72.20580749999999
+      },
+      {
+        "step": 303,
+        "workload": 82500,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 96.27440999999999,
+        "injected_blend_component_bias": 24.068602499999997
+      },
+      {
+        "step": 308,
+        "workload": 82501,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 99.36133000000018,
+        "injected_blend_component_bias": 74.52099750000014
+      },
+      {
+        "step": 313,
+        "workload": 82501,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 99.36133000000018,
+        "injected_blend_component_bias": 24.840332500000045
+      },
+      {
+        "step": 1416,
+        "workload": 82645,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 54.4227199999998,
+        "injected_blend_component_bias": 40.81703999999985
+      },
+      {
+        "step": 1421,
+        "workload": 82645,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 54.4227199999998,
+        "injected_blend_component_bias": 13.60567999999995
+      },
+      {
+        "step": 1426,
+        "workload": 82646,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 54.28564000000006,
+        "injected_blend_component_bias": 40.71423000000004
+      },
+      {
+        "step": 1431,
+        "workload": 82646,
+        "weight": 0.75,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 54.28564000000006,
+        "injected_blend_component_bias": 13.571410000000014
+      },
+      {
+        "step": 1436,
+        "workload": 82647,
+        "weight": 0.25,
+        "previous_transform": 4,
+        "previous_view_max_component_difference": 53.8168899999996,
+        "injected_blend_component_bias": 40.3626674999997
+      }
+    ],
+    "wrong_primary_source_workloads": 20,
+    "actually_blended_wrong_previous": 38,
+    "unmapped_main_steps": [
+      {
+        "mono_us": "1014850386868",
+        "pid": "21801",
+        "tid": "21874",
+        "burst": "8f2bb96f569445f3bc10cc6b3cb5367f",
+        "step": "1401",
+        "workload": "82644",
+        "previous_workload": "0",
+        "scene": "0",
+        "projection": "0",
+        "transform": "1",
+        "role": "0x1000",
+        "previous_role": "0xFFFFFFFF",
+        "previous_transform": "-1",
+        "weight": "0.25",
+        "previous_weight": "0",
+        "mapped": "0",
+        "viewport_bypassed": "0",
+        "debugger": "0",
+        "aspect_adjusted": "1",
+        "aspect_scale": "1.33333325",
+        "projection_scale": "0.75000006",
+        "viewport_origin": "2048",
+        "viewport_scale": "152/114/0.499023438",
+        "viewport_translate": "152/114/0.499023438",
+        "projection_scissor": "0/0/1216/912",
+        "framebuffer_scissor": "0/0/1216/912"
+      },
+      {
+        "mono_us": "1014850397779",
+        "pid": "21801",
+        "tid": "21874",
+        "burst": "8f2bb96f569445f3bc10cc6b3cb5367f",
+        "step": "1406",
+        "workload": "82644",
+        "previous_workload": "0",
+        "scene": "0",
+        "projection": "0",
+        "transform": "1",
+        "role": "0x1000",
+        "previous_role": "0xFFFFFFFF",
+        "previous_transform": "-1",
+        "weight": "0.75",
+        "previous_weight": "0.5",
+        "mapped": "0",
+        "viewport_bypassed": "0",
+        "debugger": "0",
+        "aspect_adjusted": "1",
+        "aspect_scale": "1.33333325",
+        "projection_scale": "0.75000006",
+        "viewport_origin": "2048",
+        "viewport_scale": "152/114/0.499023438",
+        "viewport_translate": "152/114/0.499023438",
+        "projection_scissor": "0/0/1216/912",
+        "framebuffer_scissor": "0/0/1216/912"
+      },
+      {
+        "mono_us": "1014850408197",
+        "pid": "21801",
+        "tid": "21874",
+        "burst": "8f2bb96f569445f3bc10cc6b3cb5367f",
+        "step": "1411",
+        "workload": "82644",
+        "previous_workload": "0",
+        "scene": "0",
+        "projection": "0",
+        "transform": "1",
+        "role": "0x1000",
+        "previous_role": "0xFFFFFFFF",
+        "previous_transform": "-1",
+        "weight": "1",
+        "previous_weight": "0.75",
+        "mapped": "0",
+        "viewport_bypassed": "0",
+        "debugger": "0",
+        "aspect_adjusted": "1",
+        "aspect_scale": "1.33333325",
+        "projection_scale": "0.75000006",
+        "viewport_origin": "2048",
+        "viewport_scale": "152/114/0.499023438",
+        "viewport_translate": "152/114/0.499023438",
+        "projection_scissor": "0/0/1216/912",
+        "framebuffer_scissor": "0/0/1216/912"
+      }
+    ],
+    "all_unmapped_tagged_steps": 9,
+    "maximum_selected_blend_residual": 0.0002524999999877764
+  },
+  "overlapping_present_windows": [
+    {
+      "end_mono_us": 1014847252702,
+      "elapsed_us": 5008804,
+      "target_hz": 120,
+      "presents_per_second": 77.86289900742773,
+      "maximum_gap_us": 29427,
+      "render_target": "2028x1140"
+    },
+    {
+      "end_mono_us": 1014852260680,
+      "elapsed_us": 5007978,
+      "target_hz": 120,
+      "presents_per_second": 78.2751042436688,
+      "maximum_gap_us": 27352,
+      "render_target": "2134x1205"
+    }
+  ],
+  "vulkan_results_all_zero": true,
+  "visual_scope": "User reports substantial shaking during the repeat; submitted main views change throughout. Screenshot locates the scene but no exact video-to-native-present alignment is available.",
+  "candidate_scope": "Reserve first perspective scene led by role 0x1000 before nearest-matrix matching; actual captured-input replay and controls required. No on-device fix acceptance yet."
+}

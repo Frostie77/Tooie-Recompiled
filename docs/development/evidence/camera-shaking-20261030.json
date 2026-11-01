@@ -1,0 +1,403 @@
+{
+  "archive_sha256": "c7e5efa95dc436c9d38005af46ddab2132d104f7576037e1bc56bf342d112a99",
+  "source_commit": "0e2f81f118bc042add064dcefc3a6244d7344be0",
+  "original_pid": 11092,
+  "native_delta_sha256": "e65efa6bbe22258eb30a0caeb88ce7ae4d59c4727b69d03188ca0fe25ac822b0",
+  "clock": {
+    "wall_minus_uptime_seconds": 1792002930.3482141,
+    "minimum": 1792002930.347826,
+    "maximum": 1792002930.3485498,
+    "samples": 8,
+    "scope": "Java uptime/logcat calibration; spread is observed consistency, not absolute clock accuracy. Device marker delivery is not visual onset."
+  },
+  "selection": "Reporting windows intersecting device marker delivery [-10 seconds,+5 seconds]; endpoints are native monotonic microseconds, not visual onset.",
+  "events": [
+    {
+      "device_marker_wall": "2026-10-24T22:35:55.945357+11:00",
+      "estimated_marker_native_us": 838825597143,
+      "screenshot_sha256": "3067eaaed26eebee04d41d7756ba2af914a76662ff606250315147bd10227d49",
+      "screenshot_size": 1261951,
+      "sequence": 1,
+      "marker": 1,
+      "id": "9c1cbf63eab54972874d081ad7a27c84",
+      "description": "strange",
+      "host_read_wall": "2026-10-24T22:35:56.875+11:00",
+      "present_windows": [
+        {
+          "end_native_us": 838819873684,
+          "start_native_us": 838814854482,
+          "elapsed_us": 5019202,
+          "present_calls": 301,
+          "native_presents_per_second": 59.969692,
+          "gap_min_us": 12228,
+          "gap_max_us": 20984,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 838824883586,
+          "start_native_us": 838819873683,
+          "elapsed_us": 5009903,
+          "present_calls": 299,
+          "native_presents_per_second": 59.681794,
+          "gap_min_us": 12790,
+          "gap_max_us": 22955,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 838829901611,
+          "start_native_us": 838824883584,
+          "elapsed_us": 5018027,
+          "present_calls": 301,
+          "native_presents_per_second": 59.983735,
+          "gap_min_us": 12060,
+          "gap_max_us": 20915,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 838834903068,
+          "start_native_us": 838829901611,
+          "elapsed_us": 5001457,
+          "present_calls": 300,
+          "native_presents_per_second": 59.982521,
+          "gap_min_us": 12182,
+          "gap_max_us": 20050,
+          "target_hz": 60,
+          "source_hz": 30
+        }
+      ],
+      "neighboring_projection_mismatch_totals": [
+        2
+      ]
+    },
+    {
+      "device_marker_wall": "2026-10-24T22:37:05.741497+11:00",
+      "estimated_marker_native_us": 838895393283,
+      "screenshot_sha256": "3ebfa820cfa10e4ecb298e05ad6aa2c4a64fc16790e91b8d80de20526865583e",
+      "screenshot_size": 1320166,
+      "sequence": 2,
+      "marker": 1,
+      "id": "708b09fa11fb46d1a79a0472b4922b56",
+      "description": "note strange frames",
+      "host_read_wall": "2026-10-24T22:37:06.678+11:00",
+      "present_windows": [
+        {
+          "end_native_us": 838889947256,
+          "start_native_us": 838884933859,
+          "elapsed_us": 5013397,
+          "present_calls": 295,
+          "native_presents_per_second": 58.842338,
+          "gap_min_us": 12643,
+          "gap_max_us": 36057,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 838894957458,
+          "start_native_us": 838889947258,
+          "elapsed_us": 5010200,
+          "present_calls": 300,
+          "native_presents_per_second": 59.877849,
+          "gap_min_us": 12350,
+          "gap_max_us": 21029,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 838899971438,
+          "start_native_us": 838894957459,
+          "elapsed_us": 5013979,
+          "present_calls": 297,
+          "native_presents_per_second": 59.234392,
+          "gap_min_us": 12344,
+          "gap_max_us": 26388,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 838904988515,
+          "start_native_us": 838899971436,
+          "elapsed_us": 5017079,
+          "present_calls": 301,
+          "native_presents_per_second": 59.995069,
+          "gap_min_us": 11433,
+          "gap_max_us": 21107,
+          "target_hz": 60,
+          "source_hz": 30
+        }
+      ],
+      "neighboring_projection_mismatch_totals": [
+        2
+      ]
+    },
+    {
+      "device_marker_wall": "2026-10-24T22:42:07.596744+11:00",
+      "estimated_marker_native_us": 839197248530,
+      "screenshot_sha256": "59b2f72fc94110d100ef47c12b4bed2fdf6304bb83558e210d50c3f0f1290bef",
+      "screenshot_size": 1360733,
+      "sequence": 3,
+      "marker": 3,
+      "id": "2db8ae0732a445d0aa038e0ccaf3d3fb",
+      "description": "screen shaking",
+      "host_read_wall": "2026-10-24T22:42:08.527+11:00",
+      "present_windows": [
+        {
+          "end_native_us": 839190587306,
+          "start_native_us": 839185572691,
+          "elapsed_us": 5014615,
+          "present_calls": 300,
+          "native_presents_per_second": 59.825131,
+          "gap_min_us": 14305,
+          "gap_max_us": 24198,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 839195587604,
+          "start_native_us": 839190587327,
+          "elapsed_us": 5000277,
+          "present_calls": 300,
+          "native_presents_per_second": 59.996676,
+          "gap_min_us": 12364,
+          "gap_max_us": 20814,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 839200592292,
+          "start_native_us": 839195587588,
+          "elapsed_us": 5004704,
+          "present_calls": 287,
+          "native_presents_per_second": 57.346049,
+          "gap_min_us": 12103,
+          "gap_max_us": 26500,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 839205595127,
+          "start_native_us": 839200592290,
+          "elapsed_us": 5002837,
+          "present_calls": 283,
+          "native_presents_per_second": 56.567903,
+          "gap_min_us": 12830,
+          "gap_max_us": 30096,
+          "target_hz": 60,
+          "source_hz": 30
+        }
+      ],
+      "neighboring_projection_mismatch_totals": [
+        2
+      ]
+    },
+    {
+      "device_marker_wall": "2026-10-24T22:42:21.174978+11:00",
+      "estimated_marker_native_us": 839210826764,
+      "screenshot_sha256": "cb888fcb64db95996b7a2a05c5de66fc6fac95520b86405e224b3a8f5603d341",
+      "screenshot_size": 1455840,
+      "sequence": 4,
+      "marker": 4,
+      "id": "0b70c7446231413999b84493c8516dc9",
+      "description": "screen shaking",
+      "host_read_wall": "2026-10-24T22:42:21.772+11:00",
+      "present_windows": [
+        {
+          "end_native_us": 839205595127,
+          "start_native_us": 839200592290,
+          "elapsed_us": 5002837,
+          "present_calls": 283,
+          "native_presents_per_second": 56.567903,
+          "gap_min_us": 12830,
+          "gap_max_us": 30096,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 839210618014,
+          "start_native_us": 839205595126,
+          "elapsed_us": 5022888,
+          "present_calls": 251,
+          "native_presents_per_second": 49.971252,
+          "gap_min_us": 15574,
+          "gap_max_us": 49629,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 839215619963,
+          "start_native_us": 839210618013,
+          "elapsed_us": 5001950,
+          "present_calls": 287,
+          "native_presents_per_second": 57.377623,
+          "gap_min_us": 16040,
+          "gap_max_us": 38208,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 839220622809,
+          "start_native_us": 839215619968,
+          "elapsed_us": 5002841,
+          "present_calls": 241,
+          "native_presents_per_second": 48.172628,
+          "gap_min_us": 8370,
+          "gap_max_us": 38539,
+          "target_hz": 60,
+          "source_hz": 30
+        }
+      ],
+      "neighboring_projection_mismatch_totals": [
+        2
+      ]
+    },
+    {
+      "device_marker_wall": "2026-10-24T22:47:54.461572+11:00",
+      "estimated_marker_native_us": 839544113358,
+      "screenshot_sha256": "e9da196763f680d8f6db47672b686936a764ea896d34a812a62be038b1025843",
+      "screenshot_size": 1199375,
+      "sequence": 5,
+      "marker": 5,
+      "id": "c24755bc8a724dbd9cdec6496afe3828",
+      "description": "screen shaking",
+      "host_read_wall": "2026-10-24T22:47:55.399+11:00",
+      "present_windows": [
+        {
+          "end_native_us": 839537708694,
+          "start_native_us": 839532692048,
+          "elapsed_us": 5016646,
+          "present_calls": 301,
+          "native_presents_per_second": 60.000247,
+          "gap_min_us": 12325,
+          "gap_max_us": 21044,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 839542708983,
+          "start_native_us": 839537708657,
+          "elapsed_us": 5000326,
+          "present_calls": 296,
+          "native_presents_per_second": 59.19614,
+          "gap_min_us": 10947,
+          "gap_max_us": 31013,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 839547726613,
+          "start_native_us": 839542708981,
+          "elapsed_us": 5017632,
+          "present_calls": 281,
+          "native_presents_per_second": 56.002513,
+          "gap_min_us": 12844,
+          "gap_max_us": 29415,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 839552741249,
+          "start_native_us": 839547726615,
+          "elapsed_us": 5014634,
+          "present_calls": 299,
+          "native_presents_per_second": 59.625488,
+          "gap_min_us": 13187,
+          "gap_max_us": 27492,
+          "target_hz": 60,
+          "source_hz": 30
+        }
+      ],
+      "neighboring_projection_mismatch_totals": [
+        2
+      ]
+    },
+    {
+      "device_marker_wall": "2026-10-24T22:50:44.240358+11:00",
+      "estimated_marker_native_us": 839713892144,
+      "screenshot_sha256": "7069ca774ad1fc22725092df72c849c7cba6ca8e93d963a883f6d55641526817",
+      "screenshot_size": 1048579,
+      "sequence": 6,
+      "marker": 6,
+      "id": "6bb598ce7a2844239dcba98e8082f0a9",
+      "description": "screen shaking",
+      "host_read_wall": "2026-10-24T22:50:45.158+11:00",
+      "present_windows": [
+        {
+          "end_native_us": 839707985099,
+          "start_native_us": 839702974861,
+          "elapsed_us": 5010238,
+          "present_calls": 284,
+          "native_presents_per_second": 56.683934,
+          "gap_min_us": 12544,
+          "gap_max_us": 36613,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 839713001626,
+          "start_native_us": 839707985100,
+          "elapsed_us": 5016526,
+          "present_calls": 297,
+          "native_presents_per_second": 59.204318,
+          "gap_min_us": 12888,
+          "gap_max_us": 25057,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 839718021200,
+          "start_native_us": 839713001624,
+          "elapsed_us": 5019576,
+          "present_calls": 290,
+          "native_presents_per_second": 57.773804,
+          "gap_min_us": 13281,
+          "gap_max_us": 30295,
+          "target_hz": 60,
+          "source_hz": 30
+        },
+        {
+          "end_native_us": 839723051552,
+          "start_native_us": 839718021203,
+          "elapsed_us": 5030349,
+          "present_calls": 256,
+          "native_presents_per_second": 50.891101,
+          "gap_min_us": 12608,
+          "gap_max_us": 40511,
+          "target_hz": 60,
+          "source_hz": 30
+        }
+      ],
+      "neighboring_projection_mismatch_totals": [
+        2
+      ]
+    }
+  ],
+  "projection_mismatch_increments": [
+    {
+      "previous_us": 838599644096,
+      "end_us": 838604669204,
+      "delta": 1
+    },
+    {
+      "previous_us": 838675024860,
+      "end_us": 838680029159,
+      "delta": 1
+    },
+    {
+      "previous_us": 840340898237,
+      "end_us": 840345923257,
+      "delta": 1
+    },
+    {
+      "previous_us": 841440353334,
+      "end_us": 841445369733,
+      "delta": 1
+    },
+    {
+      "previous_us": 842007460275,
+      "end_us": 842012461764,
+      "delta": 1
+    }
+  ]
+}

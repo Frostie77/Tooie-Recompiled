@@ -7,6 +7,7 @@ import importlib.util
 import io
 import json
 import queue
+import shlex
 import os
 import subprocess as sp
 import tempfile
@@ -256,10 +257,15 @@ with tempfile.TemporaryDirectory(prefix='step100-simulated-') as temporary:
                 elif remote.startswith('pm path '): value = response('package:/data/app/fixture/base.apk\n' if name_case != 'bad-installed-path' else 'package:unexpected\n')
                 elif remote.startswith('sha256sum '): value = response(('0' * 64 if name_case == 'bad-installed-hash' else m.HASH) + '  /data/app/fixture/base.apk\n')
                 elif remote.startswith('run-as '):
-                    data = baseline if name == 'Baseline' else baseline + fresh
-                    if name == 'Baseline' and name_case == 'no-baseline': value = response(b'', 1, b'not found')
-                    elif name == 'FullLog' and name_case == 'log-read-fail': value = response(b'partial', -999)
-                    else: value = response((b'rewritten\n' + fresh) if name_case == 'log-reset' and name == 'FullLog' else data)
+                    words = shlex.split(remote)
+                    log_phase, operation, start, length = m.parse_private_log_script(words[4])
+                    data = baseline if log_phase == 'Baseline' else baseline + fresh
+                    if log_phase == 'Baseline' and name_case == 'no-baseline': value = response(b'', 1, b'not found')
+                    elif log_phase == 'FullLog' and name_case == 'log-read-fail' and operation == 'bytes': value = response(b'partial', -999)
+                    else:
+                        if name_case == 'log-reset' and log_phase == 'FullLog': data = b'rewritten\n' + fresh
+                        payload = str(len(data)) if operation == 'size' else hashlib.sha256(data[:length]).hexdigest() + '  -\n' if operation == 'hash' else base64.b64encode(data[start:start+length])
+                        value = response(payload)
                 elif remote.startswith('dumpsys activity '):
                     if name == 'Launch-Reused-Process-Foreground':
                         payload = ('mResumedActivity: ActivityRecord{123 u0 '+('other.app' if name_case == 'reused-other-foreground' else m.PKG)+'/'+('.OtherActivity' if name_case == 'reused-wrong-activity' else '.BanjoTooieSDLActivity')+' t7}\n')

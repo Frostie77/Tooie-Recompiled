@@ -1,9 +1,12 @@
 """Real collector/packager with mocked device and SDK boundaries; no device access."""
 from pathlib import Path
 import contextlib
+import base64
+import hashlib
 import importlib.util
 import io
 import json
+import shlex
 import subprocess
 import tempfile
 import types
@@ -23,6 +26,12 @@ def module(name, path):
 
 capture = module('installed_capture_tests', ROOT / 'capture_installed.py')
 workflow = module('installed_workflow_tests', ROOT / 'tooie.py')
+
+def log_reply(c, remote, data):
+    _, operation, start, length = c.parse_private_log_script(shlex.split(remote)[4])
+    if operation == 'size': return str(len(data))
+    if operation == 'hash': return hashlib.sha256(data[:length]).hexdigest() + '  -\n'
+    return base64.b64encode(data[start:start + length]).decode('ascii')
 
 
 class InstalledCapture(unittest.TestCase):
@@ -144,9 +153,356 @@ class InstalledCapture(unittest.TestCase):
         self.c.start_capture = lambda start: self.fail('Started capture for the wrong installed APK')
         class Terminal(io.StringIO):
             def isatty(self): return True
+        hud = types.SimpleNamespace(label='HUD', enable=lambda c: self.fail('Enabled HUD trace before installed APK verification'))
+        render = types.SimpleNamespace(label='Render', enable=lambda c: self.fail('Enabled renderer trace before installed APK verification'))
         with patch.object(self.c.sys, 'stdin', Terminal()), self.assertRaisesRegex(RuntimeError, 'Installed APK differs'):
-            capture.installed_main(self.c, self.args)
+            capture.installed_main(self.c, self.args, hud, render)
         self.assertFalse(self.c.attempted)
+
+    def hud_shell(self, render=False, both=False):
+        app = self.area / 'app'
+        (app / 'files/data').mkdir(parents=True)
+        calls = []
+        def adb(*args, **kwargs):
+            values = ['adb', '-s', 'fixture-device', *args]
+            capture.guard_observer_command(values, 'adb', 'fixture-device', not render or both, render)
+            words = shlex.split(args[2])
+            self.assertEqual(words[:4], ['run-as', 'io.github.banjotooierecompiled', 'sh', '-c'])
+            calls.append(words[4])
+            result = subprocess.run(['sh', '-c', words[4]], cwd=app, capture_output=True)
+            self.c.save(kwargs['name'], result.stdout)
+            self.c.save(kwargs['name'] + '-status', 'returncode=' + str(result.returncode) + '\n' + result.stderr.decode())
+            return result
+        self.c.adb = adb
+        return app / (capture.RENDER_REQUEST if render else capture.HUD_REQUEST), calls
+
+    def test_hud_trace_stages_exact_request_and_archives_cleanup_receipt(self):
+        path, calls = self.hud_shell()
+        request = capture.HudTraceRequest()
+        with contextlib.redirect_stdout(io.StringIO()):
+            request.enable(self.c)
+            self.assertEqual(path.read_bytes(), capture.HUD_CONTENTS)
+            request.finish(self.c)
+            request.finish(self.c)
+        self.assertFalse(path.exists())
+        self.assertEqual(len(calls), 2)
+        receipt = json.loads(Path(str(self.c.prefix) + '-HUD-Trace-Request.txt').read_text())
+        self.assertTrue(receipt['enable_acknowledged'] and receipt['removal_acknowledged'])
+        self.assertIsNone(receipt['error'])
+        archives, _ = self.c.archive_evidence()
+        self.assertEqual(len(archives), 1)
+        with zipfile.ZipFile(archives[0]) as bundle:
+            self.assertIn(self.c.prefix.name + '-HUD-Trace-Request.txt', bundle.namelist())
+
+    def test_hud_trace_never_overwrites_existing_requests_or_removes_changed_data(self):
+        path, calls = self.hud_shell()
+        path.write_bytes(b'existing request')
+        request = capture.HudTraceRequest()
+        with self.assertRaisesRegex(RuntimeError, 'not acknowledged'):
+            request.enable(self.c)
+        request.finish(self.c)
+        self.assertEqual(path.read_bytes(), b'existing request')
+        self.assertEqual(len(calls), 1)
+
+    def test_both_trace_requests_are_removed_before_final_collection(self):
+        render_path, calls = self.hud_shell(render=True, both=True)
+        hud_path = render_path.parent / Path(capture.HUD_REQUEST).name
+        requests = [capture.HudTraceRequest(), capture.RenderTraceRequest()]
+        original_collect = self.c.collect
+        def collect():
+            self.assertFalse(hud_path.exists() or render_path.exists(), 'Final collection began with tracing enabled')
+            return original_collect()
+        self.c.collect = collect
+        with contextlib.redirect_stdout(io.StringIO()):
+            for request in requests: request.enable(self.c)
+            # Negative control: former archive-only cleanup is too late.
+            with self.assertRaisesRegex(AssertionError, 'tracing enabled'):
+                self.c.collect()
+            capture.finish_before_collection(self.c, requests)
+            self.c.collect()
+            for request in requests: request.finish(self.c)
+        self.assertEqual(len(calls), 4) # one enable and one removal per request
+        self.assertTrue(all(request.removed for request in requests))
+        with zipfile.ZipFile(Path(str(self.c.prefix) + '-Evidence.zip')) as bundle:
+            for label in ('HUD', 'Render'):
+                receipt = json.loads(bundle.read(self.c.prefix.name + '-' + label + '-Trace-Request.txt'))
+                self.assertTrue(receipt['removal_acknowledged'])
+
+    def test_hud_trace_preserves_a_changed_request_and_records_cleanup_failure(self):
+        path, _ = self.hud_shell()
+        request = capture.HudTraceRequest()
+        with contextlib.redirect_stdout(io.StringIO()): request.enable(self.c)
+        path.write_bytes(b'changed by another owner')
+        request.finish(self.c)
+        self.assertEqual(path.read_bytes(), b'changed by another owner')
+        self.assertFalse(request.removed)
+        self.assertIn('not verified', request.error)
+
+    def test_hud_guard_only_allows_the_two_exact_scripts_when_requested(self):
+        base = ['adb', '-s', 'fixture-device', 'shell', '-T']
+        for enable in (False, True):
+            command = base + [shlex.join(['run-as', 'io.github.banjotooierecompiled', 'sh', '-c', capture.hud_request_script(enable)])]
+            with self.assertRaises(RuntimeError): capture.guard_observer_command(command, 'adb', 'fixture-device')
+            capture.guard_observer_command(command, 'adb', 'fixture-device', True)
+            with self.assertRaises(RuntimeError):
+                capture.guard_observer_command(base + [command[-1].replace('hud-trace-v1', 'save-data')], 'adb', 'fixture-device', True)
+
+    def test_hud_trace_requires_a_native_observer_before_any_device_operation(self):
+        self.args.hud_trace = True
+        with self.assertRaisesRegex(RuntimeError, 'does not contain'):
+            capture.verify_local(self.c, self.args)
+        self.assertEqual(self.calls, [])
+
+    def test_supported_hud_observer_passes_complete_local_payload_and_sdk_checks(self):
+        self.args.hud_trace = True
+        native = self.native + b'hud-trace-v1\0tooie_hud_component_begin\0tooie_hud_component_callback\0tooie_hud_component_end\0'
+        self.app['lib/arm64-v8a/libmain.so'] = native
+        self.report['libraries']['libmain.so']['sha256'] = capture.digest(native)
+        self.driver_profile()
+        capture.verify_local(self.c, self.args)
+        self.assertEqual(len(self.calls), 2)
+        self.assertTrue(all(call[0] in (str(self.area / 'apksigner'), str(self.area / 'aapt2')) for call in self.calls))
+
+    def test_renderer_trace_stages_exact_owned_request_and_archives_removal(self):
+        path,calls=self.hud_shell(render=True)
+        request=capture.RenderTraceRequest()
+        with contextlib.redirect_stdout(io.StringIO()):
+            request.enable(self.c)
+            self.assertEqual(path.read_bytes(),capture.RENDER_CONTENTS)
+            request.finish(self.c)
+            request.finish(self.c)
+        self.assertFalse(path.exists());self.assertEqual(len(calls),2)
+        receipt=json.loads(Path(str(self.c.prefix)+'-Render-Trace-Request.txt').read_text())
+        self.assertEqual(receipt['path'],capture.RENDER_REQUEST)
+        self.assertTrue(receipt['enable_acknowledged'] and receipt['removal_acknowledged'])
+        self.assertIsNone(receipt['error'])
+        archives,_=self.c.archive_evidence()
+        with zipfile.ZipFile(archives[0]) as bundle:
+            self.assertIn(self.c.prefix.name+'-Render-Trace-Request.txt',bundle.namelist())
+
+    def test_renderer_guard_needs_its_own_flag_and_exact_closed_script(self):
+        base=['adb','-s','fixture-device','shell','-T']
+        for enabled in (True,False):
+            remote=shlex.join(['run-as',self.c.PKG,'sh','-c',capture.render_request_script(enabled)])
+            for hud,render in ((False,False),(True,False)):
+                with self.assertRaises(RuntimeError):capture.guard_observer_command(base+[remote],'adb','fixture-device',hud,render)
+            capture.guard_observer_command(base+[remote],'adb','fixture-device',False,True)
+            for edited in (remote.replace('render-trace-v1','save-data'),remote+'; rm save-data'):
+                with self.assertRaises(RuntimeError):capture.guard_observer_command(base+[edited],'adb','fixture-device',True,True)
+            hud_remote=shlex.join(['run-as',self.c.PKG,'sh','-c',capture.hud_request_script(enabled)])
+            with self.assertRaises(RuntimeError):capture.guard_observer_command(base+[hud_remote],'adb','fixture-device',False,True)
+
+    def test_renderer_trace_retains_existing_data_and_symlinks(self):
+        path,calls=self.hud_shell(render=True)
+        target=path.parent/'save-data';target.write_bytes(b'untouched save')
+        path.symlink_to(target)
+        request=capture.RenderTraceRequest()
+        with self.assertRaisesRegex(RuntimeError,'not acknowledged'):request.enable(self.c)
+        request.finish(self.c)
+        self.assertTrue(path.is_symlink());self.assertEqual(target.read_bytes(),b'untouched save')
+        path.unlink();path.write_bytes(b'existing request')
+        self.c.prefix=self.area/'existing-render-request'
+        with self.assertRaisesRegex(RuntimeError,'not acknowledged'):capture.RenderTraceRequest().enable(self.c)
+        self.assertEqual(path.read_bytes(),b'existing request')
+
+    def test_renderer_cleanup_keeps_changed_request_and_records_failure(self):
+        path,_=self.hud_shell(render=True)
+        request=capture.RenderTraceRequest()
+        with contextlib.redirect_stdout(io.StringIO()):request.enable(self.c)
+        path.write_bytes(b'different owner')
+        request.finish(self.c)
+        self.assertEqual(path.read_bytes(),b'different owner');self.assertFalse(request.removed)
+        self.assertIn('not verified',request.error)
+
+    def test_both_trace_requests_are_independent_and_remove_only_owned_files(self):
+        render_path,calls=self.hud_shell(render=True,both=True)
+        hud_path=render_path.parent/Path(capture.HUD_REQUEST).name
+        sentinel=render_path.parent/'saved-game';sentinel.write_bytes(b'retained')
+        hud,render=capture.HudTraceRequest(),capture.RenderTraceRequest()
+        with contextlib.redirect_stdout(io.StringIO()):
+            hud.enable(self.c);render.enable(self.c)
+            hud.finish(self.c)
+            self.assertFalse(hud_path.exists());self.assertEqual(render_path.read_bytes(),capture.RENDER_CONTENTS)
+            render.finish(self.c)
+        self.assertFalse(render_path.exists());self.assertEqual(sentinel.read_bytes(),b'retained');self.assertEqual(len(calls),4)
+
+    def test_renderer_native_gate_rejects_old_or_missing_observers_before_sdk(self):
+        self.args.render_trace=True
+        with self.assertRaisesRegex(RuntimeError,'paged renderer'):capture.verify_local(self.c,self.args)
+        self.assertEqual(self.calls,[])
+        native=self.native+b'render-trace-v1\0scene-call\0'
+        self.app['lib/arm64-v8a/libmain.so']=native
+        self.report['libraries']['libmain.so']['sha256']=capture.digest(native)
+        self.driver_profile()
+        with self.assertRaisesRegex(RuntimeError,'paged renderer'):capture.verify_local(self.c,self.args)
+        self.assertEqual(self.calls,[])
+
+    def test_supported_renderer_observer_passes_all_local_checks(self):
+        self.args.render_trace=True
+        native=self.native+b'render-trace-v1\0call_first=%u call_pages=%u\0z_compare=%u z_write=%u\0'
+        self.app['lib/arm64-v8a/libmain.so']=native
+        self.report['libraries']['libmain.so']['sha256']=capture.digest(native)
+        self.driver_profile();capture.verify_local(self.c,self.args)
+        self.assertEqual(len(self.calls),2)
+
+    def camera_shell(self, request):
+        app = self.area / 'camera-app'
+        (app / 'files/data').mkdir(parents=True, exist_ok=True)
+        calls = []
+        def adb(*args, **kwargs):
+            capture.guard_observer_command(['adb', '-s', 'fixture-device', *args],
+                'adb', 'fixture-device', True, True, request)
+            words = shlex.split(args[2])
+            self.assertEqual(words[:4], ['run-as', self.c.PKG, 'sh', '-c'])
+            calls.append(words[4])
+            result = subprocess.run(['sh', '-c', words[4]], cwd=app, capture_output=True)
+            self.c.save(kwargs['name'], result.stdout)
+            self.c.save(kwargs['name'] + '-status', 'returncode=' + str(result.returncode) + '\n' + result.stderr.decode())
+            return result
+        self.c.adb = adb
+        return app / request.request, calls
+
+    def test_camera_request_owns_one_nonce_and_is_removed_before_collection(self):
+        request = capture.CameraTraceRequest()
+        path, calls = self.camera_shell(request)
+        requests = [capture.HudTraceRequest(), capture.RenderTraceRequest(), request]
+        sentinel = path.parent / 'saved-game'
+        sentinel.write_bytes(b'untouched')
+        original_collect = self.c.collect
+        def collect():
+            self.assertFalse(any((path.parent / Path(item.request).name).exists() for item in requests))
+            return original_collect()
+        self.c.collect = collect
+        with contextlib.redirect_stdout(io.StringIO()):
+            for item in requests: item.enable(self.c)
+            self.assertEqual(path.read_bytes(), capture.CAMERA_HEADER + request.token.encode() + b'\n')
+            self.assertEqual(capture.digest(path.read_bytes()), request.request_hash)
+            with self.assertRaises(AssertionError): self.c.collect()
+            capture.finish_before_collection(self.c, requests)
+            self.c.collect()
+            for item in requests: item.finish(self.c)
+        self.assertEqual(len(calls), 6)
+        self.assertEqual(sentinel.read_bytes(), b'untouched')
+        with zipfile.ZipFile(Path(str(self.c.prefix) + '-Evidence.zip')) as bundle:
+            for label in ('HUD', 'Render', 'Camera'):
+                receipt = json.loads(bundle.read(self.c.prefix.name + '-' + label + '-Trace-Request.txt'))
+                self.assertTrue(receipt['enable_acknowledged'] and receipt['removal_acknowledged'])
+                self.assertIsNone(receipt['error'])
+
+    def test_camera_request_preserves_existing_and_changed_owners(self):
+        request = capture.CameraTraceRequest()
+        path, calls = self.camera_shell(request)
+        path.write_bytes(b'existing owner')
+        with self.assertRaisesRegex(RuntimeError, 'not acknowledged'): request.enable(self.c)
+        request.finish(self.c)
+        self.assertEqual(path.read_bytes(), b'existing owner')
+        self.assertEqual(len(calls), 1)
+        path.unlink()
+        request = capture.CameraTraceRequest()
+        # This guard was bound to the first nonce, so it must reject a new owner.
+        with self.assertRaises(RuntimeError): request.enable(self.c)
+        original = capture.CameraTraceRequest()
+        path, _ = self.camera_shell(original)
+        self.c.prefix = self.area / 'new-camera-owner'
+        with contextlib.redirect_stdout(io.StringIO()): original.enable(self.c)
+        path.write_bytes(b'another owner')
+        original.finish(self.c)
+        self.assertEqual(path.read_bytes(), b'another owner')
+        self.assertFalse(original.removed)
+        self.assertIn('not verified', original.error)
+
+    def test_camera_request_preserves_symlink_target(self):
+        request = capture.CameraTraceRequest()
+        path, calls = self.camera_shell(request)
+        target = path.parent / 'saved-game'
+        target.write_bytes(b'save')
+        path.symlink_to(target)
+        with self.assertRaisesRegex(RuntimeError, 'not acknowledged'): request.enable(self.c)
+        request.finish(self.c)
+        self.assertTrue(path.is_symlink())
+        self.assertEqual(target.read_bytes(), b'save')
+        self.assertEqual(len(calls), 1)
+
+    def test_camera_guard_requires_exact_owned_nonce_and_script(self):
+        request, other = capture.CameraTraceRequest(), capture.CameraTraceRequest()
+        base = ['adb', '-s', 'device', 'shell', '-T']
+        def remote(script): return shlex.join(['run-as', self.c.PKG, 'sh', '-c', script])
+        for enable in (False, True):
+            command = base + [remote(request.script(enable))]
+            for hud, render in ((False, False), (True, False), (False, True), (True, True)):
+                with self.assertRaises(RuntimeError):
+                    capture.guard_observer_command(command, 'adb', 'device', hud, render)
+            capture.guard_observer_command(command, 'adb', 'device', camera=request)
+            for script in (other.script(enable), request.script(enable) + '\npm clear ' + self.c.PKG,
+                           request.script(enable).replace('camera-trace-v1', 'saved-game')):
+                with self.assertRaises(RuntimeError):
+                    capture.guard_observer_command(base + [remote(script)], 'adb', 'device', camera=request)
+        for token in ('a' * 31, 'A' * 32, 'a' * 32 + '; rm file'):
+            with self.assertRaises(RuntimeError): capture.camera_request_script(True, token)
+
+    def test_camera_native_gate_precedes_sdk_and_checks_complete_observer(self):
+        self.args.camera_trace = True
+        for markers in (b'', b'camera-trace-v1\0camera-step\0'):
+            native = self.native + markers
+            self.app['lib/arm64-v8a/libmain.so'] = native
+            self.report['libraries']['libmain.so']['sha256'] = capture.digest(native)
+            self.driver_profile()
+            with self.assertRaisesRegex(RuntimeError, 'consecutive camera observer'):
+                capture.verify_local(self.c, self.args)
+            self.assertEqual(self.calls, [])
+        native = self.native + b'camera-trace-v1\0camera-step\0camera-matrix\0cpu-camera-inputs-not-gpu-readback\0'
+        self.app['lib/arm64-v8a/libmain.so'] = native
+        self.report['libraries']['libmain.so']['sha256'] = capture.digest(native)
+        self.driver_profile()
+        capture.verify_local(self.c, self.args)
+        self.assertEqual(len(self.calls), 2)
+
+    def test_camera_arms_only_after_manual_playing_unique_pid_and_foreground(self):
+        class Terminal(io.StringIO):
+            def isatty(self): return True
+        for mode in ('good', 'save', 'no-pid', 'wrong-foreground', 'wrong-installed'):
+            with self.subTest(mode=mode):
+                events = []
+                def adb(*args, **kwargs):
+                    if args == ('get-state',): payload = 'device'
+                    elif args == ('get-serialno',): payload = 'device'
+                    elif args[-1].startswith('pm path '): payload = 'package:/data/app/fixture/base.apk'
+                    elif args[-1].startswith('sha256sum '): payload = ('0' * 64 if mode == 'wrong-installed' else self.sha) + '  base.apk'
+                    elif args[-1].startswith('run-as '): payload = log_reply(self.c, args[-1], b'baseline\n')
+                    elif args[-1].startswith('dumpsys activity '):
+                        events.append('foreground')
+                        package = 'other.app' if mode == 'wrong-foreground' else self.c.PKG
+                        payload = 'mResumedActivity: ActivityRecord{abc u0 ' + package + '/.Game t1}'
+                    else: raise AssertionError(args)
+                    return subprocess.CompletedProcess(args, 0, payload.encode(), b'')
+                def prompt(message):
+                    self.assertNotIn('armed', events)
+                    events.append('playing' if mode != 'save' else 'save')
+                    return events[-1]
+                def pids(name):
+                    events.append('pid')
+                    return [] if mode == 'no-pid' else [1234]
+                def enable(c):
+                    self.assertEqual(events, ['playing', 'pid', 'foreground'])
+                    self.assertEqual(c.original_pid, 1234)
+                    self.assertTrue(Path(str(c.prefix) + '-Attached-Process.txt').is_file())
+                    events.append('armed')
+                camera = types.SimpleNamespace(enable=enable, label='Camera')
+                self.c.SERIAL, self.c.adb = 'device', adb
+                self.c.start_capture = lambda start: None
+                self.c.clock = lambda name: '2026-10-30 21:00:00'
+                self.c.prompt, self.c.pids = prompt, pids
+                with patch.object(capture.sys, 'stdin', Terminal()), \
+                     patch.object(capture, 'verify_local', return_value=(self.receipt, self.report, 'b' * 40, 'signature', 'manifest')), \
+                     patch.object(capture, 'observe_installed', side_effect=lambda c: events.append('observed')), \
+                     contextlib.redirect_stdout(io.StringIO()):
+                    if mode in ('no-pid', 'wrong-foreground', 'wrong-installed'):
+                        with self.assertRaises(RuntimeError): capture.installed_main(self.c, self.args, camera=camera)
+                    else: capture.installed_main(self.c, self.args, camera=camera)
+                expected = {'good': ['playing', 'pid', 'foreground', 'armed', 'observed'],
+                            'save': ['save'], 'no-pid': ['playing', 'pid'],
+                            'wrong-foreground': ['playing', 'pid', 'foreground'], 'wrong-installed': []}
+                self.assertEqual(events, expected[mode])
 
     def test_continuous_observation_runs_past_old_timer_and_stops_on_save(self):
         self.c.input_hub = lambda: types.SimpleNamespace(phase='')
@@ -210,13 +566,13 @@ class InstalledCapture(unittest.TestCase):
         operations = []
         def adb(*args, **kwargs):
             capture.guard_observer_command(['fixture-adb', '-s', 'fixture-device', *args],
-                                           'fixture-adb', 'fixture-device')
+                                           'fixture-adb', 'fixture-device', private_log=self.c.parse_private_log_script)
             operations.append(args)
             if args == ('get-state',): payload = 'device'
             elif args == ('get-serialno',): payload = 'fixture-device'
             elif args[-1].startswith('pm path '): payload = 'package:/data/app/fixture/base.apk'
             elif args[-1].startswith('sha256sum '): payload = self.sha + '  /data/app/fixture/base.apk'
-            elif args[-1].startswith('run-as '): payload = 'old log\n'
+            elif args[-1].startswith('run-as '): payload = log_reply(self.c, args[-1], b'old log\n')
             elif args[-1].startswith('date '): payload = '2026-10-24 21:30:00'
             elif args[-1].startswith('dumpsys activity '):
                 payload = 'mResumedActivity: ActivityRecord{abc u0 io.github.banjotooierecompiled/.BanjoTooieSDLActivity t1}'
@@ -297,11 +653,14 @@ class InstalledCapture(unittest.TestCase):
         calls = []
         def command(args, name=None, **kwargs):
             values = list(map(str, args))
-            capture.guard_observer_command(values, 'fixture-adb', 'fixture-device')
+            capture.guard_observer_command(values, 'fixture-adb', 'fixture-device', private_log=self.c.parse_private_log_script)
             calls.append(values)
             operation = values[3:]
             if operation[0] == 'logcat': payload = b'fixture app Logcat dump\n'
-            elif operation[-1].startswith('run-as '): payload = self.c.baseline + delta
+            elif operation[-1].startswith('run-as '):
+                _, action, start, length = self.c.parse_private_log_script(shlex.split(operation[-1])[4])
+                data = self.c.baseline + delta
+                payload = str(len(data)).encode() if action == 'size' else (hashlib.sha256(data[:length]).hexdigest() + '  -\n').encode() if action == 'hash' else base64.b64encode(data[start:start+length])
             elif operation[-1].startswith('pidof '): payload = b'1234\n'
             else: payload = b'fixture device state\n'
             if name is not None:
@@ -315,10 +674,83 @@ class InstalledCapture(unittest.TestCase):
         self.assertEqual(Path(prefix + '-NewLog.txt').read_bytes(), delta)
         self.assertEqual(Path(prefix + '-Logcat-Dump.txt').read_bytes(), b'fixture app Logcat dump\n')
         self.assertEqual(list(self.area.glob('*-read-error.txt')), [])
-        self.assertEqual(len(calls), 8)
+        self.assertEqual(len(calls), 11)
         self.assertTrue(any(op[-1] == 'pidof ' + self.c.PKG + ':game' for op in calls))
-        self.assertTrue(any(op[-1] == 'run-as ' + self.c.PKG + ' cat files/data/banjotooi-debug.log' for op in calls))
+        self.assertTrue(any('TOOIE_NATIVE_LOG FullLog bytes' in op[-1] for op in calls))
+        self.assertTrue(json.loads(Path(prefix + '-FullLog-Transfer.txt').read_text())['verified'])
         self.assertEqual(Path(prefix + '-Runtime-audio.txt').read_bytes(), delta.splitlines(keepends=True)[0])
+
+    def native_log_shell(self, data, fault='normal'):
+        self.c.ADB, self.c.SERIAL = 'fixture-adb', 'fixture-device'
+        self.c.NATIVE_LOG_CHUNK = 4096
+        self.c.prefix = self.area / fault
+        app = self.area / ('app-' + fault)
+        path = app / 'files/data/banjotooi-debug.log'
+        path.parent.mkdir(parents=True)
+        path.write_bytes(data)
+        queries = []
+        def command(args, **kwargs):
+            values = list(map(str, args))
+            capture.guard_observer_command(values, self.c.ADB, self.c.SERIAL,
+                private_log=self.c.parse_private_log_script)
+            script = shlex.split(values[-1])[4]
+            _, operation, start, length = self.c.parse_private_log_script(script)
+            queries.append((operation, start, length))
+            if operation == 'bytes' and start == 0:
+                if fault == 'grow':
+                    with path.open('ab') as stream: stream.write(b'new logger output\n')
+                if fault == 'truncate': path.write_bytes(b'')
+                if fault == 'replace': path.write_bytes(b'z' * len(data))
+            result = subprocess.run(['sh', '-c', script], cwd=app, capture_output=True, timeout=10)
+            if operation == 'size' and fault == 'huge': result.stdout = b'2147483649\n'
+            if operation == 'hash' and fault == 'hash': result.stdout = b'0' * 64 + b'  -\n'
+            if operation == 'bytes':
+                if fault == 'short': result.stdout = base64.b64encode(data[start:start + length - 1])
+                if fault == 'corrupt': result.stdout = b'!invalid!'
+                if fault == 'oversize': result.stdout = b'A' * (4 * ((length + 2) // 3) + 4)
+                if fault == 'timeout': result.returncode = -999
+            # Reproduce the Windows ADB newline expansion on every response.
+            result.stdout = result.stdout.replace(b'\n', b'\r\n')
+            return result
+        self.c.command = command
+        return path, queries
+
+    def test_chunked_log_preserves_native_bytes_and_accepts_concurrent_append(self):
+        data = b'p' * 4095 + b'\nmsg\r\n\x00\x1a\xff\n' + b'x' * 8192 + b'\r'
+        path, queries = self.native_log_shell(data, 'grow')
+        with contextlib.redirect_stdout(io.StringIO()): result = self.c.read_private_log('FullLog')
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, data)
+        self.assertEqual(path.read_bytes(), data + b'new logger output\n')
+        receipt = json.loads(Path(str(self.c.prefix) + '-FullLog-Transfer.txt').read_text())
+        self.assertTrue(receipt['verified'])
+        self.assertEqual(receipt['sha256'], hashlib.sha256(data).hexdigest())
+        self.assertGreater(len(receipt['chunks']), 1)
+        self.assertTrue(all(length <= 4096 for operation, _, length in queries if operation == 'bytes'))
+
+    def test_chunked_log_failure_controls_do_not_claim_verified_transfer(self):
+        for fault in ('short', 'corrupt', 'oversize', 'timeout', 'hash', 'truncate', 'replace', 'huge'):
+            with self.subTest(fault=fault):
+                self.native_log_shell(b'old\r\n' * 2500, fault)
+                with contextlib.redirect_stdout(io.StringIO()): result = self.c.read_private_log('FullLog')
+                self.assertNotEqual(result.returncode, 0)
+                receipt = json.loads(Path(str(self.c.prefix) + '-FullLog-Transfer.txt').read_text())
+                self.assertFalse(receipt['verified'])
+                self.assertIn('error', receipt)
+
+    def test_empty_native_log_and_closed_command_guard(self):
+        path, queries = self.native_log_shell(b'')
+        with contextlib.redirect_stdout(io.StringIO()): result = self.c.read_private_log('Baseline')
+        self.assertEqual((result.returncode, result.stdout), (0, b''))
+        self.assertFalse(any(operation == 'bytes' for operation, _, _ in queries))
+        original = self.c.private_log_script('FullLog', 'bytes', 0, 1)
+        for script in (original + '\nrm -rf files', original.replace('banjotooi-debug.log', 'save.dat')):
+            args = ['fixture-adb', '-s', 'fixture-device', 'shell', '-T',
+                    shlex.join(['run-as', self.c.PKG, 'sh', '-c', script])]
+            with self.assertRaises(RuntimeError):
+                capture.guard_observer_command(args, self.c.ADB, self.c.SERIAL,
+                    private_log=self.c.parse_private_log_script)
+        self.assertEqual(path.read_bytes(), b'')
 
     def test_live_router_cannot_hide_missing_original_game_process(self):
         self.c.PROCESS_NAME = self.c.PKG + ':game'

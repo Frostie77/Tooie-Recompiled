@@ -104,7 +104,7 @@ def check_configuration(source, work, ndk):
     require(re.search(r"^ANDROID_ABI:(?:STRING|UNINITIALIZED)=arm64-v8a$", cache, re.M), "wrong target ABI")
     commands = json.loads((work / "native/compile_commands.json").read_text())
     targets = [source / p for p in (
-        "src/main.cpp", "src/recomp_api.cpp", "src/aiming_controls.cpp",
+        "src/main.cpp", "src/recomp_api.cpp", "src/aiming_controls.cpp", "src/hud_diagnostics.cpp", "src/hud_placement.cpp", "src/widescreen_visibility.cpp",
         "src/android_touch_input.cpp", "src/android_touch_controls.cpp", "src/android_touch_jni.cpp",
         "lib/rt64/src/contrib/plume/plume_vulkan.cpp",
         "lib/rt64/src/hle/rt64_present_queue.cpp",
@@ -144,7 +144,7 @@ def build_id(readelf, path):
     return matches[0]
 
 
-def check_apk(source, work, ndk):
+def check_apk(source, work, ndk, output=None):
     check_configuration(source, work, ndk)
     driver_test = driver_test_mode()
     revision = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
@@ -197,6 +197,11 @@ def check_apk(source, work, ndk):
         require(b"recomp_on_init" in main, "code-mod startup event registration is missing")
         require(b"Invert Aiming y-axis" in main and b"aiming_invert" in main, "saved aiming preference is missing")
         require(b"tooie_aiming_invert" in main, "guest aiming input bridge is missing")
+        for marker in (b'render-trace-v1', b'call_first=%u call_pages=%u', b'z_compare=%u z_write=%u'):
+            require(marker in main, "paged renderer input observer is missing: " + marker.decode())
+        for marker in (b"Invert Flight y-axis", b"flight_invert", b"tooie_flight_invert",
+                       b"Swap Joystick Aiming Controls", b"aiming_swap_sticks"):
+            require(marker in main, "scoped aiming/flight control is missing: " + marker.decode())
         for marker in (b"automatic_update_checks", b"getUpdateState", b"requestUpdateCheck", b"canShowUpdateNotice", b"openUpdateRelease"):
             require(marker in main, "Android update UI/JNI bridge is missing: " + marker.decode())
         check_update_java(package)
@@ -237,7 +242,7 @@ def check_apk(source, work, ndk):
     require("application-debuggable" in badging, "test APK must support private run-as evidence collection")
     require("uses-permission: name='android.permission.INTERNET'" in badging, "Android update network permission is missing")
     require("android.permission.REQUEST_INSTALL_PACKAGES" not in badging, "Release-page checks must not request package-install permission")
-    output = work / "artifacts"
+    output = output or work / "artifacts"
     output.mkdir(exist_ok=True)
     filename = "Tooie-Recompiled-Android-arm64-" + revision[:12] + "-" + profile["suffix"] + ".apk"
     shutil.copyfile(apk, output / filename)
@@ -270,7 +275,24 @@ def check_apk(source, work, ndk):
     print("PASS: signed Android ARM64 APK, exact native libraries/Build IDs, JNI, assets, icon, name and API profile")
 
 
+def check_paired_gpu_apk(source, work, ndk):
+    require(driver_test_mode(), "Paired GPU packaging requires its separate test identity")
+    original_path = work / "artifacts/build-report.json"
+    original_bytes = original_path.read_bytes()
+    original = json.loads(original_bytes)
+    output = work / "gpu-test-artifacts"
+    require(not output.exists(), "Use a fresh paired GPU output directory")
+    check_apk(source, work, ndk, output)
+    paired = json.loads((output / "build-report.json").read_text())
+    require(original_path.read_bytes() == original_bytes, "Normal Debug report was changed")
+    require(paired["package"] != original["package"], "GPU test must have a separate app identity")
+    for field in ("source_commit", "native_version", "libraries"):
+        require(paired[field] == original[field], "Paired GPU native payload differs: " + field)
+    shutil.copyfile(source / "docs/development/redmi-combined-test-20261029.md", output / "REDMI-TEST-INSTRUCTIONS.md")
+    print("PASS: separate GPU test identity retains the exact normal Debug source, native hashes and Build IDs")
+
+
 if __name__ == "__main__":
     command, source, work, ndk = sys.argv[1:]
-    action = {"configuration": check_configuration, "apk": check_apk, "notices": write_ndk_notices}[command]
+    action = {"configuration": check_configuration, "apk": check_apk, "apk-paired-gpu": check_paired_gpu_apk, "notices": write_ndk_notices}[command]
     action(Path(source).resolve(), Path(work).resolve(), Path(ndk).resolve())
