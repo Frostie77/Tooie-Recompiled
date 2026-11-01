@@ -1,5 +1,11 @@
 # Next Android update — v1.2.0 candidate
 
+Copy-ready public description: [v1.2.0 release draft](release-notes-v1.2.0.md).
+The replacement candidate is
+[build 136](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41322662896),
+started from main source d24e33d230ec03679bbb92aac04e2b4b928e78e3.
+Documentation edits after that source do not require another APK build.
+
 Prepare **v1.2.0 / Android code 6** as the next compatible feature update.
 Public v1.1.0/code 5 remains the latest published release. Redmi's qualitative
 playability follow-up has arrived; the final
@@ -77,8 +83,7 @@ The [handoff](handoff.md) links the complete source, host, CI and device records
   persistence. Check the requested settings labels/order in the replacement
   candidate. Broader pacing and older unusual-frame reports remain separate
   from these focused passes.
-- Build the consolidated reviewed source as an unsigned **1.2.0 / code 6**
-  release candidate and verify its complete payload. Sign
+- Verify build 136's unsigned **1.2.0 / code 6** candidate and complete payload. Sign
   locally with the existing protected release key, then check update continuity,
   retained save/settings and reopening on Odin. Keep the established Debug app.
 - Replace this draft with the actual release identity, checksum, accepted scope

@@ -4,6 +4,15 @@ Updated: 2 November 2026.
 
 ## Release finishing batch
 
+**Overnight pause, 2 November:** Frostie leaves
+[build 136](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41322662896)
+running at source d24e33d230ec03679bbb92aac04e2b4b928e78e3 with the unsigned
+candidate profile enabled. Resume with artifact verification, protected local
+signing and a brief settings/save check. The installed preview remains signed
+build 135, code 6. The [copy-ready public draft](release-notes-v1.2.0.md) and
+changelog include all final labels/order changes. Subsequent documentation-only
+edits skip CI; retain build 136's exact source when binding the candidate.
+
 **Signed build 135 and settings follow-up:** the
 [checkpoint](release-candidate-135-20261102.md) records CI/payload verification,
 protected local signing and the successful code-5 replacement. Frostie imports

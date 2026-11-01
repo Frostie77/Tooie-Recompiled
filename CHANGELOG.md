@@ -59,8 +59,11 @@ release until the signed candidate is checked and published.
   and keep the opening logos steady in the focused Display check (build 125).
   Frostie also accepts the long-play character check after an extended session
   with the model staying correct throughout.
-- Correct HUD count visibility and countdown placement in Original, Expand and
-  16:9 (build 127). Tested egg ammunition and feather icons/counts remain aligned.
+- Correct HUD count visibility and countdown placement, including Jiggy totals,
+  egg ammunition and feather icons/counts (build 127). Values/timers also pass
+  the four new fixed game ratios in build 133.
+- Keep flight steering and airborne aiming on the flight inversion preference,
+  independently of stationary Breegull Blaster aiming.
 - Keep Jiggy Challenge input unchanged by stationary aiming stick swapping
   (build 125).
 - Preserve loaded depth in Android read-only depth passes used by Lagoon water.
@@ -71,8 +74,9 @@ release until the signed candidate is checked and published.
   navigation and leave/reopen check passes on Odin (build 129).
 - Keep the gameplay camera's own previous view during narrow-space turns.
   Narrow-passage, dialogue and open-area checks pass on Odin (build 133).
-- Correct scenery/character clipping in every new fixed ratio and let the
-  rotating Jiggy transition clear the edges of the wide image (build 134).
+- Correct scenery/character clipping in every new fixed ratio (build 134).
+- Let the rotating Jiggy transition clear the edges of the wide image before
+  the animation finishes (build 134).
 - Collect large native diagnostic logs in verified chunks without manual
   recovery (builds 133/134).
 
@@ -82,10 +86,13 @@ focused scope; other modes/devices and complete gameplay remain separate.
 
 ### Before publication
 
-Verify the protected-key-signed release update, retained saves/settings and
-reopening, including fixed-preset persistence. The
-[next-release draft](docs/development/release-notes-next.md) retains the focused
-acceptance scopes and broader coverage items. The unconfirmed Adreno 650
+Signed build 135 passes Debug → Release save import and 21:9 persistence after
+save/quit/reload. Verify the replacement build 136 package and local signing,
+then check the final menu labels/order and retained saves/settings on Odin.
+The [public release-description draft](docs/development/release-notes-v1.2.0.md)
+contains the current wording; the
+[engineering release notes](docs/development/release-notes-next.md) retain the
+focused acceptance scopes and broader coverage items. The unconfirmed Adreno 650
 descriptor experiment is retired and is excluded from this candidate.
 
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
