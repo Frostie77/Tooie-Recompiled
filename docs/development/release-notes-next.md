@@ -1,7 +1,8 @@
-# Next Android update — draft
+# Next Android update — v1.2.0 candidate
 
-Version and Android version code are not selected. Public v1.1.0/code 5 remains
-unchanged. Redmi's qualitative playability follow-up has arrived; the final
+Prepare **v1.2.0 / Android code 6** as the next compatible feature update.
+Public v1.1.0/code 5 remains the latest published release. Redmi's qualitative
+playability follow-up has arrived; the final
 camera check passes. Build 134 now has focused Odin acceptance for fixed-preset
 visibility and Jiggy-wipe coverage; see the [review](build134-odin-review-20261102.md).
 
@@ -22,7 +23,11 @@ visibility and Jiggy-wipe coverage; see the [review](build134-odin-review-202611
   according to HUD Placement. HUD values/timers and fixed-ratio 3D visibility
   pass their focused Odin checks.
 
-## Corrections with focused Odin acceptance
+## Corrections with focused device acceptance
+
+- Skip the unused ray-tracing compose pipeline on raster-only devices. The
+  Redmi Pad 2 reporter confirms gameplay, movement and sound after the offered
+  fix. Keep this scoped separately from Odin and unmeasured FPS conclusions.
 
 - Remove the reported Jiggy Challenge static lines and dialogue-entry shunt.
 - Correct the tested animated limb gaps at Display framerate. Frostie also
@@ -40,7 +45,6 @@ visibility and Jiggy-wipe coverage; see the [review](build134-odin-review-202611
   accepts the build-133 narrow-passage, dialogue and open-area checks.
 - Collect large diagnostic logs automatically in verified chunks. Build 133
   completed both large native reads without manual recovery.
-
 - Apply widened visibility to the four fixed aspect ratios, preventing scenery
   and characters from being rejected at the old view boundary. Frostie reports
   no clipping in any ratio on build 134.
@@ -61,13 +65,20 @@ The [handoff](handoff.md) links the complete source, host, CI and device records
   now passes too. Include one preset persistence check in the signed release
   reopen test. Broader pacing and older unusual-frame reports remain separate
   from these focused passes.
-- Select the exact reviewed release source, version name and increasing code;
-  build the unsigned release candidate and verify its complete payload. Sign
+- Build the consolidated reviewed source as an unsigned **1.2.0 / code 6**
+  release candidate and verify its complete payload. Sign
   locally with the existing protected release key, then check update continuity,
   retained save/settings and reopening on Odin. Keep the established Debug app.
 - Replace this draft with the actual release identity, checksum, accepted scope
-  and remaining known issues after those results. Frostie handles merges and
-  publication; no release or update-feed change is performed by this document.
+  and remaining known issues after those results. Frostie requested PR cleanup
+  on 2 November; public release publication and the stable-feed update follow
+  the signed candidate check.
+
+## Retired experiment
+
+Frostie asked to close PR #27 on 2 November after no further Retroid report.
+The Adreno 650 descriptor-reservation experiment is excluded from this update.
+Driver selection remains available; Retroid compatibility was not confirmed.
 
 Broader project completion and distribution/notices work retain their existing
 scope in the [checklist](../android-completion-requirements.md) and

@@ -159,7 +159,8 @@ its manual scope. Share startup log (MD-010) is now resolved on Odin in the sign
 reporter can send logs after updating; further Poco sharing tests remain deferred.
 See the [26 October result](development/poco-turnip-result-20261026.md).
 The remaining touch/phone matrix and actual failed-driver recovery remain open.
-The Retroid Pocket 5 investigation remains parked pending more data. See the
+Frostie retired the unconfirmed Adreno 650 experiment and closed PR #27 on
+2 November. No Retroid compatibility fix is claimed; see the
 [startup-crash record](development/startup-crash-issue26.md).
 
 - [ ] Complete the adventure through the credits, covering major areas,
@@ -353,7 +354,7 @@ manual acceptance, not full-game/device coverage or publication.
   game speed/audio and measured pacing. Existing extended runs and focused
   passes do not establish sustained display-rate delivery or full-game correctness.
 
-After selecting the release source/version and receiving the relevant results,
+Prepare the consolidated source as the **v1.2.0 / code 6** candidate, then
 verify the protected-key-signed release update and retained saves/settings on
 Odin. Keep public release state unchanged until Frostie publishes. Full-adventure,
 phone/touch/driver/lifecycle and distribution milestones above retain their scope.

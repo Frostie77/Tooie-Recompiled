@@ -1,6 +1,6 @@
 # Startup crash investigation — issue #26
 
-Updated: 26 October 2026. **Poco/Turnip has a working manual result; stock failures remain recorded and Retroid is parked.**
+Updated: 2 November 2026. **Poco/Turnip has a working manual result; stock failures remain recorded. Frostie has retired the unconfirmed Adreno 650 experiment.**
 
 ## Current priority
 
@@ -12,21 +12,23 @@ startup exit. Both new logs were reviewed; see the
 [25 October result](poco-system-driver-result-20261025.md). The next controlled
 test subsequently moved to d6 phone import. The reporter now confirms a working
 game, with loaded Turnip matching the active game in the screenshot; see the
-[26 October result](poco-turnip-result-20261026.md). Sharing fails on Poco and
-Odin (MD-010). Fix it locally for the update; further reporter logs are deferred.
+[26 October result](poco-turnip-result-20261026.md). The earlier sharing failure
+(MD-010) was corrected in public v1.1.0 after Odin acceptance; no fresh Poco
+sharing result is claimed. Further reporter logs remain deferred.
 
-The **Retroid Pocket 5 / Adreno 650** report is **parked pending more data**:
-Android version, a fresh app log and the result of the existing PR #27 test.
-Keep that report and experiment unresolved; resume their investigation when
-useful evidence arrives. Do not assume a Poco result proves the Retroid cause
-or requires another Retroid test build.
+Frostie asked to retire the **Retroid Pocket 5 / Adreno 650** experiment and
+close PR #27 on 2 November after no further reply from the reporter. Optional
+graphics-driver selection is already available. The experiment is excluded
+from the next update; no successful Retroid result or verified cause is claimed.
+Issue #26 remains separate from this PR cleanup. Revisit the original report
+only if fresh evidence warrants it.
 
 ## Reports and current test status
 
 | Reporter | Device | Confirmed evidence | Status |
 |---|---|---|---|
-| gojera | Retroid Pocket 5, Snapdragon 865 / Adreno 650 | Original black-screen/exit report; [PR #27](https://github.com/Frostie77/Tooie-Recompiled/pull/27) and [Actions run 40041658420](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40041658420) were offered for testing | Parked pending Android version, fresh app log and result of the existing test |
-| dusk-beep | Poco X3 Pro, Android 12, Snapdragon 860 / Adreno 640 | [Follow-up](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747) confirms startup exit with both public v1.0.1 and run 40041658420; supplied [Debug log](https://github.com/user-attachments/files/33901672/banjotooi-debug.log) | Working d6 Turnip game reported and screenshot reviewed; stock failure retained; share logging open as MD-010 |
+| gojera | Retroid Pocket 5, Snapdragon 865 / Adreno 650 | Original black-screen/exit report; [PR #27](https://github.com/Frostie77/Tooie-Recompiled/pull/27) and [Actions run 40041658420](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40041658420) were offered for testing | Experiment retired and PR #27 closed at Frostie's request on 2 November; no qualified device result arrived |
+| dusk-beep | Poco X3 Pro, Android 12, Snapdragon 860 / Adreno 640 | [Follow-up](https://github.com/Frostie77/Tooie-Recompiled/issues/26#issuecomment-6382801747) confirms startup exit with both public v1.0.1 and run 40041658420; supplied [Debug log](https://github.com/user-attachments/files/33901672/banjotooi-debug.log) | Working d6 Turnip game reported and screenshot reviewed; stock failure retained; sharing fix published after Odin acceptance, without a new Poco sharing result |
 
 Frostie says the reporting user can test further builds. Draft messages in chat
 for Frostie to post; do not post issue comments on his behalf. Treat the two

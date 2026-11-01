@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## Unreleased — v1.2.0 candidate
+
+Target Android version code **6**. Public v1.1.0 / code 5 remains the latest
+release until the signed candidate is checked and published.
 
 ### Added
 
@@ -19,8 +22,10 @@
   The nine scoped controls checks and manual Breegull Blaster comparison pass
   on Odin; Jiggy Challenge controls retain their normal behavior with swap on.
 - Manual graphics resolution scale with quarter-step choices. The combined
-  Redmi test retains the supported Mali startup correction; updated Redmi FPS
-  measurements are pending. No performance gain is claimed yet.
+  Redmi tester reports 240p + Expand and scale 3.50 playable, with occasional
+  lag spikes at 3.50. This is reported playability, without measured FPS.
+- Fixed **16:9, 16:10, 3:2 and 21:9** game aspect ratios beside Original and
+  Expand, with HUD icons, values and timers following the selected image.
 
 ### Changed
 
@@ -31,7 +36,11 @@
   mods are separate, plus instructions to use it at the launcher after saving
   and exiting any running game and reopening the app.
 
-### Fixed in focused Odin checks
+### Fixed in focused device checks
+
+- Skip an unused ray-tracing compose pipeline during raster-only startup.
+  The Redmi Pad 2 reporter confirms gameplay, movement and sound after the
+  offered correction; no replacement Mali driver is required by the change.
 
 - Clip partial attachment-clear rectangles to their actual framebuffer/view.
   Frostie reports the Jiggy-challenge static lines gone in the 27 October Debug
@@ -42,7 +51,8 @@
 
 - Correct the tested animated limb gaps at Display framerate (build 111),
   and keep the opening logos steady in the focused Display check (build 125).
-  Broader intermittent long-play character rendering remains open.
+  Frostie also accepts the long-play character check after an extended session
+  with the model staying correct throughout.
 - Correct HUD count visibility and countdown placement in Original, Expand and
   16:9 (build 127). Tested egg ammunition and feather icons/counts remain aligned.
 - Keep Jiggy Challenge input unchanged by stationary aiming stick swapping
@@ -53,22 +63,24 @@
 - Recover controller focus through the active menu navigation tree instead of
   throwing when an old focused branch is excluded. The MSAA 2× → 4× → 2×,
   navigation and leave/reopen check passes on Odin (build 129).
+- Keep the gameplay camera's own previous view during narrow-space turns.
+  Narrow-passage, dialogue and open-area checks pass on Odin (build 133).
+- Correct scenery/character clipping in every new fixed ratio and let the
+  rotating Jiggy transition clear the edges of the wide image (build 134).
+- Collect large native diagnostic logs in verified chunks without manual
+  recovery (builds 133/134).
 
 These corrections are intended for the next update. The
 [handoff](docs/development/handoff.md) links the exact host/CI/device evidence and
 focused scope; other modes/devices and complete gameplay remain separate.
 
-### Under investigation
+### Before publication
 
-- Intermittent character deformation after longer play still needs a current
-  failing capture or explicit disposition; the specific limb-gap pass is retained.
-- The [narrow-space camera candidate](docs/development/camera-primary-scene-fix-20261031.md)
-  corrects captured primary/auxiliary scene association in host consumer replay.
-  Android candidate verification and Odin acceptance remain pending; broader
-  pacing, guest camera adjustment and older unusual-frame reports stay separate.
-- Updated Redmi Original/Expand FPS and reopen results remain pending. The
-  [next-release draft](docs/development/release-notes-next.md) keeps those results
-  separate from accepted Odin fixes.
+Verify the protected-key-signed release update, retained saves/settings and
+reopening, including fixed-preset persistence. The
+[next-release draft](docs/development/release-notes-next.md) retains the focused
+acceptance scopes and broader coverage items. The unconfirmed Adreno 650
+descriptor experiment is retired and is excluded from this candidate.
 
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
 

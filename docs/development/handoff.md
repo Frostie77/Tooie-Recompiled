@@ -4,6 +4,24 @@ Updated: 2 November 2026.
 
 ## Release finishing batch
 
+**PR cleanup and next candidate, 2 November:** Frostie asks to consolidate the
+accepted work and prepare the next update. PR #43 includes every commit of #41.
+Its Mali startup code, regression test and test runner are byte-identical to
+#42, and the CI regression remains registered. The build-134 source differs
+from accepted head `7fae4aa11dced2315cdef9675223ea36a94fd200` only in six
+acceptance documents. Use #43 as the
+consolidated merge; #41/#42 are superseded rather than separate new code batches.
+Frostie explicitly retires the Adreno 650 experiment; PR #27 is now closed.
+Keep its unconfirmed Retroid report separate from a compatibility-fix claim.
+
+Prepare **1.2.0 / code 6** from the consolidated main source using one manual
+Android APK run with `prepare_candidate=true`. Leave GPU, paired-GPU and
+touch-test inputs off. Retain the tested native code; only the release version stamp changes.
+The protected key/password stay on Frostie's PC. Signed update continuity,
+retained saves/settings and fixed-preset persistence after reopening remain the
+next Odin check. Public v1.1.0/code 5 and its stable feed stay live until the new
+signed candidate is accepted and publication is authorized.
+
 **Build 134 accepted:** the [complete uploaded capture](build134-odin-review-20261102.md)
 verifies the exact installed Debug identity, all four actual events/images and
 native settings for every fixed ratio. Frostie reports transitions good in
@@ -17,7 +35,7 @@ The [build-133 review](build133-odin-review-20261101.md) retains the accepted
 narrow-passage/dialogue/open-area camera and HUD values/timers, plus the failures
 that motivated the [now accepted correction](wide-visibility-transition-fix-20261101.md).
 Keep the recording-command exit observation parked as Frostie requested.
-Next is release preparation: select source/version/code, verify and sign the
+Next is release preparation: use the source/version/code above, verify and sign the
 release candidate locally with the existing protected key, then check the
 update, save/settings retention and reopen. Include fixed-preset persistence
 in that reopen check; the build-134 capture is one continuous process. Do not
@@ -55,8 +73,8 @@ is unchanged; Frostie handles merges and publication.
 
 Frostie wants the next release after the Redmi results return. The
 [draft notes](release-notes-next.md) retain accepted build-111/121/125/127/128/129
-fixes. Public v1.1.0/code 5 and release/feed identities remain unchanged; no new
-version is selected. Redmi now has the reported-playability follow-up above;
+fixes. Public v1.1.0/code 5 and release/feed identities remain unchanged; the
+next candidate targets 1.2.0/code 6. Redmi now has the reported-playability follow-up above;
 the long-play character check is accepted above. Frostie handles messages,
 merges and releases.
 
@@ -569,18 +587,19 @@ Broader release/local Debug ROM/save/mod independence, fresh defaults and
 own-channel updates remain separate from the passed basic settings comparison.
 The Poco X3 Pro / Android 12 / Adreno 640 reporter now has working gameplay
 with Turnip in the d6 test; no stock-driver compatibility fix is established.
-Frostie has parked the Retroid Pocket 5 report and existing Adreno 650 experiment
-pending more data. The Redmi Pad 2 reporter has now supplied a 119,352-byte
+Frostie has retired the unconfirmed Adreno 650 experiment and closed PR #27
+after no further Retroid reply. The Redmi Pad 2 reporter supplied a 119,352-byte
 startup log: ten native starts reject optional FP32 attachment blending after
 Vulkan initialization. The subsequent offered test result is recorded below;
 Android version and installed build readback remain unconfirmed.
-The independent [draft PR #42](https://github.com/Frostie77/Tooie-Recompiled/pull/42)
+The original [PR #42](https://github.com/Frostie77/Tooie-Recompiled/pull/42)
 skips the unused RT compose pipeline on raster-only builds/devices.
 [Build 112](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/40633729769)
 passed CI. The [29 October reply](redmi-gameplay-performance-20261029.md) now
 reports working gameplay, movement and sound, with Expand and 1600p performance
 problems. No new log, Android version or explicit driver readback is supplied.
-It does not include PR #41's limb experiments;
+That original test did not include PR #41's limb experiments; its startup fix
+and regression checks are retained in the consolidated PR #43.
 no replacement Mali driver has been verified. Keep each device's evidence
 separate and leave reporter replies and issue closures to Frostie.
 
@@ -788,7 +807,7 @@ See the [issue #26 investigation](startup-crash-issue26.md) and
 [working Poco Turnip result](poco-turnip-result-20261026.md) before proposing
 another test. The historical c849 system-driver failure preceded the successful
 d6 on-device driver import; the old PC helper is not a pending test instruction.
-The Retroid report remains parked pending more data. Frostie handles reporter
+The unconfirmed Retroid experiment is retired as recorded above. Frostie handles reporter
 replies and issue closures.
 
 ## Save backup transfer work — 26 October 2026
