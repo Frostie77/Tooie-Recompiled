@@ -1,19 +1,21 @@
 # Android release signing
 
-## Accepted candidate — 1.2.0 / code 6
+## v1.2.0 published release
 
-The [build-136 signed acceptance](release-candidate-136-20261102.md) records
-passed CI/payload checks, protected local signing, replacement installation and
-the focused Odin settings/save check. Release branch `release/v1.2.0` points to
-the exact tested source d24e33d230ec03679bbb92aac04e2b4b928e78e3.
+Frostie published [v1.2.0 / code 6](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.2.0)
+on **2 November 2026 (AEDT)**. Its tag and release branch release/v1.2.0
+point to the tested build-136 source
+d24e33d230ec03679bbb92aac04e2b4b928e78e3.
+The [signed acceptance](release-candidate-136-20261102.md) records protected
+local signing, the successful Odin replacement, final settings and retained
+save/settings/mods, including save/close/reopen at 21:9.
 
-Stage the existing signed APK as `Tooie-Recompiled-v1.2.0-Android-arm64.apk`
-with its SHA256SUMS; do not rebuild or re-sign it for documentation changes.
-Publish using tag v1.2.0, target release/v1.2.0, title Tooie Recompiled v1.2.0
-and the [approved description](release-notes-v1.2.0.md). After independent
-public-download verification, update the stable feed and publication record.
-Public v1.1.0/code 5 remains current until then. The release package/protected
-key and retained Debug app keep their identities.
+Both canonical public downloads were independently verified against the tested
+APK and checksum. GitHub identifies this public, non-prerelease release as latest.
+The stable feed now targets v1.2.0; see the
+[publication and feed record](release-v1.2.0-check-20261102.md).
+The release package/protected certificate and separate Debug app retain their
+identities. Documentation/feed changes require no new APK or signature.
 
 ## Published releases
 
@@ -68,8 +70,8 @@ After fresh local SDK verification against the main report, Frostie published
 v1.1.0 on **26 October 2026 (AEDT)**. The public tag matches that main source;
 the public APK is 14362262 bytes with the signed hash above. Both public
 downloads and GitHub's latest-stable designation were independently verified.
-See the [publication record](release-v1.1.0-check-20261026.md). The stable metadata in this
-revision targets v1.1.0. The retained Debug update, broader device/gameplay and
+See the [publication record](release-v1.1.0-check-20261026.md). The stable metadata at that
+publication targeted v1.1.0; the current entry is v1.2.0 above. The retained Debug update, broader device/gameplay and
 actual driver-failure coverage and existing distribution review remain separate.
 
 ## Bundled notices

@@ -14,21 +14,23 @@ changing generated code, runtime behavior or dependencies.
 
 ## Technical guides
 
-- [Primary camera scene matching candidate](camera-primary-scene-fix-20261031.md): captured-input replay, scoped correction and pending Odin acceptance.
+- [Primary camera scene matching](camera-primary-scene-fix-20261031.md): captured-input replay and the correction accepted on Odin in build 133.
 
 - [Mod import, transactions and runtime integration](mod-support.md).
 - [Android ROM selection and private import](rom-selection.md).
 - [Startup update design and release identity](update-plan.md).
 - [Android save backup transfer](android-save-backups.md): General settings,
-  bounded file format, stopped-game transaction and pending device acceptance.
+  bounded file format, stopped-game transaction and focused Odin acceptance.
 - [Investigation history](history/README.md): rendering, guest code, timing,
   mods and branding findings.
 
 ## Release work
 
-The [next-update draft](release-notes-next.md) reflects the accepted focused
-fixes through Odin build 129. Redmi performance results and current camera/
-long-play findings remain separate pending work; the public release is unchanged.
+[v1.2.0 is published](release-v1.2.0-check-20261102.md) with the exact tested
+build-136 APK, independently verified public downloads and the code-6 stable
+feed. The [engineering release notes](release-notes-next.md) retain accepted
+camera/HUD/visibility/transition/controls/long-play results and Redmi's reported
+playability scope. Broader gameplay/device coverage remains separate.
 
 The [release preparation guide](release.md) records notice sources, version
 inputs, signing continuity and the candidate package verifier.
@@ -46,7 +48,10 @@ established signing identity for existing Odin updates; public-release signing
 and migration must be verified. Current CI success is separate from device
 gameplay acceptance.
 
-- [Changelog](../../CHANGELOG.md): public release changes through v1.1.0.
+- [Changelog](../../CHANGELOG.md): public release changes through v1.2.0.
+- [v1.2.0 release notes](release-notes-v1.2.0.md): final public feature/fix summary.
+- [v1.2.0 publication and Odin acceptance](release-v1.2.0-check-20261102.md): exact
+  tested source/APK, public downloads and stable-feed validation.
 - [v1.1.0 release notes](release-notes-v1.1.0.md): feature summary, tested Turnip
   download and instructions for sharing a startup log.
 - [v1.1.0 publication and Odin acceptance](release-v1.1.0-check-20261026.md): exact public

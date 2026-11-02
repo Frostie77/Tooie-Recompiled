@@ -6,11 +6,12 @@ The goal is a reliable native Android ARM64 release,
 followed by a complete Banjo-Tooie playthrough and broader coverage.
 Checked boxes describe the tested scope; the project is not fully complete.
 
-[Tooie Recompiled v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) was published on
-**26 October 2026 (AEDT)** with Android version code **5**. Its tag targets the
-verified main build; both public downloads match the tested signed APK and
-checksum. Frostie merged PR #34, and the live `main` feed now describes
-v1.1.0 / code 5; see the [publication record](development/release-v1.1.0-check-20261026.md).
+[Tooie Recompiled v1.2.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.2.0) was published on
+**2 November 2026 (AEDT)** with Android version code **6**. Its tag targets the
+exact tested build-136 source; both public downloads match the tested signed
+APK and checksum. The main feed now describes v1.2.0 / code 6; see the
+[publication record](development/release-v1.2.0-check-20261102.md).
+The earlier v1.1.0 / code 5 publication retains its historical checks below.
 
 The earlier [v1.0.1 release](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.0.1)
 was published on **24 October 2026 (AEDT)** with code **4**. Its historical
@@ -77,6 +78,23 @@ see the [release record](development/release-v1.0.1-check-20261024.md).
 - [x] Additional device confirmation: Frostie reports public v1.0.1 works on
   Pixel 8 Pro / Android 17 / Mali-G715 MP7. This is a manual functional result;
   see the [device record](development/device-compatibility.md).
+
+## v1.2.0 publication checks
+
+- [x] Accept signed build 136 on Odin: final settings labels/order,
+  retained saves/settings/mods and save/close/reopen with 21:9 retained.
+- [x] Accept Debug → Release save import on signed build 135, recorded separately.
+- [x] Publish v1.2.0 / code 6 at the exact build-136 source
+  d24e33d230ec03679bbb92aac04e2b4b928e78e3.
+- [x] Verify the public APK and SHA256SUMS by independent download:
+  14,423,702-byte APK, SHA-256 57c8f1d2…; exact checksum contents match.
+- [x] Validate and deploy the code-6 stable feed. Production host consumer checks
+  confirm code 5 is eligible and code 6 is current with the actual release JSON.
+- [x] Update README, changelog, release notes and engineering handoff.
+
+The [publication record](development/release-v1.2.0-check-20261102.md) binds the
+exact source, bytes and manual acceptance scope. These passes do not establish
+full-game/all-device coverage or a new on-device updater prompt/browser check.
 
 ## v1.1.0 publication checks
 
@@ -146,12 +164,13 @@ acceptance passed; broader background/sleep and full-game coverage remain open.
 
 ## Still required for full completion
 
-**1 November update:** The Redmi follow-up has arrived and Frostie accepts the
-long-play character check. The [draft release notes](development/release-notes-next.md) and
-[handoff](development/handoff.md) distinguish accepted focused fixes from the
-remaining visibility/transition device checks. This full-project list is broader
-than the focused acceptance of an individual update. Public version/feed remain
-v1.1.0/code 5; the next release identity is not selected.
+**2 November update:** The Redmi follow-up and long-play character check are
+accepted within their recorded scopes. Camera/HUD and fixed-ratio visibility/
+transition device checks also pass, followed by the final signed build-136
+settings/save check. The [engineering release notes](development/release-notes-next.md)
+and [handoff](development/handoff.md) retain those exact scopes. Public v1.2.0 /
+code 6 and its stable feed are now live. This full-project list remains broader
+than the focused acceptance of an individual update.
 
 **Next update priorities:** the Poco/Turnip working run is now accepted within
 its manual scope. Share startup log (MD-010) is now resolved on Odin in the signed
@@ -367,10 +386,10 @@ manual acceptance, not full-game/device coverage or publication.
   game speed/audio and measured pacing. Existing extended runs and focused
   passes do not establish sustained display-rate delivery or full-game correctness.
 
-Prepare the consolidated source as the **v1.2.0 / code 6** candidate, then
-verify the protected-key-signed release update and retained saves/settings on
-Odin. Keep public release state unchanged until Frostie publishes. Full-adventure,
-phone/touch/driver/lifecycle and distribution milestones above retain their scope.
+The consolidated **v1.2.0 / code 6** source is now published after the protected
+signed update and focused retained-save/settings checks passed on Odin.
+Full-adventure, phone/touch/driver/lifecycle and distribution milestones above
+retain their scope.
 
 ## First Android release milestone
 

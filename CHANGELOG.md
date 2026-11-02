@@ -1,9 +1,9 @@
 # Changelog
 
-## Unreleased — v1.2.0 candidate
+## [v1.2.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.2.0) — 2026-11-02
 
-Target Android version code **6**. Public v1.1.0 / code 5 remains the latest
-release until the signed candidate is checked and published.
+Android version code **6**. Adds Save Management, more game aspect ratios and
+separate flight controls, alongside camera, HUD and graphics fixes.
 
 ### Added
 
@@ -80,22 +80,24 @@ release until the signed candidate is checked and published.
 - Collect large native diagnostic logs in verified chunks without manual
   recovery (builds 133/134).
 
-These corrections are intended for the next update. The
+These corrections are included in v1.2.0. The
 [handoff](docs/development/handoff.md) links the exact host/CI/device evidence and
 focused scope; other modes/devices and complete gameplay remain separate.
 
-### Before publication
+### Publication and acceptance
 
 Signed build 136 passes the final menu labels/order, retained save/settings/mods
 and save/close/reopen checks, including 21:9 persistence. Build 135 separately
 passes Debug → Release save import. The
 [accepted candidate record](docs/development/release-candidate-136-20261102.md)
-binds the tested source and APK; staging and public publication remain pending.
-The [public release-description draft](docs/development/release-notes-v1.2.0.md)
-contains the current wording; the
-[engineering release notes](docs/development/release-notes-next.md) retain the
-focused acceptance scopes and broader coverage items. The unconfirmed Adreno 650
-descriptor experiment is retired and is excluded from this candidate.
+binds the tested source and APK. Both public downloads match those tested
+bytes; the v1.2.0 tag points to the exact build-136 source. The stable feed now
+describes v1.2.0 / code 6. See the
+[publication record](docs/development/release-v1.2.0-check-20261102.md) and
+[public release notes](docs/development/release-notes-v1.2.0.md).
+The [engineering release notes](docs/development/release-notes-next.md) retain
+the focused scopes and broader coverage items. The unconfirmed Adreno 650
+descriptor experiment is retired and excluded from this release.
 
 ## [v1.1.0](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) — 2026-10-26
 

@@ -3,7 +3,9 @@
 **Accepted for the focused v1.2.0 release check.** Frostie reports “everything
 looks good” after the requested Graphics labels/order, retained save/settings/
 mods and save/close/reopen checks. These are manual results without a new raw
-capture. Public publication and the stable-feed update remain pending.
+capture. These exact signed bytes are now public v1.2.0; see the
+[publication record](release-v1.2.0-check-20261102.md) for independent download
+checks and the stable-feed update.
 
 ## Exact release identity
 
@@ -50,12 +52,12 @@ the manual device result above does not require clearing app data. Retain the
 earlier accepted camera, HUD, visibility, transition, controls, water and long-play
 checks instead of requesting another full graphics test.
 
-## Publication handoff
+## Publication
 
-Reuse these exact signed bytes as Tooie-Recompiled-v1.2.0-Android-arm64.apk,
-with the corresponding SHA256SUMS. Use the
-[approved release-description draft](release-notes-v1.2.0.md), tag v1.2.0 and
-target release/v1.2.0. No rebuild or re-signing is needed for documentation.
-Verify the public APK/checksum after Frostie publishes, then advance the stable
-feed using the actual source, digest and byte count. Keep public v1.1.0/code 5
-and its feed current until publication; do not close reporter issues here.
+Frostie published these exact signed bytes as
+Tooie-Recompiled-v1.2.0-Android-arm64.apk with SHA256SUMS on 2 November 2026.
+Tag v1.2.0 and target release/v1.2.0 resolve to the candidate source above.
+Both public downloads match the staged/tested files; the stable feed records
+their exact identity. The [public description](release-notes-v1.2.0.md)
+reflects Frostie's final wording. No rebuild or re-signing was needed.
+Issue closures and reporter replies remain Frostie's responsibility.

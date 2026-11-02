@@ -3,10 +3,10 @@
 The startup checker is included in public **v1.0.1 / code 4**. Its focused Odin
 checks passed as described below; remaining notice/browser checks are separate.
 Version 1.0.0 predates this code and needs one manual APK update to gain it.
-The live main feed describes public **v1.1.0 / code 5**, published on
-26 October 2026 (AEDT). PR #34 is merged and its raw feed URL was checked.
-The actual APK/checksum downloads and tag were verified;
-see the [v1.1.0 publication record](release-v1.1.0-check-20261026.md).
+The live main feed describes public **v1.2.0 / code 6**, published on
+2 November 2026 (AEDT). The actual APK/checksum downloads and exact tagged
+source were verified before advancing the feed; see the
+[v1.2.0 publication record](release-v1.2.0-check-20261102.md).
 
 ## Player behavior
 
@@ -129,7 +129,11 @@ APK metadata, with exact tag/source, signer, name, size and digest checks. The
 production parser/checker, identical to public v1.0.1, passed 96 regression
 assertions plus the real published-release JSON: code 4 sees v1.1.0 available;
 code 5 is current. This is host consumer validation, not an on-device prompt or
-browser-return test.
+browser-return test. The v1.2.0 entry is bound to the exact accepted signed APK
+and both independently downloaded public assets. The production checker with
+the actual v1.2.0 release response confirms code 5 sees the canonical v1.2.0
+release as available and code 6 is current. No new device prompt/browser check
+is claimed by that host result.
 Host fixtures cover newer/equal/older codes; invalid channels, identities and
 assets; minimum API/ABI; offline/retry; ETags; throttling; malformed, oversized
 and deeply nested data; concurrent requests; and duplicate-notice deferral.

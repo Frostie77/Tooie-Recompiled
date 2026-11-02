@@ -14,11 +14,16 @@ d24e33d230ec03679bbb92aac04e2b4b928e78e3, signed APK SHA-256
 and the manual scope. The installed release preview is now build 136/code 6.
 The release/v1.2.0 branch is pinned to that exact source.
 
-Next: stage the tested signed bytes under the canonical APK name, with their
-checksum and [approved public description](release-notes-v1.2.0.md). Frostie
-publishes the GitHub release; independently verify its downloads before
-advancing the stable feed. Subsequent documentation-only edits skip CI and do
-not require another APK or signature. Do not repeat the accepted device checks.
+**Published:** Frostie published v1.2.0 on 2 November. Both public downloads
+match the exact tested/staged files; the tag resolves to the source above and
+GitHub marks the release latest and stable. The feed now targets code 6, and
+the README/changelog/checklist reflect the released work. See the
+[publication record](release-v1.2.0-check-20261102.md) and
+[final public description](release-notes-v1.2.0.md).
+Documentation/feed changes skip CI and require no new APK or signature.
+Do not repeat accepted device checks. Frostie handles issue closures and replies.
+Next: update the separate retained Debug app using the matching verified CI
+artifact and its established Debug certificate, preserving app data.
 
 **Signed build 135 and settings follow-up:** the
 [checkpoint](release-candidate-135-20261102.md) records CI/payload verification,
@@ -51,8 +56,8 @@ Android APK run with `prepare_candidate=true`. Leave GPU, paired-GPU and
 touch-test inputs off. Retain the tested native code; only the release version stamp changes.
 The protected key/password stay on Frostie's PC. Build 135's signed checkpoint
 above records the completed save-transfer/preset checks and their limits.
-The replacement candidate needs its settings check. Public v1.1.0/code 5 and its stable feed stay live until the new
-signed candidate is accepted and publication is authorized.
+The replacement settings check now passes on build 136, published as v1.2.0
+with the exact signed identity above. The stable feed has advanced to code 6.
 
 **Build 134 accepted:** the [complete uploaded capture](build134-odin-review-20261102.md)
 verifies the exact installed Debug identity, all four actual events/images and
@@ -101,12 +106,12 @@ Builds 133/134 have passed CI, downloaded-payload checks and their focused
 camera/HUD and visibility/transition device checks above. Public release state
 is unchanged; Frostie handles merges and publication.
 
-## Next release and primary camera matching candidate
+## Historical v1.2.0 preparation and primary camera matching
 
 Frostie wants the next release after the Redmi results return. The
 [draft notes](release-notes-next.md) retain accepted build-111/121/125/127/128/129
-fixes. Public v1.1.0/code 5 and release/feed identities remain unchanged; the
-next candidate targets 1.2.0/code 6. Redmi now has the reported-playability follow-up above;
+fixes. At that stage public v1.1.0/code 5 remained unchanged; the
+selected 1.2.0/code 6 candidate is now published above. Redmi now has the reported-playability follow-up above;
 the long-play character check is accepted above. Frostie handles messages,
 merges and releases.
 
@@ -149,14 +154,14 @@ Use the current repository refs and workflow profile for exact source identities
 
 ## Current release
 
-[v1.1.0 / code 5](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.1.0) is published and GitHub marks it as
-latest stable. Tag source is `0b0acfa54d2f689d6febb4dee29710fdde9fbb80`.
-The public APK is the exact tested signed APK, SHA-256 `6ed259e1c3f3b5313834bfd59440b54cb3a31888d58301e6166114159569e029`;
-both public downloads were independently verified. Frostie merged PR #34;
-the README/changelog/checklist and v1.1.0 feed are on main, and the raw feed URL
-serves the verified code-5 entry. See the
-[publication record](release-v1.1.0-check-20261026.md). Frostie handles issue closures and
-reporter replies; do not close issues as part of release work.
+[v1.2.0 / code 6](https://github.com/Frostie77/Tooie-Recompiled/releases/tag/v1.2.0)
+is public and GitHub's latest stable release. Tag source is
+d24e33d230ec03679bbb92aac04e2b4b928e78e3. The 14,423,702-byte public APK is
+the exact tested signed APK, SHA-256
+57c8f1d2da0c8bcfed43780cece20e0b90c17ec805b4285b72bd04285492b4e3.
+Both downloads were verified independently; the main feed now describes this
+code-6 release. See the [publication record](release-v1.2.0-check-20261102.md).
+Issue closures and reporter replies remain Frostie's job.
 
 The last accepted Odin menu check used build **129**, integration source
 `60cb4007223ff338639e95206f4078cfced19bfe`, with tested tree

@@ -7,6 +7,7 @@
 - **Swap Joystick Aiming Controls**: swap the sticks during stationary aiming. Normal stick controls return when you leave aiming.
 - **Four additional game aspect ratios** under **Settings → Graphics**: **16:9, 16:10, 3:2 and 21:9**, alongside Original and Expand.
 - **Manual resolution scaling** with quarter-step choices for finer control over rendering resolution.
+- Added compatibility with more Android devices.
 
 ### Changed
 
@@ -16,7 +17,6 @@
 - Renamed **Aiming Invert** to **Invert Aiming y-axis**, preserving the existing preference.
 - Moved the **Touch** settings tab between **Controls** and **Sound**.
 - Clarified descriptions for flight, Breegull Blaster controls and Save Management.
-- Improved collection of large diagnostic logs during testing.
 
 ### Fixed
 
@@ -33,13 +33,10 @@
 - Flight steering and airborne aiming responding to different inversion settings.
 - Jiggy Challenge controls being affected by stationary aiming stick swapping.
 - A Graphics-menu controller-navigation crash encountered around MSAA changes.
-- The reported Redmi Pad 2 startup failure. The tester now confirms gameplay with working movement and sound.
 
 ### Updating
 
 Install this update over your existing **release app** to retain its data. The separate Debug app remains independent.
-
-Existing ES-DE and shortcut launch addresses remain compatible.
 
 Custom Turnip drivers remain an option for compatible **Adreno** devices. **Mali** users should keep **System Default**.
 

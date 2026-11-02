@@ -1,16 +1,18 @@
-# Next Android update — v1.2.0 candidate
+# v1.2.0 engineering release notes
 
-Copy-ready public description: [v1.2.0 release draft](release-notes-v1.2.0.md).
-The replacement candidate is
+Published public description: [v1.2.0 release notes](release-notes-v1.2.0.md).
+The tested release build is
 [build 136](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41322662896),
 started from main source d24e33d230ec03679bbb92aac04e2b4b928e78e3.
 Documentation edits after that source do not require another APK build.
 The [signed build-136 acceptance](release-candidate-136-20261102.md) now passes
 the final menu labels/order, retained saves/settings/mods and save/close/reopen
-at 21:9. The tested APK is ready for staging/publication from release/v1.2.0.
+at 21:9. The exact tested APK is now public from tag v1.2.0, with
+release/v1.2.0 pinned to its source. Both public downloads match; the stable
+feed targets **v1.2.0 / Android code 6**. See the
+[publication record](release-v1.2.0-check-20261102.md).
 
-Prepare **v1.2.0 / Android code 6** as the next compatible feature update.
-Public v1.1.0/code 5 remains the latest published release. Redmi's qualitative
+Redmi's qualitative
 playability follow-up has arrived; the final
 camera check passes. Build 134 now has focused Odin acceptance for fixed-preset
 visibility and Jiggy-wipe coverage; see the [review](build134-odin-review-20261102.md).
@@ -75,7 +77,7 @@ Debug → Release save transfer and 21:9 persistence after save/quit/reload.
 These are the recorded focused checks, not full-game or all-device acceptance.
 The [handoff](handoff.md) links the complete source, host, CI and device records.
 
-## Pending before the final release record
+## Accepted scope and remaining coverage
 
 - Retain the [Redmi follow-up](redmi-playability-20261031.md) as reported
   playability with occasional lag spikes. The screenshots contain no FPS/settings
@@ -86,13 +88,12 @@ The [handoff](handoff.md) links the complete source, host, CI and device records
   persistence. Signed build 136 accepts the final settings labels/order and
   save/settings/mod retention after replacement. Broader pacing and older unusual-frame reports remain separate
   from these focused passes.
-- Stage the accepted signed build-136 **1.2.0 / code 6** APK and checksum under
-  their canonical public names. Use the pinned release/v1.2.0 source and
-  approved description. Keep the established Debug app.
-- Replace this draft with the actual release identity, checksum, accepted scope
-  and remaining known issues after those results. Frostie requested PR cleanup
-  on 2 November; public release publication and the stable-feed update follow
-  the signed candidate check.
+- The accepted signed build-136 **1.2.0 / code 6** APK and checksum are public
+  under their canonical names, with the pinned source and final description.
+  The separate established Debug app remains independent.
+- The [publication record](release-v1.2.0-check-20261102.md) binds the actual
+  release identity, independent downloads and stable-feed checks. PR cleanup,
+  focused candidate acceptance and publication are complete.
 
 ## Retired experiment
 
