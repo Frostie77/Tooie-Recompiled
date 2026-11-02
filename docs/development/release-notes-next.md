@@ -5,6 +5,9 @@ The replacement candidate is
 [build 136](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41322662896),
 started from main source d24e33d230ec03679bbb92aac04e2b4b928e78e3.
 Documentation edits after that source do not require another APK build.
+The [signed build-136 acceptance](release-candidate-136-20261102.md) now passes
+the final menu labels/order, retained saves/settings/mods and save/close/reopen
+at 21:9. The tested APK is ready for staging/publication from release/v1.2.0.
 
 Prepare **v1.2.0 / Android code 6** as the next compatible feature update.
 Public v1.1.0/code 5 remains the latest published release. Redmi's qualitative
@@ -80,12 +83,12 @@ The [handoff](handoff.md) links the complete source, host, CI and device records
 - Retain the [build-133 camera/HUD/recorder acceptance](build133-odin-review-20261101.md).
   The [build-134 visibility/transition check](build134-odin-review-20261102.md)
   now passes too. Signed build 135 also passes Debug-save import and 21:9
-  persistence. Check the requested settings labels/order in the replacement
-  candidate. Broader pacing and older unusual-frame reports remain separate
+  persistence. Signed build 136 accepts the final settings labels/order and
+  save/settings/mod retention after replacement. Broader pacing and older unusual-frame reports remain separate
   from these focused passes.
-- Verify build 136's unsigned **1.2.0 / code 6** candidate and complete payload. Sign
-  locally with the existing protected release key, then check update continuity,
-  retained save/settings and reopening on Odin. Keep the established Debug app.
+- Stage the accepted signed build-136 **1.2.0 / code 6** APK and checksum under
+  their canonical public names. Use the pinned release/v1.2.0 source and
+  approved description. Keep the established Debug app.
 - Replace this draft with the actual release identity, checksum, accepted scope
   and remaining known issues after those results. Frostie requested PR cleanup
   on 2 November; public release publication and the stable-feed update follow

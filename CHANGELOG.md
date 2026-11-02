@@ -86,9 +86,11 @@ focused scope; other modes/devices and complete gameplay remain separate.
 
 ### Before publication
 
-Signed build 135 passes Debug → Release save import and 21:9 persistence after
-save/quit/reload. Verify the replacement build 136 package and local signing,
-then check the final menu labels/order and retained saves/settings on Odin.
+Signed build 136 passes the final menu labels/order, retained save/settings/mods
+and save/close/reopen checks, including 21:9 persistence. Build 135 separately
+passes Debug → Release save import. The
+[accepted candidate record](docs/development/release-candidate-136-20261102.md)
+binds the tested source and APK; staging and public publication remain pending.
 The [public release-description draft](docs/development/release-notes-v1.2.0.md)
 contains the current wording; the
 [engineering release notes](docs/development/release-notes-next.md) retain the

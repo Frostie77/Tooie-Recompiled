@@ -274,10 +274,13 @@ Broad mod compatibility remains a coverage item.
 
 ## Focused graphics/control work for the next update
 
-The current installed Odin release candidate is **135**, version 1.2.0/code 6.
-CI, unsigned-payload checks and protected local signing pass; the
-[signed checkpoint](development/release-candidate-135-20261102.md) records the
-successful replacement, Debug-save import and 21:9 persistence. Retain the
+The current installed Odin release candidate is **136**, version 1.2.0/code 6.
+CI, independent payload verification, protected local signing and the final
+settings/save check pass; the
+[signed acceptance record](development/release-candidate-136-20261102.md)
+binds the exact tested source and APK. The earlier
+[build-135 checkpoint](development/release-candidate-135-20261102.md) retains
+the Debug-save import result. Retain the
 [build-134 visibility/transition pass](development/build134-odin-review-20261102.md).
 Exact identities are recorded in those reviews and
 [the handoff](development/handoff.md). The following checkmarks reflect focused
@@ -320,9 +323,12 @@ manual acceptance, not full-game/device coverage or publication.
   ratios. The review above distinguishes moving-animation acceptance from its
   completed-gameplay still images. Host consumer/failure controls and CI pass.
 - [x] Confirm a selected fixed aspect ratio survives save/quit/reload. Frostie
-  reports 21:9 remains selected on signed build 135; see the signed checkpoint
-  above. The requested label/order/default follow-up still needs its brief
-  replacement-candidate settings check.
+  reports 21:9 remains selected on signed builds 135 and 136; see the signed
+  records above.
+- [x] Confirm the final Graphics labels/order and retained save/settings/mods
+  after replacing the signed candidate. Frostie accepts the requested Auto/
+  Expand/Display first choices and Auto, Classic 4:3, 16:9 HUD labels on build
+  136, followed by successful save/close/reopen with progress and 21:9 retained.
 - [x] Keep Jiggy Challenge controls unchanged with stationary stick swapping
   Off and On (MD-015), accepted in the build-125 review above.
 - [x] Correct the reported Lagoon missing-water/stray-polygons/lines failure

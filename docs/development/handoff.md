@@ -4,14 +4,21 @@ Updated: 2 November 2026.
 
 ## Release finishing batch
 
-**Overnight pause, 2 November:** Frostie leaves
-[build 136](https://github.com/Frostie77/Tooie-Recompiled/actions/runs/41322662896)
-running at source d24e33d230ec03679bbb92aac04e2b4b928e78e3 with the unsigned
-candidate profile enabled. Resume with artifact verification, protected local
-signing and a brief settings/save check. The installed preview remains signed
-build 135, code 6. The [copy-ready public draft](release-notes-v1.2.0.md) and
-changelog include all final labels/order changes. Subsequent documentation-only
-edits skip CI; retain build 136's exact source when binding the candidate.
+**Build 136 accepted on Odin:** CI, independent downloaded-payload checks and
+protected local signing pass. Frostie reports successful replacement and
+“everything looks good” for the requested final menu order/labels, retained
+save/settings/mods and save/close/reopen at 21:9. The
+[final candidate record](release-candidate-136-20261102.md) binds source
+d24e33d230ec03679bbb92aac04e2b4b928e78e3, signed APK SHA-256
+57c8f1d2da0c8bcfed43780cece20e0b90c17ec805b4285b72bd04285492b4e3
+and the manual scope. The installed release preview is now build 136/code 6.
+The release/v1.2.0 branch is pinned to that exact source.
+
+Next: stage the tested signed bytes under the canonical APK name, with their
+checksum and [approved public description](release-notes-v1.2.0.md). Frostie
+publishes the GitHub release; independently verify its downloads before
+advancing the stable feed. Subsequent documentation-only edits skip CI and do
+not require another APK or signature. Do not repeat the accepted device checks.
 
 **Signed build 135 and settings follow-up:** the
 [checkpoint](release-candidate-135-20261102.md) records CI/payload verification,
@@ -25,8 +32,8 @@ Auto, Classic 4:3 and 16:9; Auto defaulting new settings; Display first in
 Framerate; and Auto first in Resolution. Preserve saved enum values/JSON keys
 and existing choices. Keep the
 launcher/settings full-display and all rendering/placement math unchanged.
-Use one replacement unsigned candidate for 1.2.0/code 6, followed by a brief
-settings check. Retain the accepted camera/HUD/visibility/transition/controls
+The replacement candidate and brief settings check now pass on build 136.
+Retain the accepted camera/HUD/visibility/transition/controls
 and long-play results instead of requesting the full graphics test again.
 
 **PR cleanup and next candidate, 2 November:** Frostie asks to consolidate the

@@ -1,16 +1,19 @@
 # Android release signing
 
-## Next candidate — 1.2.0 / code 6
+## Accepted candidate — 1.2.0 / code 6
 
-The [next-update notes](release-notes-next.md) collect the accepted changes.
-Use the consolidated `main` source in **Actions → Android APK → Run workflow**:
-enable `prepare_candidate`, enter `1.2.0` / `6`, and leave the GPU, paired-GPU
-and touch-test inputs off. This prepares an unsigned candidate and the local
-signing helpers. Verify that artifact before protected local signing and the
-Odin update/save/settings/reopen check, including fixed-preset persistence.
-The existing release package, protected key and retained Debug app keep their
-identities. Publish and advance the stable feed after the signed result is
-accepted; public v1.1.0 / code 5 remains current until then.
+The [build-136 signed acceptance](release-candidate-136-20261102.md) records
+passed CI/payload checks, protected local signing, replacement installation and
+the focused Odin settings/save check. Release branch `release/v1.2.0` points to
+the exact tested source d24e33d230ec03679bbb92aac04e2b4b928e78e3.
+
+Stage the existing signed APK as `Tooie-Recompiled-v1.2.0-Android-arm64.apk`
+with its SHA256SUMS; do not rebuild or re-sign it for documentation changes.
+Publish using tag v1.2.0, target release/v1.2.0, title Tooie Recompiled v1.2.0
+and the [approved description](release-notes-v1.2.0.md). After independent
+public-download verification, update the stable feed and publication record.
+Public v1.1.0/code 5 remains current until then. The release package/protected
+key and retained Debug app keep their identities.
 
 ## Published releases
 
