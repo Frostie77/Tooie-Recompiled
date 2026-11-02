@@ -22,8 +22,15 @@ the README/changelog/checklist reflect the released work. See the
 [final public description](release-notes-v1.2.0.md).
 Documentation/feed changes skip CI and require no new APK or signature.
 Do not repeat accepted device checks. Frostie handles issue closures and replies.
-Next: update the separate retained Debug app using the matching verified CI
-artifact and its established Debug certificate, preserving app data.
+**Retained Debug update accepted:** the same source/build 136 is now installed
+in the separate Debug app. The local helper passed the established certificate,
+signature/alignment/version and complete CI-payload checks. Signed Debug APK
+SHA-256: ece693fb1cb1dd688e529b636d024704727a49b2ac6749c3b550ab246c990e46.
+After the supplied hash-checked adb install -r step and requested open/save-load
+check, Frostie reports “yep its all good”. This is manual acceptance without a
+fresh installed-APK readback or capture. See the
+[Debug acceptance record](release-v1.2.0-check-20261102.md#retained-debug-update-accepted).
+Do not leave this update pending or request another build for it.
 
 **Signed build 135 and settings follow-up:** the
 [checkpoint](release-candidate-135-20261102.md) records CI/payload verification,

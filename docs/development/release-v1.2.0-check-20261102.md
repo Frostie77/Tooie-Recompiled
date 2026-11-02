@@ -80,8 +80,23 @@ Frostie's final GitHub description, including his broader compatibility wording.
 Remaining full-game/device/lifecycle and distribution/notices milestones keep
 their recorded scope. Issue closures and reporter replies remain Frostie's job.
 
-## Next retained Debug update
+## Retained Debug update accepted
 
-Frostie requests the matching update for his separate Debug app after release
-finishing. Use the already verified build-136 Debug artifact with the established
-Debug certificate; preserve its package and app data. No new build is required.
+On 2 November, Frostie prepared the already verified build-136 Debug artifact
+from the same d24e33d230ec03679bbb92aac04e2b4b928e78e3 source. Its local helper
+passes the established Debug certificate, APK signature/alignment/version and
+complete CI-payload comparison. The Debug package remains
+io.github.banjotooierecompiled, separate from the release app.
+
+- Signed Debug APK SHA-256:
+  ece693fb1cb1dd688e529b636d024704727a49b2ac6749c3b550ab246c990e46.
+- Established Debug certificate SHA-256:
+  548bdb3c2702e830f61695c6d701da9c021a48af4b72566209fba0b518be2836.
+- Local preparation folder: touch-d24e33d230ec-0f3f0974.
+
+The supplied install command checks the source and staged APK hashes before
+adb install -r on Odin serial 7907333f, retaining the existing app data.
+Asked to open Tooie Recompiled Debug and check the save loads after installation,
+Frostie reports “yep its all good”. The Debug update and save-load check are
+accepted as a manual report. No fresh installed-APK readback, capture or new
+full graphics test is claimed. No new CI build was needed.
